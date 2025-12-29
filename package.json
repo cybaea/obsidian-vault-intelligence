@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-vault-intelligence",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Intelligent vault management and analysis for Obsidian.",
 	"main": "main.js",
 	"type": "module",
