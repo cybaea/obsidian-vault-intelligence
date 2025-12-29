@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-vault-intelligence",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Intelligent vault management and analysis for Obsidian.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
