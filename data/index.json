@@ -1,0 +1,3587 @@
+{
+  "version": 1,
+  "embeddingModel": "gemini-embedding-001",
+  "dimensions": 768,
+  "files": {
+    "_TEMPLATES/Structured LinkedIn Post.md": {
+      "id": 0,
+      "mtime": 1761674051864,
+      "path": "_TEMPLATES/Structured LinkedIn Post.md"
+    },
+    "_TEMPLATES/Main Note.md": {
+      "id": 1,
+      "mtime": 1760857261831,
+      "path": "_TEMPLATES/Main Note.md"
+    },
+    "_TEMPLATES/Book Source.md": {
+      "id": 2,
+      "mtime": 1760856910069,
+      "path": "_TEMPLATES/Book Source.md"
+    },
+    "_TAGS/tag-visual-storytelling.md": {
+      "id": 3,
+      "mtime": 1760013873510,
+      "path": "_TAGS/tag-visual-storytelling.md"
+    },
+    "_TAGS/tag-training.md": {
+      "id": 4,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-training.md"
+    },
+    "_TAGS/tag-review.md": {
+      "id": 5,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-review.md"
+    },
+    "_TAGS/tag-python.md": {
+      "id": 6,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-python.md"
+    },
+    "_TAGS/tag-publish.md": {
+      "id": 7,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-publish.md"
+    },
+    "_TAGS/tag-productivity.md": {
+      "id": 8,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-productivity.md"
+    },
+    "_TAGS/tag-marketing.md": {
+      "id": 9,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-marketing.md"
+    },
+    "_TAGS/tag-journal.md": {
+      "id": 10,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-journal.md"
+    },
+    "_TAGS/tag-habits.md": {
+      "id": 11,
+      "mtime": 1766782794183,
+      "path": "_TAGS/tag-habits.md"
+    },
+    "_TAGS/tag-create.md": {
+      "id": 12,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-create.md"
+    },
+    "_TAGS/tag-comment.md": {
+      "id": 13,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-comment.md"
+    },
+    "_TAGS/tag-WHO.md": {
+      "id": 14,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-WHO.md"
+    },
+    "_TAGS/tag-WHAT.md": {
+      "id": 15,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-WHAT.md"
+    },
+    "_TAGS/tag-RTW.md": {
+      "id": 16,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-RTW.md"
+    },
+    "_TAGS/tag-RTO.md": {
+      "id": 17,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-RTO.md"
+    },
+    "_TAGS/tag-OTHERS.md": {
+      "id": 18,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-OTHERS.md"
+    },
+    "_TAGS/tag-LinkedIn.md": {
+      "id": 19,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-LinkedIn.md"
+    },
+    "_TAGS/tag-HOW.md": {
+      "id": 20,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-HOW.md"
+    },
+    "_TAGS/tag-Fedora.md": {
+      "id": 21,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-Fedora.md"
+    },
+    "_TAGS/tag-FOSS.md": {
+      "id": 22,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-FOSS.md"
+    },
+    "_TAGS/tag-Deep Work.md": {
+      "id": 23,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-Deep Work.md"
+    },
+    "_TAGS/tag-DN4S.md": {
+      "id": 24,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-DN4S.md"
+    },
+    "_TAGS/tag-CYBAEA-post.md": {
+      "id": 25,
+      "mtime": 1757971148198,
+      "path": "_TAGS/tag-CYBAEA-post.md"
+    },
+    "_FILES/workshopXAI_IJCAI_beyondShapley/workshopXAI_IJCAI_beyondShapley.md": {
+      "id": 26,
+      "mtime": 1757971148154,
+      "path": "_FILES/workshopXAI_IJCAI_beyondShapley/workshopXAI_IJCAI_beyondShapley.md"
+    },
+    "_FILES/relationship_templates_2.md": {
+      "id": 27,
+      "mtime": 1757971148117,
+      "path": "_FILES/relationship_templates_2.md"
+    },
+    "_FILES/relationship_templates.md": {
+      "id": 28,
+      "mtime": 1757971148117,
+      "path": "_FILES/relationship_templates.md"
+    },
+    "_FILES/opportunity_detection_grid.md": {
+      "id": 29,
+      "mtime": 1757971148117,
+      "path": "_FILES/opportunity_detection_grid.md"
+    },
+    "_FILES/lma_brief_2.md": {
+      "id": 30,
+      "mtime": 1757971148117,
+      "path": "_FILES/lma_brief_2.md"
+    },
+    "_FILES/lma_brief_1.md": {
+      "id": 31,
+      "mtime": 1757971148117,
+      "path": "_FILES/lma_brief_1.md"
+    },
+    "_FILES/decision_intelligence_brief_2.md": {
+      "id": 32,
+      "mtime": 1757971148116,
+      "path": "_FILES/decision_intelligence_brief_2.md"
+    },
+    "_FILES/decision_intelligence_brief_1.md": {
+      "id": 33,
+      "mtime": 1757971148116,
+      "path": "_FILES/decision_intelligence_brief_1.md"
+    },
+    "_FILES/US Marine Corps AI Implementation Plan 2025/US Marine Corps AI Implementation Plan 2025.md": {
+      "id": 34,
+      "mtime": 1757971148084,
+      "path": "_FILES/US Marine Corps AI Implementation Plan 2025/US Marine Corps AI Implementation Plan 2025.md"
+    },
+    "_FILES/S.T.O.R.Y - A simple framework for writing better prompts3537566277284390964/STORY -- A simple framework to help you write better AI prompts.md": {
+      "id": 35,
+      "mtime": 1757971148076,
+      "path": "_FILES/S.T.O.R.Y - A simple framework for writing better prompts3537566277284390964/STORY -- A simple framework to help you write better AI prompts.md"
+    },
+    "_FILES/Develop Your Style v2/Develop Your Style v2.md": {
+      "id": 36,
+      "mtime": 1757971147892,
+      "path": "_FILES/Develop Your Style v2/Develop Your Style v2.md"
+    },
+    "_SOURCES/enterprise-risk-management-technology-special-report-2025-263434871919280388911/enterprise-risk-management-technology-special-report-2025-263434871919280388911.md": {
+      "id": 37,
+      "mtime": 1766783519963,
+      "path": "_SOURCES/enterprise-risk-management-technology-special-report-2025-263434871919280388911/enterprise-risk-management-technology-special-report-2025-263434871919280388911.md"
+    },
+    "_SOURCES/The Coaching Habit.md": {
+      "id": 38,
+      "mtime": 1757971148194,
+      "path": "_SOURCES/The Coaching Habit.md"
+    },
+    "_SOURCES/The Advantage Player in Sales.md": {
+      "id": 39,
+      "mtime": 1757971148194,
+      "path": "_SOURCES/The Advantage Player in Sales.md"
+    },
+    "_SOURCES/Tell-Better-Stories-2025-12/Tell-Better-Stories-2025-12.md": {
+      "id": 40,
+      "mtime": 1766741970115,
+      "path": "_SOURCES/Tell-Better-Stories-2025-12/Tell-Better-Stories-2025-12.md"
+    },
+    "_SOURCES/TOWARDS A COMMON REPORTING FRAMEWORK FOR AI INCIDENTS--OECD-2025/TOWARDS A COMMON REPORTING FRAMEWORK FOR AI INCIDENTS--OECD-2025.md": {
+      "id": 41,
+      "mtime": 1766923392819,
+      "path": "_SOURCES/TOWARDS A COMMON REPORTING FRAMEWORK FOR AI INCIDENTS--OECD-2025/TOWARDS A COMMON REPORTING FRAMEWORK FOR AI INCIDENTS--OECD-2025.md"
+    },
+    "_SOURCES/PDFS/Harnham-How-to-Hire-in-AI/Harnham-How-to-Hire-in-AI.md": {
+      "id": 42,
+      "mtime": 1758866572761,
+      "path": "_SOURCES/PDFS/Harnham-How-to-Hire-in-AI/Harnham-How-to-Hire-in-AI.md"
+    },
+    "_SOURCES/Meadows-2008.-Thinking-in-Systems/Meadows-2008.-Thinking-in-Systems.md": {
+      "id": 43,
+      "mtime": 1757971148178,
+      "path": "_SOURCES/Meadows-2008.-Thinking-in-Systems/Meadows-2008.-Thinking-in-Systems.md"
+    },
+    "_SOURCES/How to Create a Killer Business Strategy -- Alex M H Smith/How to Create a Killer Business Strategy -- Alex M H Smith.md": {
+      "id": 44,
+      "mtime": 1757971148162,
+      "path": "_SOURCES/How to Create a Killer Business Strategy -- Alex M H Smith/How to Create a Killer Business Strategy -- Alex M H Smith.md"
+    },
+    "_SOURCES/HBR-The-Peter-F-Drucker-Reader-print-unlock/HBR The Peter F Drucker Reader.md": {
+      "id": 45,
+      "mtime": 1757971148158,
+      "path": "_SOURCES/HBR-The-Peter-F-Drucker-Reader-print-unlock/HBR The Peter F Drucker Reader.md"
+    },
+    "_SOURCES/Georgson--EPIC-GROWTH/Georgson--EPIC-GROWTH.md": {
+      "id": 46,
+      "mtime": 1766783620768,
+      "path": "_SOURCES/Georgson--EPIC-GROWTH/Georgson--EPIC-GROWTH.md"
+    },
+    "_SOURCES/Building Sales Capability in Consultancies/Building Sales Capability in Consultancies.md": {
+      "id": 47,
+      "mtime": 1766783400163,
+      "path": "_SOURCES/Building Sales Capability in Consultancies/Building Sales Capability in Consultancies.md"
+    },
+    "_SOURCES/BOOKS/Value Proposition Design - Alexander Osterwalder Yves Pigneur Gregory Bernarda Alan Smith.md": {
+      "id": 48,
+      "mtime": 1758468753021,
+      "path": "_SOURCES/BOOKS/Value Proposition Design - Alexander Osterwalder Yves Pigneur Gregory Bernarda Alan Smith.md"
+    },
+    "_SOURCES/BOOKS/Trivium - John Michell Rachel Grenon Earl Fontainelle Adina Arvatu Andrew Aberdein Octavia Wynne Gregory Beabout.md": {
+      "id": 49,
+      "mtime": 1758468455927,
+      "path": "_SOURCES/BOOKS/Trivium - John Michell Rachel Grenon Earl Fontainelle Adina Arvatu Andrew Aberdein Octavia Wynne Gregory Beabout.md"
+    },
+    "_SOURCES/BOOKS/Great Diaries -.md": {
+      "id": 50,
+      "mtime": 1758484727359,
+      "path": "_SOURCES/BOOKS/Great Diaries -.md"
+    },
+    "_SOURCES/AI Tools for Actuaries.md": {
+      "id": 51,
+      "mtime": 1757971148155,
+      "path": "_SOURCES/AI Tools for Actuaries.md"
+    },
+    "_SOURCES/2025-05-McKinsey Quarterly.md": {
+      "id": 52,
+      "mtime": 1757971148154,
+      "path": "_SOURCES/2025-05-McKinsey Quarterly.md"
+    },
+    "Readwise/Tweets/-49945408-Tweets-From-TheBlackWolf.md": {
+      "id": 53,
+      "mtime": 1760043223806,
+      "path": "Readwise/Tweets/-49945408-Tweets-From-TheBlackWolf.md"
+    },
+    "Readwise/Tweets/-45484762-Tweets-From-Architecture-&-Tradition.md": {
+      "id": 54,
+      "mtime": 1760043221495,
+      "path": "Readwise/Tweets/-45484762-Tweets-From-Architecture-&-Tradition.md"
+    },
+    "Readwise/Tweets/-45484761-Tweets-From-Jade.md": {
+      "id": 55,
+      "mtime": 1760043221474,
+      "path": "Readwise/Tweets/-45484761-Tweets-From-Jade.md"
+    },
+    "Readwise/Tweets/-45484760-Tweets-From-Sam-Bidwell.md": {
+      "id": 56,
+      "mtime": 1760043221453,
+      "path": "Readwise/Tweets/-45484760-Tweets-From-Sam-Bidwell.md"
+    },
+    "Readwise/Tweets/-45484759-Tweets-From-ThinkingWest.md": {
+      "id": 57,
+      "mtime": 1760043221435,
+      "path": "Readwise/Tweets/-45484759-Tweets-From-ThinkingWest.md"
+    },
+    "Readwise/Tweets/-45484758-Tweets-From-Akshay-🚀.md": {
+      "id": 58,
+      "mtime": 1760043221415,
+      "path": "Readwise/Tweets/-45484758-Tweets-From-Akshay-🚀.md"
+    },
+    "Readwise/Full Document Contents/Tweets/01jfy5xvz38kjmx4jfmy90symp-2024-02-11-10-paradoxical-truths-from-10-brilliant-men.md": {
+      "id": 59,
+      "mtime": 1760043226492,
+      "path": "Readwise/Full Document Contents/Tweets/01jfy5xvz38kjmx4jfmy90symp-2024-02-11-10-paradoxical-truths-from-10-brilliant-men.md"
+    },
+    "Readwise/Full Document Contents/Books/01k6345rb2hmzf2fr3p47749ne-2000-08-01-How-to-Live-on-24-Hours-a-Day.md": {
+      "id": 60,
+      "mtime": 1760043225277,
+      "path": "Readwise/Full Document Contents/Books/01k6345rb2hmzf2fr3p47749ne-2000-08-01-How-to-Live-on-24-Hours-a-Day.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfvwad07njkfb2r07y7qx--Meditations.md": {
+      "id": 61,
+      "mtime": 1760043226327,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfvwad07njkfb2r07y7qx--Meditations.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfttj08tzs78m4d0fqmq0-2020-11-24-The-Art-of-War.md": {
+      "id": 62,
+      "mtime": 1760043245016,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfttj08tzs78m4d0fqmq0-2020-11-24-The-Art-of-War.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfsvrk8ka9h7xyfb098hz-2020-10-26-The-Art-of-Public-Speaking.md": {
+      "id": 63,
+      "mtime": 1760043225437,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfsvrk8ka9h7xyfb098hz-2020-10-26-The-Art-of-Public-Speaking.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfrddbqagbazb3989w7kb-2021-03-12-Three-Men-in-a-Boat.md": {
+      "id": 64,
+      "mtime": 1760043226222,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfrddbqagbazb3989w7kb-2021-03-12-Three-Men-in-a-Boat.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfqn5w3zxkkt37nfw83dg-2020-11-05-Dantes´s-Inferno.md": {
+      "id": 65,
+      "mtime": 1760043226313,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfqn5w3zxkkt37nfw83dg-2020-11-05-Dantes´s-Inferno.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfpdfy29hzvfhevfaq57b-2021-01-15-The-Complete-Works-of-William-Shakespeare.md": {
+      "id": 66,
+      "mtime": 1760043225548,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfpdfy29hzvfhevfaq57b-2021-01-15-The-Complete-Works-of-William-Shakespeare.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8dfn7nvm6ve28ban39t1vh--The-Wealth-of-Nations.md": {
+      "id": 67,
+      "mtime": 1760043226321,
+      "path": "Readwise/Full Document Contents/Books/01jt8dfn7nvm6ve28ban39t1vh--The-Wealth-of-Nations.md"
+    },
+    "Readwise/Full Document Contents/Books/01jt8crnv5db9v4gjghap1ph0g-2025-03-05-A-farewell-to-arms.md": {
+      "id": 68,
+      "mtime": 1760043225639,
+      "path": "Readwise/Full Document Contents/Books/01jt8crnv5db9v4gjghap1ph0g-2025-03-05-A-farewell-to-arms.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kdgabr67062t15h0r3wcr79g-2025-12-27-Key-Updates-of-the-International-AI-Safety-Report.md": {
+      "id": 69,
+      "mtime": 1766921319277,
+      "path": "Readwise/Full Document Contents/Articles/01kdgabr67062t15h0r3wcr79g-2025-12-27-Key-Updates-of-the-International-AI-Safety-Report.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde6jz2ft4cn9e68dy0t6p9y--fall25-cme295-lecture1.pdf.md": {
+      "id": 70,
+      "mtime": 1766921319333,
+      "path": "Readwise/Full Document Contents/Articles/01kde6jz2ft4cn9e68dy0t6p9y--fall25-cme295-lecture1.pdf.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5rbgjq5vmnf058h47rp8k-2025-12-02-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-8---LLM-Evaluation.md": {
+      "id": 71,
+      "mtime": 1766781408824,
+      "path": "Readwise/Full Document Contents/Articles/01kde5rbgjq5vmnf058h47rp8k-2025-12-02-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-8---LLM-Evaluation.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5qrj98e6emppcr7e284z4-2025-11-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-7---Agentic-LLMs.md": {
+      "id": 72,
+      "mtime": 1766781409824,
+      "path": "Readwise/Full Document Contents/Articles/01kde5qrj98e6emppcr7e284z4-2025-11-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-7---Agentic-LLMs.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5q0pvb542axcg6hsk4na0-2025-11-14-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-6---LLM-Reasoning.md": {
+      "id": 73,
+      "mtime": 1766781409234,
+      "path": "Readwise/Full Document Contents/Articles/01kde5q0pvb542axcg6hsk4na0-2025-11-14-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-6---LLM-Reasoning.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5nxtfjmvd2cjdwbccyj8n-2025-11-14-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-5---LLM-tuning.md": {
+      "id": 74,
+      "mtime": 1766781409148,
+      "path": "Readwise/Full Document Contents/Articles/01kde5nxtfjmvd2cjdwbccyj8n-2025-11-14-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-5---LLM-tuning.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5mq1zp7eqx9b7ae8mh956-2025-10-21-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-4---LLM-Training.md": {
+      "id": 75,
+      "mtime": 1766781409059,
+      "path": "Readwise/Full Document Contents/Articles/01kde5mq1zp7eqx9b7ae8mh956-2025-10-21-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-4---LLM-Training.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5kyevfm9qxtp9zcr4smwm-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-3---Tranformers-&-Large-Language-Models.md": {
+      "id": 76,
+      "mtime": 1766781408435,
+      "path": "Readwise/Full Document Contents/Articles/01kde5kyevfm9qxtp9zcr4smwm-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-3---Tranformers-&-Large-Language-Models.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5k48xgq8vht7a8rzpzhzb-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-2---Transformer-Based-Models-&-Tricks.md": {
+      "id": 77,
+      "mtime": 1766781408650,
+      "path": "Readwise/Full Document Contents/Articles/01kde5k48xgq8vht7a8rzpzhzb-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-2---Transformer-Based-Models-&-Tricks.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kde5h2bmb8xhwr5ddz38qkqg-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-1---Transformer.md": {
+      "id": 78,
+      "mtime": 1766781409870,
+      "path": "Readwise/Full Document Contents/Articles/01kde5h2bmb8xhwr5ddz38qkqg-2025-10-17-Stanford-CME295-Transformers-&-LLMs--Autumn-2025--Lecture-1---Transformer.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kddq8szsammvjdbw5cgsmxkz-2025-12-26-10-Questions-to-Ask-Yourself-Before-2026.md": {
+      "id": 79,
+      "mtime": 1766781409618,
+      "path": "Readwise/Full Document Contents/Articles/01kddq8szsammvjdbw5cgsmxkz-2025-12-26-10-Questions-to-Ask-Yourself-Before-2026.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kcvdp555knj8qf0vcv585ygp-2025-12-19-The-Imperfectionist-Four-thoughts-about-living-in-reality.md": {
+      "id": 80,
+      "mtime": 1766781408783,
+      "path": "Readwise/Full Document Contents/Articles/01kcvdp555knj8qf0vcv585ygp-2025-12-19-The-Imperfectionist-Four-thoughts-about-living-in-reality.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kcgzjkyj6tgk1ftz2kre1mrq-2025-12-15-LinkedIn-Marketing-in-2026-The-Complete-Guide-for-Businesses-and-Creators.md": {
+      "id": 81,
+      "mtime": 1766781409911,
+      "path": "Readwise/Full Document Contents/Articles/01kcgzjkyj6tgk1ftz2kre1mrq-2025-12-15-LinkedIn-Marketing-in-2026-The-Complete-Guide-for-Businesses-and-Creators.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kbqn84vw4m8kwgxxanq520dh-2025-12-05-Two-Years-After-Leaving-Google-The-Truth-About-Entrepreneurship.md": {
+      "id": 82,
+      "mtime": 1766781409335,
+      "path": "Readwise/Full Document Contents/Articles/01kbqn84vw4m8kwgxxanq520dh-2025-12-05-Two-Years-After-Leaving-Google-The-Truth-About-Entrepreneurship.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kbk3qstx1e25463atjtxmq1d-2025-10-07-37-Tools-and-Tactics-to-Protect-Your-Attention.md": {
+      "id": 83,
+      "mtime": 1766781408362,
+      "path": "Readwise/Full Document Contents/Articles/01kbk3qstx1e25463atjtxmq1d-2025-10-07-37-Tools-and-Tactics-to-Protect-Your-Attention.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kb310gxa6d1s2c0360kyyfrb-2025-11-27-The-Imperfectionist-Interest-is-everything.md": {
+      "id": 84,
+      "mtime": 1766781409574,
+      "path": "Readwise/Full Document Contents/Articles/01kb310gxa6d1s2c0360kyyfrb-2025-11-27-The-Imperfectionist-Interest-is-everything.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kb0yj7nkjk6e9cfmzqcjjvrv-2025-11-26-Satellite-Imagery.md": {
+      "id": 85,
+      "mtime": 1766781408341,
+      "path": "Readwise/Full Document Contents/Articles/01kb0yj7nkjk6e9cfmzqcjjvrv-2025-11-26-Satellite-Imagery.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kap3s5v3rf7ja23ekvs7zr54-2025-11-22-Andrew's-2025-Holiday-Gift-Guide.md": {
+      "id": 86,
+      "mtime": 1766781408910,
+      "path": "Readwise/Full Document Contents/Articles/01kap3s5v3rf7ja23ekvs7zr54-2025-11-22-Andrew's-2025-Holiday-Gift-Guide.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kafacs41zvymqbwst0kz4gs5-2025-11-19-Accelerate-workflow-development-with-enhanced-local-testing-in-AWS-Step-Functions.md": {
+      "id": 87,
+      "mtime": 1766781409544,
+      "path": "Readwise/Full Document Contents/Articles/01kafacs41zvymqbwst0kz4gs5-2025-11-19-Accelerate-workflow-development-with-enhanced-local-testing-in-AWS-Step-Functions.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9w6s9as3t50e97888ttj5hw-2025-11-12-The-Real-AI-Bottleneck-Is-Organizational-Reinvention,-Not-Computing-Power.md": {
+      "id": 88,
+      "mtime": 1766781408305,
+      "path": "Readwise/Full Document Contents/Articles/01k9w6s9as3t50e97888ttj5hw-2025-11-12-The-Real-AI-Bottleneck-Is-Organizational-Reinvention,-Not-Computing-Power.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9v75wtm4k2zkbm2n8trqvde-2025-11-12-Culture-vs.-Command.md": {
+      "id": 89,
+      "mtime": 1766781408270,
+      "path": "Readwise/Full Document Contents/Articles/01k9v75wtm4k2zkbm2n8trqvde-2025-11-12-Culture-vs.-Command.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9pxwsv4fh8dhxxa54p5yavk-2025-11-10-Fixing-Enterprise-Apps-with-AI-The-T+n-Problem.md": {
+      "id": 90,
+      "mtime": 1766781409805,
+      "path": "Readwise/Full Document Contents/Articles/01k9pxwsv4fh8dhxxa54p5yavk-2025-11-10-Fixing-Enterprise-Apps-with-AI-The-T+n-Problem.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9mk4s4rd588gpq539tkp3v2-2004-06-29-Zeigarnik-Effect---Wikipedia.md": {
+      "id": 91,
+      "mtime": 1766781408056,
+      "path": "Readwise/Full Document Contents/Articles/01k9mk4s4rd588gpq539tkp3v2-2004-06-29-Zeigarnik-Effect---Wikipedia.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9mf55cfgfxcbt0ewmrjac2q-2024-03-01-AI-and-the-New-Theocracies.md": {
+      "id": 92,
+      "mtime": 1766781409717,
+      "path": "Readwise/Full Document Contents/Articles/01k9mf55cfgfxcbt0ewmrjac2q-2024-03-01-AI-and-the-New-Theocracies.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9fk2h4ksk301w6qx7b79nnd-2025-11-07-Making-Dreams-Come-True.md": {
+      "id": 93,
+      "mtime": 1766781408551,
+      "path": "Readwise/Full Document Contents/Articles/01k9fk2h4ksk301w6qx7b79nnd-2025-11-07-Making-Dreams-Come-True.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9e96hevrsyt1p08360hbrbp-2025-11-07-Fighters-Versus-Fakers.md": {
+      "id": 94,
+      "mtime": 1766781408237,
+      "path": "Readwise/Full Document Contents/Articles/01k9e96hevrsyt1p08360hbrbp-2025-11-07-Fighters-Versus-Fakers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9dhhvg2qzw01j3y6481wf84-2025-11-06-How-Starting-a-Side-Project-Can-Help-Cool-Off-Burnout.md": {
+      "id": 95,
+      "mtime": 1766781408202,
+      "path": "Readwise/Full Document Contents/Articles/01k9dhhvg2qzw01j3y6481wf84-2025-11-06-How-Starting-a-Side-Project-Can-Help-Cool-Off-Burnout.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k9cgmyzage23pvmk5g6e6d85-2025-11-06-Jensen-Huang-Gets-It-Wrong.md": {
+      "id": 96,
+      "mtime": 1766781408155,
+      "path": "Readwise/Full Document Contents/Articles/01k9cgmyzage23pvmk5g6e6d85-2025-11-06-Jensen-Huang-Gets-It-Wrong.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k96hqnkyk69gpqjsyxwrwkxs-2025-11-04-Innovation-Is-Forgiveness.md": {
+      "id": 97,
+      "mtime": 1766781408122,
+      "path": "Readwise/Full Document Contents/Articles/01k96hqnkyk69gpqjsyxwrwkxs-2025-11-04-Innovation-Is-Forgiveness.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k8tyg3ay8v3ngr38wen335sm-2025-10-30-The-Imperfectionist-You-have-to-do-the-living-yourself.md": {
+      "id": 98,
+      "mtime": 1766781409491,
+      "path": "Readwise/Full Document Contents/Articles/01k8tyg3ay8v3ngr38wen335sm-2025-10-30-The-Imperfectionist-You-have-to-do-the-living-yourself.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k8s7t0rvpecqt9wn0e57yzf5-2025-10-29-The-problem-with-solving-problems.md": {
+      "id": 99,
+      "mtime": 1766781408010,
+      "path": "Readwise/Full Document Contents/Articles/01k8s7t0rvpecqt9wn0e57yzf5-2025-10-29-The-problem-with-solving-problems.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k8b39r874ez15vtq0e3ek4wn-2025-10-24-The-Paths-to-Building-Wealth-(Part-2).md": {
+      "id": 100,
+      "mtime": 1766781409740,
+      "path": "Readwise/Full Document Contents/Articles/01k8b39r874ez15vtq0e3ek4wn-2025-10-24-The-Paths-to-Building-Wealth-(Part-2).md"
+    },
+    "Readwise/Full Document Contents/Articles/01k8359hwx0mw8qmdvf559p2yn-2025-09-19-The-dawn-of-the-post-literate-society.md": {
+      "id": 101,
+      "mtime": 1766781408725,
+      "path": "Readwise/Full Document Contents/Articles/01k8359hwx0mw8qmdvf559p2yn-2025-09-19-The-dawn-of-the-post-literate-society.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k7x8ajtj2wzkresqva6kkbgd-2025-10-19-The-Two-Headed-Horse.md": {
+      "id": 102,
+      "mtime": 1766781407912,
+      "path": "Readwise/Full Document Contents/Articles/01k7x8ajtj2wzkresqva6kkbgd-2025-10-19-The-Two-Headed-Horse.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k74ewk78hngg22bz32exx3ya-2025-10-01-🌲-The-Konik-Method-for-Organizing-Electronic-Notes.md": {
+      "id": 103,
+      "mtime": 1760043225583,
+      "path": "Readwise/Full Document Contents/Articles/01k74ewk78hngg22bz32exx3ya-2025-10-01-🌲-The-Konik-Method-for-Organizing-Electronic-Notes.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k71ch5b3n0bnanmnyfrgsw2m-2025-10-08-Stop-Listening-to-So-Much-Stuff.md": {
+      "id": 104,
+      "mtime": 1766781407943,
+      "path": "Readwise/Full Document Contents/Articles/01k71ch5b3n0bnanmnyfrgsw2m-2025-10-08-Stop-Listening-to-So-Much-Stuff.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6zgewfbgpza9seh9zqgd464-2025-10-07-The-Paths-to-Building-Wealth-(Part-1).md": {
+      "id": 105,
+      "mtime": 1760043226128,
+      "path": "Readwise/Full Document Contents/Articles/01k6zgewfbgpza9seh9zqgd464-2025-10-07-The-Paths-to-Building-Wealth-(Part-1).md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6qn2sgkzpznfd0n914bww5a-2025-10-04-You're-on-the-list!.md": {
+      "id": 106,
+      "mtime": 1760043244461,
+      "path": "Readwise/Full Document Contents/Articles/01k6qn2sgkzpznfd0n914bww5a-2025-10-04-You're-on-the-list!.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6qjp2afy0mxzdg46m75mvmz-2025-09-01-30-Life-Lessons-from-30-Years.md": {
+      "id": 107,
+      "mtime": 1760043225389,
+      "path": "Readwise/Full Document Contents/Articles/01k6qjp2afy0mxzdg46m75mvmz-2025-09-01-30-Life-Lessons-from-30-Years.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6q3we9vv7at9fjygr8g2bks-2025-06-27-The-Connection-Economy-Playbook-How-to-Turn-Relationships-into-Revenue.md": {
+      "id": 108,
+      "mtime": 1760043225516,
+      "path": "Readwise/Full Document Contents/Articles/01k6q3we9vv7at9fjygr8g2bks-2025-06-27-The-Connection-Economy-Playbook-How-to-Turn-Relationships-into-Revenue.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6n6wxpnk4ethm9c6m1m0eg7-2025-10-03-The-Imperfectionist-Five-short-thoughts-(plus-upcoming-US-events).md": {
+      "id": 109,
+      "mtime": 1760043226665,
+      "path": "Readwise/Full Document Contents/Articles/01k6n6wxpnk4ethm9c6m1m0eg7-2025-10-03-The-Imperfectionist-Five-short-thoughts-(plus-upcoming-US-events).md"
+    },
+    "Readwise/Full Document Contents/Articles/01k6cgjavdytvrwsqsjf2a33e0-2025-09-30-Creativity-The-Antidote-to-Elite-Oversupply.md": {
+      "id": 110,
+      "mtime": 1760043225367,
+      "path": "Readwise/Full Document Contents/Articles/01k6cgjavdytvrwsqsjf2a33e0-2025-09-30-Creativity-The-Antidote-to-Elite-Oversupply.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k69s0b37hz4y6ex4n2c9czqy-2025-09-28-Act-Now!.md": {
+      "id": 111,
+      "mtime": 1760043225351,
+      "path": "Readwise/Full Document Contents/Articles/01k69s0b37hz4y6ex4n2c9czqy-2025-09-28-Act-Now!.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k62909n6ygsxdywn6kz0mfev--The-Individual-Usurps-the-Firm-as-the-Leading-Actor-in-Business.md": {
+      "id": 112,
+      "mtime": 1760043225254,
+      "path": "Readwise/Full Document Contents/Articles/01k62909n6ygsxdywn6kz0mfev--The-Individual-Usurps-the-Firm-as-the-Leading-Actor-in-Business.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k5w9wrmx6q73pqb788x2p5cq-2025-09-23-Going-Upstream.md": {
+      "id": 113,
+      "mtime": 1760043225238,
+      "path": "Readwise/Full Document Contents/Articles/01k5w9wrmx6q73pqb788x2p5cq-2025-09-23-Going-Upstream.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k5vemwcmsrzpq09vaqp39v80-2025-09-23-To-Be-Heard.md": {
+      "id": 114,
+      "mtime": 1760043225224,
+      "path": "Readwise/Full Document Contents/Articles/01k5vemwcmsrzpq09vaqp39v80-2025-09-23-To-Be-Heard.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k5vbt53mewgnmtwmre9rxwvk-2025-09-23-I-Reached-20,000-Followers-on-LinkedIn-and-I-Feel-Weird-About-It.md": {
+      "id": 115,
+      "mtime": 1760043225488,
+      "path": "Readwise/Full Document Contents/Articles/01k5vbt53mewgnmtwmre9rxwvk-2025-09-23-I-Reached-20,000-Followers-on-LinkedIn-and-I-Feel-Weird-About-It.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k5rc978dvn8yj99g7zh03xj6-2025-09-22-The-FDI-Shake-Up-How-Foreign-Direct-Investment-Today-May-Shape-Industry-and-Trade-Tomorrow.md": {
+      "id": 116,
+      "mtime": 1760043225162,
+      "path": "Readwise/Full Document Contents/Articles/01k5rc978dvn8yj99g7zh03xj6-2025-09-22-The-FDI-Shake-Up-How-Foreign-Direct-Investment-Today-May-Shape-Industry-and-Trade-Tomorrow.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k5bq5ez34954ws2f25y74ypx-2025-09-17-The-Editorial-Workflow-That-Doubled-My-LinkedIn-Following-in-6-Months.md": {
+      "id": 117,
+      "mtime": 1760043225133,
+      "path": "Readwise/Full Document Contents/Articles/01k5bq5ez34954ws2f25y74ypx-2025-09-17-The-Editorial-Workflow-That-Doubled-My-LinkedIn-Following-in-6-Months.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k4qbdktfqfywe5tgg8ca2stx-2024-04-27-The-three-or-four-hours-rule-for-getting-creative-work-done.md": {
+      "id": 118,
+      "mtime": 1760043225109,
+      "path": "Readwise/Full Document Contents/Articles/01k4qbdktfqfywe5tgg8ca2stx-2024-04-27-The-three-or-four-hours-rule-for-getting-creative-work-done.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k4h3k1yq5vwjj1epsh0v9as4-2025-09-06-Personalized-Insurance-Premiums-Cheaper-Thanks-to-AI-Here’s-Why-It’s-a-Slippery-Slope.md": {
+      "id": 119,
+      "mtime": 1760043226185,
+      "path": "Readwise/Full Document Contents/Articles/01k4h3k1yq5vwjj1epsh0v9as4-2025-09-06-Personalized-Insurance-Premiums-Cheaper-Thanks-to-AI-Here’s-Why-It’s-a-Slippery-Slope.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k4f8dbme4avhzc5a3e671r5c-2025-09-06-System-ArchitectSystem-Victim.md": {
+      "id": 120,
+      "mtime": 1760043225082,
+      "path": "Readwise/Full Document Contents/Articles/01k4f8dbme4avhzc5a3e671r5c-2025-09-06-System-ArchitectSystem-Victim.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k4dgk8sfdhm35t1jcz14cnbc-2025-09-05-Pluralistic-Why-Wikipedia-Works.md": {
+      "id": 121,
+      "mtime": 1760043225044,
+      "path": "Readwise/Full Document Contents/Articles/01k4dgk8sfdhm35t1jcz14cnbc-2025-09-05-Pluralistic-Why-Wikipedia-Works.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k4939tbq3g9a211z0pef6fnd-2025-09-04-Why-You-Keep-Refreshing.md": {
+      "id": 122,
+      "mtime": 1760043225004,
+      "path": "Readwise/Full Document Contents/Articles/01k4939tbq3g9a211z0pef6fnd-2025-09-04-Why-You-Keep-Refreshing.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k44vgryafm23ynb2nv34a7w0-2025-09-02-Bringing-Goodwill-to-the-Conversation.md": {
+      "id": 123,
+      "mtime": 1760043224971,
+      "path": "Readwise/Full Document Contents/Articles/01k44vgryafm23ynb2nv34a7w0-2025-09-02-Bringing-Goodwill-to-the-Conversation.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k3w84tfyz5q7key6ehstnfmk-2025-08-29-The-Knowing-of-Not-Knowing.md": {
+      "id": 124,
+      "mtime": 1760043224987,
+      "path": "Readwise/Full Document Contents/Articles/01k3w84tfyz5q7key6ehstnfmk-2025-08-29-The-Knowing-of-Not-Knowing.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k2fc4mng2ff82qzyrt7na60x-2025-08-12-The-Anatomy-of-a-Great-Hook-How-to-Grab-(and-Keep)-Attention-in-2025.md": {
+      "id": 125,
+      "mtime": 1760043225937,
+      "path": "Readwise/Full Document Contents/Articles/01k2fc4mng2ff82qzyrt7na60x-2025-08-12-The-Anatomy-of-a-Great-Hook-How-to-Grab-(and-Keep)-Attention-in-2025.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k2f2s3qj5ak23h5gcbj466e2-2025-08-12-The-Abstractions,-They-Are-a-Changing.md": {
+      "id": 126,
+      "mtime": 1760043245084,
+      "path": "Readwise/Full Document Contents/Articles/01k2f2s3qj5ak23h5gcbj466e2-2025-08-12-The-Abstractions,-They-Are-a-Changing.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k29vg5f689g8xfw6hc62sz8p-2025-08-10-After-the-Chores.md": {
+      "id": 127,
+      "mtime": 1760043224936,
+      "path": "Readwise/Full Document Contents/Articles/01k29vg5f689g8xfw6hc62sz8p-2025-08-10-After-the-Chores.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k29v6ae1xd3frx5we7qzc4mm-2025-08-10-Story-in-Reverse.md": {
+      "id": 128,
+      "mtime": 1760043224893,
+      "path": "Readwise/Full Document Contents/Articles/01k29v6ae1xd3frx5we7qzc4mm-2025-08-10-Story-in-Reverse.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k253kxsap37ne0md6pqdd1e8--The-ROI-of-AI-Ethics.md": {
+      "id": 129,
+      "mtime": 1760043226400,
+      "path": "Readwise/Full Document Contents/Articles/01k253kxsap37ne0md6pqdd1e8--The-ROI-of-AI-Ethics.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k24yamadv701x0qgpszfnnmk-2025-08-08-You're-on-the-list!.md": {
+      "id": 130,
+      "mtime": 1760043225825,
+      "path": "Readwise/Full Document Contents/Articles/01k24yamadv701x0qgpszfnnmk-2025-08-08-You're-on-the-list!.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k24wbhynrzt51mymr9vmrevf-2025-07-21-Complete-guide.md": {
+      "id": 131,
+      "mtime": 1760043224869,
+      "path": "Readwise/Full Document Contents/Articles/01k24wbhynrzt51mymr9vmrevf-2025-07-21-Complete-guide.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k24epxkj48yzyqm3hx7w5cab-2025-08-08-Scarcity-and-Abundance.md": {
+      "id": 132,
+      "mtime": 1760043224854,
+      "path": "Readwise/Full Document Contents/Articles/01k24epxkj48yzyqm3hx7w5cab-2025-08-08-Scarcity-and-Abundance.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k1jq8nvmd0c584cecaa557hy-2025-08-01-How-We-Encourage-Self-Improvement-at-Buffer.md": {
+      "id": 133,
+      "mtime": 1760043224825,
+      "path": "Readwise/Full Document Contents/Articles/01k1jq8nvmd0c584cecaa557hy-2025-08-01-How-We-Encourage-Self-Improvement-at-Buffer.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k1jmd2kvn10b0c23dqmsthfj-2025-08-01-After-You-Make-a-Strategic-Error.md": {
+      "id": 134,
+      "mtime": 1760043224808,
+      "path": "Readwise/Full Document Contents/Articles/01k1jmd2kvn10b0c23dqmsthfj-2025-08-01-After-You-Make-a-Strategic-Error.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k1ef58n1fhd4zj05gdaxsy8k-2025-07-30-The-End-Is-Where-You-Begin.md": {
+      "id": 135,
+      "mtime": 1760043224789,
+      "path": "Readwise/Full Document Contents/Articles/01k1ef58n1fhd4zj05gdaxsy8k-2025-07-30-The-End-Is-Where-You-Begin.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k16d82rs9xz1h9k28wwexdby-2025-07-27-You’re-Looking-for-Help-in-the-Wrong-Place.md": {
+      "id": 136,
+      "mtime": 1760043224770,
+      "path": "Readwise/Full Document Contents/Articles/01k16d82rs9xz1h9k28wwexdby-2025-07-27-You’re-Looking-for-Help-in-the-Wrong-Place.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k130xxfp04e1bmejd7t9z7mj-2025-07-07-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md": {
+      "id": 137,
+      "mtime": 1760043225299,
+      "path": "Readwise/Full Document Contents/Articles/01k130xxfp04e1bmejd7t9z7mj-2025-07-07-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md"
+    },
+    "Readwise/Full Document Contents/Articles/01k130x2073hf3txwwmbqmdyej-2025-07-26-Settling-for-Better.md": {
+      "id": 138,
+      "mtime": 1760043224756,
+      "path": "Readwise/Full Document Contents/Articles/01k130x2073hf3txwwmbqmdyej-2025-07-26-Settling-for-Better.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k130s0e6zr0nqkkpeha14yn2-2025-06-17-I-Deleted-My-Second-Brain.md": {
+      "id": 139,
+      "mtime": 1760043225906,
+      "path": "Readwise/Full Document Contents/Articles/01k130s0e6zr0nqkkpeha14yn2-2025-06-17-I-Deleted-My-Second-Brain.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0x7s8qfzfhn07fcjjbq3mc2-2025-07-24-The-Most-Important-Word-in-the-English-Language.md": {
+      "id": 140,
+      "mtime": 1760043224739,
+      "path": "Readwise/Full Document Contents/Articles/01k0x7s8qfzfhn07fcjjbq3mc2-2025-07-24-The-Most-Important-Word-in-the-English-Language.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0wr3bdnk20grcfe05k2ycek-2025-07-23-The-Most-Underrated-Healing-Tool.md": {
+      "id": 141,
+      "mtime": 1760043224722,
+      "path": "Readwise/Full Document Contents/Articles/01k0wr3bdnk20grcfe05k2ycek-2025-07-23-The-Most-Underrated-Healing-Tool.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0szqb38rsfjbc6e4nw248dg-2025-07-22-Don’t-Let-Your-B2B-Pricing-Devalue-Your-AI-Innovation.md": {
+      "id": 142,
+      "mtime": 1760043224668,
+      "path": "Readwise/Full Document Contents/Articles/01k0szqb38rsfjbc6e4nw248dg-2025-07-22-Don’t-Let-Your-B2B-Pricing-Devalue-Your-AI-Innovation.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0s4rrxd4ntvncsgj4hm6yc6-2025-07-22-Is-the-Median-Far-Away-From-the-Mean-(For-Variables-With-Finite-Variance).md": {
+      "id": 143,
+      "mtime": 1760043224651,
+      "path": "Readwise/Full Document Contents/Articles/01k0s4rrxd4ntvncsgj4hm6yc6-2025-07-22-Is-the-Median-Far-Away-From-the-Mean-(For-Variables-With-Finite-Variance).md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0h0mkgsy9hfe6896g9eh06r-2025-07-19-Finding-the-Difficult-Work.md": {
+      "id": 144,
+      "mtime": 1760043224637,
+      "path": "Readwise/Full Document Contents/Articles/01k0h0mkgsy9hfe6896g9eh06r-2025-07-19-Finding-the-Difficult-Work.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k0gpjt97x2vd9stmkyxv52vq-2025-07-19-Welcome-to-our-newsletter!.md": {
+      "id": 145,
+      "mtime": 1763535271719,
+      "path": "Readwise/Full Document Contents/Articles/01k0gpjt97x2vd9stmkyxv52vq-2025-07-19-Welcome-to-our-newsletter!.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k09b86jeyxe4r8hherzf21d5-2025-07-16-Overappreciated.md": {
+      "id": 146,
+      "mtime": 1760043224618,
+      "path": "Readwise/Full Document Contents/Articles/01k09b86jeyxe4r8hherzf21d5-2025-07-16-Overappreciated.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k06a8z4h0v4prfn9296rabtv-2025-07-14-AI-Is-Killing-the-Web.-Can-Anything-Save-It.md": {
+      "id": 147,
+      "mtime": 1760043224586,
+      "path": "Readwise/Full Document Contents/Articles/01k06a8z4h0v4prfn9296rabtv-2025-07-14-AI-Is-Killing-the-Web.-Can-Anything-Save-It.md"
+    },
+    "Readwise/Full Document Contents/Articles/01k024wjwmqb13rcx9q3s9xqt3-2025-07-13-Dispatch-From-Vermont.md": {
+      "id": 148,
+      "mtime": 1760043224571,
+      "path": "Readwise/Full Document Contents/Articles/01k024wjwmqb13rcx9q3s9xqt3-2025-07-13-Dispatch-From-Vermont.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jzysap8gae3yrpj5garaj1pj-2024-06-29-How-Do-You-Organize-3,000-Books-Touring-My-Personal-Library.md": {
+      "id": 149,
+      "mtime": 1760043225688,
+      "path": "Readwise/Full Document Contents/Articles/01jzysap8gae3yrpj5garaj1pj-2024-06-29-How-Do-You-Organize-3,000-Books-Touring-My-Personal-Library.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jzxf39402ew50w2brdvbqyrf-2025-06-26-The-Best-E-Readers-for-2025.md": {
+      "id": 150,
+      "mtime": 1760043225805,
+      "path": "Readwise/Full Document Contents/Articles/01jzxf39402ew50w2brdvbqyrf-2025-06-26-The-Best-E-Readers-for-2025.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jzwk5bdjf1mvs9bcnmg7dk6m-2025-07-11-How-We-Plan-Retreats,-After-Hosting-14-over-12+-Years-(+-Get-Our-Retreat-Planning-Playbook!).md": {
+      "id": 151,
+      "mtime": 1760043244398,
+      "path": "Readwise/Full Document Contents/Articles/01jzwk5bdjf1mvs9bcnmg7dk6m-2025-07-11-How-We-Plan-Retreats,-After-Hosting-14-over-12+-Years-(+-Get-Our-Retreat-Planning-Playbook!).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jztkr2bwgm036jnef9fn3k0y-2025-07-10-Notes-to-myself.md": {
+      "id": 152,
+      "mtime": 1760043225922,
+      "path": "Readwise/Full Document Contents/Articles/01jztkr2bwgm036jnef9fn3k0y-2025-07-10-Notes-to-myself.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jzt7zpv82yazb2c8y3sjespk-2025-07-10-What-Ugly-Dolls-Teach-Us.md": {
+      "id": 153,
+      "mtime": 1760043224554,
+      "path": "Readwise/Full Document Contents/Articles/01jzt7zpv82yazb2c8y3sjespk-2025-07-10-What-Ugly-Dolls-Teach-Us.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jza7ykpmh3madcfsajxcq8pd-2015-06-28-Buzzer-Management.md": {
+      "id": 154,
+      "mtime": 1760043224402,
+      "path": "Readwise/Full Document Contents/Articles/01jza7ykpmh3madcfsajxcq8pd-2015-06-28-Buzzer-Management.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jz811gpnpmrqrr6w677qg5zj-2025-07-03-I-Work-Full-Time-—-Here’s-the-No-Pressure-System-That-Helped-Me-Stay-Consistent-on-Social-Media.md": {
+      "id": 155,
+      "mtime": 1760043224533,
+      "path": "Readwise/Full Document Contents/Articles/01jz811gpnpmrqrr6w677qg5zj-2025-07-03-I-Work-Full-Time-—-Here’s-the-No-Pressure-System-That-Helped-Me-Stay-Consistent-on-Social-Media.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jz3ajs1en6mre9ah4t9y2w92-2021-01-22-Creativity-faucet-Increase-your-creativity.md": {
+      "id": 156,
+      "mtime": 1760043224384,
+      "path": "Readwise/Full Document Contents/Articles/01jz3ajs1en6mre9ah4t9y2w92-2021-01-22-Creativity-faucet-Increase-your-creativity.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jz2j59hvr6884m79ywaw91q8-2025-07-01-Humans-Are-the-New-Luxury-Goods.md": {
+      "id": 157,
+      "mtime": 1760043224508,
+      "path": "Readwise/Full Document Contents/Articles/01jz2j59hvr6884m79ywaw91q8-2025-07-01-Humans-Are-the-New-Luxury-Goods.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jyygcv8rxp20myakzd6askf3-2025-06-29-A-Billion-Choices.md": {
+      "id": 158,
+      "mtime": 1760043224466,
+      "path": "Readwise/Full Document Contents/Articles/01jyygcv8rxp20myakzd6askf3-2025-06-29-A-Billion-Choices.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jypf47j6j2t0de02bszs2bvn-2025-06-29-Congested-Equilibrium.md": {
+      "id": 159,
+      "mtime": 1760043224482,
+      "path": "Readwise/Full Document Contents/Articles/01jypf47j6j2t0de02bszs2bvn-2025-06-29-Congested-Equilibrium.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jy74jm6z8kk1q694wb4756d8-2025-06-20-Notes-on-the-Resistant-Reader.md": {
+      "id": 160,
+      "mtime": 1760043224350,
+      "path": "Readwise/Full Document Contents/Articles/01jy74jm6z8kk1q694wb4756d8-2025-06-20-Notes-on-the-Resistant-Reader.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jy4xdfk9df8h1c10agvagsth-2025-06-19-Making-the-Most-of-11-Meetings-With-Your-Boss.md": {
+      "id": 161,
+      "mtime": 1760043225975,
+      "path": "Readwise/Full Document Contents/Articles/01jy4xdfk9df8h1c10agvagsth-2025-06-19-Making-the-Most-of-11-Meetings-With-Your-Boss.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jy0jye784cnqdbr6hzar5brg-2025-06-18-Throw-Away-the-Scales.md": {
+      "id": 162,
+      "mtime": 1760043224443,
+      "path": "Readwise/Full Document Contents/Articles/01jy0jye784cnqdbr6hzar5brg-2025-06-18-Throw-Away-the-Scales.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jxysbbzmfyqq5pd97zzprfj2-2025-06-17-Where-AI-Provides-Value.md": {
+      "id": 163,
+      "mtime": 1760043224420,
+      "path": "Readwise/Full Document Contents/Articles/01jxysbbzmfyqq5pd97zzprfj2-2025-06-17-Where-AI-Provides-Value.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jxwej9zr3kts5c0egkftm408-2025-06-16-Building-Your-Own-Mini-ChatGPT-with-R-From-Markov-Chains-to-Transformers!.md": {
+      "id": 164,
+      "mtime": 1760043226456,
+      "path": "Readwise/Full Document Contents/Articles/01jxwej9zr3kts5c0egkftm408-2025-06-16-Building-Your-Own-Mini-ChatGPT-with-R-From-Markov-Chains-to-Transformers!.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jxjvhmwtxwpnb2z03twgy9ak-2025-06-12-Make-No-Mistake,-Software-Is-a-Supply-Chain-and-It’s-Under-Attack.md": {
+      "id": 165,
+      "mtime": 1760043224326,
+      "path": "Readwise/Full Document Contents/Articles/01jxjvhmwtxwpnb2z03twgy9ak-2025-06-12-Make-No-Mistake,-Software-Is-a-Supply-Chain-and-It’s-Under-Attack.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jx12pkkf7bx9wz9k9709m4bc-2025-06-07-Getting-Past-Procastination.md": {
+      "id": 166,
+      "mtime": 1760043224299,
+      "path": "Readwise/Full Document Contents/Articles/01jx12pkkf7bx9wz9k9709m4bc-2025-06-07-Getting-Past-Procastination.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jwegh1bb03nt3a4w5f3qyfj8-2025-05-29-Standing-Out-in-a-Zero-Click-World-Starts-With-Stronger-Collaboration.md": {
+      "id": 167,
+      "mtime": 1760043224277,
+      "path": "Readwise/Full Document Contents/Articles/01jwegh1bb03nt3a4w5f3qyfj8-2025-05-29-Standing-Out-in-a-Zero-Click-World-Starts-With-Stronger-Collaboration.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jwcfqaqp4xhnnfxzjexd9qs3-2025-05-28-Desire-Isn’t-the-Problem.-This-Is..md": {
+      "id": 168,
+      "mtime": 1760043224257,
+      "path": "Readwise/Full Document Contents/Articles/01jwcfqaqp4xhnnfxzjexd9qs3-2025-05-28-Desire-Isn’t-the-Problem.-This-Is..md"
+    },
+    "Readwise/Full Document Contents/Articles/01jvyr4xqg08qvkqg4de6fpjpe-2025-05-16-Google-Review-Ai-First-Puts-Humans-First.md": {
+      "id": 169,
+      "mtime": 1760043224221,
+      "path": "Readwise/Full Document Contents/Articles/01jvyr4xqg08qvkqg4de6fpjpe-2025-05-16-Google-Review-Ai-First-Puts-Humans-First.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jvsx76z5x6w39v3hg7em773z-2025-05-21-It’s-Not-About-“Nice”.md": {
+      "id": 170,
+      "mtime": 1760043224241,
+      "path": "Readwise/Full Document Contents/Articles/01jvsx76z5x6w39v3hg7em773z-2025-05-21-It’s-Not-About-“Nice”.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jvhssb8k4aqtxgfb68twa6fv-2025-05-18-Most-return-to-office-policies-are-just-lazy-leadership.md": {
+      "id": 171,
+      "mtime": 1760043224204,
+      "path": "Readwise/Full Document Contents/Articles/01jvhssb8k4aqtxgfb68twa6fv-2025-05-18-Most-return-to-office-policies-are-just-lazy-leadership.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jvh7926tbj58sev6q8djbpnw-2025-01-29-The-Future-of-the-Office--McKinsey.md": {
+      "id": 172,
+      "mtime": 1760043224171,
+      "path": "Readwise/Full Document Contents/Articles/01jvh7926tbj58sev6q8djbpnw-2025-01-29-The-Future-of-the-Office--McKinsey.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jtjh8epka2xjn1ncpjq0svw3-2012-12-05-If-You-Want-to-Be-a-Billionaire,-Start-Acting-Like-One.md": {
+      "id": 173,
+      "mtime": 1760043226358,
+      "path": "Readwise/Full Document Contents/Articles/01jtjh8epka2xjn1ncpjq0svw3-2012-12-05-If-You-Want-to-Be-a-Billionaire,-Start-Acting-Like-One.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jthtb0nzvk5snyymahxe1y30-2025-05-06-A-Little-Folding-of-the-Hands-to-Sleep.md": {
+      "id": 174,
+      "mtime": 1760043224151,
+      "path": "Readwise/Full Document Contents/Articles/01jthtb0nzvk5snyymahxe1y30-2025-05-06-A-Little-Folding-of-the-Hands-to-Sleep.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt9bem9s01jaw1qvzb7bqva3-2022-05-15-Pluralistic-AI-and-the-fatfinger-economy-(02-May-2025).md": {
+      "id": 175,
+      "mtime": 1760043224114,
+      "path": "Readwise/Full Document Contents/Articles/01jt9bem9s01jaw1qvzb7bqva3-2022-05-15-Pluralistic-AI-and-the-fatfinger-economy-(02-May-2025).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt8mpxmyppz9grm21rf6yd97-2025-04-03-Moving-Generative-AI-from-Experimentation-to-Operation.md": {
+      "id": 176,
+      "mtime": 1760043225504,
+      "path": "Readwise/Full Document Contents/Articles/01jt8mpxmyppz9grm21rf6yd97-2025-04-03-Moving-Generative-AI-from-Experimentation-to-Operation.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt8mmxfemay6762e7qnkqv23--Moving-Generative-AI-from-Experimentation-to-Operation---MovingGenerativeAIFromExperimentationToOperation.pdf.md": {
+      "id": 177,
+      "mtime": 1760043225524,
+      "path": "Readwise/Full Document Contents/Articles/01jt8mmxfemay6762e7qnkqv23--Moving-Generative-AI-from-Experimentation-to-Operation---MovingGenerativeAIFromExperimentationToOperation.pdf.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt8mapcbj1595dq86d8pj1x0-2025-04-24-You-Can-Be-a-Great-Designer-and-Be-Completely-Unknown.md": {
+      "id": 178,
+      "mtime": 1760043224086,
+      "path": "Readwise/Full Document Contents/Articles/01jt8mapcbj1595dq86d8pj1x0-2025-04-24-You-Can-Be-a-Great-Designer-and-Be-Completely-Unknown.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt8hf9epxhw941zahj292vza-2025-02-12-How-Top-Performers-Use-Innovation-to-Grow-Within-and-Beyond-the-Core.md": {
+      "id": 179,
+      "mtime": 1760043224004,
+      "path": "Readwise/Full Document Contents/Articles/01jt8hf9epxhw941zahj292vza-2025-02-12-How-Top-Performers-Use-Innovation-to-Grow-Within-and-Beyond-the-Core.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt7xb68fq033ezp90ax2kn6n-2025-05-02-What-Civilization-Can-Learn-From-Pizza.md": {
+      "id": 180,
+      "mtime": 1760043224068,
+      "path": "Readwise/Full Document Contents/Articles/01jt7xb68fq033ezp90ax2kn6n-2025-05-02-What-Civilization-Can-Learn-From-Pizza.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt5j82k0zqjz2t0hwyng1m3b-2025-05-01-How-CEOs-Can-Outcompete-by-Building-New-B2C-Businesses.md": {
+      "id": 181,
+      "mtime": 1760043224026,
+      "path": "Readwise/Full Document Contents/Articles/01jt5j82k0zqjz2t0hwyng1m3b-2025-05-01-How-CEOs-Can-Outcompete-by-Building-New-B2C-Businesses.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt55034yaepkm9nzbmh6af1x-2025-05-01-Doubling-Down-on-Disaster.md": {
+      "id": 182,
+      "mtime": 1760043224052,
+      "path": "Readwise/Full Document Contents/Articles/01jt55034yaepkm9nzbmh6af1x-2025-05-01-Doubling-Down-on-Disaster.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jt48fzw6prsscqbqrga4bcd1-2025-04-30-A-Simple-Question-That-Brought-Me-Alive.md": {
+      "id": 183,
+      "mtime": 1760043223988,
+      "path": "Readwise/Full Document Contents/Articles/01jt48fzw6prsscqbqrga4bcd1-2025-04-30-A-Simple-Question-That-Brought-Me-Alive.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jsktnvh95vgq34240mpnsqcf-2025-04-24-Pluralistic-Every-Complex-Ecosystem-Has-Parasites.md": {
+      "id": 184,
+      "mtime": 1760043223954,
+      "path": "Readwise/Full Document Contents/Articles/01jsktnvh95vgq34240mpnsqcf-2025-04-24-Pluralistic-Every-Complex-Ecosystem-Has-Parasites.md"
+    },
+    "Readwise/Full Document Contents/Articles/01js1ewhstbdq05fzmvwjkqtc2-2025-04-17-How-to-Enter-a-‘Flow-State’-on-Command-Peak-Performance-Mind-Hack-Explained-in-7-Minutes.md": {
+      "id": 185,
+      "mtime": 1760043225958,
+      "path": "Readwise/Full Document Contents/Articles/01js1ewhstbdq05fzmvwjkqtc2-2025-04-17-How-to-Enter-a-‘Flow-State’-on-Command-Peak-Performance-Mind-Hack-Explained-in-7-Minutes.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jrj4s1ytyc4efvtyk64fef1v-2025-04-10-Paradoxes-of-Segmentation-and-Discrimination-in-Insurance.md": {
+      "id": 186,
+      "mtime": 1760043223922,
+      "path": "Readwise/Full Document Contents/Articles/01jrj4s1ytyc4efvtyk64fef1v-2025-04-10-Paradoxes-of-Segmentation-and-Discrimination-in-Insurance.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqxnb8wzgpmraxbmdqh47dse-2025-04-02-Web-3.0-Requires-Data-Integrity.md": {
+      "id": 187,
+      "mtime": 1760043226623,
+      "path": "Readwise/Full Document Contents/Articles/01jqxnb8wzgpmraxbmdqh47dse-2025-04-02-Web-3.0-Requires-Data-Integrity.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqvkvt088n7be2pwnaj75mnq-2024-09-28-The-Zombocom-Problem.md": {
+      "id": 188,
+      "mtime": 1760043223873,
+      "path": "Readwise/Full Document Contents/Articles/01jqvkvt088n7be2pwnaj75mnq-2024-09-28-The-Zombocom-Problem.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqpn2vx92jmkevws19vtvsv0-2025-03-31-S02-E01-Greta---No-One-Is-Too-Small-to-Make-a-Difference.md": {
+      "id": 189,
+      "mtime": 1760043223899,
+      "path": "Readwise/Full Document Contents/Articles/01jqpn2vx92jmkevws19vtvsv0-2025-03-31-S02-E01-Greta---No-One-Is-Too-Small-to-Make-a-Difference.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqm9416b6xcw7d7c0nzyq9kj-2025-03-30-The-Shape-of-Network-Society.md": {
+      "id": 190,
+      "mtime": 1760043223852,
+      "path": "Readwise/Full Document Contents/Articles/01jqm9416b6xcw7d7c0nzyq9kj-2025-03-30-The-Shape-of-Network-Society.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqdgrj9jbsddw8ve21a6ytyx-2025-03-27-How-Traveling-Inspires-My-Art-Process.md": {
+      "id": 191,
+      "mtime": 1760043223818,
+      "path": "Readwise/Full Document Contents/Articles/01jqdgrj9jbsddw8ve21a6ytyx-2025-03-27-How-Traveling-Inspires-My-Art-Process.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqczb5yapytk9x17d8pnr97x-2025-03-27-Pockets-of-Belfast.md": {
+      "id": 192,
+      "mtime": 1760043223836,
+      "path": "Readwise/Full Document Contents/Articles/01jqczb5yapytk9x17d8pnr97x-2025-03-27-Pockets-of-Belfast.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jqcb0mc3t0vr49zsgt7sgg1g-2025-03-27-AI-Wakes-The-Sleeping-Giant-Continuous-Improvement-Will-Finally-Fulfill-Its-Promise.md": {
+      "id": 193,
+      "mtime": 1760043244989,
+      "path": "Readwise/Full Document Contents/Articles/01jqcb0mc3t0vr49zsgt7sgg1g-2025-03-27-AI-Wakes-The-Sleeping-Giant-Continuous-Improvement-Will-Finally-Fulfill-Its-Promise.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jq729q38f8nsckazf0vqe4v6-2025-03-25-Escaping-POC-Purgatory-Evaluation-Driven-Development-for-AI-Systems.md": {
+      "id": 194,
+      "mtime": 1760043244853,
+      "path": "Readwise/Full Document Contents/Articles/01jq729q38f8nsckazf0vqe4v6-2025-03-25-Escaping-POC-Purgatory-Evaluation-Driven-Development-for-AI-Systems.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jpmjw6y3s0dfznnefrb06w5v-2025-03-18-Congratulations,-You-Are-Now-an-AI-Company.md": {
+      "id": 195,
+      "mtime": 1760043226642,
+      "path": "Readwise/Full Document Contents/Articles/01jpmjw6y3s0dfznnefrb06w5v-2025-03-18-Congratulations,-You-Are-Now-an-AI-Company.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jpm1pf5eeqs8q6zyx2tfavyx-2025-03-18-Pluralistic-AI-Can't-Do-Your-Job.md": {
+      "id": 196,
+      "mtime": 1760043223774,
+      "path": "Readwise/Full Document Contents/Articles/01jpm1pf5eeqs8q6zyx2tfavyx-2025-03-18-Pluralistic-AI-Can't-Do-Your-Job.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jpgejmr241yasea42ab9srz2-2025-02-18-This-Habit-Will-Outlast-Every-Notes-App.md": {
+      "id": 197,
+      "mtime": 1760043225327,
+      "path": "Readwise/Full Document Contents/Articles/01jpgejmr241yasea42ab9srz2-2025-02-18-This-Habit-Will-Outlast-Every-Notes-App.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jpb9np5yqmf1h1bkd1n0k8n0-2009-03-13-Zack-Weinberg.md": {
+      "id": 198,
+      "mtime": 1760043225474,
+      "path": "Readwise/Full Document Contents/Articles/01jpb9np5yqmf1h1bkd1n0k8n0-2009-03-13-Zack-Weinberg.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jpa59hbh9k7f21fegf6d52r9--(10)-Post.md": {
+      "id": 199,
+      "mtime": 1760043223721,
+      "path": "Readwise/Full Document Contents/Articles/01jpa59hbh9k7f21fegf6d52r9--(10)-Post.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jp89dwx8x5wza4t563f9x24n-2025-03-13-Pluralistic-The-Future-of-Amazon-Coders-Is-the-Present-of-Amazon-Warehouse-Workers.md": {
+      "id": 200,
+      "mtime": 1760043223741,
+      "path": "Readwise/Full Document Contents/Articles/01jp89dwx8x5wza4t563f9x24n-2025-03-13-Pluralistic-The-Future-of-Amazon-Coders-Is-the-Present-of-Amazon-Warehouse-Workers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jp2p5e9apnyh7k6r5f78g18k-2025-03-11-Stop-Making-Art-When-You-Need-Weapons.md": {
+      "id": 201,
+      "mtime": 1760043223704,
+      "path": "Readwise/Full Document Contents/Articles/01jp2p5e9apnyh7k6r5f78g18k-2025-03-11-Stop-Making-Art-When-You-Need-Weapons.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jp1wc17qfckcpnqr53g020wa-2025-03-11-How-the-Moving-Image-Has-Become-the-Medium-of-Record-Part-1.md": {
+      "id": 202,
+      "mtime": 1760043226044,
+      "path": "Readwise/Full Document Contents/Articles/01jp1wc17qfckcpnqr53g020wa-2025-03-11-How-the-Moving-Image-Has-Become-the-Medium-of-Record-Part-1.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jnpqk2afz71xnr1m2dg0xmgq-2025-03-03-The-Evil-Vector.md": {
+      "id": 203,
+      "mtime": 1760043226010,
+      "path": "Readwise/Full Document Contents/Articles/01jnpqk2afz71xnr1m2dg0xmgq-2025-03-03-The-Evil-Vector.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jnm5xpc9e1tdzq7cvzgv0j8s-2025-03-05-Why-I-took-a-sledgehammer-to-my-life.md": {
+      "id": 204,
+      "mtime": 1760043223688,
+      "path": "Readwise/Full Document Contents/Articles/01jnm5xpc9e1tdzq7cvzgv0j8s-2025-03-05-Why-I-took-a-sledgehammer-to-my-life.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jnhw0xkmsnd82w1srjjebb43-2025-03-04-It’s-Time-to-Change-the-Rules-for-Defining-the-Value-of-B2B-Data.md": {
+      "id": 205,
+      "mtime": 1760043223670,
+      "path": "Readwise/Full Document Contents/Articles/01jnhw0xkmsnd82w1srjjebb43-2025-03-04-It’s-Time-to-Change-the-Rules-for-Defining-the-Value-of-B2B-Data.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jngmqzwx65adhg4aaks2yb6c-2025-03-04-Radar-Trends-to-Watch-March-2025.md": {
+      "id": 206,
+      "mtime": 1760043225990,
+      "path": "Readwise/Full Document Contents/Articles/01jngmqzwx65adhg4aaks2yb6c-2025-03-04-Radar-Trends-to-Watch-March-2025.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jn12hsnsxgx5hnfvrcc8z4g1-2025-02-26-An-iCloud-Backdoor-Would-Make-Our-Phones-Less-Safe.md": {
+      "id": 207,
+      "mtime": 1760043223599,
+      "path": "Readwise/Full Document Contents/Articles/01jn12hsnsxgx5hnfvrcc8z4g1-2025-02-26-An-iCloud-Backdoor-Would-Make-Our-Phones-Less-Safe.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jmdhkpbfs28fpcbc0ez7sybq-2025-02-17-Enhancing-the-performance-of-gradient-boosting-trees-on-regression-problems.md": {
+      "id": 208,
+      "mtime": 1760043226426,
+      "path": "Readwise/Full Document Contents/Articles/01jmdhkpbfs28fpcbc0ez7sybq-2025-02-17-Enhancing-the-performance-of-gradient-boosting-trees-on-regression-problems.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jm8sw0f88cj4str729mkh7s3-2025-02-16-Burn-Notice.md": {
+      "id": 209,
+      "mtime": 1760043226253,
+      "path": "Readwise/Full Document Contents/Articles/01jm8sw0f88cj4str729mkh7s3-2025-02-16-Burn-Notice.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jm3xfw6qwppaw4kfx28pyjrn-2025-02-14-How-Advanced-Analytics-Can-Transform-Your-CX-Practice.md": {
+      "id": 210,
+      "mtime": 1760043225443,
+      "path": "Readwise/Full Document Contents/Articles/01jm3xfw6qwppaw4kfx28pyjrn-2025-02-14-How-Advanced-Analytics-Can-Transform-Your-CX-Practice.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jm1z9pv2fb5fr9wvnhy4ktd4-2025-02-14-Returning-to-the-office-Focus-more-on-practices-and-less-on-the-policy.md": {
+      "id": 211,
+      "mtime": 1760043226543,
+      "path": "Readwise/Full Document Contents/Articles/01jm1z9pv2fb5fr9wvnhy4ktd4-2025-02-14-Returning-to-the-office-Focus-more-on-practices-and-less-on-the-policy.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jk8gajmvzg02nvf7ar9mkef5-2025-02-04-Radar-Trends-to-Watch-February-2025.md": {
+      "id": 212,
+      "mtime": 1760043223544,
+      "path": "Readwise/Full Document Contents/Articles/01jk8gajmvzg02nvf7ar9mkef5-2025-02-04-Radar-Trends-to-Watch-February-2025.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jjxxj2q21xf3p2fsacvhqkrr-2025-01-31-The-Nature-of-Human-Stupidity-Explained-by-the-48-Laws-of-Power-Author-Robert-Greene.md": {
+      "id": 213,
+      "mtime": 1760043223619,
+      "path": "Readwise/Full Document Contents/Articles/01jjxxj2q21xf3p2fsacvhqkrr-2025-01-31-The-Nature-of-Human-Stupidity-Explained-by-the-48-Laws-of-Power-Author-Robert-Greene.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jj7s13mgwyb8yynthhw7nqv7-2025-01-22-Migration-Guide-From-Windows-to-Fedora-Linux.md": {
+      "id": 214,
+      "mtime": 1760043244895,
+      "path": "Readwise/Full Document Contents/Articles/01jj7s13mgwyb8yynthhw7nqv7-2025-01-22-Migration-Guide-From-Windows-to-Fedora-Linux.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jhxksjz3h222nc500qbxvbwx-2024-12-21-Proud-to-be-a-blockhead-(permalink).md": {
+      "id": 215,
+      "mtime": 1760043223638,
+      "path": "Readwise/Full Document Contents/Articles/01jhxksjz3h222nc500qbxvbwx-2024-12-21-Proud-to-be-a-blockhead-(permalink).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jhp4kfkm3220e9249x83am4p-2025-01-15-The-gift-of-losing.md": {
+      "id": 216,
+      "mtime": 1760043223524,
+      "path": "Readwise/Full Document Contents/Articles/01jhp4kfkm3220e9249x83am4p-2025-01-15-The-gift-of-losing.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jhmc10vjcngqyf7v2ynw0pz8-2025-01-15-More-“Be,”-Less-“Do”.md": {
+      "id": 217,
+      "mtime": 1760043223509,
+      "path": "Readwise/Full Document Contents/Articles/01jhmc10vjcngqyf7v2ynw0pz8-2025-01-15-More-“Be,”-Less-“Do”.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jha7zd6fg4twm6gz9w6kjwft-2004-04-29-The-mentality-of-Homo-interneticus-Some-Ongian-postulates.md": {
+      "id": 218,
+      "mtime": 1760043244747,
+      "path": "Readwise/Full Document Contents/Articles/01jha7zd6fg4twm6gz9w6kjwft-2004-04-29-The-mentality-of-Homo-interneticus-Some-Ongian-postulates.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jh18d2d01ac490vv4ga3w5be-2025-01-07-The-46-Best-Pens-for-2025-Gel,-Ballpoint,-Rollerball,-and-Fountain-Pens.md": {
+      "id": 219,
+      "mtime": 1760043226704,
+      "path": "Readwise/Full Document Contents/Articles/01jh18d2d01ac490vv4ga3w5be-2025-01-07-The-46-Best-Pens-for-2025-Gel,-Ballpoint,-Rollerball,-and-Fountain-Pens.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jfy7c16zww5yj8nr7gfevtv2-2024-07-03-Don’t-Cede-the-Lead.md": {
+      "id": 220,
+      "mtime": 1760043223492,
+      "path": "Readwise/Full Document Contents/Articles/01jfy7c16zww5yj8nr7gfevtv2-2024-07-03-Don’t-Cede-the-Lead.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jfqqjt7bv79rhrj87mqzer9r-2024-12-22-Mastery-Isn’t-Enough.md": {
+      "id": 221,
+      "mtime": 1760043223474,
+      "path": "Readwise/Full Document Contents/Articles/01jfqqjt7bv79rhrj87mqzer9r-2024-12-22-Mastery-Isn’t-Enough.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jfga0pnx6vhwkwjex755sx7k-2024-12-22-The-Three-Bricklayers-Story.md": {
+      "id": 222,
+      "mtime": 1760043223454,
+      "path": "Readwise/Full Document Contents/Articles/01jfga0pnx6vhwkwjex755sx7k-2024-12-22-The-Three-Bricklayers-Story.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jff7mk5th7nkpx4392zbar1g-2024-12-19-Richard-Feynman-Enthusiastically-Explains-How-to-Think-Like-a-Physicist-in-His-Series-Fun-to-Imagine-(1983).md": {
+      "id": 223,
+      "mtime": 1760043244723,
+      "path": "Readwise/Full Document Contents/Articles/01jff7mk5th7nkpx4392zbar1g-2024-12-19-Richard-Feynman-Enthusiastically-Explains-How-to-Think-Like-a-Physicist-in-His-Series-Fun-to-Imagine-(1983).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jff309x7t6475m487a2z4vnj-2024-12-19-What-it-takes-to-make-separations-a-competitive-difference-maker.md": {
+      "id": 224,
+      "mtime": 1760043226523,
+      "path": "Readwise/Full Document Contents/Articles/01jff309x7t6475m487a2z4vnj-2024-12-19-What-it-takes-to-make-separations-a-competitive-difference-maker.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jetakj0sa3xc4x01xgxkhk9v-2024-12-11-@GossiTheDog@cyberplace.social.md": {
+      "id": 225,
+      "mtime": 1760043244814,
+      "path": "Readwise/Full Document Contents/Articles/01jetakj0sa3xc4x01xgxkhk9v-2024-12-11-@GossiTheDog@cyberplace.social.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jes3az67279qjs458ax8rdtp-2024-12-10-Are-Adults-Forgetting-How-to-Read.md": {
+      "id": 226,
+      "mtime": 1760043223423,
+      "path": "Readwise/Full Document Contents/Articles/01jes3az67279qjs458ax8rdtp-2024-12-10-Are-Adults-Forgetting-How-to-Read.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jegy2gra4cj69mxw0np30bhc-2024-12-07-Stop-Being-So-Right-All-the-Time.md": {
+      "id": 227,
+      "mtime": 1760043223403,
+      "path": "Readwise/Full Document Contents/Articles/01jegy2gra4cj69mxw0np30bhc-2024-12-07-Stop-Being-So-Right-All-the-Time.md"
+    },
+    "Readwise/Full Document Contents/Articles/01je3fxms4f44f89cezzca982f-2024-11-27-Tools-of-Cooperation-Theory.md": {
+      "id": 228,
+      "mtime": 1760043223353,
+      "path": "Readwise/Full Document Contents/Articles/01je3fxms4f44f89cezzca982f-2024-11-27-Tools-of-Cooperation-Theory.md"
+    },
+    "Readwise/Full Document Contents/Articles/01je3d04p3wfhrrf69kwkzrm01-2024-12-01-Where-to-Draw-the-Line.md": {
+      "id": 229,
+      "mtime": 1760043223374,
+      "path": "Readwise/Full Document Contents/Articles/01je3d04p3wfhrrf69kwkzrm01-2024-12-01-Where-to-Draw-the-Line.md"
+    },
+    "Readwise/Full Document Contents/Articles/01je1nr41k6wrpnrm4fyh09dy6-2006-12-19-Economics-Discovers-Its-Feelings.md": {
+      "id": 230,
+      "mtime": 1760043223315,
+      "path": "Readwise/Full Document Contents/Articles/01je1nr41k6wrpnrm4fyh09dy6-2006-12-19-Economics-Discovers-Its-Feelings.md"
+    },
+    "Readwise/Full Document Contents/Articles/01je0xxpgmeyd1xjr93x72qkcb-2021-04-26-We-were-promised-Strong-AI,-but-instead-we-got-metadata-analysis.md": {
+      "id": 231,
+      "mtime": 1760043226234,
+      "path": "Readwise/Full Document Contents/Articles/01je0xxpgmeyd1xjr93x72qkcb-2021-04-26-We-were-promised-Strong-AI,-but-instead-we-got-metadata-analysis.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdy8y71vjypxx166j6zdp7b9-2024-11-30-Sham-urbanity-dispatches-Smithfield-to-the-knacker’s-yard.md": {
+      "id": 232,
+      "mtime": 1760043225879,
+      "path": "Readwise/Full Document Contents/Articles/01jdy8y71vjypxx166j6zdp7b9-2024-11-30-Sham-urbanity-dispatches-Smithfield-to-the-knacker’s-yard.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jds2bdk5s4qbdt24rk2z11zf-2021-05-09-The-Memex-Method.md": {
+      "id": 233,
+      "mtime": 1760043245033,
+      "path": "Readwise/Full Document Contents/Articles/01jds2bdk5s4qbdt24rk2z11zf-2021-05-09-The-Memex-Method.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdr2n0vk4v4vsyqfp2jpax5e-2024-11-27-Why-Your-Gratitude-Journal-Isn’t-Working.md": {
+      "id": 234,
+      "mtime": 1760043223274,
+      "path": "Readwise/Full Document Contents/Articles/01jdr2n0vk4v4vsyqfp2jpax5e-2024-11-27-Why-Your-Gratitude-Journal-Isn’t-Working.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdqv09s90zyejkxscdfrwe8k-2024-11-27-Examining-Meta-Analysis.md": {
+      "id": 235,
+      "mtime": 1760043225534,
+      "path": "Readwise/Full Document Contents/Articles/01jdqv09s90zyejkxscdfrwe8k-2024-11-27-Examining-Meta-Analysis.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdpq6y3ahasedj9vgmy5ymea--11-FREE-Storytelling-Courses..md": {
+      "id": 236,
+      "mtime": 1760043223255,
+      "path": "Readwise/Full Document Contents/Articles/01jdpq6y3ahasedj9vgmy5ymea--11-FREE-Storytelling-Courses..md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdppbe5dmxz630x4xteg9trb-2017-03-16-The-magical-science-of-storytelling--David-JP-Phillips--TEDxStockholm.md": {
+      "id": 237,
+      "mtime": 1760043226340,
+      "path": "Readwise/Full Document Contents/Articles/01jdppbe5dmxz630x4xteg9trb-2017-03-16-The-magical-science-of-storytelling--David-JP-Phillips--TEDxStockholm.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdp5v7pjzhm3197j22pajwgk-2024-11-22-The-best-books-of-2024,-as-chosen-by-The-Economist.md": {
+      "id": 238,
+      "mtime": 1760043244929,
+      "path": "Readwise/Full Document Contents/Articles/01jdp5v7pjzhm3197j22pajwgk-2024-11-22-The-best-books-of-2024,-as-chosen-by-The-Economist.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdmt84j6197z15fwprmvzz5p-2024-11-26-Help!-How-Do-I-Cook-a-Turkey.md": {
+      "id": 239,
+      "mtime": 1760043223232,
+      "path": "Readwise/Full Document Contents/Articles/01jdmt84j6197z15fwprmvzz5p-2024-11-26-Help!-How-Do-I-Cook-a-Turkey.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdm9m34feq8wkpvtkh4yccn7-2024-11-26-Educating-a-New-Generation-of-Workers.md": {
+      "id": 240,
+      "mtime": 1760043223201,
+      "path": "Readwise/Full Document Contents/Articles/01jdm9m34feq8wkpvtkh4yccn7-2024-11-26-Educating-a-New-Generation-of-Workers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdm8per685waq1dpdf481v1g-2024-11-26-Ask-Dumb-Questions,-Embrace-Mistakes-—-And-Other-Lessons-on-Innovation--Dave-Raggio--TED.md": {
+      "id": 241,
+      "mtime": 1760043223174,
+      "path": "Readwise/Full Document Contents/Articles/01jdm8per685waq1dpdf481v1g-2024-11-26-Ask-Dumb-Questions,-Embrace-Mistakes-—-And-Other-Lessons-on-Innovation--Dave-Raggio--TED.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdhqzt4yzxt7ka1pp6sfbawn-2005-11-12-William-Bernbach.md": {
+      "id": 242,
+      "mtime": 1760043223152,
+      "path": "Readwise/Full Document Contents/Articles/01jdhqzt4yzxt7ka1pp6sfbawn-2005-11-12-William-Bernbach.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdhfaadb1nypzamtnz8dbfra-2024-11-13-MBS-How-to-Say-No.md": {
+      "id": 243,
+      "mtime": 1760043223135,
+      "path": "Readwise/Full Document Contents/Articles/01jdhfaadb1nypzamtnz8dbfra-2024-11-13-MBS-How-to-Say-No.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdhcyn3bnz8dby4m77h04mjn-2024-10-20-Conceptual-models-of-space-colonization.md": {
+      "id": 244,
+      "mtime": 1760043226407,
+      "path": "Readwise/Full Document Contents/Articles/01jdhcyn3bnz8dby4m77h04mjn-2024-10-20-Conceptual-models-of-space-colonization.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdddcmmcsvpjq19p488gqa9y-2021-03-01-What-Professional-Service-Firms-Must-Do-to-Thrive.md": {
+      "id": 245,
+      "mtime": 1760043225775,
+      "path": "Readwise/Full Document Contents/Articles/01jdddcmmcsvpjq19p488gqa9y-2021-03-01-What-Professional-Service-Firms-Must-Do-to-Thrive.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jdc58vfzvq3zv7h35gz6f9m3-2019-03-03-That-Was-Fun.md": {
+      "id": 246,
+      "mtime": 1760043223100,
+      "path": "Readwise/Full Document Contents/Articles/01jdc58vfzvq3zv7h35gz6f9m3-2019-03-03-That-Was-Fun.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jd53rvxjnwcv4a4gzks4ftwq-2024-11-20-Questions,-Not-Answers.md": {
+      "id": 247,
+      "mtime": 1760043225468,
+      "path": "Readwise/Full Document Contents/Articles/01jd53rvxjnwcv4a4gzks4ftwq-2024-11-20-Questions,-Not-Answers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jd36dam4wj165qrjbxxr1bxk-2024-11-11-How-I-do-diary-comics.-And-why..md": {
+      "id": 248,
+      "mtime": 1760043226507,
+      "path": "Readwise/Full Document Contents/Articles/01jd36dam4wj165qrjbxxr1bxk-2024-11-11-How-I-do-diary-comics.-And-why..md"
+    },
+    "Readwise/Full Document Contents/Articles/01jd36chs62g8b62tj1csdctaf-2024-11-15-Diary-Comics-with-Prompts.md": {
+      "id": 249,
+      "mtime": 1760043226276,
+      "path": "Readwise/Full Document Contents/Articles/01jd36chs62g8b62tj1csdctaf-2024-11-15-Diary-Comics-with-Prompts.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jczpm3b95x6psa424cehcvq4-2024-11-18-Using-LLM-agents-to-review-tutorials-‘in-character’-as-learners.md": {
+      "id": 250,
+      "mtime": 1760043226090,
+      "path": "Readwise/Full Document Contents/Articles/01jczpm3b95x6psa424cehcvq4-2024-11-18-Using-LLM-agents-to-review-tutorials-‘in-character’-as-learners.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jczb0x26z3xz5cay42ys350t-2024-11-18-Pluralistic-Harpercollins-Wants-Authors-to-Sign-Away-AI-Training-Rights.md": {
+      "id": 251,
+      "mtime": 1760043223005,
+      "path": "Readwise/Full Document Contents/Articles/01jczb0x26z3xz5cay42ys350t-2024-11-18-Pluralistic-Harpercollins-Wants-Authors-to-Sign-Away-AI-Training-Rights.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jcz7bs22ebjz2vhmcarxry1h--6-Words-that-are-way-more-useful-than-Strategy.md": {
+      "id": 252,
+      "mtime": 1760043225462,
+      "path": "Readwise/Full Document Contents/Articles/01jcz7bs22ebjz2vhmcarxry1h--6-Words-that-are-way-more-useful-than-Strategy.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jcxpa4h4jjxdw3h1hhpgd69p-2024-11-17-What-Matters-Not-What’s-Easy.md": {
+      "id": 253,
+      "mtime": 1760043223080,
+      "path": "Readwise/Full Document Contents/Articles/01jcxpa4h4jjxdw3h1hhpgd69p-2024-11-17-What-Matters-Not-What’s-Easy.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jcq2t4zyt5014c8kpb5ry3dq-2024-11-14-Stop-Defending-The-Three-Lines-Of-Defense.md": {
+      "id": 254,
+      "mtime": 1760043226074,
+      "path": "Readwise/Full Document Contents/Articles/01jcq2t4zyt5014c8kpb5ry3dq-2024-11-14-Stop-Defending-The-Three-Lines-Of-Defense.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jckhfwrb2cd8985wkdamh7ga--Happy-Birthday-WWW-–-Make-Money-From-Data---CYBAEA.NET.md": {
+      "id": 255,
+      "mtime": 1760043222951,
+      "path": "Readwise/Full Document Contents/Articles/01jckhfwrb2cd8985wkdamh7ga--Happy-Birthday-WWW-–-Make-Money-From-Data---CYBAEA.NET.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jckgsw2y5fs0yngh34en88w3-2006-04-11-Paper’s-Revenge.md": {
+      "id": 256,
+      "mtime": 1760043222923,
+      "path": "Readwise/Full Document Contents/Articles/01jckgsw2y5fs0yngh34en88w3-2006-04-11-Paper’s-Revenge.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jckghpfrsxz4s8nyfe40ta0b--John-Kay-The-Centralised-Road-to-Mediocrity.md": {
+      "id": 257,
+      "mtime": 1760043222891,
+      "path": "Readwise/Full Document Contents/Articles/01jckghpfrsxz4s8nyfe40ta0b--John-Kay-The-Centralised-Road-to-Mediocrity.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jckftpz1c7300hr2rg9dzqn7-2005-04-21-Innovation-in-Online-Book-Sales.md": {
+      "id": 258,
+      "mtime": 1760043222872,
+      "path": "Readwise/Full Document Contents/Articles/01jckftpz1c7300hr2rg9dzqn7-2005-04-21-Innovation-in-Online-Book-Sales.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jceddgdptc3zcnbyvpyy5jpt-2024-11-08-Research-How-WFH-Can-Actually-Strengthen-Bonds-Between-Coworkers.md": {
+      "id": 259,
+      "mtime": 1760043226287,
+      "path": "Readwise/Full Document Contents/Articles/01jceddgdptc3zcnbyvpyy5jpt-2024-11-08-Research-How-WFH-Can-Actually-Strengthen-Bonds-Between-Coworkers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jcebz4gcbttpg152pg11pxtz-2004-11-09-Social-Software-in-the-Enterprise-A-Historic-Perspective.md": {
+      "id": 260,
+      "mtime": 1760043222818,
+      "path": "Readwise/Full Document Contents/Articles/01jcebz4gcbttpg152pg11pxtz-2004-11-09-Social-Software-in-the-Enterprise-A-Historic-Perspective.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jce1ph2zarg6bk3y0rwx31qp-2004-01-26-Entrepreneurial-vision.md": {
+      "id": 261,
+      "mtime": 1760043225659,
+      "path": "Readwise/Full Document Contents/Articles/01jce1ph2zarg6bk3y0rwx31qp-2004-01-26-Entrepreneurial-vision.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jce1a0ev0ps3zfj9whcz06da-2003-11-17-Optimizing-Viral-Marketing-A-Practical-Approach.md": {
+      "id": 262,
+      "mtime": 1760043225706,
+      "path": "Readwise/Full Document Contents/Articles/01jce1a0ev0ps3zfj9whcz06da-2003-11-17-Optimizing-Viral-Marketing-A-Practical-Approach.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jce13tq97wzqr7h1c2zzs249-2011-03-04-þÿBusiness-Platforms-Profiting-From-Networks.md": {
+      "id": 263,
+      "mtime": 1760043245113,
+      "path": "Readwise/Full Document Contents/Articles/01jce13tq97wzqr7h1c2zzs249-2011-03-04-þÿBusiness-Platforms-Profiting-From-Networks.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jce0tprkjsg6t8esz7hph2h5-2003-01-24-Linked-The-New-Science-of-Networks.md": {
+      "id": 264,
+      "mtime": 1760043222787,
+      "path": "Readwise/Full Document Contents/Articles/01jce0tprkjsg6t8esz7hph2h5-2003-01-24-Linked-The-New-Science-of-Networks.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jccstppvgzwp326efbb3ajq5-2024-11-10-Qwertyman-No.-119-The-MAGAverse.md": {
+      "id": 265,
+      "mtime": 1760043222768,
+      "path": "Readwise/Full Document Contents/Articles/01jccstppvgzwp326efbb3ajq5-2024-11-10-Qwertyman-No.-119-The-MAGAverse.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jc8sy82seey68n3gwjfxc7sg-2024-11-10-The-Paradise-Paradox.md": {
+      "id": 266,
+      "mtime": 1760043222743,
+      "path": "Readwise/Full Document Contents/Articles/01jc8sy82seey68n3gwjfxc7sg-2024-11-10-The-Paradise-Paradox.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jc4tfvb86bstxc7meqnj1600-2024-11-08-Mommy,-Where-Does-Money-Come-From.md": {
+      "id": 267,
+      "mtime": 1760043222725,
+      "path": "Readwise/Full Document Contents/Articles/01jc4tfvb86bstxc7meqnj1600-2024-11-08-Mommy,-Where-Does-Money-Come-From.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jc193peytn7gydn0tzz30ev6-2024-08-05-Letter_to_Chancellor_and_Secretary_of_State_on_VAT_on_Fees_04-11-2024.md": {
+      "id": 268,
+      "mtime": 1760043245064,
+      "path": "Readwise/Full Document Contents/Articles/01jc193peytn7gydn0tzz30ev6-2024-08-05-Letter_to_Chancellor_and_Secretary_of_State_on_VAT_on_Fees_04-11-2024.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jc06md7xbq7vsmrrn89ktm38-2024-11-05-Starbucks-Needs-to-Cut-the-Crap-From-Its-Brand-Positioning.md": {
+      "id": 269,
+      "mtime": 1760043222704,
+      "path": "Readwise/Full Document Contents/Articles/01jc06md7xbq7vsmrrn89ktm38-2024-11-05-Starbucks-Needs-to-Cut-the-Crap-From-Its-Brand-Positioning.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbz1vxagnw1qdxasxja7z7r1-2024-11-05-Fluid-Everything-Else.md": {
+      "id": 270,
+      "mtime": 1760043222676,
+      "path": "Readwise/Full Document Contents/Articles/01jbz1vxagnw1qdxasxja7z7r1-2024-11-05-Fluid-Everything-Else.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbykhgth3pvprdmxjk2njpx9-2024-09-25-NIST-Proposes-Barring-Some-of-the-Most-Nonsensical-Password-Rules.md": {
+      "id": 271,
+      "mtime": 1760043222647,
+      "path": "Readwise/Full Document Contents/Articles/01jbykhgth3pvprdmxjk2njpx9-2024-09-25-NIST-Proposes-Barring-Some-of-the-Most-Nonsensical-Password-Rules.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbycv4xrh123axc14mrmywm0-2024-11-05-There’s-Always-a-Storm-Coming.md": {
+      "id": 272,
+      "mtime": 1760043222660,
+      "path": "Readwise/Full Document Contents/Articles/01jbycv4xrh123axc14mrmywm0-2024-11-05-There’s-Always-a-Storm-Coming.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jby3kt591vt62et4xskcms88-2024-01-16-Does-Working-From-Home-Boost-Productivity-Growth.md": {
+      "id": 273,
+      "mtime": 1760043222603,
+      "path": "Readwise/Full Document Contents/Articles/01jby3kt591vt62et4xskcms88-2024-01-16-Does-Working-From-Home-Boost-Productivity-Growth.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jby31kbp451btbbqj66jssyg-2024-05-20-Reaching-your-sustainability-goals-through-data-insights--Barnett-Waddingham.md": {
+      "id": 274,
+      "mtime": 1760043226059,
+      "path": "Readwise/Full Document Contents/Articles/01jby31kbp451btbbqj66jssyg-2024-05-20-Reaching-your-sustainability-goals-through-data-insights--Barnett-Waddingham.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jby1tn0e0f74rt2w3fxe6djh-2024-10-31-Feds-Critical-Software-Must-Drop-CC++-by-2026-or-Face-Risk.md": {
+      "id": 275,
+      "mtime": 1760043222582,
+      "path": "Readwise/Full Document Contents/Articles/01jby1tn0e0f74rt2w3fxe6djh-2024-10-31-Feds-Critical-Software-Must-Drop-CC++-by-2026-or-Face-Risk.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jby1aewt5s84jb003zh3zxd8-2024-11-05-Grindr-used-RTO-to-screw-union,-labor-watchdog-claims.md": {
+      "id": 276,
+      "mtime": 1760043244831,
+      "path": "Readwise/Full Document Contents/Articles/01jby1aewt5s84jb003zh3zxd8-2024-11-05-Grindr-used-RTO-to-screw-union,-labor-watchdog-claims.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbxjqmggrf5wp3gxv8yy705p-2024-11-04-Why-Your-Company-Is-Struggling-to-Scale-Up-Generative-AI.md": {
+      "id": 277,
+      "mtime": 1760043222850,
+      "path": "Readwise/Full Document Contents/Articles/01jbxjqmggrf5wp3gxv8yy705p-2024-11-04-Why-Your-Company-Is-Struggling-to-Scale-Up-Generative-AI.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbx8a1a4pvdzsxd58jywx5vp-2024-11-05-There’s-Always-a-Storm-Coming.md": {
+      "id": 278,
+      "mtime": 1760043222627,
+      "path": "Readwise/Full Document Contents/Articles/01jbx8a1a4pvdzsxd58jywx5vp-2024-11-05-There’s-Always-a-Storm-Coming.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbwh8p9ns46wsy9qmsey4w6b-2024-09-10-Better-performing-“25519”-elliptic-curve-cryptography.md": {
+      "id": 279,
+      "mtime": 1760043244362,
+      "path": "Readwise/Full Document Contents/Articles/01jbwh8p9ns46wsy9qmsey4w6b-2024-09-10-Better-performing-“25519”-elliptic-curve-cryptography.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbvvd2ygmk7x6chs9cb0s0wq-2024-10-04-Can-Creative-Writing-Help-America-Win-Wars.md": {
+      "id": 280,
+      "mtime": 1760043222526,
+      "path": "Readwise/Full Document Contents/Articles/01jbvvd2ygmk7x6chs9cb0s0wq-2024-10-04-Can-Creative-Writing-Help-America-Win-Wars.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbv010dr6tjpc0m30exz4jdz-2024-11-04-Global-discret-grids.md": {
+      "id": 281,
+      "mtime": 1760043225624,
+      "path": "Readwise/Full Document Contents/Articles/01jbv010dr6tjpc0m30exz4jdz-2024-11-04-Global-discret-grids.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbsyq2p19adfbcrw43as4ysv-2024-03-16-Form,-Function,-&-Fun!---My-Obsidian-Vault-Tour-[2024].md": {
+      "id": 282,
+      "mtime": 1760043225888,
+      "path": "Readwise/Full Document Contents/Articles/01jbsyq2p19adfbcrw43as4ysv-2024-03-16-Form,-Function,-&-Fun!---My-Obsidian-Vault-Tour-[2024].md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbrxjhpywc2a3t5z8n9pjjft-2024-10-29-One-Company-AB-Tested-Hybrid-Work.-Here’s-What-They-Found..md": {
+      "id": 283,
+      "mtime": 1760043226202,
+      "path": "Readwise/Full Document Contents/Articles/01jbrxjhpywc2a3t5z8n9pjjft-2024-10-29-One-Company-AB-Tested-Hybrid-Work.-Here’s-What-They-Found..md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbrnk515389s19cnxq50gk8s-2021-01-13-Pluralistic-13-Jan-2021.md": {
+      "id": 284,
+      "mtime": 1760043222498,
+      "path": "Readwise/Full Document Contents/Articles/01jbrnk515389s19cnxq50gk8s-2021-01-13-Pluralistic-13-Jan-2021.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbpf3deznha7jzbj2wza0att-2024-11-01-The-Cult-of-Microsoft.md": {
+      "id": 285,
+      "mtime": 1760043225556,
+      "path": "Readwise/Full Document Contents/Articles/01jbpf3deznha7jzbj2wza0att-2024-11-01-The-Cult-of-Microsoft.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbpckyn3yexrs68mnvgmz3dp-2024-10-30-Researchers-Are-Questioning-if-ADHD-Should-Be-Seen-as-a-Disorder.md": {
+      "id": 286,
+      "mtime": 1760043222479,
+      "path": "Readwise/Full Document Contents/Articles/01jbpckyn3yexrs68mnvgmz3dp-2024-10-30-Researchers-Are-Questioning-if-ADHD-Should-Be-Seen-as-a-Disorder.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbnh2cncdawhj8zbcax8gepz-2024-11-01-Watching-Nintendo-think-out-loud-about-radar-and-music.md": {
+      "id": 287,
+      "mtime": 1760043226568,
+      "path": "Readwise/Full Document Contents/Articles/01jbnh2cncdawhj8zbcax8gepz-2024-11-01-Watching-Nintendo-think-out-loud-about-radar-and-music.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbmtwvty7sjjw2cpgf9tyrb8-2024-11-01-Google-Workspace-Updates-Weekly-Recap---November-1,-2024.md": {
+      "id": 288,
+      "mtime": 1760043221690,
+      "path": "Readwise/Full Document Contents/Articles/01jbmtwvty7sjjw2cpgf9tyrb8-2024-11-01-Google-Workspace-Updates-Weekly-Recap---November-1,-2024.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbm57xv5x76ksey25apddz4h-2024-04-24-Obsidian-The-King-of-Learning-Tools-(FULL-GUIDE-+-SETUP).md": {
+      "id": 289,
+      "mtime": 1760043244300,
+      "path": "Readwise/Full Document Contents/Articles/01jbm57xv5x76ksey25apddz4h-2024-04-24-Obsidian-The-King-of-Learning-Tools-(FULL-GUIDE-+-SETUP).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbksmmp4yz81tbzevha4fe5p-2024-11-01-Umberto-Eco’s-List-of-the-14-Common-Features-of-Fascism.md": {
+      "id": 290,
+      "mtime": 1760043226025,
+      "path": "Readwise/Full Document Contents/Articles/01jbksmmp4yz81tbzevha4fe5p-2024-11-01-Umberto-Eco’s-List-of-the-14-Common-Features-of-Fascism.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbkphyp1vpasnyr5h994gr9d-2024-11-01-Networking-Doesn’t-Have-to-Feel-Gross--Daniel-Hallak--TED.md": {
+      "id": 291,
+      "mtime": 1760043221365,
+      "path": "Readwise/Full Document Contents/Articles/01jbkphyp1vpasnyr5h994gr9d-2024-11-01-Networking-Doesn’t-Have-to-Feel-Gross--Daniel-Hallak--TED.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbj52zrshz9k13q1mxz732e4--12-Interview-Questions-You-Must-Prepare-(And-How-To-Answer-Them).md": {
+      "id": 292,
+      "mtime": 1760043226689,
+      "path": "Readwise/Full Document Contents/Articles/01jbj52zrshz9k13q1mxz732e4--12-Interview-Questions-You-Must-Prepare-(And-How-To-Answer-Them).md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbj4h9afewktkssm5rt3e9ea-2024-10-30-Space-May-Be-Worse-for-Humans-Than-Thought.md": {
+      "id": 293,
+      "mtime": 1760043221329,
+      "path": "Readwise/Full Document Contents/Articles/01jbj4h9afewktkssm5rt3e9ea-2024-10-30-Space-May-Be-Worse-for-Humans-Than-Thought.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbj45mtbz037kn693v8ezb46-2024-10-31-The-Telegram-Our-New-Guide-to-a-Dangerous-World.md": {
+      "id": 294,
+      "mtime": 1760043221294,
+      "path": "Readwise/Full Document Contents/Articles/01jbj45mtbz037kn693v8ezb46-2024-10-31-The-Telegram-Our-New-Guide-to-a-Dangerous-World.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbj3vvzybnc9yx0wawrsf3jj-2024-01-01-When-politics-is-about-hating-the-other-side,-democracy-suffers.md": {
+      "id": 295,
+      "mtime": 1760043225851,
+      "path": "Readwise/Full Document Contents/Articles/01jbj3vvzybnc9yx0wawrsf3jj-2024-01-01-When-politics-is-about-hating-the-other-side,-democracy-suffers.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbg1nppt42t4wagfd8rc7acr-2024-10-31-This-Is-Your-Most-Valuable-Resource.md": {
+      "id": 296,
+      "mtime": 1760043221253,
+      "path": "Readwise/Full Document Contents/Articles/01jbg1nppt42t4wagfd8rc7acr-2024-10-31-This-Is-Your-Most-Valuable-Resource.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jbb56q0ff05gxy7mn2tg3b3m-2024-10-29-Insurance-analytics-prediction,-explainability-and-fairness.md": {
+      "id": 297,
+      "mtime": 1760043225605,
+      "path": "Readwise/Full Document Contents/Articles/01jbb56q0ff05gxy7mn2tg3b3m-2024-10-29-Insurance-analytics-prediction,-explainability-and-fairness.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb804etxj8q9m86bynht77h6--Matt-Smith’s-Post.md": {
+      "id": 298,
+      "mtime": 1760043221225,
+      "path": "Readwise/Full Document Contents/Articles/01jb804etxj8q9m86bynht77h6--Matt-Smith’s-Post.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb7xf1j8q6faahbhk464vhnx--Nina-Devouge’s-Post.md": {
+      "id": 299,
+      "mtime": 1760043221187,
+      "path": "Readwise/Full Document Contents/Articles/01jb7xf1j8q6faahbhk464vhnx--Nina-Devouge’s-Post.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb7w9v7mj1mm7dpeq065mwxa--Dan-Diggins’-Post.md": {
+      "id": 300,
+      "mtime": 1760043226476,
+      "path": "Readwise/Full Document Contents/Articles/01jb7w9v7mj1mm7dpeq065mwxa--Dan-Diggins’-Post.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb5f067qh2t8636rtmxabvvb-2023-09-12-A-guide-for-finding-product-market-fit.md": {
+      "id": 301,
+      "mtime": 1760043226374,
+      "path": "Readwise/Full Document Contents/Articles/01jb5f067qh2t8636rtmxabvvb-2023-09-12-A-guide-for-finding-product-market-fit.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb4czp1zzg5dvmse45f8fkmk-2024-10-26-Beware-the-AI-Bureaucrats.md": {
+      "id": 302,
+      "mtime": 1760043221141,
+      "path": "Readwise/Full Document Contents/Articles/01jb4czp1zzg5dvmse45f8fkmk-2024-10-26-Beware-the-AI-Bureaucrats.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb3s6fjqmx9x13943j7rn8nj-2024-10-26-More-neurons-in-the-hidden-layer-than-predictive-features-in-neural-nets.md": {
+      "id": 303,
+      "mtime": 1760043225649,
+      "path": "Readwise/Full Document Contents/Articles/01jb3s6fjqmx9x13943j7rn8nj-2024-10-26-More-neurons-in-the-hidden-layer-than-predictive-features-in-neural-nets.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jb20706r8gs41wp7bk8abgfq-2024-10-25-Come-to-the-light-dark()-Side.md": {
+      "id": 304,
+      "mtime": 1760043226589,
+      "path": "Readwise/Full Document Contents/Articles/01jb20706r8gs41wp7bk8abgfq-2024-10-25-Come-to-the-light-dark()-Side.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jazdzrsr5x20mqnmz4psva7r-2024-10-24-You-can-use-text-wrap-balance;-on-icons.md": {
+      "id": 305,
+      "mtime": 1760043225423,
+      "path": "Readwise/Full Document Contents/Articles/01jazdzrsr5x20mqnmz4psva7r-2024-10-24-You-can-use-text-wrap-balance;-on-icons.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jax00mt7kbxptwwv4j84b5q8-2024-10-23-The-Strategy-Sessions-Chocolate.md": {
+      "id": 306,
+      "mtime": 1760043225843,
+      "path": "Readwise/Full Document Contents/Articles/01jax00mt7kbxptwwv4j84b5q8-2024-10-23-The-Strategy-Sessions-Chocolate.md"
+    },
+    "Readwise/Full Document Contents/Articles/01javd65w2vj0xs2j91d40mj27-2024-10-23-Why-Being-Called-Worthless-Can-Change-Everything.md": {
+      "id": 307,
+      "mtime": 1760043221098,
+      "path": "Readwise/Full Document Contents/Articles/01javd65w2vj0xs2j91d40mj27-2024-10-23-Why-Being-Called-Worthless-Can-Change-Everything.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jatgdn1gtcse2rxmv3r2w7tp-2024-10-22-Predictions-2025-Clouds-Shift-From-Riches-to-RAGs.md": {
+      "id": 308,
+      "mtime": 1760043221060,
+      "path": "Readwise/Full Document Contents/Articles/01jatgdn1gtcse2rxmv3r2w7tp-2024-10-22-Predictions-2025-Clouds-Shift-From-Riches-to-RAGs.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jaq93yyt84g1f501se548afg--The-Funding-Crisis-Threatening-England’s-Special-Needs-Education.md": {
+      "id": 309,
+      "mtime": 1760043221017,
+      "path": "Readwise/Full Document Contents/Articles/01jaq93yyt84g1f501se548afg--The-Funding-Crisis-Threatening-England’s-Special-Needs-Education.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jant3k77wfdg8x4py1my322b-2023-08-10-Reader-Frequently-Asked-Questions.md": {
+      "id": 310,
+      "mtime": 1760043225721,
+      "path": "Readwise/Full Document Contents/Articles/01jant3k77wfdg8x4py1my322b-2023-08-10-Reader-Frequently-Asked-Questions.md"
+    },
+    "Readwise/Full Document Contents/Articles/01jant3k4j4gykh4zcdabwzrxh-2024-02-10-Getting-Started-with-Reader.md": {
+      "id": 311,
+      "mtime": 1760043226108,
+      "path": "Readwise/Full Document Contents/Articles/01jant3k4j4gykh4zcdabwzrxh-2024-02-10-Getting-Started-with-Reader.md"
+    },
+    "Readwise/Books/2000-08-01-55247878-How-to-Live-on-24-Hours-a-Day.md": {
+      "id": 312,
+      "mtime": 1760043225285,
+      "path": "Readwise/Books/2000-08-01-55247878-How-to-Live-on-24-Hours-a-Day.md"
+    },
+    "Readwise/Books/-54108552-New-Rose-Hotel.md": {
+      "id": 313,
+      "mtime": 1760043224886,
+      "path": "Readwise/Books/-54108552-New-Rose-Hotel.md"
+    },
+    "Readwise/Books/-53791782-Jeffrey-Gitomer's-Sales-Manifesto.md": {
+      "id": 314,
+      "mtime": 1760043224700,
+      "path": "Readwise/Books/-53791782-Jeffrey-Gitomer's-Sales-Manifesto.md"
+    },
+    "Readwise/Books/-53219461-Sketch-Your-Mind.md": {
+      "id": 315,
+      "mtime": 1760043224370,
+      "path": "Readwise/Books/-53219461-Sketch-Your-Mind.md"
+    },
+    "Readwise/Books/-52284771-Secret-Tradecraft-of-Elite-Advisors.md": {
+      "id": 316,
+      "mtime": 1760043224951,
+      "path": "Readwise/Books/-52284771-Secret-Tradecraft-of-Elite-Advisors.md"
+    },
+    "Readwise/Books/-51112804-Peak-Human.md": {
+      "id": 317,
+      "mtime": 1760043224105,
+      "path": "Readwise/Books/-51112804-Peak-Human.md"
+    },
+    "Readwise/Books/-48893029-The-Diary-of-a-CEO.md": {
+      "id": 318,
+      "mtime": 1760043225022,
+      "path": "Readwise/Books/-48893029-The-Diary-of-a-CEO.md"
+    },
+    "Readwise/Books/-48726679-On-Writing-Well.md": {
+      "id": 319,
+      "mtime": 1760043223570,
+      "path": "Readwise/Books/-48726679-On-Writing-Well.md"
+    },
+    "Readwise/Books/-47035391-The-Invention-of-Good-and-Evil.md": {
+      "id": 320,
+      "mtime": 1760043223584,
+      "path": "Readwise/Books/-47035391-The-Invention-of-Good-and-Evil.md"
+    },
+    "Readwise/Books/-46810084-Counter-Intelligence.md": {
+      "id": 321,
+      "mtime": 1760043223442,
+      "path": "Readwise/Books/-46810084-Counter-Intelligence.md"
+    },
+    "Readwise/Books/-46414996-The-Hero-With-a-Thousand-Faces.md": {
+      "id": 322,
+      "mtime": 1760043223341,
+      "path": "Readwise/Books/-46414996-The-Hero-With-a-Thousand-Faces.md"
+    },
+    "Readwise/Books/-46414319-History-of-Western-Philosophy.md": {
+      "id": 323,
+      "mtime": 1760043223302,
+      "path": "Readwise/Books/-46414319-History-of-Western-Philosophy.md"
+    },
+    "Readwise/Books/-46414256-The-Beast-in-the-Jungle.md": {
+      "id": 324,
+      "mtime": 1760043223291,
+      "path": "Readwise/Books/-46414256-The-Beast-in-the-Jungle.md"
+    },
+    "Readwise/Books/-46188883-Machina.md": {
+      "id": 325,
+      "mtime": 1760043223124,
+      "path": "Readwise/Books/-46188883-Machina.md"
+    },
+    "Readwise/Books/-45959523-The-Creative-Act.md": {
+      "id": 326,
+      "mtime": 1760043225100,
+      "path": "Readwise/Books/-45959523-The-Creative-Act.md"
+    },
+    "Readwise/Books/-45798740-Pattern-Recognition.md": {
+      "id": 327,
+      "mtime": 1760043222806,
+      "path": "Readwise/Books/-45798740-Pattern-Recognition.md"
+    },
+    "Readwise/Books/-45580631-The-Eye.md": {
+      "id": 328,
+      "mtime": 1760043222573,
+      "path": "Readwise/Books/-45580631-The-Eye.md"
+    },
+    "Readwise/Books/-45580339-Strategy.md": {
+      "id": 329,
+      "mtime": 1760043222566,
+      "path": "Readwise/Books/-45580339-Strategy.md"
+    },
+    "Readwise/Books/-45580225-God.md": {
+      "id": 330,
+      "mtime": 1760043222556,
+      "path": "Readwise/Books/-45580225-God.md"
+    },
+    "Readwise/Books/-45580008-The-War-of-Art.md": {
+      "id": 331,
+      "mtime": 1760043222551,
+      "path": "Readwise/Books/-45580008-The-War-of-Art.md"
+    },
+    "Readwise/Books/-45453105-Perennial-Seller.md": {
+      "id": 332,
+      "mtime": 1760043220206,
+      "path": "Readwise/Books/-45453105-Perennial-Seller.md"
+    },
+    "Readwise/Books/-45453103-American-Gods.md": {
+      "id": 333,
+      "mtime": 1760043220490,
+      "path": "Readwise/Books/-45453103-American-Gods.md"
+    },
+    "Readwise/Books/-45453102-The-Blade-Itself.md": {
+      "id": 334,
+      "mtime": 1760043220517,
+      "path": "Readwise/Books/-45453102-The-Blade-Itself.md"
+    },
+    "Readwise/Books/-45453101-It-Doesn’t-Have-to-Be-Crazy-at-Work.md": {
+      "id": 335,
+      "mtime": 1760043220527,
+      "path": "Readwise/Books/-45453101-It-Doesn’t-Have-to-Be-Crazy-at-Work.md"
+    },
+    "Readwise/Books/-45453100-People-in-Watercolour.md": {
+      "id": 336,
+      "mtime": 1760043220600,
+      "path": "Readwise/Books/-45453100-People-in-Watercolour.md"
+    },
+    "Readwise/Books/-45453098-Ultralearning.md": {
+      "id": 337,
+      "mtime": 1760043224316,
+      "path": "Readwise/Books/-45453098-Ultralearning.md"
+    },
+    "Readwise/Books/-45453096-Who-Not-How.md": {
+      "id": 338,
+      "mtime": 1760043224708,
+      "path": "Readwise/Books/-45453096-Who-Not-How.md"
+    },
+    "Readwise/Books/-45453095-Working-Backwards.md": {
+      "id": 339,
+      "mtime": 1760043220992,
+      "path": "Readwise/Books/-45453095-Working-Backwards.md"
+    },
+    "Readwise/Books/-45452779-Quick-Passages.md": {
+      "id": 340,
+      "mtime": 1766781408099,
+      "path": "Readwise/Books/-45452779-Quick-Passages.md"
+    },
+    "Readwise/Articles/2025-12-27-57154766-Key-Updates-of-the-International-AI-Safety-Report.md": {
+      "id": 341,
+      "mtime": 1766921319311,
+      "path": "Readwise/Articles/2025-12-27-57154766-Key-Updates-of-the-International-AI-Safety-Report.md"
+    },
+    "Readwise/Articles/2025-11-12-56261965-The-Real-AI-Bottleneck-Is-Organizational-Reinvention,-Not-Computing-Power.md": {
+      "id": 342,
+      "mtime": 1766781408325,
+      "path": "Readwise/Articles/2025-11-12-56261965-The-Real-AI-Bottleneck-Is-Organizational-Reinvention,-Not-Computing-Power.md"
+    },
+    "Readwise/Articles/2025-11-12-56261928-Culture-vs.-Command.md": {
+      "id": 343,
+      "mtime": 1766781408284,
+      "path": "Readwise/Articles/2025-11-12-56261928-Culture-vs.-Command.md"
+    },
+    "Readwise/Articles/2025-11-07-56261638-Fighters-Versus-Fakers.md": {
+      "id": 344,
+      "mtime": 1766781408252,
+      "path": "Readwise/Articles/2025-11-07-56261638-Fighters-Versus-Fakers.md"
+    },
+    "Readwise/Articles/2025-11-06-56261600-How-Starting-a-Side-Project-Can-Help-Cool-Off-Burnout.md": {
+      "id": 345,
+      "mtime": 1766781408219,
+      "path": "Readwise/Articles/2025-11-06-56261600-How-Starting-a-Side-Project-Can-Help-Cool-Off-Burnout.md"
+    },
+    "Readwise/Articles/2025-11-06-56261241-Jensen-Huang-Gets-It-Wrong.md": {
+      "id": 346,
+      "mtime": 1766781408186,
+      "path": "Readwise/Articles/2025-11-06-56261241-Jensen-Huang-Gets-It-Wrong.md"
+    },
+    "Readwise/Articles/2025-11-04-56260756-Innovation-Is-Forgiveness.md": {
+      "id": 347,
+      "mtime": 1766781408136,
+      "path": "Readwise/Articles/2025-11-04-56260756-Innovation-Is-Forgiveness.md"
+    },
+    "Readwise/Articles/2025-10-29-55976960-The-problem-with-solving-problems.md": {
+      "id": 348,
+      "mtime": 1766781408029,
+      "path": "Readwise/Articles/2025-10-29-55976960-The-problem-with-solving-problems.md"
+    },
+    "Readwise/Articles/2025-10-19-55873487-The-Two-Headed-Horse.md": {
+      "id": 349,
+      "mtime": 1766781407924,
+      "path": "Readwise/Articles/2025-10-19-55873487-The-Two-Headed-Horse.md"
+    },
+    "Readwise/Articles/2025-10-08-55891939-Stop-Listening-to-So-Much-Stuff.md": {
+      "id": 350,
+      "mtime": 1766781407995,
+      "path": "Readwise/Articles/2025-10-08-55891939-Stop-Listening-to-So-Much-Stuff.md"
+    },
+    "Readwise/Articles/2025-09-30-55336339-Creativity-The-Antidote-to-Elite-Oversupply.md": {
+      "id": 351,
+      "mtime": 1760043225375,
+      "path": "Readwise/Articles/2025-09-30-55336339-Creativity-The-Antidote-to-Elite-Oversupply.md"
+    },
+    "Readwise/Articles/2025-09-28-55313455-Act-Now!.md": {
+      "id": 352,
+      "mtime": 1760043225356,
+      "path": "Readwise/Articles/2025-09-28-55313455-Act-Now!.md"
+    },
+    "Readwise/Articles/2025-09-23-55198972-Going-Upstream.md": {
+      "id": 353,
+      "mtime": 1760043225243,
+      "path": "Readwise/Articles/2025-09-23-55198972-Going-Upstream.md"
+    },
+    "Readwise/Articles/2025-09-23-55189540-To-Be-Heard.md": {
+      "id": 354,
+      "mtime": 1760043225227,
+      "path": "Readwise/Articles/2025-09-23-55189540-To-Be-Heard.md"
+    },
+    "Readwise/Articles/2025-09-22-55165367-The-FDI-Shake-Up-How-Foreign-Direct-Investment-Today-May-Shape-Industry-and-Trade-Tomorrow.md": {
+      "id": 355,
+      "mtime": 1760043225209,
+      "path": "Readwise/Articles/2025-09-22-55165367-The-FDI-Shake-Up-How-Foreign-Direct-Investment-Today-May-Shape-Industry-and-Trade-Tomorrow.md"
+    },
+    "Readwise/Articles/2025-09-17-55062732-The-Editorial-Workflow-That-Doubled-My-LinkedIn-Following-in-6-Months.md": {
+      "id": 356,
+      "mtime": 1760043225142,
+      "path": "Readwise/Articles/2025-09-17-55062732-The-Editorial-Workflow-That-Doubled-My-LinkedIn-Following-in-6-Months.md"
+    },
+    "Readwise/Articles/2025-09-06-54822111-System-ArchitectSystem-Victim.md": {
+      "id": 357,
+      "mtime": 1760043225087,
+      "path": "Readwise/Articles/2025-09-06-54822111-System-ArchitectSystem-Victim.md"
+    },
+    "Readwise/Articles/2025-09-05-54822044-Pluralistic-Why-Wikipedia-Works.md": {
+      "id": 358,
+      "mtime": 1760043225067,
+      "path": "Readwise/Articles/2025-09-05-54822044-Pluralistic-Why-Wikipedia-Works.md"
+    },
+    "Readwise/Articles/2025-09-04-54758895-Why-You-Keep-Refreshing.md": {
+      "id": 359,
+      "mtime": 1760043225009,
+      "path": "Readwise/Articles/2025-09-04-54758895-Why-You-Keep-Refreshing.md"
+    },
+    "Readwise/Articles/2025-09-02-54722289-Bringing-Goodwill-to-the-Conversation.md": {
+      "id": 360,
+      "mtime": 1760043224980,
+      "path": "Readwise/Articles/2025-09-02-54722289-Bringing-Goodwill-to-the-Conversation.md"
+    },
+    "Readwise/Articles/2025-09-01-55405740-30-Life-Lessons-from-30-Years.md": {
+      "id": 361,
+      "mtime": 1760043225409,
+      "path": "Readwise/Articles/2025-09-01-55405740-30-Life-Lessons-from-30-Years.md"
+    },
+    "Readwise/Articles/2025-08-29-54722428-The-Knowing-of-Not-Knowing.md": {
+      "id": 362,
+      "mtime": 1760043224992,
+      "path": "Readwise/Articles/2025-08-29-54722428-The-Knowing-of-Not-Knowing.md"
+    },
+    "Readwise/Articles/2025-08-10-54109173-After-the-Chores.md": {
+      "id": 363,
+      "mtime": 1760043224939,
+      "path": "Readwise/Articles/2025-08-10-54109173-After-the-Chores.md"
+    },
+    "Readwise/Articles/2025-08-10-54109132-Story-in-Reverse.md": {
+      "id": 364,
+      "mtime": 1760043224924,
+      "path": "Readwise/Articles/2025-08-10-54109132-Story-in-Reverse.md"
+    },
+    "Readwise/Articles/2025-08-08-54032031-Scarcity-and-Abundance.md": {
+      "id": 365,
+      "mtime": 1760043224857,
+      "path": "Readwise/Articles/2025-08-08-54032031-Scarcity-and-Abundance.md"
+    },
+    "Readwise/Articles/2025-08-01-53842089-How-We-Encourage-Self-Improvement-at-Buffer.md": {
+      "id": 366,
+      "mtime": 1760043224837,
+      "path": "Readwise/Articles/2025-08-01-53842089-How-We-Encourage-Self-Improvement-at-Buffer.md"
+    },
+    "Readwise/Articles/2025-08-01-53841985-After-You-Make-a-Strategic-Error.md": {
+      "id": 367,
+      "mtime": 1760043224815,
+      "path": "Readwise/Articles/2025-08-01-53841985-After-You-Make-a-Strategic-Error.md"
+    },
+    "Readwise/Articles/2025-07-30-53841528-The-End-Is-Where-You-Begin.md": {
+      "id": 368,
+      "mtime": 1760043224800,
+      "path": "Readwise/Articles/2025-07-30-53841528-The-End-Is-Where-You-Begin.md"
+    },
+    "Readwise/Articles/2025-07-27-53840866-You’re-Looking-for-Help-in-the-Wrong-Place.md": {
+      "id": 369,
+      "mtime": 1760043224775,
+      "path": "Readwise/Articles/2025-07-27-53840866-You’re-Looking-for-Help-in-the-Wrong-Place.md"
+    },
+    "Readwise/Articles/2025-07-26-53840007-Settling-for-Better.md": {
+      "id": 370,
+      "mtime": 1760043224759,
+      "path": "Readwise/Articles/2025-07-26-53840007-Settling-for-Better.md"
+    },
+    "Readwise/Articles/2025-07-24-53806015-The-Most-Important-Word-in-the-English-Language.md": {
+      "id": 371,
+      "mtime": 1760043224746,
+      "path": "Readwise/Articles/2025-07-24-53806015-The-Most-Important-Word-in-the-English-Language.md"
+    },
+    "Readwise/Articles/2025-07-23-53806000-The-Most-Underrated-Healing-Tool.md": {
+      "id": 372,
+      "mtime": 1760043224732,
+      "path": "Readwise/Articles/2025-07-23-53806000-The-Most-Underrated-Healing-Tool.md"
+    },
+    "Readwise/Articles/2025-07-22-53589717-Don’t-Let-Your-B2B-Pricing-Devalue-Your-AI-Innovation.md": {
+      "id": 373,
+      "mtime": 1760043224676,
+      "path": "Readwise/Articles/2025-07-22-53589717-Don’t-Let-Your-B2B-Pricing-Devalue-Your-AI-Innovation.md"
+    },
+    "Readwise/Articles/2025-07-22-53589662-Is-the-Median-Far-Away-From-the-Mean-(For-Variables-With-Finite-Variance).md": {
+      "id": 374,
+      "mtime": 1760043224656,
+      "path": "Readwise/Articles/2025-07-22-53589662-Is-the-Median-Far-Away-From-the-Mean-(For-Variables-With-Finite-Variance).md"
+    },
+    "Readwise/Articles/2025-07-21-54033745-Complete-guide.md": {
+      "id": 375,
+      "mtime": 1760043224873,
+      "path": "Readwise/Articles/2025-07-21-54033745-Complete-guide.md"
+    },
+    "Readwise/Articles/2025-07-19-53526264-Finding-the-Difficult-Work.md": {
+      "id": 376,
+      "mtime": 1760043224640,
+      "path": "Readwise/Articles/2025-07-19-53526264-Finding-the-Difficult-Work.md"
+    },
+    "Readwise/Articles/2025-07-16-53476228-Overappreciated.md": {
+      "id": 377,
+      "mtime": 1760043224625,
+      "path": "Readwise/Articles/2025-07-16-53476228-Overappreciated.md"
+    },
+    "Readwise/Articles/2025-07-14-53342713-AI-Is-Killing-the-Web.-Can-Anything-Save-It.md": {
+      "id": 378,
+      "mtime": 1760043224601,
+      "path": "Readwise/Articles/2025-07-14-53342713-AI-Is-Killing-the-Web.-Can-Anything-Save-It.md"
+    },
+    "Readwise/Articles/2025-07-13-53304598-Dispatch-From-Vermont.md": {
+      "id": 379,
+      "mtime": 1760043224574,
+      "path": "Readwise/Articles/2025-07-13-53304598-Dispatch-From-Vermont.md"
+    },
+    "Readwise/Articles/2025-07-10-53286520-What-Ugly-Dolls-Teach-Us.md": {
+      "id": 380,
+      "mtime": 1760043224558,
+      "path": "Readwise/Articles/2025-07-10-53286520-What-Ugly-Dolls-Teach-Us.md"
+    },
+    "Readwise/Articles/2025-07-07-55274558-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md": {
+      "id": 381,
+      "mtime": 1760043225315,
+      "path": "Readwise/Articles/2025-07-07-55274558-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md"
+    },
+    "Readwise/Articles/2025-07-03-53281723-I-Work-Full-Time-—-Here’s-the-No-Pressure-System-That-Helped-Me-Stay-Consistent-on-Social-Media.md": {
+      "id": 382,
+      "mtime": 1760043224547,
+      "path": "Readwise/Articles/2025-07-03-53281723-I-Work-Full-Time-—-Here’s-the-No-Pressure-System-That-Helped-Me-Stay-Consistent-on-Social-Media.md"
+    },
+    "Readwise/Articles/2025-07-01-53274768-Humans-Are-the-New-Luxury-Goods.md": {
+      "id": 383,
+      "mtime": 1760043224521,
+      "path": "Readwise/Articles/2025-07-01-53274768-Humans-Are-the-New-Luxury-Goods.md"
+    },
+    "Readwise/Articles/2025-06-29-53274376-Congested-Equilibrium.md": {
+      "id": 384,
+      "mtime": 1760043224493,
+      "path": "Readwise/Articles/2025-06-29-53274376-Congested-Equilibrium.md"
+    },
+    "Readwise/Articles/2025-06-29-53274359-A-Billion-Choices.md": {
+      "id": 385,
+      "mtime": 1760043224471,
+      "path": "Readwise/Articles/2025-06-29-53274359-A-Billion-Choices.md"
+    },
+    "Readwise/Articles/2025-06-20-52637342-Notes-on-the-Resistant-Reader.md": {
+      "id": 386,
+      "mtime": 1760043224357,
+      "path": "Readwise/Articles/2025-06-20-52637342-Notes-on-the-Resistant-Reader.md"
+    },
+    "Readwise/Articles/2025-06-18-53191129-Throw-Away-the-Scales.md": {
+      "id": 387,
+      "mtime": 1760043224453,
+      "path": "Readwise/Articles/2025-06-18-53191129-Throw-Away-the-Scales.md"
+    },
+    "Readwise/Articles/2025-06-17-53190534-Where-AI-Provides-Value.md": {
+      "id": 388,
+      "mtime": 1760043224434,
+      "path": "Readwise/Articles/2025-06-17-53190534-Where-AI-Provides-Value.md"
+    },
+    "Readwise/Articles/2025-06-12-52416052-Make-No-Mistake,-Software-Is-a-Supply-Chain-and-It’s-Under-Attack.md": {
+      "id": 389,
+      "mtime": 1760043224337,
+      "path": "Readwise/Articles/2025-06-12-52416052-Make-No-Mistake,-Software-Is-a-Supply-Chain-and-It’s-Under-Attack.md"
+    },
+    "Readwise/Articles/2025-06-07-52310709-Getting-Past-Procastination.md": {
+      "id": 390,
+      "mtime": 1760043224306,
+      "path": "Readwise/Articles/2025-06-07-52310709-Getting-Past-Procastination.md"
+    },
+    "Readwise/Articles/2025-05-29-52290596-Standing-Out-in-a-Zero-Click-World-Starts-With-Stronger-Collaboration.md": {
+      "id": 391,
+      "mtime": 1760043224288,
+      "path": "Readwise/Articles/2025-05-29-52290596-Standing-Out-in-a-Zero-Click-World-Starts-With-Stronger-Collaboration.md"
+    },
+    "Readwise/Articles/2025-05-28-52290339-Desire-Isn’t-the-Problem.-This-Is..md": {
+      "id": 392,
+      "mtime": 1760043224266,
+      "path": "Readwise/Articles/2025-05-28-52290339-Desire-Isn’t-the-Problem.-This-Is..md"
+    },
+    "Readwise/Articles/2025-05-21-52289880-It’s-Not-About-“Nice”.md": {
+      "id": 393,
+      "mtime": 1760043224250,
+      "path": "Readwise/Articles/2025-05-21-52289880-It’s-Not-About-“Nice”.md"
+    },
+    "Readwise/Articles/2025-05-18-51514660-Most-return-to-office-policies-are-just-lazy-leadership.md": {
+      "id": 394,
+      "mtime": 1760043224209,
+      "path": "Readwise/Articles/2025-05-18-51514660-Most-return-to-office-policies-are-just-lazy-leadership.md"
+    },
+    "Readwise/Articles/2025-05-16-52061094-Google-Review-Ai-First-Puts-Humans-First.md": {
+      "id": 395,
+      "mtime": 1760043224234,
+      "path": "Readwise/Articles/2025-05-16-52061094-Google-Review-Ai-First-Puts-Humans-First.md"
+    },
+    "Readwise/Articles/2025-05-06-51173674-A-Little-Folding-of-the-Hands-to-Sleep.md": {
+      "id": 396,
+      "mtime": 1760043224159,
+      "path": "Readwise/Articles/2025-05-06-51173674-A-Little-Folding-of-the-Hands-to-Sleep.md"
+    },
+    "Readwise/Articles/2025-05-02-51064542-What-Civilization-Can-Learn-From-Pizza.md": {
+      "id": 397,
+      "mtime": 1760043224074,
+      "path": "Readwise/Articles/2025-05-02-51064542-What-Civilization-Can-Learn-From-Pizza.md"
+    },
+    "Readwise/Articles/2025-05-01-51063994-Doubling-Down-on-Disaster.md": {
+      "id": 398,
+      "mtime": 1760043224056,
+      "path": "Readwise/Articles/2025-05-01-51063994-Doubling-Down-on-Disaster.md"
+    },
+    "Readwise/Articles/2025-05-01-51063876-How-CEOs-Can-Outcompete-by-Building-New-B2C-Businesses.md": {
+      "id": 399,
+      "mtime": 1760043224043,
+      "path": "Readwise/Articles/2025-05-01-51063876-How-CEOs-Can-Outcompete-by-Building-New-B2C-Businesses.md"
+    },
+    "Readwise/Articles/2025-04-30-51063777-A-Simple-Question-That-Brought-Me-Alive.md": {
+      "id": 400,
+      "mtime": 1760043223992,
+      "path": "Readwise/Articles/2025-04-30-51063777-A-Simple-Question-That-Brought-Me-Alive.md"
+    },
+    "Readwise/Articles/2025-04-24-51065101-You-Can-Be-a-Great-Designer-and-Be-Completely-Unknown.md": {
+      "id": 401,
+      "mtime": 1760043224097,
+      "path": "Readwise/Articles/2025-04-24-51065101-You-Can-Be-a-Great-Designer-and-Be-Completely-Unknown.md"
+    },
+    "Readwise/Articles/2025-04-24-50850897-Pluralistic-Every-Complex-Ecosystem-Has-Parasites.md": {
+      "id": 402,
+      "mtime": 1760043223973,
+      "path": "Readwise/Articles/2025-04-24-50850897-Pluralistic-Every-Complex-Ecosystem-Has-Parasites.md"
+    },
+    "Readwise/Articles/2025-04-10-50446083-Paradoxes-of-Segmentation-and-Discrimination-in-Insurance.md": {
+      "id": 403,
+      "mtime": 1760043223941,
+      "path": "Readwise/Articles/2025-04-10-50446083-Paradoxes-of-Segmentation-and-Discrimination-in-Insurance.md"
+    },
+    "Readwise/Articles/2025-03-31-50195757-S02-E01-Greta---No-One-Is-Too-Small-to-Make-a-Difference.md": {
+      "id": 404,
+      "mtime": 1760043223907,
+      "path": "Readwise/Articles/2025-03-31-50195757-S02-E01-Greta---No-One-Is-Too-Small-to-Make-a-Difference.md"
+    },
+    "Readwise/Articles/2025-03-30-50191609-The-Shape-of-Network-Society.md": {
+      "id": 405,
+      "mtime": 1760043223866,
+      "path": "Readwise/Articles/2025-03-30-50191609-The-Shape-of-Network-Society.md"
+    },
+    "Readwise/Articles/2025-03-27-50066528-Pockets-of-Belfast.md": {
+      "id": 406,
+      "mtime": 1760043223840,
+      "path": "Readwise/Articles/2025-03-27-50066528-Pockets-of-Belfast.md"
+    },
+    "Readwise/Articles/2025-03-27-50066518-How-Traveling-Inspires-My-Art-Process.md": {
+      "id": 407,
+      "mtime": 1760043223823,
+      "path": "Readwise/Articles/2025-03-27-50066518-How-Traveling-Inspires-My-Art-Process.md"
+    },
+    "Readwise/Articles/2025-03-18-49734597-Pluralistic-AI-Can't-Do-Your-Job.md": {
+      "id": 408,
+      "mtime": 1760043223790,
+      "path": "Readwise/Articles/2025-03-18-49734597-Pluralistic-AI-Can't-Do-Your-Job.md"
+    },
+    "Readwise/Articles/2025-03-13-49640824-Pluralistic-The-Future-of-Amazon-Coders-Is-the-Present-of-Amazon-Warehouse-Workers.md": {
+      "id": 409,
+      "mtime": 1760043223761,
+      "path": "Readwise/Articles/2025-03-13-49640824-Pluralistic-The-Future-of-Amazon-Coders-Is-the-Present-of-Amazon-Warehouse-Workers.md"
+    },
+    "Readwise/Articles/2025-03-11-49551336-Stop-Making-Art-When-You-Need-Weapons.md": {
+      "id": 410,
+      "mtime": 1760043223712,
+      "path": "Readwise/Articles/2025-03-11-49551336-Stop-Making-Art-When-You-Need-Weapons.md"
+    },
+    "Readwise/Articles/2025-03-05-49489017-Why-I-took-a-sledgehammer-to-my-life.md": {
+      "id": 411,
+      "mtime": 1760043223693,
+      "path": "Readwise/Articles/2025-03-05-49489017-Why-I-took-a-sledgehammer-to-my-life.md"
+    },
+    "Readwise/Articles/2025-03-04-49488680-It’s-Time-to-Change-the-Rules-for-Defining-the-Value-of-B2B-Data.md": {
+      "id": 412,
+      "mtime": 1760043223675,
+      "path": "Readwise/Articles/2025-03-04-49488680-It’s-Time-to-Change-the-Rules-for-Defining-the-Value-of-B2B-Data.md"
+    },
+    "Readwise/Articles/2025-02-26-49416621-An-iCloud-Backdoor-Would-Make-Our-Phones-Less-Safe.md": {
+      "id": 413,
+      "mtime": 1760043223607,
+      "path": "Readwise/Articles/2025-02-26-49416621-An-iCloud-Backdoor-Would-Make-Our-Phones-Less-Safe.md"
+    },
+    "Readwise/Articles/2025-02-18-51067617-This-Habit-Will-Outlast-Every-Notes-App.md": {
+      "id": 414,
+      "mtime": 1760043225338,
+      "path": "Readwise/Articles/2025-02-18-51067617-This-Habit-Will-Outlast-Every-Notes-App.md"
+    },
+    "Readwise/Articles/2025-02-12-51063835-How-Top-Performers-Use-Innovation-to-Grow-Within-and-Beyond-the-Core.md": {
+      "id": 415,
+      "mtime": 1760043224018,
+      "path": "Readwise/Articles/2025-02-12-51063835-How-Top-Performers-Use-Innovation-to-Grow-Within-and-Beyond-the-Core.md"
+    },
+    "Readwise/Articles/2025-02-04-48459373-Radar-Trends-to-Watch-February-2025.md": {
+      "id": 416,
+      "mtime": 1760043223556,
+      "path": "Readwise/Articles/2025-02-04-48459373-Radar-Trends-to-Watch-February-2025.md"
+    },
+    "Readwise/Articles/2025-01-31-49416798-The-Nature-of-Human-Stupidity-Explained-by-the-48-Laws-of-Power-Author-Robert-Greene.md": {
+      "id": 417,
+      "mtime": 1760043223630,
+      "path": "Readwise/Articles/2025-01-31-49416798-The-Nature-of-Human-Stupidity-Explained-by-the-48-Laws-of-Power-Author-Robert-Greene.md"
+    },
+    "Readwise/Articles/2025-01-29-51508777-The-Future-of-the-Office--McKinsey.md": {
+      "id": 418,
+      "mtime": 1760043224192,
+      "path": "Readwise/Articles/2025-01-29-51508777-The-Future-of-the-Office--McKinsey.md"
+    },
+    "Readwise/Articles/2025-01-15-47912782-The-gift-of-losing.md": {
+      "id": 419,
+      "mtime": 1760043223533,
+      "path": "Readwise/Articles/2025-01-15-47912782-The-gift-of-losing.md"
+    },
+    "Readwise/Articles/2025-01-15-47912295-More-“Be,”-Less-“Do”.md": {
+      "id": 420,
+      "mtime": 1760043223518,
+      "path": "Readwise/Articles/2025-01-15-47912295-More-“Be,”-Less-“Do”.md"
+    },
+    "Readwise/Articles/2024-12-22-47030312-Mastery-Isn’t-Enough.md": {
+      "id": 421,
+      "mtime": 1760043223483,
+      "path": "Readwise/Articles/2024-12-22-47030312-Mastery-Isn’t-Enough.md"
+    },
+    "Readwise/Articles/2024-12-22-46948374-The-Three-Bricklayers-Story.md": {
+      "id": 422,
+      "mtime": 1760043223465,
+      "path": "Readwise/Articles/2024-12-22-46948374-The-Three-Bricklayers-Story.md"
+    },
+    "Readwise/Articles/2024-12-21-47916964-Proud-to-be-a-blockhead-(permalink).md": {
+      "id": 423,
+      "mtime": 1760043223658,
+      "path": "Readwise/Articles/2024-12-21-47916964-Proud-to-be-a-blockhead-(permalink).md"
+    },
+    "Readwise/Articles/2024-12-10-46683026-Are-Adults-Forgetting-How-to-Read.md": {
+      "id": 424,
+      "mtime": 1760043223435,
+      "path": "Readwise/Articles/2024-12-10-46683026-Are-Adults-Forgetting-How-to-Read.md"
+    },
+    "Readwise/Articles/2024-12-07-46615437-Stop-Being-So-Right-All-the-Time.md": {
+      "id": 425,
+      "mtime": 1760043223407,
+      "path": "Readwise/Articles/2024-12-07-46615437-Stop-Being-So-Right-All-the-Time.md"
+    },
+    "Readwise/Articles/2024-12-01-46434765-Where-to-Draw-the-Line.md": {
+      "id": 426,
+      "mtime": 1760043223389,
+      "path": "Readwise/Articles/2024-12-01-46434765-Where-to-Draw-the-Line.md"
+    },
+    "Readwise/Articles/2024-11-27-46434895-Tools-of-Cooperation-Theory.md": {
+      "id": 427,
+      "mtime": 1760043223359,
+      "path": "Readwise/Articles/2024-11-27-46434895-Tools-of-Cooperation-Theory.md"
+    },
+    "Readwise/Articles/2024-11-27-46322742-Why-Your-Gratitude-Journal-Isn’t-Working.md": {
+      "id": 428,
+      "mtime": 1760043223284,
+      "path": "Readwise/Articles/2024-11-27-46322742-Why-Your-Gratitude-Journal-Isn’t-Working.md"
+    },
+    "Readwise/Articles/2024-11-26-46266099-Help!-How-Do-I-Cook-a-Turkey.md": {
+      "id": 429,
+      "mtime": 1760043223238,
+      "path": "Readwise/Articles/2024-11-26-46266099-Help!-How-Do-I-Cook-a-Turkey.md"
+    },
+    "Readwise/Articles/2024-11-26-46266074-Educating-a-New-Generation-of-Workers.md": {
+      "id": 430,
+      "mtime": 1760043223220,
+      "path": "Readwise/Articles/2024-11-26-46266074-Educating-a-New-Generation-of-Workers.md"
+    },
+    "Readwise/Articles/2024-11-26-46265949-Ask-Dumb-Questions,-Embrace-Mistakes-—-And-Other-Lessons-on-Innovation--Dave-Raggio--TED.md": {
+      "id": 431,
+      "mtime": 1760043223187,
+      "path": "Readwise/Articles/2024-11-26-46265949-Ask-Dumb-Questions,-Embrace-Mistakes-—-And-Other-Lessons-on-Innovation--Dave-Raggio--TED.md"
+    },
+    "Readwise/Articles/2024-11-18-46004778-Pluralistic-Harpercollins-Wants-Authors-to-Sign-Away-AI-Training-Rights.md": {
+      "id": 432,
+      "mtime": 1760043223049,
+      "path": "Readwise/Articles/2024-11-18-46004778-Pluralistic-Harpercollins-Wants-Authors-to-Sign-Away-AI-Training-Rights.md"
+    },
+    "Readwise/Articles/2024-11-17-46007861-What-Matters-Not-What’s-Easy.md": {
+      "id": 433,
+      "mtime": 1760043223085,
+      "path": "Readwise/Articles/2024-11-17-46007861-What-Matters-Not-What’s-Easy.md"
+    },
+    "Readwise/Articles/2024-11-13-46220523-MBS-How-to-Say-No.md": {
+      "id": 434,
+      "mtime": 1760043223141,
+      "path": "Readwise/Articles/2024-11-13-46220523-MBS-How-to-Say-No.md"
+    },
+    "Readwise/Articles/2024-11-10-45786092-Qwertyman-No.-119-The-MAGAverse.md": {
+      "id": 435,
+      "mtime": 1760043222774,
+      "path": "Readwise/Articles/2024-11-10-45786092-Qwertyman-No.-119-The-MAGAverse.md"
+    },
+    "Readwise/Articles/2024-11-10-45774856-The-Paradise-Paradox.md": {
+      "id": 436,
+      "mtime": 1760043222755,
+      "path": "Readwise/Articles/2024-11-10-45774856-The-Paradise-Paradox.md"
+    },
+    "Readwise/Articles/2024-11-08-45758327-Mommy,-Where-Does-Money-Come-From.md": {
+      "id": 437,
+      "mtime": 1760043222734,
+      "path": "Readwise/Articles/2024-11-08-45758327-Mommy,-Where-Does-Money-Come-From.md"
+    },
+    "Readwise/Articles/2024-11-05-45627915-Starbucks-Needs-to-Cut-the-Crap-From-Its-Brand-Positioning.md": {
+      "id": 438,
+      "mtime": 1760043222718,
+      "path": "Readwise/Articles/2024-11-05-45627915-Starbucks-Needs-to-Cut-the-Crap-From-Its-Brand-Positioning.md"
+    },
+    "Readwise/Articles/2024-11-05-45614486-Fluid-Everything-Else.md": {
+      "id": 439,
+      "mtime": 1760043222691,
+      "path": "Readwise/Articles/2024-11-05-45614486-Fluid-Everything-Else.md"
+    },
+    "Readwise/Articles/2024-11-05-45603626-There’s-Always-a-Storm-Coming.md": {
+      "id": 440,
+      "mtime": 1760043222669,
+      "path": "Readwise/Articles/2024-11-05-45603626-There’s-Always-a-Storm-Coming.md"
+    },
+    "Readwise/Articles/2024-11-05-45603303-There’s-Always-a-Storm-Coming.md": {
+      "id": 441,
+      "mtime": 1760043222636,
+      "path": "Readwise/Articles/2024-11-05-45603303-There’s-Always-a-Storm-Coming.md"
+    },
+    "Readwise/Articles/2024-11-04-45593682-Why-Your-Company-Is-Struggling-to-Scale-Up-Generative-AI.md": {
+      "id": 442,
+      "mtime": 1760043222861,
+      "path": "Readwise/Articles/2024-11-04-45593682-Why-Your-Company-Is-Struggling-to-Scale-Up-Generative-AI.md"
+    },
+    "Readwise/Articles/2024-11-01-45492434-Google-Workspace-Updates-Weekly-Recap---November-1,-2024.md": {
+      "id": 443,
+      "mtime": 1760043222093,
+      "path": "Readwise/Articles/2024-11-01-45492434-Google-Workspace-Updates-Weekly-Recap---November-1,-2024.md"
+    },
+    "Readwise/Articles/2024-11-01-45470074-Networking-Doesn’t-Have-to-Feel-Gross--Daniel-Hallak--TED.md": {
+      "id": 444,
+      "mtime": 1760043221389,
+      "path": "Readwise/Articles/2024-11-01-45470074-Networking-Doesn’t-Have-to-Feel-Gross--Daniel-Hallak--TED.md"
+    },
+    "Readwise/Articles/2024-10-31-45599138-Feds-Critical-Software-Must-Drop-CC++-by-2026-or-Face-Risk.md": {
+      "id": 445,
+      "mtime": 1760043222592,
+      "path": "Readwise/Articles/2024-10-31-45599138-Feds-Critical-Software-Must-Drop-CC++-by-2026-or-Face-Risk.md"
+    },
+    "Readwise/Articles/2024-10-31-45438638-The-Telegram-Our-New-Guide-to-a-Dangerous-World.md": {
+      "id": 446,
+      "mtime": 1760043221308,
+      "path": "Readwise/Articles/2024-10-31-45438638-The-Telegram-Our-New-Guide-to-a-Dangerous-World.md"
+    },
+    "Readwise/Articles/2024-10-31-45420306-This-Is-Your-Most-Valuable-Resource.md": {
+      "id": 447,
+      "mtime": 1760043221270,
+      "path": "Readwise/Articles/2024-10-31-45420306-This-Is-Your-Most-Valuable-Resource.md"
+    },
+    "Readwise/Articles/2024-10-30-45496100-Researchers-Are-Questioning-if-ADHD-Should-Be-Seen-as-a-Disorder.md": {
+      "id": 448,
+      "mtime": 1760043222487,
+      "path": "Readwise/Articles/2024-10-30-45496100-Researchers-Are-Questioning-if-ADHD-Should-Be-Seen-as-a-Disorder.md"
+    },
+    "Readwise/Articles/2024-10-30-45438811-Space-May-Be-Worse-for-Humans-Than-Thought.md": {
+      "id": 449,
+      "mtime": 1760043221340,
+      "path": "Readwise/Articles/2024-10-30-45438811-Space-May-Be-Worse-for-Humans-Than-Thought.md"
+    },
+    "Readwise/Articles/2024-10-26-45282053-Beware-the-AI-Bureaucrats.md": {
+      "id": 450,
+      "mtime": 1760043221164,
+      "path": "Readwise/Articles/2024-10-26-45282053-Beware-the-AI-Bureaucrats.md"
+    },
+    "Readwise/Articles/2024-10-23-45247302-Why-Being-Called-Worthless-Can-Change-Everything.md": {
+      "id": 451,
+      "mtime": 1760043221121,
+      "path": "Readwise/Articles/2024-10-23-45247302-Why-Being-Called-Worthless-Can-Change-Everything.md"
+    },
+    "Readwise/Articles/2024-10-22-45175377-Predictions-2025-Clouds-Shift-From-Riches-to-RAGs.md": {
+      "id": 452,
+      "mtime": 1760043221074,
+      "path": "Readwise/Articles/2024-10-22-45175377-Predictions-2025-Clouds-Shift-From-Riches-to-RAGs.md"
+    },
+    "Readwise/Articles/2024-10-04-45571872-Can-Creative-Writing-Help-America-Win-Wars.md": {
+      "id": 453,
+      "mtime": 1760043222541,
+      "path": "Readwise/Articles/2024-10-04-45571872-Can-Creative-Writing-Help-America-Win-Wars.md"
+    },
+    "Readwise/Articles/2024-09-28-50191637-The-Zombocom-Problem.md": {
+      "id": 454,
+      "mtime": 1760043223887,
+      "path": "Readwise/Articles/2024-09-28-50191637-The-Zombocom-Problem.md"
+    },
+    "Readwise/Articles/2024-09-25-45606771-NIST-Proposes-Barring-Some-of-the-Most-Nonsensical-Password-Rules.md": {
+      "id": 455,
+      "mtime": 1760043222654,
+      "path": "Readwise/Articles/2024-09-25-45606771-NIST-Proposes-Barring-Some-of-the-Most-Nonsensical-Password-Rules.md"
+    },
+    "Readwise/Articles/2024-07-03-47088895-Don’t-Cede-the-Lead.md": {
+      "id": 456,
+      "mtime": 1760043223502,
+      "path": "Readwise/Articles/2024-07-03-47088895-Don’t-Cede-the-Lead.md"
+    },
+    "Readwise/Articles/2024-04-27-54872609-The-three-or-four-hours-rule-for-getting-creative-work-done.md": {
+      "id": 457,
+      "mtime": 1760043225120,
+      "path": "Readwise/Articles/2024-04-27-54872609-The-three-or-four-hours-rule-for-getting-creative-work-done.md"
+    },
+    "Readwise/Articles/2024-01-16-45599565-Does-Working-From-Home-Boost-Productivity-Growth.md": {
+      "id": 458,
+      "mtime": 1760043222618,
+      "path": "Readwise/Articles/2024-01-16-45599565-Does-Working-From-Home-Boost-Productivity-Growth.md"
+    },
+    "Readwise/Articles/2023-03-09-45509957-The-Key-to-Becoming-Extraordinary.md": {
+      "id": 459,
+      "mtime": 1760043220940,
+      "path": "Readwise/Articles/2023-03-09-45509957-The-Key-to-Becoming-Extraordinary.md"
+    },
+    "Readwise/Articles/2022-05-15-51173367-Pluralistic-AI-and-the-fatfinger-economy-(02-May-2025).md": {
+      "id": 460,
+      "mtime": 1760043224134,
+      "path": "Readwise/Articles/2022-05-15-51173367-Pluralistic-AI-and-the-fatfinger-economy-(02-May-2025).md"
+    },
+    "Readwise/Articles/2022-03-07-45509958-The-Million-Dollar-Gap.md": {
+      "id": 461,
+      "mtime": 1760043220926,
+      "path": "Readwise/Articles/2022-03-07-45509958-The-Million-Dollar-Gap.md"
+    },
+    "Readwise/Articles/2021-01-22-52945540-Creativity-faucet-Increase-your-creativity.md": {
+      "id": 462,
+      "mtime": 1760043224390,
+      "path": "Readwise/Articles/2021-01-22-52945540-Creativity-faucet-Increase-your-creativity.md"
+    },
+    "Readwise/Articles/2021-01-13-45527035-Pluralistic-13-Jan-2021.md": {
+      "id": 463,
+      "mtime": 1760043222518,
+      "path": "Readwise/Articles/2021-01-13-45527035-Pluralistic-13-Jan-2021.md"
+    },
+    "Readwise/Articles/2019-03-03-46160967-That-Was-Fun.md": {
+      "id": 464,
+      "mtime": 1760043223117,
+      "path": "Readwise/Articles/2019-03-03-46160967-That-Was-Fun.md"
+    },
+    "Readwise/Articles/2015-06-28-53024396-Buzzer-Management.md": {
+      "id": 465,
+      "mtime": 1760043224408,
+      "path": "Readwise/Articles/2015-06-28-53024396-Buzzer-Management.md"
+    },
+    "Readwise/Articles/2006-12-19-46414809-Economics-Discovers-Its-Feelings.md": {
+      "id": 466,
+      "mtime": 1760043223327,
+      "path": "Readwise/Articles/2006-12-19-46414809-Economics-Discovers-Its-Feelings.md"
+    },
+    "Readwise/Articles/2006-04-11-45868810-Paper’s-Revenge.md": {
+      "id": 467,
+      "mtime": 1760043222934,
+      "path": "Readwise/Articles/2006-04-11-45868810-Paper’s-Revenge.md"
+    },
+    "Readwise/Articles/2005-11-12-46224465-William-Bernbach.md": {
+      "id": 468,
+      "mtime": 1760043223167,
+      "path": "Readwise/Articles/2005-11-12-46224465-William-Bernbach.md"
+    },
+    "Readwise/Articles/2005-04-21-45868305-Innovation-in-Online-Book-Sales.md": {
+      "id": 469,
+      "mtime": 1760043222882,
+      "path": "Readwise/Articles/2005-04-21-45868305-Innovation-in-Online-Book-Sales.md"
+    },
+    "Readwise/Articles/2004-11-09-45803670-Social-Software-in-the-Enterprise-A-Historic-Perspective.md": {
+      "id": 470,
+      "mtime": 1760043222837,
+      "path": "Readwise/Articles/2004-11-09-45803670-Social-Software-in-the-Enterprise-A-Historic-Perspective.md"
+    },
+    "Readwise/Articles/2004-06-29-56141487-Zeigarnik-Effect---Wikipedia.md": {
+      "id": 471,
+      "mtime": 1766781408085,
+      "path": "Readwise/Articles/2004-06-29-56141487-Zeigarnik-Effect---Wikipedia.md"
+    },
+    "Readwise/Articles/2003-01-24-45798711-Linked-The-New-Science-of-Networks.md": {
+      "id": 472,
+      "mtime": 1760043222799,
+      "path": "Readwise/Articles/2003-01-24-45798711-Linked-The-New-Science-of-Networks.md"
+    },
+    "Readwise/Articles/-55241533-The-Individual-Usurps-the-Firm-as-the-Leading-Actor-in-Business.md": {
+      "id": 473,
+      "mtime": 1760043225269,
+      "path": "Readwise/Articles/-55241533-The-Individual-Usurps-the-Firm-as-the-Leading-Actor-in-Business.md"
+    },
+    "Readwise/Articles/-55175927-Highlights-From-economist.com.md": {
+      "id": 474,
+      "mtime": 1760043225218,
+      "path": "Readwise/Articles/-55175927-Highlights-From-economist.com.md"
+    },
+    "Readwise/Articles/-54822073-Oblique-Strategies.md": {
+      "id": 475,
+      "mtime": 1760043225036,
+      "path": "Readwise/Articles/-54822073-Oblique-Strategies.md"
+    },
+    "Readwise/Articles/-54721240-Should-a-machine-arbitrate-a-row-with-your-boss.md": {
+      "id": 476,
+      "mtime": 1760043224960,
+      "path": "Readwise/Articles/-54721240-Should-a-machine-arbitrate-a-row-with-your-boss.md"
+    },
+    "Readwise/Articles/-53663904-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md": {
+      "id": 477,
+      "mtime": 1760043224688,
+      "path": "Readwise/Articles/-53663904-I-Spent-90-Days-Rebuilding-My-Brain.-Here's-What-I-Learned..md"
+    },
+    "Readwise/Articles/-53343905-In-war,-incentives-matter-more-than-courage.md": {
+      "id": 478,
+      "mtime": 1760043224608,
+      "path": "Readwise/Articles/-53343905-In-war,-incentives-matter-more-than-courage.md"
+    },
+    "Readwise/Articles/-49629232-(10)-Post.md": {
+      "id": 479,
+      "mtime": 1760043223726,
+      "path": "Readwise/Articles/-49629232-(10)-Post.md"
+    },
+    "Readwise/Articles/-46286296-11-FREE-Storytelling-Courses..md": {
+      "id": 480,
+      "mtime": 1760043223267,
+      "path": "Readwise/Articles/-46286296-11-FREE-Storytelling-Courses..md"
+    },
+    "Readwise/Articles/-45976986-Brain-Food-Obsessed.md": {
+      "id": 481,
+      "mtime": 1760043222989,
+      "path": "Readwise/Articles/-45976986-Brain-Food-Obsessed.md"
+    },
+    "Readwise/Articles/-45869117-Happy-Birthday-WWW-–-Make-Money-From-Data---CYBAEA.NET.md": {
+      "id": 482,
+      "mtime": 1760043222962,
+      "path": "Readwise/Articles/-45869117-Happy-Birthday-WWW-–-Make-Money-From-Data---CYBAEA.NET.md"
+    },
+    "Readwise/Articles/-45868754-John-Kay-The-Centralised-Road-to-Mediocrity.md": {
+      "id": 483,
+      "mtime": 1760043222909,
+      "path": "Readwise/Articles/-45868754-John-Kay-The-Centralised-Road-to-Mediocrity.md"
+    },
+    "Readwise/Articles/-45509980-The-Brand-Awareness-Checklist.md": {
+      "id": 484,
+      "mtime": 1760043220098,
+      "path": "Readwise/Articles/-45509980-The-Brand-Awareness-Checklist.md"
+    },
+    "Readwise/Articles/-45509979-GUEST-ARTIST-“Conjuring-Dreams-Out-of-Thin-Air”-by-James-Gurney.md": {
+      "id": 485,
+      "mtime": 1760043220558,
+      "path": "Readwise/Articles/-45509979-GUEST-ARTIST-“Conjuring-Dreams-Out-of-Thin-Air”-by-James-Gurney.md"
+    },
+    "Readwise/Articles/-45509978-Ordering-Adjectives — Remarkably,-When-We-Describe-a-Noun-We....md": {
+      "id": 486,
+      "mtime": 1760043220578,
+      "path": "Readwise/Articles/-45509978-Ordering-Adjectives — Remarkably,-When-We-Describe-a-Noun-We....md"
+    },
+    "Readwise/Articles/-45509977-Non-Negotiable.md": {
+      "id": 487,
+      "mtime": 1760043220620,
+      "path": "Readwise/Articles/-45509977-Non-Negotiable.md"
+    },
+    "Readwise/Articles/-45509973-Your-output-depends-on-your-input.md": {
+      "id": 488,
+      "mtime": 1760043220641,
+      "path": "Readwise/Articles/-45509973-Your-output-depends-on-your-input.md"
+    },
+    "Readwise/Articles/-45509972-It’s-the-Little-Things.md": {
+      "id": 489,
+      "mtime": 1760043220665,
+      "path": "Readwise/Articles/-45509972-It’s-the-Little-Things.md"
+    },
+    "Readwise/Articles/-45509971-GUEST-ARTIST-“12-Life-Lessons-We-Can-Learn-From-Watercolours”-by-Patanjali-Bhati.md": {
+      "id": 490,
+      "mtime": 1760043220687,
+      "path": "Readwise/Articles/-45509971-GUEST-ARTIST-“12-Life-Lessons-We-Can-Learn-From-Watercolours”-by-Patanjali-Bhati.md"
+    },
+    "Readwise/Articles/-45509970-Retail-Data-R-Package.md": {
+      "id": 491,
+      "mtime": 1760043220706,
+      "path": "Readwise/Articles/-45509970-Retail-Data-R-Package.md"
+    },
+    "Readwise/Articles/-45509969-Beware-of-Experience-Asymmetry.md": {
+      "id": 492,
+      "mtime": 1760043220726,
+      "path": "Readwise/Articles/-45509969-Beware-of-Experience-Asymmetry.md"
+    },
+    "Readwise/Articles/-45509968-The-Fremen-Principle.md": {
+      "id": 493,
+      "mtime": 1760043220739,
+      "path": "Readwise/Articles/-45509968-The-Fremen-Principle.md"
+    },
+    "Readwise/Articles/-45509967-Bulletins-vs-Bulletin-Boards.md": {
+      "id": 494,
+      "mtime": 1760043220757,
+      "path": "Readwise/Articles/-45509967-Bulletins-vs-Bulletin-Boards.md"
+    },
+    "Readwise/Articles/-45509966-Let-Go-of-Control.-It’s-an-Illusion..md": {
+      "id": 495,
+      "mtime": 1760043220777,
+      "path": "Readwise/Articles/-45509966-Let-Go-of-Control.-It’s-an-Illusion..md"
+    },
+    "Readwise/Articles/-45509965-The-Secrets-to-Sustaining-a-Strong-Remote-Team.md": {
+      "id": 496,
+      "mtime": 1760043220799,
+      "path": "Readwise/Articles/-45509965-The-Secrets-to-Sustaining-a-Strong-Remote-Team.md"
+    },
+    "Readwise/Articles/-45509964-How-to-Thrive-in-a-World-of-Constant-Change.md": {
+      "id": 497,
+      "mtime": 1760043220819,
+      "path": "Readwise/Articles/-45509964-How-to-Thrive-in-a-World-of-Constant-Change.md"
+    },
+    "Readwise/Articles/-45509963-Sales-Impact-of-Advertising.md": {
+      "id": 498,
+      "mtime": 1760043220838,
+      "path": "Readwise/Articles/-45509963-Sales-Impact-of-Advertising.md"
+    },
+    "Readwise/Articles/-45509962-The-Dilution-Effect.md": {
+      "id": 499,
+      "mtime": 1760043220860,
+      "path": "Readwise/Articles/-45509962-The-Dilution-Effect.md"
+    },
+    "Readwise/Articles/-45509961-A-State-of-Flow.md": {
+      "id": 500,
+      "mtime": 1760043220874,
+      "path": "Readwise/Articles/-45509961-A-State-of-Flow.md"
+    },
+    "Readwise/Articles/-45509960-Thought-Leadership.md": {
+      "id": 501,
+      "mtime": 1760043220895,
+      "path": "Readwise/Articles/-45509960-Thought-Leadership.md"
+    },
+    "Readwise/Articles/-45509959-Gambling-Is-Fun-but-It-Can-Ruin-Addicts.md": {
+      "id": 502,
+      "mtime": 1760043220906,
+      "path": "Readwise/Articles/-45509959-Gambling-Is-Fun-but-It-Can-Ruin-Addicts.md"
+    },
+    "Readwise/Articles/-45509956-The-Corporatization-of-Consulting.md": {
+      "id": 503,
+      "mtime": 1760043220960,
+      "path": "Readwise/Articles/-45509956-The-Corporatization-of-Consulting.md"
+    },
+    "Readwise/Articles/-45509955-Ep.-62---Customer-Retention-Strategies-How-to-Improve-Your-Customer-Lifespan-by-6x-W-Greg-Daines.md": {
+      "id": 504,
+      "mtime": 1760043220972,
+      "path": "Readwise/Articles/-45509955-Ep.-62---Customer-Retention-Strategies-How-to-Improve-Your-Customer-Lifespan-by-6x-W-Greg-Daines.md"
+    },
+    "Readwise/Articles/-45319962-Matt-Smith’s-Post.md": {
+      "id": 505,
+      "mtime": 1760043221233,
+      "path": "Readwise/Articles/-45319962-Matt-Smith’s-Post.md"
+    },
+    "Readwise/Articles/-45318067-Nina-Devouge’s-Post.md": {
+      "id": 506,
+      "mtime": 1760043221203,
+      "path": "Readwise/Articles/-45318067-Nina-Devouge’s-Post.md"
+    },
+    "Readwise/Articles/-45139660-The-Funding-Crisis-Threatening-England’s-Special-Needs-Education.md": {
+      "id": 507,
+      "mtime": 1760043221040,
+      "path": "Readwise/Articles/-45139660-The-Funding-Crisis-Threatening-England’s-Special-Needs-Education.md"
+    },
+    "Michael/Physics papers.md": {
+      "id": 508,
+      "mtime": 1757971147435,
+      "path": "Michael/Physics papers.md"
+    },
+    "Michael/Edexcel (Pearson) IGCSE Maths A Past Papers PDFs.md": {
+      "id": 509,
+      "mtime": 1757971147434,
+      "path": "Michael/Edexcel (Pearson) IGCSE Maths A Past Papers PDFs.md"
+    },
+    "MAIN NOTES/Your Analytics Are Useless If Your Org Chart is Wrong.md": {
+      "id": 510,
+      "mtime": 1759814900091,
+      "path": "MAIN NOTES/Your Analytics Are Useless If Your Org Chart is Wrong.md"
+    },
+    "MAIN NOTES/Why Most AI Projects Fail (And How to Fix Them).md": {
+      "id": 511,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/Why Most AI Projects Fail (And How to Fix Them).md"
+    },
+    "MAIN NOTES/What is the purpose of business meetings.md": {
+      "id": 512,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/What is the purpose of business meetings.md"
+    },
+    "MAIN NOTES/VSC Python Quarto for Data Science.md": {
+      "id": 513,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/VSC Python Quarto for Data Science.md"
+    },
+    "MAIN NOTES/The importance of real things.md": {
+      "id": 514,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/The importance of real things.md"
+    },
+    "MAIN NOTES/The Sim-to-Real Gap in a Corporate Context.md": {
+      "id": 515,
+      "mtime": 1761674291986,
+      "path": "MAIN NOTES/The Sim-to-Real Gap in a Corporate Context.md"
+    },
+    "MAIN NOTES/The Hidden Risk of Compounding Complexity in Hybrid Models.md": {
+      "id": 516,
+      "mtime": 1767019263810,
+      "path": "MAIN NOTES/The Hidden Risk of Compounding Complexity in Hybrid Models.md"
+    },
+    "MAIN NOTES/The Creative Dividend - summary.md": {
+      "id": 517,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/The Creative Dividend - summary.md"
+    },
+    "MAIN NOTES/The Corporation as Asgard--Control, Hubris, and the Inevitability of Change.md": {
+      "id": 518,
+      "mtime": 1761686184075,
+      "path": "MAIN NOTES/The Corporation as Asgard--Control, Hubris, and the Inevitability of Change.md"
+    },
+    "MAIN NOTES/The 80% Rule - Work with imperfect data.md": {
+      "id": 519,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/The 80% Rule - Work with imperfect data.md"
+    },
+    "MAIN NOTES/Strategies for building professional relationships - Copilot.md": {
+      "id": 520,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/Strategies for building professional relationships - Copilot.md"
+    },
+    "MAIN NOTES/Strategies for building professional relationships - Claude.md": {
+      "id": 521,
+      "mtime": 1757971147434,
+      "path": "MAIN NOTES/Strategies for building professional relationships - Claude.md"
+    },
+    "MAIN NOTES/Social Media Snippets.md": {
+      "id": 522,
+      "mtime": 1762521174346,
+      "path": "MAIN NOTES/Social Media Snippets.md"
+    },
+    "MAIN NOTES/Sketch Your Mind.md": {
+      "id": 523,
+      "mtime": 1759088574968,
+      "path": "MAIN NOTES/Sketch Your Mind.md"
+    },
+    "MAIN NOTES/Sketch Your Mind 2025.md": {
+      "id": 524,
+      "mtime": 1760986644399,
+      "path": "MAIN NOTES/Sketch Your Mind 2025.md"
+    },
+    "MAIN NOTES/Return to office is lazy leadership.md": {
+      "id": 525,
+      "mtime": 1760013872399,
+      "path": "MAIN NOTES/Return to office is lazy leadership.md"
+    },
+    "MAIN NOTES/Requirements for software and services.md": {
+      "id": 526,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Requirements for software and services.md"
+    },
+    "MAIN NOTES/Reflections on the moral life 2003.md": {
+      "id": 527,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Reflections on the moral life 2003.md"
+    },
+    "MAIN NOTES/Quotes that inspire.md": {
+      "id": 528,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Quotes that inspire.md"
+    },
+    "MAIN NOTES/Quotes about storytelling.md": {
+      "id": 529,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Quotes about storytelling.md"
+    },
+    "MAIN NOTES/Questions every year.md": {
+      "id": 530,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Questions every year.md"
+    },
+    "MAIN NOTES/Questions every decade.md": {
+      "id": 531,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Questions every decade.md"
+    },
+    "MAIN NOTES/Putting my hat back on - the joy of Fedora.md": {
+      "id": 532,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Putting my hat back on - the joy of Fedora.md"
+    },
+    "MAIN NOTES/Public risk registers.md": {
+      "id": 533,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Public risk registers.md"
+    },
+    "MAIN NOTES/Prompts for daily journaling in comics format.md": {
+      "id": 534,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Prompts for daily journaling in comics format.md"
+    },
+    "MAIN NOTES/Playing with colours for note taking.md": {
+      "id": 535,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Playing with colours for note taking.md"
+    },
+    "MAIN NOTES/Matt's image style.md": {
+      "id": 536,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/Matt's image style.md"
+    },
+    "MAIN NOTES/Master the Micro Moments.md": {
+      "id": 537,
+      "mtime": 1766782731333,
+      "path": "MAIN NOTES/Master the Micro Moments.md"
+    },
+    "MAIN NOTES/MDA AI Use.md": {
+      "id": 538,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/MDA AI Use.md"
+    },
+    "MAIN NOTES/MCP information architecture.md": {
+      "id": 539,
+      "mtime": 1760987457781,
+      "path": "MAIN NOTES/MCP information architecture.md"
+    },
+    "MAIN NOTES/LinkedIn profile improvements 2025.md": {
+      "id": 540,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/LinkedIn profile improvements 2025.md"
+    },
+    "MAIN NOTES/LinkedIn for LMA research.md": {
+      "id": 541,
+      "mtime": 1757971147433,
+      "path": "MAIN NOTES/LinkedIn for LMA research.md"
+    },
+    "MAIN NOTES/LMA AI paper presentation.md": {
+      "id": 542,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/LMA AI paper presentation.md"
+    },
+    "MAIN NOTES/Images.md": {
+      "id": 543,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Images.md"
+    },
+    "MAIN NOTES/Howden Global Employee Health Report 2026 Repost.md": {
+      "id": 544,
+      "mtime": 1763654128294,
+      "path": "MAIN NOTES/Howden Global Employee Health Report 2026 Repost.md"
+    },
+    "MAIN NOTES/How I journal.md": {
+      "id": 545,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/How I journal.md"
+    },
+    "MAIN NOTES/Google Documents Spy on Your Clients.md": {
+      "id": 546,
+      "mtime": 1762691388067,
+      "path": "MAIN NOTES/Google Documents Spy on Your Clients.md"
+    },
+    "MAIN NOTES/GenAI and Structured Data - Research.md": {
+      "id": 547,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/GenAI and Structured Data - Research.md"
+    },
+    "MAIN NOTES/Garbage Can Model.md": {
+      "id": 548,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Garbage Can Model.md"
+    },
+    "MAIN NOTES/GEM and AI Instructions.md": {
+      "id": 549,
+      "mtime": 1763651144457,
+      "path": "MAIN NOTES/GEM and AI Instructions.md"
+    },
+    "MAIN NOTES/Fleeting notes.md": {
+      "id": 550,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Fleeting notes.md"
+    },
+    "MAIN NOTES/Eight Point Arc.md": {
+      "id": 551,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Eight Point Arc.md"
+    },
+    "MAIN NOTES/EIOPA Opinion on AI.md": {
+      "id": 552,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/EIOPA Opinion on AI.md"
+    },
+    "MAIN NOTES/EARL 2025.md": {
+      "id": 553,
+      "mtime": 1761047749352,
+      "path": "MAIN NOTES/EARL 2025.md"
+    },
+    "MAIN NOTES/Design Inspiration - PDF Carousel.md": {
+      "id": 554,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Design Inspiration - PDF Carousel.md"
+    },
+    "MAIN NOTES/Denmark for a young teenager.md": {
+      "id": 555,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Denmark for a young teenager.md"
+    },
+    "MAIN NOTES/Demystifying sales in consulting.md": {
+      "id": 556,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Demystifying sales in consulting.md"
+    },
+    "MAIN NOTES/Data vandalism.md": {
+      "id": 557,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Data vandalism.md"
+    },
+    "MAIN NOTES/Data Craftsman LI.md": {
+      "id": 558,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Data Craftsman LI.md"
+    },
+    "MAIN NOTES/Danish itinerary.md": {
+      "id": 559,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Danish itinerary.md"
+    },
+    "MAIN NOTES/Cyberpunk AI Generation prompts.md": {
+      "id": 560,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Cyberpunk AI Generation prompts.md"
+    },
+    "MAIN NOTES/Customisations.md": {
+      "id": 561,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Customisations.md"
+    },
+    "MAIN NOTES/Content system for newsletters.md": {
+      "id": 562,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Content system for newsletters.md"
+    },
+    "MAIN NOTES/Content pillars.md": {
+      "id": 563,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Content pillars.md"
+    },
+    "MAIN NOTES/Coaching questions.md": {
+      "id": 564,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/Coaching questions.md"
+    },
+    "MAIN NOTES/Change of media, change of culture.md": {
+      "id": 565,
+      "mtime": 1759695127546,
+      "path": "MAIN NOTES/Change of media, change of culture.md"
+    },
+    "MAIN NOTES/AI tool economics fail structure win.md": {
+      "id": 566,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/AI tool economics fail structure win.md"
+    },
+    "MAIN NOTES/AI reasoning errors.md": {
+      "id": 567,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/AI reasoning errors.md"
+    },
+    "MAIN NOTES/AI as legal entity - unintended consequences.md": {
+      "id": 568,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/AI as legal entity - unintended consequences.md"
+    },
+    "MAIN NOTES/AI Strategy Prompts.md": {
+      "id": 569,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/AI Strategy Prompts.md"
+    },
+    "MAIN NOTES/AI Image generation prompts.md": {
+      "id": 570,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/AI Image generation prompts.md"
+    },
+    "MAIN NOTES/AI Graduate Jobpocalypse.md": {
+      "id": 571,
+      "mtime": 1759138693128,
+      "path": "MAIN NOTES/AI Graduate Jobpocalypse.md"
+    },
+    "MAIN NOTES/AI Deep Model Assurance.md": {
+      "id": 572,
+      "mtime": 1761674305467,
+      "path": "MAIN NOTES/AI Deep Model Assurance.md"
+    },
+    "MAIN NOTES/5-Day Gen AI Intensive.md": {
+      "id": 573,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/5-Day Gen AI Intensive.md"
+    },
+    "MAIN NOTES/2025-11-07 Links.md": {
+      "id": 574,
+      "mtime": 1762697728001,
+      "path": "MAIN NOTES/2025-11-07 Links.md"
+    },
+    "MAIN NOTES/2025-10-21 Simon Grayson Coaching Session.md": {
+      "id": 575,
+      "mtime": 1761065114437,
+      "path": "MAIN NOTES/2025-10-21 Simon Grayson Coaching Session.md"
+    },
+    "MAIN NOTES/2025 ambitions.md": {
+      "id": 576,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/2025 ambitions.md"
+    },
+    "MAIN NOTES/2025 Laptop research.md": {
+      "id": 577,
+      "mtime": 1757971147432,
+      "path": "MAIN NOTES/2025 Laptop research.md"
+    },
+    "MAIN NOTES/10 Paradoxical Truths from 10 Paradoxical People.md": {
+      "id": 578,
+      "mtime": 1758029301862,
+      "path": "MAIN NOTES/10 Paradoxical Truths from 10 Paradoxical People.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Toggle Grid.md": {
+      "id": 579,
+      "mtime": 1757971147431,
+      "path": "Excalidraw/Scripts/Downloaded/Toggle Grid.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Text to Path.md": {
+      "id": 580,
+      "mtime": 1757971147431,
+      "path": "Excalidraw/Scripts/Downloaded/Text to Path.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Text Aura.md": {
+      "id": 581,
+      "mtime": 1757971147431,
+      "path": "Excalidraw/Scripts/Downloaded/Text Aura.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Slideshow.md": {
+      "id": 582,
+      "mtime": 1760865651349,
+      "path": "Excalidraw/Scripts/Downloaded/Slideshow.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Shade Master.md": {
+      "id": 583,
+      "mtime": 1759049418949,
+      "path": "Excalidraw/Scripts/Downloaded/Shade Master.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Set background color of unclosed line object by adding a shadow clone.md": {
+      "id": 584,
+      "mtime": 1763535271719,
+      "path": "Excalidraw/Scripts/Downloaded/Set background color of unclosed line object by adding a shadow clone.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Set Text Alignment.md": {
+      "id": 585,
+      "mtime": 1763535271719,
+      "path": "Excalidraw/Scripts/Downloaded/Set Text Alignment.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Set Stroke Width of Selected Elements.md": {
+      "id": 586,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Set Stroke Width of Selected Elements.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Set Grid.md": {
+      "id": 587,
+      "mtime": 1757971147431,
+      "path": "Excalidraw/Scripts/Downloaded/Set Grid.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Set Dimensions.md": {
+      "id": 588,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Scripts/Downloaded/Set Dimensions.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Palette loader.md": {
+      "id": 589,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Scripts/Downloaded/Palette loader.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Normalize Selected Arrows.md": {
+      "id": 590,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Normalize Selected Arrows.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Modify background color opacity.md": {
+      "id": 591,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Modify background color opacity.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Lighten background color.md": {
+      "id": 592,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Lighten background color.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Grid Selected Images.md": {
+      "id": 593,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Grid Selected Images.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Fixed vertical distance.md": {
+      "id": 594,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Fixed vertical distance.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Fixed vertical distance between centers.md": {
+      "id": 595,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Fixed vertical distance between centers.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Fixed spacing.md": {
+      "id": 596,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Fixed spacing.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Fixed inner distance.md": {
+      "id": 597,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Fixed inner distance.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Fixed horizontal distance between centers.md": {
+      "id": 598,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Fixed horizontal distance between centers.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Elbow connectors.md": {
+      "id": 599,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Elbow connectors.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Darken background color.md": {
+      "id": 600,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Darken background color.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Convert freedraw to line.md": {
+      "id": 601,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Convert freedraw to line.md"
+    },
+    "Excalidraw/Scripts/Downloaded/Change shape of selected elements.md": {
+      "id": 602,
+      "mtime": 1763535271718,
+      "path": "Excalidraw/Scripts/Downloaded/Change shape of selected elements.md"
+    },
+    "Excalidraw/Presentation 2025-06-27 15.32.55.excalidraw.md": {
+      "id": 603,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Presentation 2025-06-27 15.32.55.excalidraw.md"
+    },
+    "Excalidraw/Palettes/Default1.md": {
+      "id": 604,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Palettes/Default1.md"
+    },
+    "Excalidraw/Drawing 2025-06-28 22.05.10.md": {
+      "id": 605,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Drawing 2025-06-28 22.05.10.md"
+    },
+    "Excalidraw/Drawing 2025-06-27 23.04.35.excalidraw.md": {
+      "id": 606,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Drawing 2025-06-27 23.04.35.excalidraw.md"
+    },
+    "Excalidraw/Drawing 2025-06-27 22.27.59.excalidraw.md": {
+      "id": 607,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Drawing 2025-06-27 22.27.59.excalidraw.md"
+    },
+    "Excalidraw/Drawing 2025-06-26 13.49.54.excalidraw.md": {
+      "id": 608,
+      "mtime": 1757971147430,
+      "path": "Excalidraw/Drawing 2025-06-26 13.49.54.excalidraw.md"
+    },
+    "Excalidraw/Drawing 2024-11-03 21.21.29.excalidraw.md": {
+      "id": 609,
+      "mtime": 1757971147429,
+      "path": "Excalidraw/Drawing 2024-11-03 21.21.29.excalidraw.md"
+    },
+    "Daily/2025-07-19P1W posts.md": {
+      "id": 610,
+      "mtime": 1757971147429,
+      "path": "Daily/2025-07-19P1W posts.md"
+    },
+    "Daily/2024-10-31.md": {
+      "id": 611,
+      "mtime": 1757971147429,
+      "path": "Daily/2024-10-31.md"
+    },
+    "Clippings/seascapemodels.md": {
+      "id": 612,
+      "mtime": 1757971147429,
+      "path": "Clippings/seascapemodels.md"
+    },
+    "Clippings/matloffdsld A statistical and graphical toolkit for analyzing data for possible patterns of discrimination (racial, gender, age, etc.).md": {
+      "id": 613,
+      "mtime": 1757971147428,
+      "path": "Clippings/matloffdsld A statistical and graphical toolkit for analyzing data for possible patterns of discrimination (racial, gender, age, etc.).md"
+    },
+    "Clippings/bain_report_technology_report_2025/bain_report_technology_report_2025.md": {
+      "id": 614,
+      "mtime": 1762518753644,
+      "path": "Clippings/bain_report_technology_report_2025/bain_report_technology_report_2025.md"
+    },
+    "Clippings/Your Car Is Listening To You — And So Are Hackers.md": {
+      "id": 615,
+      "mtime": 1757971147428,
+      "path": "Clippings/Your Car Is Listening To You — And So Are Hackers.md"
+    },
+    "Clippings/Working from home is 'not proper work', says ex-Asda boss.md": {
+      "id": 616,
+      "mtime": 1757971147428,
+      "path": "Clippings/Working from home is 'not proper work', says ex-Asda boss.md"
+    },
+    "Clippings/Windows 10 LTSC – the version that won't expire for years.md": {
+      "id": 617,
+      "mtime": 1757971147428,
+      "path": "Clippings/Windows 10 LTSC – the version that won't expire for years.md"
+    },
+    "Clippings/Why the billable hour is still king in the legal world.md": {
+      "id": 618,
+      "mtime": 1757971147428,
+      "path": "Clippings/Why the billable hour is still king in the legal world.md"
+    },
+    "Clippings/Why the Post Office paid £600m to stay shackled to the faulty Horizon system.md": {
+      "id": 619,
+      "mtime": 1757971147428,
+      "path": "Clippings/Why the Post Office paid £600m to stay shackled to the faulty Horizon system.md"
+    },
+    "Clippings/Why Most Corporate Innovation Programs Fail — and How to Fix Them.md": {
+      "id": 620,
+      "mtime": 1766782965341,
+      "path": "Clippings/Why Most Corporate Innovation Programs Fail — and How to Fix Them.md"
+    },
+    "Clippings/Where to draw the line.md": {
+      "id": 621,
+      "mtime": 1757971147428,
+      "path": "Clippings/Where to draw the line.md"
+    },
+    "Clippings/Where is artificial general intelligence My grandfather’s guess is as good as yours.md": {
+      "id": 622,
+      "mtime": 1757971147428,
+      "path": "Clippings/Where is artificial general intelligence My grandfather’s guess is as good as yours.md"
+    },
+    "Clippings/What Professional Service Firms Must Do to Thrive.md": {
+      "id": 623,
+      "mtime": 1757971147428,
+      "path": "Clippings/What Professional Service Firms Must Do to Thrive.md"
+    },
+    "Clippings/Version, Share, Deploy, and Monitor Models.md": {
+      "id": 624,
+      "mtime": 1757971147428,
+      "path": "Clippings/Version, Share, Deploy, and Monitor Models.md"
+    },
+    "Clippings/Using AI Right Now A Quick Guide.md": {
+      "id": 625,
+      "mtime": 1757971147428,
+      "path": "Clippings/Using AI Right Now A Quick Guide.md"
+    },
+    "Clippings/Unlike everyone else, Americans and Britons still shun the office.md": {
+      "id": 626,
+      "mtime": 1757971147428,
+      "path": "Clippings/Unlike everyone else, Americans and Britons still shun the office.md"
+    },
+    "Clippings/Unleashing the power of small, independent teams.md": {
+      "id": 627,
+      "mtime": 1757971147428,
+      "path": "Clippings/Unleashing the power of small, independent teams.md"
+    },
+    "Clippings/Unicode Character Repertoire Subsets.md": {
+      "id": 628,
+      "mtime": 1757971147428,
+      "path": "Clippings/Unicode Character Repertoire Subsets.md"
+    },
+    "Clippings/US Marine Corps AI Implementation Plan 2025.md": {
+      "id": 629,
+      "mtime": 1757971147428,
+      "path": "Clippings/US Marine Corps AI Implementation Plan 2025.md"
+    },
+    "Clippings/Two scholars ask whether democracy can survive if AI does all the jobs.md": {
+      "id": 630,
+      "mtime": 1766783290838,
+      "path": "Clippings/Two scholars ask whether democracy can survive if AI does all the jobs.md"
+    },
+    "Clippings/Three axioms and three questions that summarise all of brand strategy.md": {
+      "id": 631,
+      "mtime": 1757971147427,
+      "path": "Clippings/Three axioms and three questions that summarise all of brand strategy.md"
+    },
+    "Clippings/Thinking in Systems.md": {
+      "id": 632,
+      "mtime": 1757971147427,
+      "path": "Clippings/Thinking in Systems.md"
+    },
+    "Clippings/The-state-of-AI-2025-Agents-innovation-and-transformation/The-state-of-AI-2025-Agents-innovation-and-transformation.md": {
+      "id": 633,
+      "mtime": 1762518753617,
+      "path": "Clippings/The-state-of-AI-2025-Agents-innovation-and-transformation/The-state-of-AI-2025-Agents-innovation-and-transformation.md"
+    },
+    "Clippings/The year ahead a message from the CEO.md": {
+      "id": 634,
+      "mtime": 1757971147427,
+      "path": "Clippings/The year ahead a message from the CEO.md"
+    },
+    "Clippings/The shape of network society.md": {
+      "id": 635,
+      "mtime": 1757971147427,
+      "path": "Clippings/The shape of network society.md"
+    },
+    "Clippings/The myths of corporate innovation.md": {
+      "id": 636,
+      "mtime": 1757971147427,
+      "path": "Clippings/The myths of corporate innovation.md"
+    },
+    "Clippings/The individual usurps the firm as the leading actor in business.md": {
+      "id": 637,
+      "mtime": 1758866363690,
+      "path": "Clippings/The individual usurps the firm as the leading actor in business.md"
+    },
+    "Clippings/The future of the office.md": {
+      "id": 638,
+      "mtime": 1757971147427,
+      "path": "Clippings/The future of the office.md"
+    },
+    "Clippings/The future of AI in the insurance industry.md": {
+      "id": 639,
+      "mtime": 1757971147427,
+      "path": "Clippings/The future of AI in the insurance industry.md"
+    },
+    "Clippings/The eight essentials of innovation.md": {
+      "id": 640,
+      "mtime": 1757971147427,
+      "path": "Clippings/The eight essentials of innovation.md"
+    },
+    "Clippings/The best books of 2024, as chosen by The Economist.md": {
+      "id": 641,
+      "mtime": 1757971147427,
+      "path": "Clippings/The best books of 2024, as chosen by The Economist.md"
+    },
+    "Clippings/The baffling WFH puzzle.md": {
+      "id": 642,
+      "mtime": 1757971147427,
+      "path": "Clippings/The baffling WFH puzzle.md"
+    },
+    "Clippings/The Modern R Stack for Production AI.md": {
+      "id": 643,
+      "mtime": 1757971147426,
+      "path": "Clippings/The Modern R Stack for Production AI.md"
+    },
+    "Clippings/The Great Library.md": {
+      "id": 644,
+      "mtime": 1757971147426,
+      "path": "Clippings/The Great Library.md"
+    },
+    "Clippings/The CEO’s essential checklist Questions every chief executive should be able to answer.md": {
+      "id": 645,
+      "mtime": 1757971147426,
+      "path": "Clippings/The CEO’s essential checklist Questions every chief executive should be able to answer.md"
+    },
+    "Clippings/Ten implausible-sounding scenarios for 2025.md": {
+      "id": 646,
+      "mtime": 1757971147426,
+      "path": "Clippings/Ten implausible-sounding scenarios for 2025.md"
+    },
+    "Clippings/Tech groups step up efforts to solve AI’s big security flaw.md": {
+      "id": 647,
+      "mtime": 1762155017061,
+      "path": "Clippings/Tech groups step up efforts to solve AI’s big security flaw.md"
+    },
+    "Clippings/Sparse Vectors for Use in Data Frames.md": {
+      "id": 648,
+      "mtime": 1757971147426,
+      "path": "Clippings/Sparse Vectors for Use in Data Frames.md"
+    },
+    "Clippings/Social Software in the Enterprise A Historic Perspective – Make money from data - CYBAEA.NET.md": {
+      "id": 649,
+      "mtime": 1757971147426,
+      "path": "Clippings/Social Software in the Enterprise A Historic Perspective – Make money from data - CYBAEA.NET.md"
+    },
+    "Clippings/Sham urbanity dispatches Smithfield to the knacker’s yard.md": {
+      "id": 650,
+      "mtime": 1757971147426,
+      "path": "Clippings/Sham urbanity dispatches Smithfield to the knacker’s yard.md"
+    },
+    "Clippings/Seth Godin Hates Being Organized.md": {
+      "id": 651,
+      "mtime": 1766783261105,
+      "path": "Clippings/Seth Godin Hates Being Organized.md"
+    },
+    "Clippings/Reimagining people development to overcome talent challenges.md": {
+      "id": 652,
+      "mtime": 1757971147426,
+      "path": "Clippings/Reimagining people development to overcome talent challenges.md"
+    },
+    "Clippings/RaphireWin11Debloat A simple, easy to use PowerShell script to remove pre-installed apps from Windows.md": {
+      "id": 653,
+      "mtime": 1757971147426,
+      "path": "Clippings/RaphireWin11Debloat A simple, easy to use PowerShell script to remove pre-installed apps from Windows.md"
+    },
+    "Clippings/Radar Trends to Watch March 2023.md": {
+      "id": 654,
+      "mtime": 1757971147426,
+      "path": "Clippings/Radar Trends to Watch March 2023.md"
+    },
+    "Clippings/RAG is dead, long live RAG!.md": {
+      "id": 655,
+      "mtime": 1757971147426,
+      "path": "Clippings/RAG is dead, long live RAG!.md"
+    },
+    "Clippings/Not By AI — Add the Badge to Your Human-Created Content.md": {
+      "id": 656,
+      "mtime": 1757971147426,
+      "path": "Clippings/Not By AI — Add the Badge to Your Human-Created Content.md"
+    },
+    "Clippings/Moving from Notion to Obsidian.md": {
+      "id": 657,
+      "mtime": 1757971147426,
+      "path": "Clippings/Moving from Notion to Obsidian.md"
+    },
+    "Clippings/Markdown and the slow fade of the formatting fetish.md": {
+      "id": 658,
+      "mtime": 1757971147426,
+      "path": "Clippings/Markdown and the slow fade of the formatting fetish.md"
+    },
+    "Clippings/Links, Resources, and Humans of Note - Infrequently Noted.md": {
+      "id": 659,
+      "mtime": 1757971147426,
+      "path": "Clippings/Links, Resources, and Humans of Note - Infrequently Noted.md"
+    },
+    "Clippings/Law firm clients seek clarity on AI’s potential to cut costs.md": {
+      "id": 660,
+      "mtime": 1757971147425,
+      "path": "Clippings/Law firm clients seek clarity on AI’s potential to cut costs.md"
+    },
+    "Clippings/LEADERSHIP LAB The Craft of Writing Effectively.md": {
+      "id": 661,
+      "mtime": 1757971147425,
+      "path": "Clippings/LEADERSHIP LAB The Craft of Writing Effectively.md"
+    },
+    "Clippings/Job apocalypse Not yet. AI is creating brand new occupations.md": {
+      "id": 662,
+      "mtime": 1766782239940,
+      "path": "Clippings/Job apocalypse Not yet. AI is creating brand new occupations.md"
+    },
+    "Clippings/Investors expect AI use to soar. That’s not happening.md": {
+      "id": 663,
+      "mtime": 1766782566570,
+      "path": "Clippings/Investors expect AI use to soar. That’s not happening.md"
+    },
+    "Clippings/Introduction to the Fundamentals of Amazon Redshift.md": {
+      "id": 664,
+      "mtime": 1757971147425,
+      "path": "Clippings/Introduction to the Fundamentals of Amazon Redshift.md"
+    },
+    "Clippings/Introducing TODS – a typographic and OpenType default stylesheet.md": {
+      "id": 665,
+      "mtime": 1757971147424,
+      "path": "Clippings/Introducing TODS – a typographic and OpenType default stylesheet.md"
+    },
+    "Clippings/Insurers retreat from AI cover as risk of multibillion-dollar claims mounts.md": {
+      "id": 666,
+      "mtime": 1764069348270,
+      "path": "Clippings/Insurers retreat from AI cover as risk of multibillion-dollar claims mounts.md"
+    },
+    "Clippings/Insurance 2030—The impact of AI on the future of insurance.md": {
+      "id": 667,
+      "mtime": 1757971147424,
+      "path": "Clippings/Insurance 2030—The impact of AI on the future of insurance.md"
+    },
+    "Clippings/I Post Every Day on LinkedIn Here’s How I Show Up, Even on Low-Motivation Days.md": {
+      "id": 668,
+      "mtime": 1757971147424,
+      "path": "Clippings/I Post Every Day on LinkedIn Here’s How I Show Up, Even on Low-Motivation Days.md"
+    },
+    "Clippings/Hyperlight Wasm Fast, secure, and OS-free.md": {
+      "id": 669,
+      "mtime": 1757971147424,
+      "path": "Clippings/Hyperlight Wasm Fast, secure, and OS-free.md"
+    },
+    "Clippings/Humans Have Been Taking Out Insurance Policies for at Least 30,000 Years.md": {
+      "id": 670,
+      "mtime": 1757971147424,
+      "path": "Clippings/Humans Have Been Taking Out Insurance Policies for at Least 30,000 Years.md"
+    },
+    "Clippings/Howden's Overnight Raid What it Means for US Insurance Broking.md": {
+      "id": 671,
+      "mtime": 1766782070090,
+      "path": "Clippings/Howden's Overnight Raid What it Means for US Insurance Broking.md"
+    },
+    "Clippings/How to set up and tune your recurve bow, all the secrets they don’t tell you.md": {
+      "id": 672,
+      "mtime": 1757971147424,
+      "path": "Clippings/How to set up and tune your recurve bow, all the secrets they don’t tell you.md"
+    },
+    "Clippings/How to master the art of delegation.md": {
+      "id": 673,
+      "mtime": 1757971147424,
+      "path": "Clippings/How to master the art of delegation.md"
+    },
+    "Clippings/How to Begin.md": {
+      "id": 674,
+      "mtime": 1757971147424,
+      "path": "Clippings/How to Begin.md"
+    },
+    "Clippings/How to Avoid US-Based Digital Services—and Why You Might Want To.md": {
+      "id": 675,
+      "mtime": 1757971147424,
+      "path": "Clippings/How to Avoid US-Based Digital Services—and Why You Might Want To.md"
+    },
+    "Clippings/How much happiness does money buy.md": {
+      "id": 676,
+      "mtime": 1757971147424,
+      "path": "Clippings/How much happiness does money buy.md"
+    },
+    "Clippings/How Thought Leadership Has Been Driving My Business Development for 15+ Years.md": {
+      "id": 677,
+      "mtime": 1757971147424,
+      "path": "Clippings/How Thought Leadership Has Been Driving My Business Development for 15+ Years.md"
+    },
+    "Clippings/How CEOs can outcompete by building new B2C businesses.md": {
+      "id": 678,
+      "mtime": 1757971147424,
+      "path": "Clippings/How CEOs can outcompete by building new B2C businesses.md"
+    },
+    "Clippings/Graphic Devices Based on AGG.md": {
+      "id": 679,
+      "mtime": 1757971147424,
+      "path": "Clippings/Graphic Devices Based on AGG.md"
+    },
+    "Clippings/Getting Started with Zettelkasten in Obsidian.md": {
+      "id": 680,
+      "mtime": 1757971147424,
+      "path": "Clippings/Getting Started with Zettelkasten in Obsidian.md"
+    },
+    "Clippings/Generative Logic.md": {
+      "id": 681,
+      "mtime": 1757971147424,
+      "path": "Clippings/Generative Logic.md"
+    },
+    "Clippings/Generative AI in depth A survey of recent advances, model variants, and real-world applications - Journal of Big Data.md": {
+      "id": 682,
+      "mtime": 1761594897838,
+      "path": "Clippings/Generative AI in depth A survey of recent advances, model variants, and real-world applications - Journal of Big Data.md"
+    },
+    "Clippings/Gen Z is leading the charge back to the office.md": {
+      "id": 683,
+      "mtime": 1757971147423,
+      "path": "Clippings/Gen Z is leading the charge back to the office.md"
+    },
+    "Clippings/Garbage Can Model in Practice.md": {
+      "id": 684,
+      "mtime": 1757971147423,
+      "path": "Clippings/Garbage Can Model in Practice.md"
+    },
+    "Clippings/Functional Analysis of Loss-development Patterns in P-C Insurance/Functional Analysis of Loss-development Patterns in P-C Insurance.md": {
+      "id": 685,
+      "mtime": 1762154925484,
+      "path": "Clippings/Functional Analysis of Loss-development Patterns in P-C Insurance/Functional Analysis of Loss-development Patterns in P-C Insurance.md"
+    },
+    "Clippings/Fail to prepare...  South West Business Insider November 2025  Insider Media.md": {
+      "id": 686,
+      "mtime": 1766782160765,
+      "path": "Clippings/Fail to prepare...  South West Business Insider November 2025  Insider Media.md"
+    },
+    "Clippings/FT on risk management in legal services.md": {
+      "id": 687,
+      "mtime": 1757971147423,
+      "path": "Clippings/FT on risk management in legal services.md"
+    },
+    "Clippings/Etienne Bacher Using property-based testing in R.md": {
+      "id": 688,
+      "mtime": 1757971147423,
+      "path": "Clippings/Etienne Bacher Using property-based testing in R.md"
+    },
+    "Clippings/Estimating AI productivity gains.md": {
+      "id": 689,
+      "mtime": 1764622135918,
+      "path": "Clippings/Estimating AI productivity gains.md"
+    },
+    "Clippings/Estimating AI productivity gains 1.md": {
+      "id": 690,
+      "mtime": 1766782494063,
+      "path": "Clippings/Estimating AI productivity gains 1.md"
+    },
+    "Clippings/Enabling system-wide DNS over TLS  Readwise.md": {
+      "id": 691,
+      "mtime": 1757971147423,
+      "path": "Clippings/Enabling system-wide DNS over TLS  Readwise.md"
+    },
+    "Clippings/Economics discovers its feelings.md": {
+      "id": 692,
+      "mtime": 1757971147423,
+      "path": "Clippings/Economics discovers its feelings.md"
+    },
+    "Clippings/Don’t blame AI for your job woes.md": {
+      "id": 693,
+      "mtime": 1762519483047,
+      "path": "Clippings/Don’t blame AI for your job woes.md"
+    },
+    "Clippings/Data Validation and Organization of Metadata for Local and Remote Tables.md": {
+      "id": 694,
+      "mtime": 1757971147423,
+      "path": "Clippings/Data Validation and Organization of Metadata for Local and Remote Tables.md"
+    },
+    "Clippings/Create a tile of logos for loaded packages.md": {
+      "id": 695,
+      "mtime": 1757971147423,
+      "path": "Clippings/Create a tile of logos for loaded packages.md"
+    },
+    "Clippings/Context Switching Why It's So Hard to Avoid & How to Prevent It Anyway.md": {
+      "id": 696,
+      "mtime": 1757971147423,
+      "path": "Clippings/Context Switching Why It's So Hard to Avoid & How to Prevent It Anyway.md"
+    },
+    "Clippings/Color and Contrast.com.md": {
+      "id": 697,
+      "mtime": 1757971147423,
+      "path": "Clippings/Color and Contrast.com.md"
+    },
+    "Clippings/City firms order workers back to the office as WFH perks end.md": {
+      "id": 698,
+      "mtime": 1757971147423,
+      "path": "Clippings/City firms order workers back to the office as WFH perks end.md"
+    },
+    "Clippings/Charting a path to the data- and AI-driven enterprise of 2030.md": {
+      "id": 699,
+      "mtime": 1757971147423,
+      "path": "Clippings/Charting a path to the data- and AI-driven enterprise of 2030.md"
+    },
+    "Clippings/CSS snippets.md": {
+      "id": 700,
+      "mtime": 1757971147423,
+      "path": "Clippings/CSS snippets.md"
+    },
+    "Clippings/British women thrived under remote working.md": {
+      "id": 701,
+      "mtime": 1757971147423,
+      "path": "Clippings/British women thrived under remote working.md"
+    },
+    "Clippings/BASIS The Fast-Track Innovation Playbook.md": {
+      "id": 702,
+      "mtime": 1757971147423,
+      "path": "Clippings/BASIS The Fast-Track Innovation Playbook.md"
+    },
+    "Clippings/Aviva Rewiring the insurance claims journey with AI.md": {
+      "id": 703,
+      "mtime": 1757971147423,
+      "path": "Clippings/Aviva Rewiring the insurance claims journey with AI.md"
+    },
+    "Clippings/An introduction to Python for R users.md": {
+      "id": 704,
+      "mtime": 1757971147423,
+      "path": "Clippings/An introduction to Python for R users.md"
+    },
+    "Clippings/Agentic Misalignment How LLMs could be insider threats.md": {
+      "id": 705,
+      "mtime": 1758866652559,
+      "path": "Clippings/Agentic Misalignment How LLMs could be insider threats.md"
+    },
+    "Clippings/Advancing loss reserving A hybrid neural network approach for individual claim development prediction.md": {
+      "id": 706,
+      "mtime": 1757971147423,
+      "path": "Clippings/Advancing loss reserving A hybrid neural network approach for individual claim development prediction.md"
+    },
+    "Clippings/Advanced and Fast Data Transformation in R.md": {
+      "id": 707,
+      "mtime": 1757971147423,
+      "path": "Clippings/Advanced and Fast Data Transformation in R.md"
+    },
+    "Clippings/AI and the New Theocracies.md": {
+      "id": 708,
+      "mtime": 1762698419300,
+      "path": "Clippings/AI and the New Theocracies.md"
+    },
+    "Clippings/A new operating model for people management More personal, more tech, more human.md": {
+      "id": 709,
+      "mtime": 1757971147423,
+      "path": "Clippings/A new operating model for people management More personal, more tech, more human.md"
+    },
+    "Clippings/A guide for finding product-market fit in B2B.md": {
+      "id": 710,
+      "mtime": 1757971147423,
+      "path": "Clippings/A guide for finding product-market fit in B2B.md"
+    },
+    "Clippings/37 Tools and Tactics to Protect Your Attention.md": {
+      "id": 711,
+      "mtime": 1766782456602,
+      "path": "Clippings/37 Tools and Tactics to Protect Your Attention.md"
+    },
+    "Clippings/(7) Post  LinkedIn.md": {
+      "id": 712,
+      "mtime": 1766783176894,
+      "path": "Clippings/(7) Post  LinkedIn.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kafacrsp0kkps9mkhvxdhtc3-2025-11-19-Simplify-access-to-external-services-using-AWS-IAM-Outbound-Identity-Federation.md": {
+      "id": 713,
+      "mtime": 1766781408519,
+      "path": "Readwise/Full Document Contents/Articles/01kafacrsp0kkps9mkhvxdhtc3-2025-11-19-Simplify-access-to-external-services-using-AWS-IAM-Outbound-Identity-Federation.md"
+    },
+    "Readwise/Full Document Contents/Articles/01kaemeygrrxmfvr149bfdz5jq-2025-11-19-How-Agentic-AI-Empowers-Architecture-Governance.md": {
+      "id": 714,
+      "mtime": 1766781409700,
+      "path": "Readwise/Full Document Contents/Articles/01kaemeygrrxmfvr149bfdz5jq-2025-11-19-How-Agentic-AI-Empowers-Architecture-Governance.md"
+    },
+    "Clippings/1,700 Free Online Courses from Top Universities.md": {
+      "id": 715,
+      "mtime": 1757971147422,
+      "path": "Clippings/1,700 Free Online Courses from Top Universities.md"
+    }
+  }
+}

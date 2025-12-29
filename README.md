@@ -1,90 +1,64 @@
-# Vault Intelligence
+# Obsidian Vault Intelligence
 
-This is a plugin for Obsidian (https://obsidian.md) that provides intelligent vault management features.
+**Obsidian Vault Intelligence** brings state-of-the-art semantic search and research capabilities to your Obsidian vault using Google Gemini.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+> [!NOTE]
+> For users looking for more mature (if costly) implementations of AI in Obsidian, we highly recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight alternative focused on the Gemini ecosystem.
 
-This plugin demonstrates advanced vault intelligence capabilities.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## Features
 
-## First time developing plugins?
+### 🧠 Research Chat
 
-Quick starting guide for new plugin devs:
+A dedicated research sidebar where you can talk to your vault.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+- **Full Context**: The agent understands your conversation history.
+- **Multimodal**: Powered by Gemini 1.5 Flash/Pro, supporting text and more.
+- **Smart RAG**: Automatically searches your vault for relevant notes to answer your questions.
+- **Improved UI**: Full Markdown rendering, selectable text, and a right-click context menu for easy copying.
 
-## Releasing new releases
+### 🔍 Hybrid Vault Search
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+A robust search tool used by the Research Agent to find your information.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- **Semantic Search**: Finds notes based on *meaning*, not just keywords. Uses Gemini embeddings (`text-embedding-004`).
+- **Keyword Fallback**: Automatically falls back to traditional keyword matching to ensure exact terms (like proper names or specific numbers) are never missed.
+- **Automatic Indexing**: Background indexing with rate-limit protection.
 
-## Adding your plugin to the community plugin list
+### 🖇️ Similar Notes View
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+Automatically discover connections you didn't know existed.
 
-## How to use
+- Shows a list of notes similar to your currently active file.
+- Real-time updates as you switch between documents.
+- Confidence scores for every match.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## Getting Started
 
-## Manually installing the plugin
+1. **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+2. **Setup**: Enter your API key in the plugin settings.
+3. **Indexing**: The plugin will begin indexing your vault in the background. You can monitor progress in the developer console.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Configuration
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable GA performance.
+- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge agentic capabilities.
+- **Similarity Threshold**: Fine-tune how "related" a note must be to appear in your sidebar.
 
-## Funding URL
+## Links
 
-You can include funding URLs where people who use your plugin can financially support it.
+- **Main Repository**: [GitHub](https://github.com/cybaea/obsidian-vault-intelligence)
+- **Issue Tracker**: [Report a Bug / Request a Feature](https://github.com/cybaea/obsidian-vault-intelligence/issues)
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## Installation
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+### Community Plugins (Upcoming)
 
-If you have multiple URLs, you can also do:
+Search for "Vault Intelligence" in the Obsidian community plugin browser.
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+### Manual Installation
 
-## API Documentation
+1. Download the latest release (`main.js`, `manifest.json`, `styles.css`).
+2. Create a folder `.obsidian/plugins/obsidian-vault-intelligence` in your vault.
+3. Copy the files into that folder.
+4. Reload Obsidian and enable the plugin.
 
-See https://docs.obsidian.md
