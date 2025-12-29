@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, DropdownComponent, setIcon, Notice, MarkdownRenderer } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, DropdownComponent, setIcon, Notice, MarkdownRenderer, Menu } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";
@@ -142,6 +142,50 @@ export class ResearchChatView extends ItemView {
             msgDiv.style.maxWidth = "80%";
             msgDiv.style.userSelect = "text"; // Explicit inline style for selection
             (msgDiv.style as any).webkitUserSelect = "text";
+
+            msgDiv.addEventListener("contextmenu", (e) => {
+                const menu = new Menu();
+
+                menu.addItem((item) =>
+                    item
+                        .setTitle("Select All")
+                        .setIcon("select-all")
+                        .onClick(() => {
+                            const range = document.createRange();
+                            range.selectNodeContents(msgDiv);
+                            const selection = window.getSelection();
+                            selection?.removeAllRanges();
+                            selection?.addRange(range);
+                        })
+                );
+
+                menu.addItem((item) =>
+                    item
+                        .setTitle("Copy Message")
+                        .setIcon("copy")
+                        .onClick(() => {
+                            navigator.clipboard.writeText(msg.text);
+                            new Notice("Message copied to clipboard.");
+                        })
+                );
+
+                menu.addSeparator();
+
+                menu.addItem((item) =>
+                    item
+                        .setTitle("Copy Entire Chat")
+                        .setIcon("copy")
+                        .onClick(() => {
+                            const history = this.messages
+                                .map(m => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`)
+                                .join("\n\n");
+                            navigator.clipboard.writeText(history);
+                            new Notice("Entire chat history copied.");
+                        })
+                );
+
+                menu.showAtMouseEvent(e);
+            });
 
             if (msg.thought) {
                 const thoughtDiv = msgDiv.createDiv();
