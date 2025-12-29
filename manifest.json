@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-vault-intelligence",
 	"name": "Vault Intelligence",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Intelligent vault management and analysis.",
 	"author": "Obsidian",
