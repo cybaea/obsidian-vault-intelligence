@@ -4,6 +4,8 @@ import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";
 import { AgentService } from "../services/AgentService";
 import { logger } from "../utils/logger";
+import { FileSuggest } from "./FileSuggest";
+import { TFile } from "obsidian";
 
 export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
 
@@ -120,6 +122,9 @@ export class ResearchChatView extends ItemView {
             .onClick(() => this.handleSubmit());
         submitBtn.buttonEl.style.marginTop = "5px";
         submitBtn.buttonEl.style.width = "100%";
+
+        // File Autocomplete
+        new FileSuggest(this.app, this.inputComponent.inputEl);
     }
 
     private clearChat() {
@@ -131,6 +136,20 @@ export class ResearchChatView extends ItemView {
     private async handleSubmit() {
         const text = this.inputComponent.getValue().trim();
         if (!text) return;
+
+        // Parse @ references
+        const files: TFile[] = [];
+        const atRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        let match;
+        while ((match = atRegex.exec(text)) !== null) {
+            const fileName = match[1] || match[2];
+            if (fileName) {
+                const file = this.app.metadataCache.getFirstLinkpathDest(fileName, "");
+                if (file instanceof TFile) {
+                    files.push(file);
+                }
+            }
+        }
 
         // Add to history
         if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== text) {
@@ -150,7 +169,7 @@ export class ResearchChatView extends ItemView {
             .map(m => ({ role: m.role, text: m.text }));
 
         try {
-            const response = await this.agent.chat(agentHistory, text);
+            const response = await this.agent.chat(agentHistory, text, files);
             this.addMessage("model", response); // Thought not easily exposed by Gemini SDK yet without parsing
         } catch (e: any) {
             this.addMessage("model", "Error: " + e.message);
