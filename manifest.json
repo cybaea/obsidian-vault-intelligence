@@ -4,8 +4,8 @@
 	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Intelligent vault management and analysis.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"author": "Allan Engelhardt",
+	"authorUrl": "https://github.com/cybaea",
+	"fundingUrl": "https://github.com/sponsors/cybaea",
 	"isDesktopOnly": false
 }
