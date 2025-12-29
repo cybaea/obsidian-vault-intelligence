@@ -91,16 +91,15 @@ export default class VaultIntelligencePlugin extends Plugin {
 					}
 
 					// 2. Index this file if needed (opportunistic indexing)
-					// We do this silently
 					await this.vectorStore.indexFile(file);
 				}
 			})
 		);
 
 		// File Modification Handling (Debounced)
-		const onModify = debounce(async (file: TFile) => {
-			if (file instanceof TFile) {
-				logger.debug(`File modified (debounced): ${file.path}`);
+		const onMetadataChange = debounce(async (file: TFile) => {
+			if (file instanceof TFile && file.extension === 'md') {
+				logger.debug(`File changed (metadata): ${file.path}`);
 				await this.vectorStore.indexFile(file);
 
 				// Update view if it's the active file
@@ -114,11 +113,28 @@ export default class VaultIntelligencePlugin extends Plugin {
 					}
 				}
 			}
-		}, 2000, true); // 2 second debounce
+		}, 2000, true);
 
-		this.registerEvent(this.app.vault.on('modify', onModify));
+		// More reliable than vault.on('modify') for external changes
+		this.registerEvent(this.app.metadataCache.on('changed', onMetadataChange));
+
 		this.registerEvent(this.app.vault.on('create', async (file) => {
-			if (file instanceof TFile) await this.vectorStore.indexFile(file);
+			if (file instanceof TFile && file.extension === 'md') {
+				await this.vectorStore.indexFile(file);
+			}
+		}));
+
+		this.registerEvent(this.app.vault.on('delete', async (file) => {
+			if (file instanceof TFile) {
+				// @ts-ignore - access private for deletion
+				await this.vectorStore.deleteVector(file.path);
+			}
+		}));
+
+		this.registerEvent(this.app.vault.on('rename', async (file, oldPath) => {
+			if (file instanceof TFile && file.extension === 'md') {
+				await this.vectorStore.renameVector(oldPath, file.path);
+			}
 		}));
 
 		logger.info("Vault Intelligence Plugin Loaded");
