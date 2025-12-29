@@ -94,7 +94,7 @@ export class GeminiService {
         });
     }
 
-    private async retryOperation<T>(operation: () => Promise<T>, retries: number = 3, contentWindow: number = 0): Promise<T> {
+    private async retryOperation<T>(operation: () => Promise<T>, retries: number = 10, contentWindow: number = 0): Promise<T> {
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
                 return await operation();

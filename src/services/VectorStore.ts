@@ -30,7 +30,7 @@ export class VectorStore {
     // Data Store
     private index: VectorIndex = {
         version: 1,
-        embeddingModel: "gemini-1.5-flash",
+        embeddingModel: "gemini-embedding-001",
         dimensions: EMBEDDING_DIMENSION,
         files: {}
     };
