@@ -176,7 +176,7 @@ export class VectorStore {
         const pathsToDelete = Object.keys(this.index.files).filter(p => !currentPaths.has(p));
 
         for (const p of pathsToDelete) {
-            this.deleteVector(p);
+            await this.deleteVector(p);
             changedCount++;
         }
 
@@ -315,7 +315,7 @@ export class VectorStore {
         }
     }
 
-    private deleteVector(path: string) {
+    private async deleteVector(path: string) {
         const entry = this.index.files[path];
         if (!entry) return;
 
@@ -324,6 +324,7 @@ export class VectorStore {
 
         // 1. Remove from Index
         delete this.index.files[path];
+        await this.saveVectors();
 
         // 2. Remove from Buffer (Shift everyone after `idToRemove` down by 1 slot)
         // If it's the last one, just slice.
@@ -353,6 +354,16 @@ export class VectorStore {
                 }
             }
         }
+    }
+
+    public async renameVector(oldPath: string, newPath: string) {
+        const entry = this.index.files[oldPath];
+        if (!entry) return;
+
+        logger.info(`Renaming vector from ${oldPath} to ${newPath}`);
+        this.index.files[newPath] = { ...entry, path: newPath };
+        delete this.index.files[oldPath];
+        await this.saveVectors();
     }
 
     private triggerBackoff() {
