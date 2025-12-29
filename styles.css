@@ -1,8 +1,25 @@
-/*
+/* Research Chat View Styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.research-chat-view .chat-message {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
 
-If your plugin does not need CSS, delete this file.
+.research-chat-view .chat-message.model {
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+}
 
-*/
+.research-chat-view .chat-message.user {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+/* Ensure code blocks within chat are also selectable and look nice */
+.research-chat-view .chat-message pre,
+.research-chat-view .chat-message code {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}

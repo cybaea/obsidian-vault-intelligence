@@ -63,18 +63,80 @@ export class AgentService {
 
         if (name === "vault_search") {
             const query = args.query;
-            const embedding = await this.gemini.embedText(query, { taskType: TaskType.RETRIEVAL_QUERY });
-            const results = this.vectorStore.findSimilar(embedding, 5);
 
-            if (results.length === 0) return { result: "No relevant notes found." };
+            // 1. Determine Task Type
+            // const isQuestion = query.includes("?") || /^(who|what|where|when|why|how)/i.test(query);
+            // const taskType = isQuestion ? TaskType.QUESTION_ANSWERING : TaskType.RETRIEVAL_QUERY;
+            // SDK might not support QUESTION_ANSWERING yet, fallback to RETRIEVAL_QUERY
+            const taskType = TaskType.RETRIEVAL_QUERY;
+
+            const embedding = await this.gemini.embedText(query, { taskType });
+
+            // 2. Vector Search (Semantic)
+            let vectorResults = this.vectorStore.findSimilar(embedding, 5);
+
+            // Fallback for vector search
+            if (vectorResults.length === 0) {
+                logger.debug("No results at default threshold, retrying with 0.25...");
+                vectorResults = this.vectorStore.findSimilar(embedding, 5, 0.25);
+            }
+
+            // 3. Keyword Search (Exact Match)
+            // This is a simple fallback for specific entity names or phrases that vector search might miss in large docs
+            const keywordResults: any[] = [];
+            // optimization: only search if query is specific enough (e.g. > 3 chars)
+            if (query.length > 3) {
+                const files = this.app.vault.getMarkdownFiles();
+                // Limit to scanning ? Maybe 100 recent files? Or all if small? 
+                // Let's just scan all but break early if we find matches? No, we need top matches.
+                // Simple implementation: Scan all. WARNING: Slow on huge vaults.
+
+                let matchesFound = 0;
+                for (const file of files) {
+                    if (matchesFound >= 3) break; // Limit keyword matches to top 3
+
+                    // Skip if already in vector results
+                    if (vectorResults.some(r => r.path === file.path)) continue;
+
+                    try {
+                        const content = await this.app.vault.cachedRead(file); // Cached read is faster
+                        if (content.toLowerCase().includes(query.toLowerCase())) {
+                            keywordResults.push({
+                                path: file.path,
+                                score: 1.0, // High confidence for exact match
+                                isKeywordMatch: true
+                            });
+                            matchesFound++;
+                        }
+                    } catch (e) {
+                        // ignore read errors
+                    }
+                }
+            }
+
+            // 4. Merge Results
+            const allResults = [...keywordResults, ...vectorResults];
+
+            if (allResults.length === 0) return { result: "No relevant notes found." };
 
             let context = "";
-            for (const doc of results) {
+            let contextLength = 0;
+            const MAX_CONTEXT = 12000; // ~3k tokens
+
+            for (const doc of allResults) {
                 const file = this.app.vault.getAbstractFileByPath(doc.path);
                 if (file instanceof TFile) {
                     const content = await this.app.vault.read(file);
-                    // Truncate to avoid context limit issues
-                    context += `\n--- Document: ${doc.path} ---\n${content.substring(0, 1500)}\n`;
+
+                    // Simple snippet extraction for keyword matches could be better, but full doc is fine for RAG
+                    const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}${doc.isKeywordMatch ? " [Keyword Match]" : ""}) ---\n`;
+                    const docLimit = 2000;
+                    const clippedContent = content.substring(0, docLimit);
+
+                    if (contextLength + clippedContent.length > MAX_CONTEXT) break;
+
+                    context += header + clippedContent + "\n";
+                    contextLength += clippedContent.length;
                 }
             }
             return { result: context };

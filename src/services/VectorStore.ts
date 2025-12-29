@@ -85,11 +85,30 @@ export class VectorStore {
             try {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
                 this.index = JSON.parse(indexStr);
+
+                // Check for Model Mismatch
+                if (this.index.embeddingModel !== this.gemini.getEmbeddingModelName()) {
+                    logger.warn(`Embedding model changed from ${this.index.embeddingModel} to ${this.gemini.getEmbeddingModelName()}. Wiping index.`);
+                    this.index = {
+                        version: 1,
+                        embeddingModel: this.gemini.getEmbeddingModelName(),
+                        dimensions: EMBEDDING_DIMENSION,
+                        files: {}
+                    };
+                    this.vectors = new Float32Array(0);
+                    // Delete vectors file if exists to allow fresh start
+                    if (await this.plugin.app.vault.adapter.exists(vectorsPath)) {
+                        await this.plugin.app.vault.adapter.remove(vectorsPath);
+                    }
+                    await this.saveVectors(true);
+                    return; // Done reset
+                }
+
                 logger.info(`Loaded index for ${Object.keys(this.index.files).length} files.`);
             } catch (e) {
                 logger.error("Failed to load index.json", e);
                 // Reset on corrupt index
-                this.index = { version: 1, embeddingModel: "gemini-1.5-flash", dimensions: EMBEDDING_DIMENSION, files: {} };
+                this.index = { version: 1, embeddingModel: this.gemini.getEmbeddingModelName(), dimensions: EMBEDDING_DIMENSION, files: {} };
             }
         }
 
@@ -348,7 +367,7 @@ export class VectorStore {
         }, 60000); // Wait 60s
     }
 
-    public findSimilar(queryVector: number[] | string, threshold?: number): any[] {
+    public findSimilar(queryVector: number[] | string, limit?: number, threshold?: number): any[] {
         let query: number[];
         if (typeof queryVector === 'string') throw new Error("Pass embedded vector");
         query = queryVector;
@@ -356,6 +375,8 @@ export class VectorStore {
         const minScore = threshold ?? this.minSimilarityScore;
 
         const count = this.vectors.length / this.index.dimensions;
+        logger.info(`Searching ${count} vectors. Threshold: ${minScore}, Limit: ${limit}`);
+
         const scores: { id: number, score: number }[] = [];
 
         // Brute force cosine similarity against the flat buffer
@@ -364,21 +385,41 @@ export class VectorStore {
             const vec = this.vectors.subarray(start, start + this.index.dimensions);
             const score = this.cosineSimilarity(query, vec);
 
+            // Log high scores for debugging
+            // if (score > 0.3) logger.debug(`Vector ${i} score: ${score}`);
+
             if (score >= minScore) {
                 scores.push({ id: i, score });
             }
         }
 
         scores.sort((a, b) => b.score - a.score);
-        // Instead of top K, we return all that met the threshold
-        const matches = scores;
+
+        let matches = scores;
+
+        // DEBUG: Log the top 5 matches regardless of threshold if we found nothing or few
+        if (matches.length < 5) {
+            const allScores: { id: number, score: number }[] = [];
+            for (let i = 0; i < count; i++) {
+                const start = i * this.index.dimensions;
+                const vec = this.vectors.subarray(start, start + this.index.dimensions);
+                const score = this.cosineSimilarity(query, vec);
+                allScores.push({ id: i, score });
+            }
+            allScores.sort((a, b) => b.score - a.score);
+            const top5 = allScores.slice(0, 5);
+            logger.info("Top 5 raw matches (ignoring threshold):");
+            top5.forEach(m => {
+                const path = Object.keys(this.index.files).find(p => this.index.files[p]?.id === m.id);
+                logger.info(` - ${path}: ${m.score}`);
+            });
+        }
+
+        if (limit && limit > 0) {
+            matches = matches.slice(0, limit);
+        }
 
         // Map back to file paths
-        // We need Reverse Map or just search. 
-        // Since `files` is path->Entry, we can't easily look up by ID without scanning.
-        // For performance, we might want an ID->Path map in memory.
-        // But for V1, scanning the index object is "Okay" (thousands of files = fast enough).
-
         return matches.map(match => {
             // Find path for this ID
             const path = Object.keys(this.index.files).find(p => {
@@ -388,7 +429,6 @@ export class VectorStore {
             return {
                 path: path,
                 score: match.score,
-                // We could return full entry if needed
             };
         }).filter(item => item.path); // Should always be found
     }

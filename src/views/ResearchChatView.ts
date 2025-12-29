@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, DropdownComponent, setIcon, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, DropdownComponent, setIcon, Notice, MarkdownRenderer } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";
@@ -40,6 +40,8 @@ export class ResearchChatView extends ItemView {
     }
 
     async onOpen() {
+        this.containerEl.addClass("research-chat-view");
+
         const padding = this.containerEl.createDiv({ cls: "nav-header" });
         padding.style.padding = "10px";
         padding.style.display = "flex";
@@ -127,7 +129,7 @@ export class ResearchChatView extends ItemView {
         this.renderMessages();
     }
 
-    private renderMessages() {
+    private async renderMessages() {
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
@@ -138,6 +140,8 @@ export class ResearchChatView extends ItemView {
             msgDiv.style.padding = "8px 12px";
             msgDiv.style.borderRadius = "8px";
             msgDiv.style.maxWidth = "80%";
+            msgDiv.style.userSelect = "text"; // Explicit inline style for selection
+            (msgDiv.style as any).webkitUserSelect = "text";
 
             if (msg.thought) {
                 const thoughtDiv = msgDiv.createDiv();
@@ -148,7 +152,12 @@ export class ResearchChatView extends ItemView {
                 thoughtDiv.setText(`Thought: ${msg.thought}`);
             }
 
-            msgDiv.createDiv({ text: msg.text });
+            const contentDiv = msgDiv.createDiv();
+            if (msg.role === "model") {
+                await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+            } else {
+                contentDiv.setText(msg.text);
+            }
         }
 
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;

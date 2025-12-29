@@ -45,6 +45,10 @@ export class GeminiService {
         return !!this.embeddingModel && !!this.chatModel;
     }
 
+    public getEmbeddingModelName(): string {
+        return this.settings.embeddingModel;
+    }
+
     public async generateContent(prompt: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.chatModel) throw new Error("Chat model not initialized.");
