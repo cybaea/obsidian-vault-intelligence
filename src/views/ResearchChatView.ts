@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, DropdownComponent, setIcon, Notice, MarkdownRenderer, Menu } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, setIcon, Notice, MarkdownRenderer, Menu } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";

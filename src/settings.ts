@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import VaultIntelligencePlugin from "./main";
+import { LogLevel } from "./utils/logger";
 
 export interface VaultIntelligenceSettings {
 	googleApiKey: string;
@@ -8,6 +9,7 @@ export interface VaultIntelligenceSettings {
 	indexingDelayMs: number;
 	minSimilarityScore: number;
 	geminiRetries: number;
+	logLevel: LogLevel;
 }
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
@@ -16,7 +18,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	chatModel: 'gemini-3-flash-preview',
 	indexingDelayMs: 200,
 	minSimilarityScore: 0.5,
-	geminiRetries: 10
+	geminiRetries: 10,
+	logLevel: LogLevel.WARN
 }
 
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
@@ -103,6 +106,20 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 						this.plugin.settings.geminiRetries = num;
 						await this.plugin.saveSettings();
 					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Log Level')
+			.setDesc('Level of detail for logs in the developer console. Default is WARN.')
+			.addDropdown(dropdown => dropdown
+				.addOption(String(LogLevel.DEBUG), 'Debug')
+				.addOption(String(LogLevel.INFO), 'Info')
+				.addOption(String(LogLevel.WARN), 'Warn')
+				.addOption(String(LogLevel.ERROR), 'Error')
+				.setValue(String(this.plugin.settings.logLevel))
+				.onChange(async (value) => {
+					this.plugin.settings.logLevel = parseInt(value) as LogLevel;
+					await this.plugin.saveSettings();
 				}));
 	}
 }

@@ -26,6 +26,7 @@ export class VectorStore {
     private plugin: Plugin;
     private gemini: GeminiService;
     private saveDebounceTimer: NodeJS.Timeout | null = null;
+    private activeTimers: Set<NodeJS.Timeout> = new Set();
 
     // Data Store
     private index: VectorIndex = {
@@ -154,7 +155,11 @@ export class VectorStore {
         if (immediate) {
             await doSave();
         } else {
-            this.saveDebounceTimer = setTimeout(doSave, 2000);
+            this.saveDebounceTimer = setTimeout(async () => {
+                this.activeTimers.delete(this.saveDebounceTimer!);
+                await doSave();
+            }, 2000);
+            this.activeTimers.add(this.saveDebounceTimer);
         }
     }
 
@@ -225,7 +230,11 @@ export class VectorStore {
                 logger.error("Error processing queue task", e);
             } finally {
                 this.activeRequests--;
-                setTimeout(() => this.processQueue(), this.currentDelayMs);
+                const timer = setTimeout(() => {
+                    this.activeTimers.delete(timer);
+                    this.processQueue();
+                }, this.currentDelayMs);
+                this.activeTimers.add(timer);
             }
         }
     }
@@ -371,11 +380,24 @@ export class VectorStore {
         this.isBackingOff = true;
         this.currentDelayMs = 30000;
 
-        setTimeout(() => {
+        const timer = setTimeout(() => {
+            this.activeTimers.delete(timer);
             this.isBackingOff = false;
             logger.info("Resuming queue after backoff.");
             this.processQueue();
         }, 60000); // Wait 60s
+        this.activeTimers.add(timer);
+    }
+
+    public destroy() {
+        if (this.saveDebounceTimer) {
+            clearTimeout(this.saveDebounceTimer);
+        }
+        this.activeTimers.forEach(timer => clearTimeout(timer));
+        this.activeTimers.clear();
+        this.requestQueue = [];
+        this.activeRequests = 0;
+        this.isBackingOff = true; // Prevent further processing
     }
 
     public findSimilar(queryVector: number[] | string, limit?: number, threshold?: number): any[] {

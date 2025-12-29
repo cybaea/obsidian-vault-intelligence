@@ -15,6 +15,9 @@ export default class VaultIntelligencePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		// Initialize Logger
+		logger.setLevel(this.settings.logLevel);
+
 		// Initialize Services
 		this.geminiService = new GeminiService(this.settings);
 		this.vectorStore = new VectorStore(this, this.geminiService, this.settings);
@@ -141,6 +144,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 	}
 
 	onunload() {
+		if (this.vectorStore) this.vectorStore.destroy();
 		logger.info("Vault Intelligence Plugin Unloaded");
 	}
 
@@ -151,6 +155,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 		// Update services if needed
+		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
 		if (this.vectorStore) this.vectorStore.updateSettings(this.settings);
 	}

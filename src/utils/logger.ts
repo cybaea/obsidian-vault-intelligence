@@ -7,7 +7,7 @@ export enum LogLevel {
 
 export class Logger {
     private static instance: Logger;
-    private level: LogLevel = LogLevel.INFO;
+    private level: LogLevel = LogLevel.WARN;
 
     private constructor() { }
 
