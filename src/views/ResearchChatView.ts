@@ -23,6 +23,11 @@ export class ResearchChatView extends ItemView {
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
 
+    // Input History
+    inputHistory: string[] = [];
+    historyIndex: number = -1;
+    currentDraft: string = "";
+
     constructor(leaf: WorkspaceLeaf, plugin: VaultIntelligencePlugin, gemini: GeminiService, vectorStore: VectorStore) {
         super(leaf);
         this.plugin = plugin;
@@ -85,6 +90,27 @@ export class ResearchChatView extends ItemView {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 this.handleSubmit();
+            } else if (e.key === "ArrowUp") {
+                if (this.historyIndex < this.inputHistory.length - 1) {
+                    if (this.historyIndex === -1) {
+                        this.currentDraft = this.inputComponent.getValue();
+                    }
+                    this.historyIndex++;
+                    const historicalValue = this.inputHistory[this.inputHistory.length - 1 - this.historyIndex];
+                    this.inputComponent.setValue(historicalValue || "");
+                    e.preventDefault();
+                }
+            } else if (e.key === "ArrowDown") {
+                if (this.historyIndex > -1) {
+                    this.historyIndex--;
+                    if (this.historyIndex === -1) {
+                        this.inputComponent.setValue(this.currentDraft);
+                    } else {
+                        const historicalValue = this.inputHistory[this.inputHistory.length - 1 - this.historyIndex];
+                        this.inputComponent.setValue(historicalValue || "");
+                    }
+                    e.preventDefault();
+                }
             }
         });
 
@@ -105,6 +131,13 @@ export class ResearchChatView extends ItemView {
     private async handleSubmit() {
         const text = this.inputComponent.getValue().trim();
         if (!text) return;
+
+        // Add to history
+        if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== text) {
+            this.inputHistory.push(text);
+        }
+        this.historyIndex = -1;
+        this.currentDraft = "";
 
         this.inputComponent.setValue("");
         this.addMessage("user", text);
