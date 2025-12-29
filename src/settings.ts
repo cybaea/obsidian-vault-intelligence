@@ -7,6 +7,7 @@ export interface VaultIntelligenceSettings {
 	chatModel: string;
 	indexingDelayMs: number;
 	minSimilarityScore: number;
+	geminiRetries: number;
 }
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
@@ -14,7 +15,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	embeddingModel: 'gemini-embedding-001',
 	chatModel: 'gemini-3-flash-preview',
 	indexingDelayMs: 200,
-	minSimilarityScore: 0.5
+	minSimilarityScore: 0.5,
+	geminiRetries: 10
 }
 
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
@@ -87,6 +89,20 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.minSimilarityScore = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Gemini Retries')
+			.setDesc('Number of times to retry a Gemini API call if it fails (e.g., due to rate limiting).')
+			.addText(text => text
+				.setPlaceholder('10')
+				.setValue(String(this.plugin.settings.geminiRetries))
+				.onChange(async (value) => {
+					const num = parseInt(value);
+					if (!isNaN(num) && num >= 0) {
+						this.plugin.settings.geminiRetries = num;
+						await this.plugin.saveSettings();
+					}
 				}));
 	}
 }
