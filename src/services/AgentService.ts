@@ -154,12 +154,28 @@ export class AgentService {
         return { error: "Tool not found." };
     }
 
-    public async chat(history: any[], message: string): Promise<string> {
+    public async chat(history: any[], message: string, contextFiles: TFile[] = []): Promise<string> {
         // Prepare history for Gemini SDK
         const formattedHistory = history.map(h => ({
             role: h.role,
             parts: [{ text: h.text }] // Simplified
         }));
+
+        // Inject specific file context if provided
+        if (contextFiles.length > 0) {
+            let fileContext = "The user has explicitly referenced the following notes. Please prioritize this information:\n\n";
+            for (const file of contextFiles) {
+                try {
+                    const content = await this.app.vault.read(file);
+                    fileContext += `--- Content of ${file.path} ---\n${content}\n\n`;
+                } catch (e) {
+                    logger.error(`Failed to read referenced file: ${file.path}`, e);
+                }
+            }
+
+            // Prepend context to the current message
+            message = `${fileContext}User Query: ${message}`;
+        }
 
         // Start chat
         const chat = await this.gemini.startChat(formattedHistory, this.getTools());
