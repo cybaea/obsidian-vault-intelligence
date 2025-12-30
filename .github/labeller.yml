@@ -1,0 +1,30 @@
+# Map keywords in the issue body to labels
+# Syntax: "Label Name": ["keyword1", "keyword2"]
+
+"area: docs":
+  - documentation
+  - guide
+  - readme
+  - typo
+
+"area: backend":
+  - ollama
+  - openai
+  - claude
+  - copilot
+  - local model
+  - api key
+  - connection
+
+"area: search":
+  - indexing
+  - embedding
+  - semantic search
+  - rag
+
+"area: ui":
+  - sidebar
+  - css
+  - theme
+  - dark mode
+  - mobile
