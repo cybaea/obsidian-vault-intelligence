@@ -50,23 +50,31 @@ export class SimilarNotesView extends ItemView {
         const loadingEl = container.createEl("div", { text: "Finding similar notes..." });
 
         try {
-            // Get embedding for current file LIVE (if modified) or from store?
-            // "Only re-embed the active note live if it has unsaved changes." - actually for simplicity, 
-            // let's just use the store if valid, or re-embed if needed.
-            // But we need the vector to search OTHER vectors.
+            // 1. Try to get cached vector from store
+            let embedding = this.vectorStore.getVector(file.path);
 
-            // For now, let's just get the text and embed it to be sure we have the latest "query"
-            const content = await this.plugin.app.vault.read(file);
-            if (!content.trim()) {
-                loadingEl.setText("File is empty.");
-                return;
+            // 2. Fallback to Gemini API if missing or if file was modified after indexing
+            // (Note: indexingDelayMs makes it possible for mtime to be higher than store entry mtime)
+            if (!embedding) {
+                const content = await this.plugin.app.vault.read(file);
+                if (!content.trim()) {
+                    loadingEl.setText("File is empty.");
+                    return;
+                }
+
+                logger.debug(`Cached vector not found for ${file.path}, embedding live...`);
+                embedding = await this.gemini.embedText(content, {
+                    taskType: TaskType.RETRIEVAL_DOCUMENT,
+                    title: file.basename
+                });
             }
 
-            // embed as RETRIEVAL_QUERY because we are looking for other documents based on this one
-            const embedding = await this.gemini.embedText(content, {
-                taskType: TaskType.RETRIEVAL_QUERY
-            });
-            const similar = this.vectorStore.findSimilar(embedding);
+            const similar = this.vectorStore.findSimilar(
+                embedding,
+                this.plugin.settings.similarNotesLimit, // Limit
+                this.plugin.settings.minSimilarityScore, // Threshold
+                file.path // Exclude active file
+            );
 
             loadingEl.remove();
 
@@ -76,9 +84,6 @@ export class SimilarNotesView extends ItemView {
 
             const list = container.createEl("ul");
             similar.forEach(doc => {
-                // Don't show the file itself
-                if (doc.path === file.path) return;
-
                 const item = list.createEl("li");
                 const link = item.createEl("a", {
                     text: doc.path.split('/').pop() || doc.path,

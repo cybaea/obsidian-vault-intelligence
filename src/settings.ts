@@ -9,6 +9,7 @@ export interface VaultIntelligenceSettings {
 	chatModel: string;
 	indexingDelayMs: number;
 	minSimilarityScore: number;
+	similarNotesLimit: number;
 	geminiRetries: number;
 	logLevel: LogLevel;
 }
@@ -19,6 +20,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	chatModel: 'gemini-3-flash-preview',
 	indexingDelayMs: 200,
 	minSimilarityScore: 0.5,
+	similarNotesLimit: 20,
 	geminiRetries: 10,
 	logLevel: LogLevel.WARN
 }
@@ -92,6 +94,26 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					this.plugin.settings.minSimilarityScore = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Similar notes limit')
+			.setDesc('Maximum number of similar notes to show in the sidebar. Set to 0 for no limit.')
+			.addText(text => text
+				.setPlaceholder(String(DEFAULT_SETTINGS.similarNotesLimit))
+				.setValue(String(this.plugin.settings.similarNotesLimit))
+				.onChange(async (value) => {
+					let num = parseFloat(value);
+					if (isNaN(num)) return;
+
+					// Truncate decimals (integer only)
+					num = Math.trunc(num);
+
+					// Treat negative values as 0 (no limit)
+					if (num < 0) num = 0;
+
+					this.plugin.settings.similarNotesLimit = num;
 					await this.plugin.saveSettings();
 				}));
 

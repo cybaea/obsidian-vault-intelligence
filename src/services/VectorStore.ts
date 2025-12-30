@@ -7,7 +7,7 @@ import { VaultIntelligenceSettings } from "../settings";
 const DATA_DIR = "data";
 const INDEX_FILE = "index.json";
 const VECTORS_FILE = "vectors.bin";
-const EMBEDDING_DIMENSION = 768; // Gemini 1.5 Flash/Pro are 768
+const EMBEDDING_DIMENSION = 768; // Gemini Embedding 001 is 768, 1536, or 3072 dimensions
 
 interface VectorEntry {
     id: number;       // Index in the binary array (row number)
@@ -45,6 +45,7 @@ export class VectorStore {
     private currentDelayMs: number;
     private minSimilarityScore: number;
     private isBackingOff = false;
+    private similarNotesLimit: number;
 
     constructor(plugin: Plugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
@@ -52,11 +53,13 @@ export class VectorStore {
         this.baseDelayMs = settings.indexingDelayMs || 200;
         this.currentDelayMs = this.baseDelayMs;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
+        this.similarNotesLimit = settings.similarNotesLimit ?? 5;
     }
 
     public updateSettings(settings: VaultIntelligenceSettings) {
         this.baseDelayMs = settings.indexingDelayMs || 200;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
+        this.similarNotesLimit = settings.similarNotesLimit ?? 5;
         // If not currently backing off, sync current delay? 
         if (!this.isBackingOff) {
             this.currentDelayMs = this.baseDelayMs;
@@ -401,16 +404,26 @@ export class VectorStore {
         this.isBackingOff = true; // Prevent further processing
     }
 
-    public findSimilar(queryVector: number[], limit?: number, threshold?: number): { path: string; score: number }[] {
+    public getVector(path: string): number[] | null {
+        const entry = this.index.files[path];
+        if (!entry) return null;
+
+        const start = entry.id * this.index.dimensions;
+        const end = start + this.index.dimensions;
+        return Array.from(this.vectors.slice(start, end));
+    }
+
+    public findSimilar(queryVector: number[], limit?: number, threshold?: number, excludePath?: string): { path: string; score: number }[] {
         let query: number[];
         query = queryVector;
 
         const minScore = threshold ?? this.minSimilarityScore;
+        const finalLimit = limit ?? this.similarNotesLimit;
 
         const count = this.vectors.length / this.index.dimensions;
-        logger.info(`Searching ${count} vectors. Threshold: ${minScore}, Limit: ${limit}`);
+        logger.info(`Searching ${count} vectors. Threshold: ${minScore}, Limit: ${finalLimit}`);
 
-        const scores: { id: number, score: number }[] = [];
+        const scores: { path: string, score: number }[] = [];
 
         // Brute force cosine similarity against the flat buffer
         for (let i = 0; i < count; i++) {
@@ -418,11 +431,12 @@ export class VectorStore {
             const vec = this.vectors.subarray(start, start + this.index.dimensions);
             const score = this.cosineSimilarity(query, vec);
 
-            // Log high scores for debugging
-            // if (score > 0.3) logger.debug(`Vector ${i} score: ${score}`);
-
             if (score >= minScore) {
-                scores.push({ id: i, score });
+                // Find path for this ID
+                const path = Object.keys(this.index.files).find(p => this.index.files[p]?.id === i);
+                if (path && path !== excludePath) {
+                    scores.push({ path, score });
+                }
             }
         }
 
@@ -430,40 +444,11 @@ export class VectorStore {
 
         let matches = scores;
 
-        // DEBUG: Log the top 5 matches regardless of threshold if we found nothing or few
-        if (matches.length < 5) {
-            const allScores: { id: number, score: number }[] = [];
-            for (let i = 0; i < count; i++) {
-                const start = i * this.index.dimensions;
-                const vec = this.vectors.subarray(start, start + this.index.dimensions);
-                const score = this.cosineSimilarity(query, vec);
-                allScores.push({ id: i, score });
-            }
-            allScores.sort((a, b) => b.score - a.score);
-            const top5 = allScores.slice(0, 5);
-            logger.info("Top 5 raw matches (ignoring threshold):");
-            top5.forEach(m => {
-                const path = Object.keys(this.index.files).find(p => this.index.files[p]?.id === m.id);
-                logger.info(` - ${path}: ${m.score}`);
-            });
+        if (finalLimit && finalLimit > 0) {
+            matches = matches.slice(0, finalLimit);
         }
 
-        if (limit && limit > 0) {
-            matches = matches.slice(0, limit);
-        }
-
-        // Map back to file paths
-        return matches.map(match => {
-            // Find path for this ID
-            const path = Object.keys(this.index.files).find(p => {
-                const f = this.index.files[p];
-                return f && f.id === match.id;
-            });
-            return {
-                path: path,
-                score: match.score,
-            };
-        }).filter((item): item is { path: string; score: number } => !!item.path); // Should always be found
+        return matches;
     }
 
     // Adjusted to take Float32Array or number[]
@@ -471,7 +456,7 @@ export class VectorStore {
         let dot = 0;
         let magA = 0;
         let magB = 0;
-        // Assuming equal length 768
+        // Assuming equal length 
         for (let i = 0; i < a.length; i++) {
             const valA = a[i] ?? 0;
             const valB = b[i] ?? 0;
