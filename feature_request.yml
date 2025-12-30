@@ -1,0 +1,70 @@
+name: Feature Request
+description: Suggest an idea or enhancement for Vault Intelligence
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature! 
+        
+        Please ensure you have **searched existing issues and discussions** to avoid duplicates.
+        Refer to our [Contribution Guidelines](https://github.com/cybaea/obsidian-vault-intelligence/discussions/6) for more details on our roadmap and objectives.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this feature related to?
+      description: Select the component most affected by this request.
+      options:
+        - "Backend / Models (e.g. Ollama, OpenAI)"
+        - "Research Agent (Chat & Tools)"
+        - "Vault Search & Indexing"
+        - "UI / UX (Sidebar, Settings)"
+        - "Documentation"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: Please describe the problem you are trying to solve. (e.g. "I'm frustrated when...")
+      placeholder: I find it difficult to use local models because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+      placeholder: I would like a setting to input a custom base URL for the API...
+    validations:
+      required: true
+
+  - type: textarea
+    id: value
+    attributes:
+      label: Why is this valuable?
+      description: Explain why this would be valuable for other Obsidian users.
+      placeholder: This would allow users with privacy concerns to run the agent entirely offline...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Describe any alternative solutions or workarounds you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots about the feature request here.
+    validations:
+      required: false
