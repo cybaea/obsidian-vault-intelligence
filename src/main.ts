@@ -1,4 +1,4 @@
-import { App, Plugin, WorkspaceLeaf, TFile, debounce, Menu } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, debounce, Menu } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { VectorStore } from "./services/VectorStore";
@@ -25,26 +25,26 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(() => {
-			this.vectorStore.scanVault();
+			void this.vectorStore.scanVault();
 		});
 
 		// Ribbon Icon
-		this.addRibbonIcon('bot', 'Vault Intelligence', (evt: MouseEvent) => {
+		this.addRibbonIcon('bot', 'Vault intelligence', (evt: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem((item) =>
 				item
-					.setTitle('Research Chat')
+					.setTitle('Research chat')
 					.setIcon('message-square')
 					.onClick(() => {
-						this.activateView(RESEARCH_CHAT_VIEW_TYPE);
+						void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
 					})
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle('Similar Notes')
+					.setTitle('Similar notes')
 					.setIcon('files')
 					.onClick(() => {
-						this.activateView(SIMILAR_NOTES_VIEW_TYPE);
+						void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
 					})
 			);
 			menu.showAtMouseEvent(evt);
@@ -64,17 +64,17 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// Activate View Command
 		this.addCommand({
 			id: 'open-similar-notes-view',
-			name: 'Open Similar Notes View',
+			name: 'Open similar notes view',
 			callback: () => {
-				this.activateView(SIMILAR_NOTES_VIEW_TYPE);
+				void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
 			}
 		});
 
 		this.addCommand({
 			id: 'open-research-chat-view',
-			name: 'Open Research Chat',
+			name: 'Open research chat',
 			callback: () => {
-				this.activateView(RESEARCH_CHAT_VIEW_TYPE);
+				void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
 			}
 		});
 
@@ -89,7 +89,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
 					for (const leaf of leaves) {
 						if (leaf.view instanceof SimilarNotesView) {
-							leaf.view.updateForFile(file);
+							void leaf.view.updateForFile(file);
 						}
 					}
 
@@ -111,7 +111,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
 					for (const leaf of leaves) {
 						if (leaf.view instanceof SimilarNotesView) {
-							leaf.view.updateForFile(file);
+							void leaf.view.updateForFile(file);
 						}
 					}
 				}
@@ -179,6 +179,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 			}
 		}
 
-		if (leaf) workspace.revealLeaf(leaf);
+		if (leaf) void workspace.revealLeaf(leaf);
 	}
 }

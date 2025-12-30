@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting } from "obsidian";
 import VaultIntelligencePlugin from "./main";
 import { LogLevel } from "./utils/logger";
@@ -36,10 +37,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Google API Key')
-			.setDesc('Enter your Google Gemini API key.')
+			.setName('Google API key')
+			.setDesc('Enter your Google Gemini API key')
 			.addText(text => text
-				.setPlaceholder('API Key')
+				.setPlaceholder('API key')
 				.setValue(this.plugin.settings.googleApiKey)
 				.onChange(async (value) => {
 					this.plugin.settings.googleApiKey = value;
@@ -47,10 +48,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Chat Model')
-			.setDesc('The model to use for chat and research.')
+			.setName('Chat model')
+			.setDesc('The model to use for chat and research')
 			.addText(text => text
-				.setPlaceholder('gemini-3-flash-preview')
+				.setPlaceholder('gemini-1.5-flash-preview')
 				.setValue(this.plugin.settings.chatModel)
 				.onChange(async (value) => {
 					this.plugin.settings.chatModel = value;
@@ -58,8 +59,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Embedding Model')
-			.setDesc('The model to use for generating vector embeddings.')
+			.setName('Embedding model')
+			.setDesc('The model to use for generating vector embeddings')
 			.addText(text => text
 				.setPlaceholder('gemini-embedding-001')
 				.setValue(this.plugin.settings.embeddingModel)
@@ -69,7 +70,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Indexing Delay (ms)')
+			.setName('Indexing delay (ms)')
 			.setDesc('Background indexing delay. Lower = faster, but higher risk of rate limiting. Default for free-tier is 4000ms.')
 			.addText(text => text
 				.setPlaceholder('200')
@@ -83,7 +84,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Minimum Similarity Score')
+			.setName('Minimum similarity score')
 			.setDesc('Only notes with a similarity score above this threshold will be shown.')
 			.addSlider(slider => slider
 				.setLimits(0, 1, 0.05)
@@ -95,8 +96,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Gemini Retries')
-			.setDesc('Number of times to retry a Gemini API call if it fails (e.g., due to rate limiting).')
+			.setName('Gemini retries')
+			.setDesc('Number of times to retry a Gemini API call if it fails (e.g., due to rate limiting)')
 			.addText(text => text
 				.setPlaceholder('10')
 				.setValue(String(this.plugin.settings.geminiRetries))
@@ -109,8 +110,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Log Level')
-			.setDesc('Level of detail for logs in the developer console. Default is WARN.')
+			.setName('Log level')
+			.setDesc('Level of detail for logs in the developer console. Default is warn')
 			.addDropdown(dropdown => dropdown
 				.addOption(String(LogLevel.DEBUG), 'Debug')
 				.addOption(String(LogLevel.INFO), 'Info')

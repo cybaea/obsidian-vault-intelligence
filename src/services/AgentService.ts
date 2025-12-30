@@ -3,6 +3,19 @@ import { VectorStore } from "../services/VectorStore";
 import { TFile, App, requestUrl } from "obsidian";
 import { FunctionDeclaration, SchemaType, TaskType } from "@google/generative-ai";
 import { logger } from "../utils/logger";
+import { Part } from "@google/generative-ai";
+
+export interface ChatMessage {
+    role: "user" | "model" | "system";
+    text: string;
+    thought?: string;
+}
+
+interface VaultSearchResult {
+    path: string;
+    score: number;
+    isKeywordMatch?: boolean;
+}
 
 export class AgentService {
     private gemini: GeminiService;
@@ -58,11 +71,12 @@ export class AgentService {
         }];
     }
 
-    private async executeFunction(name: string, args: any): Promise<any> {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    private async executeFunction(name: string, args: Record<string, unknown>): Promise<Record<string, any>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
         if (name === "vault_search") {
-            const query = args.query;
+            const query = args.query as string;
 
             // 1. Determine Task Type
             // const isQuestion = query.includes("?") || /^(who|what|where|when|why|how)/i.test(query);
@@ -83,7 +97,7 @@ export class AgentService {
 
             // 3. Keyword Search (Exact Match)
             // This is a simple fallback for specific entity names or phrases that vector search might miss in large docs
-            const keywordResults: any[] = [];
+            const keywordResults: VaultSearchResult[] = [];
             // optimization: only search if query is specific enough (e.g. > 3 chars)
             if (query.length > 3) {
                 const files = this.app.vault.getMarkdownFiles();
@@ -108,7 +122,7 @@ export class AgentService {
                             });
                             matchesFound++;
                         }
-                    } catch (e) {
+                    } catch {
                         // ignore read errors
                     }
                 }
@@ -123,7 +137,7 @@ export class AgentService {
             let contextLength = 0;
             const MAX_CONTEXT = 12000; // ~3k tokens
 
-            for (const doc of allResults) {
+            for (const doc of allResults as VaultSearchResult[]) {
                 const file = this.app.vault.getAbstractFileByPath(doc.path);
                 if (file instanceof TFile) {
                     const content = await this.app.vault.read(file);
@@ -144,21 +158,23 @@ export class AgentService {
 
         if (name === "read_url") {
             try {
-                const res = await requestUrl({ url: args.url });
+                const url = args.url as string;
+                const res = await requestUrl({ url });
                 return { result: res.text.substring(0, 5000) }; // Truncate
-            } catch (e: any) {
-                return { error: `Failed to read URL: ${e.message}` };
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : String(e);
+                return { error: `Failed to read URL: ${message}` };
             }
         }
 
         return { error: "Tool not found." };
     }
 
-    public async chat(history: any[], message: string, contextFiles: TFile[] = []): Promise<string> {
+    public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
         // Prepare history for Gemini SDK
         const formattedHistory = history.map(h => ({
-            role: h.role,
-            parts: [{ text: h.text }] // Simplified
+            role: h.role as "user" | "model",
+            parts: [{ text: h.text }] as Part[]
         }));
 
         // Inject specific file context if provided
@@ -182,7 +198,7 @@ export class AgentService {
 
         try {
             let result = await chat.sendMessage(message);
-            let response = await result.response;
+            let response = result.response;
 
             // Loop for function calls
             // LIMIT LOOPS to avoid infinite recursion
@@ -193,7 +209,7 @@ export class AgentService {
                     // Execute calls
                     const parts: any[] = [];
                     for (const call of calls) {
-                        const functionResponse = await this.executeFunction(call.name, call.args);
+                        const functionResponse = await this.executeFunction(call.name, call.args as Record<string, any>);
                         parts.push({
                             functionResponse: {
                                 name: call.name,
@@ -203,7 +219,7 @@ export class AgentService {
                     }
                     // Send back results
                     result = await chat.sendMessage(parts);
-                    response = await result.response;
+                    response = result.response;
                 } else {
                     break;
                 }
@@ -212,7 +228,7 @@ export class AgentService {
 
             return response.text();
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             logger.error("Error in chat loop", e);
             return "Sorry, I encountered an error processing your request.";
         }
