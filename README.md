@@ -2,8 +2,7 @@
 
 **Obsidian Vault Intelligence** brings state-of-the-art semantic search and research capabilities to your Obsidian vault using Google Gemini.
 
-> [!NOTE]
-> For users looking for more mature (if costly) implementations of AI in Obsidian, we highly recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight alternative focused on the Gemini ecosystem.
+Note: For users looking for more mature implementations of AI in Obsidian and who are comfortable with paying for it, we recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight, and open-source (MIT license) alternative focused on the Gemini ecosystem.
 
 ## Features
 
@@ -42,12 +41,12 @@ Automatically discover connections you didn't know existed.
 
 ## Configuration
 
-- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable performance.
-- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities.
+- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable performance. See [Gemini API | Embeddings](https://ai.google.dev/gemini-api/docs/embeddings) for available models.
+- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities. See [Gemini API | Gemini Models](https://ai.google.dev/gemini-api/docs/models) for available models.
 - **Minimum Similarity Score**: Fine-tune how "related" a note must be to appear in your sidebar (default `0.5`).
 - **Indexing Delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
 - **Gemini Retries**: Automatically retry failed API calls (useful for handling usage limits).
-- **Log Level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`).
+- **Log Level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`). Level `Info` will show indexing progress.
 
 ## Links
 
