@@ -14,7 +14,9 @@ A dedicated research sidebar where you can talk to your vault.
 - **Full Context**: The agent understands your conversation history.
 - **Multimodal**: Powered by Gemini 1.5 Flash/Pro, supporting text and more.
 - **Smart RAG**: Automatically searches your vault for relevant notes to answer your questions.
-- **Improved UI**: Full Markdown rendering, selectable text, and a right-click context menu for easy copying.
+- **File Mentions**: Use `@` to reference specific files in your chat with built-in autocomplete.
+- **Command History**: Quickly recall previous messages using the `Up` and `Down` arrow keys.
+- **Improved UI**: Full Markdown rendering, selectable text, and code block support.
 
 ### 🔍 Hybrid Vault Search
 
@@ -40,9 +42,12 @@ Automatically discover connections you didn't know existed.
 
 ## Configuration
 
-- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable GA performance.
-- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge agentic capabilities.
-- **Similarity Threshold**: Fine-tune how "related" a note must be to appear in your sidebar.
+- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable performance.
+- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities.
+- **Minimum Similarity Score**: Fine-tune how "related" a note must be to appear in your sidebar (default `0.5`).
+- **Indexing Delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
+- **Gemini Retries**: Automatically retry failed API calls (useful for handling usage limits).
+- **Log Level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`).
 
 ## Links
 
