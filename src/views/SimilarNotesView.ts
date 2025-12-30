@@ -24,11 +24,11 @@ export class SimilarNotesView extends ItemView {
     }
 
     getDisplayText() {
-        return "Similar Notes";
+        return "Similar notes";
     }
 
     async onOpen() {
-        this.updateView();
+        void this.updateView();
         // Global listener logic will be in main.ts to trigger this view update
     }
 
@@ -94,11 +94,11 @@ export class SimilarNotesView extends ItemView {
                 });
 
                 link.addEventListener("click", () => {
-                    this.plugin.app.workspace.openLinkText(doc.path, "", true);
+                    void this.plugin.app.workspace.openLinkText(doc.path, "", true);
                 });
             });
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             loadingEl.setText("Error finding similar notes.");
             logger.error("Error updating similar notes view", e);
         }

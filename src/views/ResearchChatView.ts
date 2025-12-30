@@ -1,34 +1,26 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, setIcon, Notice, MarkdownRenderer, Menu } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";
-import { AgentService } from "../services/AgentService";
-import { logger } from "../utils/logger";
+import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
-import { TFile } from "obsidian";
 
 export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
-
-interface ChatMessage {
-    role: "user" | "model" | "system";
-    text: string;
-    thought?: string; // For showing reasoning
-}
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
     gemini: GeminiService;
     vectorStore: VectorStore;
     agent: AgentService;
-    messages: ChatMessage[] = [];
+    private messages: ChatMessage[] = [];
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
 
     // Input History
     inputHistory: string[] = [];
-    historyIndex: number = -1;
-    currentDraft: string = "";
+    historyIndex = -1;
+    private currentDraft = "";
 
     constructor(leaf: WorkspaceLeaf, plugin: VaultIntelligencePlugin, gemini: GeminiService, vectorStore: VectorStore) {
         super(leaf);
@@ -43,55 +35,41 @@ export class ResearchChatView extends ItemView {
     }
 
     getDisplayText() {
-        return "Research Agent";
+        return "Research agent";
     }
 
     async onOpen() {
-        this.containerEl.addClass("research-chat-view");
+        const container = this.containerEl.children[1] as HTMLElement;
+        container.empty();
+        container.addClass("research-chat-view");
 
-        const padding = this.containerEl.createDiv({ cls: "nav-header" });
-        padding.style.padding = "10px";
-        padding.style.display = "flex";
-        padding.style.justifyContent = "space-between";
-        padding.style.alignItems = "center";
+        const header = container.createDiv({ cls: "chat-header" });
+        header.createEl("h4", { text: "Research chat", cls: "chat-title" });
 
-        const title = padding.createEl("h4", { text: "Research Chat" });
-        title.style.margin = "0";
-
-        // Action Buttons
-        const actionsDiv = padding.createDiv();
-
-        new ButtonComponent(actionsDiv)
+        new ButtonComponent(header)
             .setIcon("trash")
-            .setTooltip("Clear Context")
+            .setTooltip("Clear chat")
             .onClick(() => {
-                this.clearChat();
+                this.messages = [];
+                void this.renderMessages();
+                new Notice("Chat cleared");
             });
 
         // Chat History Area
-        this.chatContainer = this.containerEl.createDiv();
-        this.chatContainer.style.height = "calc(100% - 150px)";
-        this.chatContainer.style.overflowY = "auto";
-        this.chatContainer.style.padding = "10px";
-        this.chatContainer.style.display = "flex";
-        this.chatContainer.style.flexDirection = "column";
-        this.chatContainer.style.gap = "10px";
+        this.chatContainer = container.createDiv({ cls: "chat-container" });
 
         // Input Area
-        const inputContainer = this.containerEl.createDiv();
-        inputContainer.style.padding = "10px";
-        inputContainer.style.borderTop = "1px solid var(--background-modifier-border)";
+        const inputContainer = container.createDiv({ cls: "input-container" });
 
         this.inputComponent = new TextAreaComponent(inputContainer);
-        this.inputComponent.inputEl.style.width = "100%";
-        this.inputComponent.inputEl.style.minHeight = "60px";
+        this.inputComponent.inputEl.addClass("chat-input");
         this.inputComponent.setPlaceholder("Ask your vault...");
 
         // Submit on Enter (Shift+Enter for newline)
-        this.inputComponent.inputEl.addEventListener("keydown", (e) => {
+        this.inputComponent.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                this.handleSubmit();
+                void this.handleSubmit();
             } else if (e.key === "ArrowUp") {
                 if (this.historyIndex < this.inputHistory.length - 1) {
                     if (this.historyIndex === -1) {
@@ -99,7 +77,9 @@ export class ResearchChatView extends ItemView {
                     }
                     this.historyIndex++;
                     const historicalValue = this.inputHistory[this.inputHistory.length - 1 - this.historyIndex];
-                    this.inputComponent.setValue(historicalValue || "");
+                    if (historicalValue !== undefined) {
+                        this.inputComponent.setValue(historicalValue);
+                    }
                     e.preventDefault();
                 }
             } else if (e.key === "ArrowDown") {
@@ -109,7 +89,9 @@ export class ResearchChatView extends ItemView {
                         this.inputComponent.setValue(this.currentDraft);
                     } else {
                         const historicalValue = this.inputHistory[this.inputHistory.length - 1 - this.historyIndex];
-                        this.inputComponent.setValue(historicalValue || "");
+                        if (historicalValue !== undefined) {
+                            this.inputComponent.setValue(historicalValue);
+                        }
                     }
                     e.preventDefault();
                 }
@@ -119,29 +101,36 @@ export class ResearchChatView extends ItemView {
         const submitBtn = new ButtonComponent(inputContainer)
             .setButtonText("Send")
             .setCta()
-            .onClick(() => this.handleSubmit());
-        submitBtn.buttonEl.style.marginTop = "5px";
-        submitBtn.buttonEl.style.width = "100%";
+            .onClick(() => {
+                void this.handleSubmit();
+            });
+        submitBtn.buttonEl.addClass("submit-button");
 
         // File Autocomplete
         new FileSuggest(this.app, this.inputComponent.inputEl);
-    }
 
-    private clearChat() {
-        this.messages = [];
-        this.renderMessages();
-        new Notice("Chat context cleared.");
+        void this.renderMessages();
     }
 
     private async handleSubmit() {
         const text = this.inputComponent.getValue().trim();
         if (!text) return;
 
-        // Parse @ references
+        // Save history
+        if (!this.inputHistory.includes(text)) {
+            this.inputHistory.push(text);
+        }
+        this.historyIndex = -1;
+        this.currentDraft = "";
+
+        this.inputComponent.setValue("");
+        this.addMessage("user", text);
+
+        // Parse @-sign references
         const files: TFile[] = [];
-        const atRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        const fileRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
         let match;
-        while ((match = atRegex.exec(text)) !== null) {
+        while ((match = fileRegex.exec(text)) !== null) {
             const fileName = match[1] || match[2];
             if (fileName) {
                 const file = this.app.metadataCache.getFirstLinkpathDest(fileName, "");
@@ -151,56 +140,36 @@ export class ResearchChatView extends ItemView {
             }
         }
 
-        // Add to history
-        if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== text) {
-            this.inputHistory.push(text);
-        }
-        this.historyIndex = -1;
-        this.currentDraft = "";
-
-        this.inputComponent.setValue("");
-        this.addMessage("user", text);
-
-        // Placeholder for real logic
-        const thought = "Thinking...";
-        // Convert internal history to agent history format
-        const agentHistory = this.messages
-            .filter(m => m.role !== "system" && m.text !== text) // exclude current msg and system
-            .map(m => ({ role: m.role, text: m.text }));
-
         try {
-            const response = await this.agent.chat(agentHistory, text, files);
-            this.addMessage("model", response); // Thought not easily exposed by Gemini SDK yet without parsing
-        } catch (e: any) {
-            this.addMessage("model", "Error: " + e.message);
+            const response = await this.agent.chat(this.messages, text, files);
+            this.addMessage("model", response);
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            new Notice(`Error: ${message}`);
+            this.addMessage("model", `Error: ${message}`);
         }
     }
 
-    private addMessage(role: "user" | "model", text: string, thought?: string) {
+    private addMessage(role: "user" | "model" | "system", text: string, thought?: string) {
         this.messages.push({ role, text, thought });
-        this.renderMessages();
+        void this.renderMessages();
     }
 
     private async renderMessages() {
+        if (!this.chatContainer) return;
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
-            const msgDiv = this.chatContainer.createDiv({ cls: `chat-message ${msg.role}` });
-            msgDiv.style.alignSelf = msg.role === "user" ? "flex-end" : "flex-start";
-            msgDiv.style.backgroundColor = msg.role === "user" ? "var(--interactive-accent)" : "var(--background-secondary)";
-            msgDiv.style.color = msg.role === "user" ? "var(--text-on-accent)" : "var(--text-normal)";
-            msgDiv.style.padding = "8px 12px";
-            msgDiv.style.borderRadius = "8px";
-            msgDiv.style.maxWidth = "80%";
-            msgDiv.style.userSelect = "text"; // Explicit inline style for selection
-            (msgDiv.style as any).webkitUserSelect = "text";
+            const msgDiv = this.chatContainer.createDiv({
+                cls: `chat-message ${msg.role}`
+            });
 
             msgDiv.addEventListener("contextmenu", (e) => {
                 const menu = new Menu();
 
                 menu.addItem((item) =>
                     item
-                        .setTitle("Select All")
+                        .setTitle("Select all")
                         .setIcon("select-all")
                         .onClick(() => {
                             const range = document.createRange();
@@ -213,11 +182,21 @@ export class ResearchChatView extends ItemView {
 
                 menu.addItem((item) =>
                     item
-                        .setTitle("Copy Message")
+                        .setTitle("Copy message")
                         .setIcon("copy")
                         .onClick(() => {
-                            navigator.clipboard.writeText(msg.text);
-                            new Notice("Message copied to clipboard.");
+                            void navigator.clipboard.writeText(msg.text);
+                            new Notice("Message copied to clipboard");
+                        })
+                );
+
+                menu.addItem((item) =>
+                    item
+                        .setTitle("Copy as HTML")
+                        .setIcon("code")
+                        .onClick(() => {
+                            void navigator.clipboard.writeText(msgDiv.innerHTML);
+                            new Notice("HTML copied to clipboard");
                         })
                 );
 
@@ -225,13 +204,13 @@ export class ResearchChatView extends ItemView {
 
                 menu.addItem((item) =>
                     item
-                        .setTitle("Copy Entire Chat")
+                        .setTitle("Copy entire chat")
                         .setIcon("copy")
                         .onClick(() => {
                             const history = this.messages
                                 .map(m => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`)
                                 .join("\n\n");
-                            navigator.clipboard.writeText(history);
+                            void navigator.clipboard.writeText(history);
                             new Notice("Entire chat history copied.");
                         })
                 );
@@ -240,11 +219,7 @@ export class ResearchChatView extends ItemView {
             });
 
             if (msg.thought) {
-                const thoughtDiv = msgDiv.createDiv();
-                thoughtDiv.style.fontSize = "0.8em";
-                thoughtDiv.style.opacity = "0.7";
-                thoughtDiv.style.fontStyle = "italic";
-                thoughtDiv.style.marginBottom = "4px";
+                const thoughtDiv = msgDiv.createDiv({ cls: "chat-thought" });
                 thoughtDiv.setText(`Thought: ${msg.thought}`);
             }
 
@@ -258,6 +233,4 @@ export class ResearchChatView extends ItemView {
 
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
-
-
 }

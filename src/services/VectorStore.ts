@@ -25,8 +25,8 @@ interface VectorIndex {
 export class VectorStore {
     private plugin: Plugin;
     private gemini: GeminiService;
-    private saveDebounceTimer: NodeJS.Timeout | null = null;
-    private activeTimers: Set<NodeJS.Timeout> = new Set();
+    private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
 
     // Data Store
     private index: VectorIndex = {
@@ -85,7 +85,7 @@ export class VectorStore {
         if (await this.plugin.app.vault.adapter.exists(indexPath)) {
             try {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
-                this.index = JSON.parse(indexStr);
+                this.index = JSON.parse(indexStr) as VectorIndex;
 
                 // Check for Model Mismatch
                 if (this.index.embeddingModel !== this.gemini.getEmbeddingModelName()) {
@@ -155,9 +155,10 @@ export class VectorStore {
         if (immediate) {
             await doSave();
         } else {
-            this.saveDebounceTimer = setTimeout(async () => {
-                this.activeTimers.delete(this.saveDebounceTimer!);
-                await doSave();
+            this.saveDebounceTimer = setTimeout(() => {
+                const timer = this.saveDebounceTimer;
+                if (timer) this.activeTimers.delete(timer);
+                void doSave();
             }, 2000);
             this.activeTimers.add(this.saveDebounceTimer);
         }
@@ -208,7 +209,7 @@ export class VectorStore {
         this.requestQueue.push(async () => {
             await this.indexFileImmediate(file);
         });
-        this.processQueue();
+        void this.processQueue();
     }
 
     private async processQueue() {
@@ -232,7 +233,7 @@ export class VectorStore {
                 this.activeRequests--;
                 const timer = setTimeout(() => {
                     this.activeTimers.delete(timer);
-                    this.processQueue();
+                    void this.processQueue();
                 }, this.currentDelayMs);
                 this.activeTimers.add(timer);
             }
@@ -271,12 +272,13 @@ export class VectorStore {
 
             // Update Store
             this.upsertVector(file.path, file.stat.mtime, embedding);
-            await this.saveVectors();
+            void this.saveVectors();
 
             // logger.info(`Successfully indexed: ${file.path}`);
 
-        } catch (e: any) {
-            if (e.message?.includes('429') || e.toString().includes('429')) {
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            if (message.includes('429')) {
                 logger.warn(`Hit 429 in VectorStore for ${file.path}. Pausing queue.`);
                 this.triggerBackoff();
                 // Re-queue this task at the front? Or just let scan pick it up next time.
@@ -304,8 +306,7 @@ export class VectorStore {
             entry.mtime = mtime; // update mtime
         } else {
             // Append new
-            const newId = Object.keys(this.index.files).length; // Check current count *before* adding this one? 
-            // Wait, IDs must be stable or we track them.
+            // IDs must be stable or we track them.
             // If we use "compact" IDs 0..N-1, then new ID is always current count.
             // But if we delete, we shift.
             const currentCount = this.vectors.length / this.index.dimensions;
@@ -384,7 +385,7 @@ export class VectorStore {
             this.activeTimers.delete(timer);
             this.isBackingOff = false;
             logger.info("Resuming queue after backoff.");
-            this.processQueue();
+            void this.processQueue();
         }, 60000); // Wait 60s
         this.activeTimers.add(timer);
     }
@@ -400,9 +401,8 @@ export class VectorStore {
         this.isBackingOff = true; // Prevent further processing
     }
 
-    public findSimilar(queryVector: number[] | string, limit?: number, threshold?: number): any[] {
+    public findSimilar(queryVector: number[], limit?: number, threshold?: number): { path: string; score: number }[] {
         let query: number[];
-        if (typeof queryVector === 'string') throw new Error("Pass embedded vector");
         query = queryVector;
 
         const minScore = threshold ?? this.minSimilarityScore;
@@ -463,7 +463,7 @@ export class VectorStore {
                 path: path,
                 score: match.score,
             };
-        }).filter(item => item.path); // Should always be found
+        }).filter((item): item is { path: string; score: number } => !!item.path); // Should always be found
     }
 
     // Adjusted to take Float32Array or number[]

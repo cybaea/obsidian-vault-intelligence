@@ -1,9 +1,37 @@
 /* Research Chat View Styles */
 
+.research-chat-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.research-chat-view .chat-header {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.research-chat-view .chat-title {
+    margin: 0;
+}
+
+.research-chat-view .chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .research-chat-view .chat-message {
     user-select: text !important;
     -webkit-user-select: text !important;
-    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 80%;
     line-height: 1.5;
 }
 
@@ -15,6 +43,29 @@
 .research-chat-view .chat-message.user {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
+    align-self: flex-end;
+}
+
+.research-chat-view .chat-thought {
+    font-size: 0.8em;
+    opacity: 0.7;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.research-chat-view .input-container {
+    padding: 10px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.research-chat-view .chat-input {
+    width: 100%;
+    min-height: 60px;
+}
+
+.research-chat-view .submit-button {
+    margin-top: 10px;
+    width: 100%;
 }
 
 /* Ensure code blocks within chat are also selectable and look nice */

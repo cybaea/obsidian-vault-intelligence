@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -22,25 +23,25 @@ export class Logger {
         this.level = level;
     }
 
-    public debug(message: string, ...args: any[]) {
+    public debug(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.DEBUG) {
             console.debug(`[VaultIntelligence:DEBUG] ${message}`, ...args);
         }
     }
 
-    public info(message: string, ...args: any[]) {
+    public info(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.INFO) {
             console.info(`[VaultIntelligence:INFO] ${message}`, ...args);
         }
     }
 
-    public warn(message: string, ...args: any[]) {
+    public warn(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.WARN) {
             console.warn(`[VaultIntelligence:WARN] ${message}`, ...args);
         }
     }
 
-    public error(message: string, ...args: any[]) {
+    public error(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.ERROR) {
             console.error(`[VaultIntelligence:ERROR] ${message}`, ...args);
         }

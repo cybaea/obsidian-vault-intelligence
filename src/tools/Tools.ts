@@ -5,7 +5,7 @@ import { requestUrl } from "obsidian";
 export interface Tool {
     name: string;
     description: string;
-    execute(args: any): Promise<string>;
+    execute(args: Record<string, unknown>): Promise<string>;
 }
 
 export class VaultSearchTool implements Tool {
@@ -19,8 +19,8 @@ export class VaultSearchTool implements Tool {
         this.gemini = gemini;
     }
 
-    async execute(args: any): Promise<string> {
-        const query = args.query;
+    async execute(args: Record<string, unknown>): Promise<string> {
+        const query = args.query as string | undefined;
         if (!query) return "Error: No query provided.";
 
         // Embed query
@@ -49,7 +49,7 @@ export class WebSearchTool implements Tool {
     description = "Search the web for live information. Args: { query: string }";
 
     // This might just be a flag for Gemini Grounding, but if we want manual control:
-    async execute(args: any): Promise<string> {
+    async execute(_args: Record<string, unknown>): Promise<string> {
         return "Use the built-in Google Search Grounding capability of the model instead.";
     }
 }
@@ -58,16 +58,17 @@ export class UrlReaderTool implements Tool {
     name = "read_url";
     description = "Read the content of a specific URL. Args: { url: string }";
 
-    async execute(args: any): Promise<string> {
-        const url = args.url;
+    async execute(args: Record<string, unknown>): Promise<string> {
+        const url = args.url as string | undefined;
         if (!url) return "Error: No URL provided.";
 
         try {
             const response = await requestUrl({ url });
             // Simple HTML to text or just return raw up to limit
             return response.text.substring(0, 5000) + "... (truncated)";
-        } catch (e: any) {
-            return `Error reading URL: ${e.message}`;
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            return `Error reading URL: ${message}`;
         }
     }
 }
