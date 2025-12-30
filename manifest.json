@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-vault-intelligence",
+	"id": "vault-intelligence",
 	"name": "Vault Intelligence",
 	"version": "1.1.5",
 	"minAppVersion": "0.15.0",
-	"description": "Research your Obsidian vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
+	"description": "Research your vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
 	"author": "Allan Engelhardt",
 	"authorUrl": "https://github.com/cybaea",
 	"fundingUrl": "https://github.com/sponsors/cybaea",
