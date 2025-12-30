@@ -12,7 +12,7 @@
 A dedicated research sidebar where you can talk to your vault.
 
 - **Full Context**: The agent understands your conversation history.
-- **Multimodal**: Powered by Gemini 1.5 Flash/Pro, supporting text and more.
+- **Multimodal**: Powered by Gemini 3 Flash, supporting text and more.
 - **Smart RAG**: Automatically searches your vault for relevant notes to answer your questions.
 - **File Mentions**: Use `@` to reference specific files in your chat with built-in autocomplete.
 - **Command History**: Quickly recall previous messages using the `Up` and `Down` arrow keys.
@@ -22,7 +22,7 @@ A dedicated research sidebar where you can talk to your vault.
 
 A robust search tool used by the Research Agent to find your information.
 
-- **Semantic Search**: Finds notes based on *meaning*, not just keywords. Uses Gemini embeddings (`text-embedding-004`).
+- **Semantic Search**: Finds notes based on *meaning*, not just keywords. Uses Gemini embeddings.
 - **Keyword Fallback**: Automatically falls back to traditional keyword matching to ensure exact terms (like proper names or specific numbers) are never missed.
 - **Automatic Indexing**: Background indexing with rate-limit protection.
 

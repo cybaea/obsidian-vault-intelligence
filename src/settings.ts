@@ -51,7 +51,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 			.setName('Chat model')
 			.setDesc('The model to use for chat and research')
 			.addText(text => text
-				.setPlaceholder('gemini-1.5-flash-preview')
+				.setPlaceholder(DEFAULT_SETTINGS.chatModel)
 				.setValue(this.plugin.settings.chatModel)
 				.onChange(async (value) => {
 					this.plugin.settings.chatModel = value;
@@ -62,7 +62,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 			.setName('Embedding model')
 			.setDesc('The model to use for generating vector embeddings')
 			.addText(text => text
-				.setPlaceholder('gemini-embedding-001')
+				.setPlaceholder(DEFAULT_SETTINGS.embeddingModel)
 				.setValue(this.plugin.settings.embeddingModel)
 				.onChange(async (value) => {
 					this.plugin.settings.embeddingModel = value;
@@ -73,7 +73,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 			.setName('Indexing delay (ms)')
 			.setDesc('Background indexing delay. Lower = faster, but higher risk of rate limiting. Default for free-tier is 4000ms.')
 			.addText(text => text
-				.setPlaceholder('200')
+				.setPlaceholder(String(DEFAULT_SETTINGS.indexingDelayMs))
 				.setValue(String(this.plugin.settings.indexingDelayMs))
 				.onChange(async (value) => {
 					const num = parseInt(value);
@@ -99,7 +99,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 			.setName('Gemini retries')
 			.setDesc('Number of times to retry a Gemini API call if it fails (e.g., due to rate limiting)')
 			.addText(text => text
-				.setPlaceholder('10')
+				.setPlaceholder(String(DEFAULT_SETTINGS.geminiRetries))
 				.setValue(String(this.plugin.settings.geminiRetries))
 				.onChange(async (value) => {
 					const num = parseInt(value);
