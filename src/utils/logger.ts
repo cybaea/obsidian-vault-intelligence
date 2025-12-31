@@ -1,4 +1,3 @@
-/* eslint-disable no-console -- This is a logger utility whose purpose is to provide a controlled interface to console methods (warn, error, debug). Direct console usage is required for the implementation. */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -31,7 +30,8 @@ export class Logger {
 
     public info(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.INFO) {
-            console.info(`[VaultIntelligence:INFO] ${message}`, ...args);
+            // info is not allowed in Obsidian so change to warn - reference https://discord.com/channels/686053708261228577/840286264964022302/1455955627527508133
+            console.warn(`[VaultIntelligence:INFO] ${message}`, ...args);
         }
     }
 
@@ -47,6 +47,4 @@ export class Logger {
         }
     }
 }
-/* eslint-enable no-console -- re-enable after logger class */
-
 export const logger = Logger.getInstance();
