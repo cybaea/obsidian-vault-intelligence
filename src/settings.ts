@@ -21,7 +21,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	indexingDelayMs: 200,
 	minSimilarityScore: 0.5,
 	similarNotesLimit: 20,
-	vaultSearchResultsLimit: 5,
+	vaultSearchResultsLimit: 25,
 	geminiRetries: 10,
 	logLevel: LogLevel.WARN
 }
