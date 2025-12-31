@@ -4,7 +4,7 @@ import { TFile, App, requestUrl } from "obsidian";
 import { FunctionDeclaration, SchemaType, TaskType } from "@google/generative-ai";
 import { logger } from "../utils/logger";
 import { Part } from "@google/generative-ai";
-import { VaultIntelligenceSettings } from "../settings";
+import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 
 export interface ChatMessage {
     role: "user" | "model" | "system";
@@ -89,7 +89,7 @@ export class AgentService {
             const embedding = await this.gemini.embedText(query, { taskType });
 
             // 2. Vector Search (Semantic)
-            const rawLimit = this.settings?.vaultSearchResultsLimit ?? 5;
+            const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
 
             let vectorResults = this.vectorStore.findSimilar(embedding, limit);
