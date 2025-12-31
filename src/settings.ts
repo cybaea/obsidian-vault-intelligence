@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case -- descriptions of settings often use sentence case as requested by users */
 import { App, PluginSettingTab, Setting } from "obsidian";
 import VaultIntelligencePlugin from "./main";
 import { LogLevel } from "./utils/logger";
@@ -146,4 +145,3 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 	}
 }
-/* eslint-enable obsidianmd/ui/sentence-case -- re-enable after settings tab class */

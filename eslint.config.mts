@@ -38,7 +38,10 @@ export default tseslint.config(
 		rules: {
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-explicit-any": "error",
-			"obsidianmd/ui/sentence-case": "error",
+			"obsidianmd/ui/sentence-case": ["error", {
+				brands: ["Google", "Gemini"],
+				acronyms: ["API", "HTML"]
+			}],
 			"no-console": "error",
 			"eslint-comments/require-description": "error",
 			"eslint-comments/disable-enable-pair": "error",

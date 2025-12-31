@@ -1,6 +1,0 @@
-
-/home/allane/Projects/GitHub/obsidian-vault-intelligence/src/main.ts
-  103:57  error  Async arrow function has no 'await' expression  @typescript-eslint/require-await
-
-✖ 1 problem (1 error, 0 warnings)
-

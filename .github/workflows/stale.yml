@@ -21,8 +21,3 @@ jobs:
           # Messages posted to the user
           stale-issue-message: "This issue has been inactive for 6 months. To keep our backlog actionable, we mark old requests as stale. If this is still relevant, please comment to keep it open."
           close-issue-message: "This issue was closed because it has been inactive for 14 days since being marked as stale."
-          
-          # Optional: Message posted to the repository
-          stale-issue-message-admin: "This issue has been inactive for 6 months. To keep our backlog actionable, we mark old requests as stale. If this is still relevant, please comment to keep it open."
-          close-issue-message-admin: "This issue was closed because it has been inactive for 14 days since being marked as stale."
-          

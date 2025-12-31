@@ -1,7 +1,13 @@
-import { GoogleGenerativeAI, GenerativeModel, TaskType, Tool, Content, EmbedContentRequest } from "@google/generative-ai";
+import {
+    GoogleGenerativeAI,
+    GenerativeModel,
+    TaskType,
+    Tool,
+    Content,
+    EmbedContentRequest
+} from "@google/generative-ai";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
-
 
 export interface EmbedOptions {
     taskType?: TaskType;
@@ -54,15 +60,6 @@ export class GeminiService {
             if (!this.chatModel) throw new Error("Chat model not initialized.");
             const result = await this.chatModel.generateContent(prompt);
             return result.response.text();
-        });
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- stream results are typed as any in the current SDK version
-    public async streamContent(prompt: string): Promise<any> {
-        return this.retryOperation(async () => {
-            if (!this.chatModel) throw new Error("Chat model not initialized.");
-            const result = await this.chatModel.generateContentStream(prompt);
-            return result.stream;
         });
     }
 

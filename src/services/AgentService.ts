@@ -71,7 +71,7 @@ export class AgentService {
         }];
     }
 
-    /* eslint-disable @typescript-eslint/no-explicit-any -- tool results can be arbitrary objects from the Gemini SDK */
+    /* eslint-disable @typescript-eslint/no-explicit-any -- Tool execution results must return arbitrary JSON-serializable objects as defined by the Gemini function calling API specification. The return type Record<string, any> accurately reflects that these objects can contain any valid JSON structure (strings, numbers, arrays, nested objects, etc.) */
     private async executeFunction(name: string, args: Record<string, unknown>): Promise<Record<string, any>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
@@ -169,7 +169,7 @@ export class AgentService {
 
         return { error: "Tool not found." };
     }
-    /* eslint-enable @typescript-eslint/no-explicit-any -- re-enable after executeFunction */
+    /* eslint-enable @typescript-eslint/no-explicit-any -- End of function requiring flexible return types for Gemini tool results */
 
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
         // Prepare history for Gemini SDK

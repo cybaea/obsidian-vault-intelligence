@@ -1,4 +1,4 @@
-/* eslint-disable no-console -- this is a logger utility that explicitly wraps console methods */
+/* eslint-disable no-console -- This is a logger utility whose purpose is to provide a controlled interface to console methods (warn, error, debug). Direct console usage is required for the implementation. */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
