@@ -1,0 +1,16 @@
+
+> obsidian-vault-intelligence@1.2.0 lint
+> eslint .
+
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.1
+
+A configuration object specifies rule "obsidianmd/ui/sentence-case", but could not find plugin "obsidianmd".
+
+Common causes of this problem include:
+
+1. The "obsidianmd" plugin is not defined in your configuration file.
+2. The "obsidianmd" plugin is not defined within the same configuration object in which the "obsidianmd/ui/sentence-case" rule is applied.
+

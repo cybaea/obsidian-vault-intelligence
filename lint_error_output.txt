@@ -1,0 +1,13 @@
+
+> obsidian-vault-intelligence@1.2.0 lint
+> eslint .
+
+
+/home/allane/Projects/GitHub/obsidian-vault-intelligence/eslint.config.mts
+  0:0  error  Parsing error: /home/allane/Projects/GitHub/obsidian-vault-intelligence/eslint.config.mts was not found by the project service. Consider either including it in the tsconfig.json or including it in allowDefaultProject
+
+/home/allane/Projects/GitHub/obsidian-vault-intelligence/package.json
+  22:3  error  "eslint-plugin-eslint-comments" should be replaced with an alternative package. Read more here: https://github.com/es-tooling/module-replacements/blob/main/docs/modules/eslint-plugin-eslint-comments.md  depend/ban-dependencies
+
+✖ 2 problems (2 errors, 0 warnings)
+

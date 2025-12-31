@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- this is a logger utility that explicitly wraps console methods */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -47,5 +47,6 @@ export class Logger {
         }
     }
 }
+/* eslint-enable no-console -- re-enable after logger class */
 
 export const logger = Logger.getInstance();

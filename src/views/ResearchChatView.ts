@@ -38,7 +38,13 @@ export class ResearchChatView extends ItemView {
         return "Research agent";
     }
 
+    async onClose() {
+        await Promise.resolve();
+        // Nothing to cleanup
+    }
+
     async onOpen() {
+        await Promise.resolve();
         const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
         container.addClass("research-chat-view");
