@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console -- This is a logger utility whose purpose is to provide a controlled interface to console methods (warn, error, debug). Direct console usage is required for the implementation. */
 export enum LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -47,5 +47,6 @@ export class Logger {
         }
     }
 }
+/* eslint-enable no-console -- re-enable after logger class */
 
 export const logger = Logger.getInstance();

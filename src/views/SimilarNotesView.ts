@@ -28,11 +28,12 @@ export class SimilarNotesView extends ItemView {
     }
 
     async onOpen() {
-        void this.updateView();
+        await this.updateView();
         // Global listener logic will be in main.ts to trigger this view update
     }
 
     async onClose() {
+        await Promise.resolve();
         // Nothing to cleanup
     }
 

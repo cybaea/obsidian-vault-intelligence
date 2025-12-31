@@ -83,7 +83,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		// Event Listeners
 		this.registerEvent(
-			this.app.workspace.on('file-open', async (file) => {
+			this.app.workspace.on('file-open', (file) => {
 				if (file) {
 					// 1. Update the sidebar view
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
@@ -94,16 +94,16 @@ export default class VaultIntelligencePlugin extends Plugin {
 					}
 
 					// 2. Index this file if needed (opportunistic indexing)
-					await this.vectorStore.indexFile(file);
+					this.vectorStore.indexFile(file);
 				}
 			})
 		);
 
 		// File Modification Handling (Debounced)
-		const onMetadataChange = debounce(async (file: TFile) => {
+		const onMetadataChange = debounce((file: TFile) => {
 			if (file instanceof TFile && file.extension === 'md') {
 				logger.debug(`File changed (metadata): ${file.path}`);
-				await this.vectorStore.indexFile(file);
+				this.vectorStore.indexFile(file);
 
 				// Update view if it's the active file
 				const activeFile = this.app.workspace.getActiveFile();
@@ -121,9 +121,9 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// More reliable than vault.on('modify') for external changes
 		this.registerEvent(this.app.metadataCache.on('changed', onMetadataChange));
 
-		this.registerEvent(this.app.vault.on('create', async (file) => {
+		this.registerEvent(this.app.vault.on('create', (file) => {
 			if (file instanceof TFile && file.extension === 'md') {
-				await this.vectorStore.indexFile(file);
+				this.vectorStore.indexFile(file);
 			}
 		}));
 

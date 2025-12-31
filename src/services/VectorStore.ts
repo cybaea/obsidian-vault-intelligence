@@ -243,7 +243,7 @@ export class VectorStore {
         }
     }
 
-    public async indexFile(file: TFile) {
+    public indexFile(file: TFile) {
         this.enqueueIndex(file);
     }
 

@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting } from "obsidian";
 import VaultIntelligencePlugin from "./main";
 import { LogLevel } from "./utils/logger";

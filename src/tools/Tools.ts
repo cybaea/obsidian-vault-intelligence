@@ -49,8 +49,8 @@ export class WebSearchTool implements Tool {
     description = "Search the web for live information. Args: { query: string }";
 
     // This might just be a flag for Gemini Grounding, but if we want manual control:
-    async execute(_args: Record<string, unknown>): Promise<string> {
-        return "Use the built-in Google Search Grounding capability of the model instead.";
+    execute(_args: Record<string, unknown>): Promise<string> {
+        return Promise.resolve("Use the built-in Google Search Grounding capability of the model instead.");
     }
 }
 
