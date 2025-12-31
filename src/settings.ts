@@ -9,6 +9,7 @@ export interface VaultIntelligenceSettings {
 	indexingDelayMs: number;
 	minSimilarityScore: number;
 	similarNotesLimit: number;
+	vaultSearchResultsLimit: number;
 	geminiRetries: number;
 	logLevel: LogLevel;
 }
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	indexingDelayMs: 200,
 	minSimilarityScore: 0.5,
 	similarNotesLimit: 20,
+	vaultSearchResultsLimit: 5,
 	geminiRetries: 10,
 	logLevel: LogLevel.WARN
 }
@@ -113,6 +115,23 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 					if (num < 0) num = 0;
 
 					this.plugin.settings.similarNotesLimit = num;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Vault search results limit')
+			.setDesc('Maximum number of results returned by the vault search tool. Set to 0 for no limit.')
+			.addText(text => text
+				.setPlaceholder(String(DEFAULT_SETTINGS.vaultSearchResultsLimit))
+				.setValue(String(this.plugin.settings.vaultSearchResultsLimit))
+				.onChange(async (value) => {
+					let num = parseInt(value);
+					if (isNaN(num)) return;
+
+					// Treat negative values as 0 (no limit)
+					if (num < 0) num = 0;
+
+					this.plugin.settings.vaultSearchResultsLimit = num;
 					await this.plugin.saveSettings();
 				}));
 

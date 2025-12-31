@@ -27,7 +27,7 @@ export class ResearchChatView extends ItemView {
         this.plugin = plugin;
         this.gemini = gemini;
         this.vectorStore = vectorStore;
-        this.agent = new AgentService(plugin.app, gemini, vectorStore);
+        this.agent = new AgentService(plugin.app, gemini, vectorStore, plugin.settings);
     }
 
     getViewType() {
