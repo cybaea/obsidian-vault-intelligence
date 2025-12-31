@@ -2,8 +2,6 @@
 
 **Obsidian Vault Intelligence** brings state-of-the-art semantic search and research capabilities to your Obsidian vault using Google Gemini.
 
-Note: For users looking for more mature implementations of AI in Obsidian and who are comfortable with paying for it, we recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight, and open-source (MIT license) alternative focused on the Gemini ecosystem.
-
 ## Features
 
 ### 🧠 Research Chat
@@ -16,6 +14,15 @@ A dedicated research sidebar where you can talk to your vault.
 - **File Mentions**: Use `@` to reference specific files in your chat with built-in autocomplete.
 - **Command History**: Quickly recall previous messages using the `Up` and `Down` arrow keys.
 - **Improved UI**: Full Markdown rendering, selectable text, and code block support.
+
+#### Examples
+
+You can ask:
+
+- _"What do I know about X?"_ to search your vault for insights.
+- _"What do I know about X and is it still factually correct?"_ to search your vault for insights and verify the information using external sources.
+
+![Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used](images/knowledge-and-verification.webp)
 
 ### 🔍 Hybrid Vault Search
 
@@ -33,6 +40,13 @@ Automatically discover connections you didn't know existed.
 - Real-time updates as you switch between documents.
 - Confidence scores for every match.
 
+#### Examples
+
+From the wonderful [DnD 5e SRD in Markdown vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown) we can see what is similar to bards:
+
+![Screenshot: Showing the page for the bard class with the similar documents shown in the right sidebar. Apparently, Wizards and Sorcerers are the most similar to Bards.](images/similar-documents-bard.webp)
+
+
 ## Getting Started
 
 1. **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
@@ -47,6 +61,8 @@ Automatically discover connections you didn't know existed.
 - **Indexing Delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
 - **Gemini Retries**: Automatically retry failed API calls (useful for handling usage limits).
 - **Log Level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`). Level `Info` will show indexing progress.
+
+![Screenshot: Plugin options](images/options.webp)
 
 ## Links
 
@@ -65,4 +81,20 @@ Search for "Vault Intelligence" in the Obsidian community plugin browser.
 2. Create a folder `.obsidian/plugins/obsidian-vault-intelligence` in your vault.
 3. Copy the files into that folder.
 4. Reload Obsidian and enable the plugin.
+
+## Common problems
+
+1. **Indexing fails with "429" (rate limited)** (visible in the developer console, which you can usually open with Ctrl+Shift+I): At the time of writing (December 2025), the servers for the Gemini API are under-provisioned and rate limiting is common, even with a paid account. This is the compute pool for all Gemini API users being exhausted. You will see this in the developer console:
+
+    ```
+    POST https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent 429 (Too Many Requests)
+    ```
+
+## License
+
+MIT License
+
+## See also
+
+For users looking for more mature implementations of AI in Obsidian and who are comfortable with paying for it, we recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight, and open-source (MIT license) alternative, initially focused on the Gemini ecosystem.
 
