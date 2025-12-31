@@ -17,12 +17,34 @@ A dedicated research sidebar where you can talk to your vault.
 
 #### Examples
 
+##### Insights from your vault
+
 You can ask:
 
 - _"What do I know about X?"_ to search your vault for insights.
 - _"What do I know about X and is it still factually correct?"_ to search your vault for insights and verify the information using external sources.
 
-![Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used](images/knowledge-and-verification.webp)
+Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used:
+
+![Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used.](images/knowledge-and-verification.webp)
+
+##### Conversations about specific files
+
+You can limit to specific files by using `@` to reference documents from your vault with built-in autocomplete. For example:
+
+- _"Summarise @bard in three bullet points."_
+- _"What are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points."_
+- _"Briefly summarise all @classes"_ where `classes` is a folder in your vault.
+
+Screenshot: Prompts of _"summarise @bard in three bullet points"_ and _"what are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points"_ with output:
+
+![Screenshot: Prompts of _"summarise @bard in three bullet points"_ and _"what are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points"_ with output.](images/single-file.webp)
+
+Screenshot: Prompt _"Briefly summarise all @classes"_ with output:
+
+![Screenshot: Prompt _"Briefly summarise all @classes"_ with output.](images/folder-query.webp)
+
+(From the wonderful [DnD 5e SRD in Markdown vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown).)
 
 ### 🔍 Hybrid Vault Search
 
@@ -42,10 +64,11 @@ Automatically discover connections you didn't know existed.
 
 #### Examples
 
-From the wonderful [DnD 5e SRD in Markdown vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown) we can see what is similar to bards:
+From the DnD 5e SRD in Markdown vault, we can see what is similar to bards:
 
 ![Screenshot: Showing the page for the bard class with the similar documents shown in the right sidebar. Apparently, Wizards and Sorcerers are the most similar to Bards.](images/similar-documents-bard.webp)
 
+Note that this is contextual similarity, not just word similarity.
 
 ## Getting Started
 
