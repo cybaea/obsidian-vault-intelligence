@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, setIcon } from "obsidian";
 import VaultIntelligencePlugin from "./main";
 import { LogLevel } from "./utils/logger";
 
@@ -38,10 +38,39 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
+		const configDir = this.app.vault.configDir;
+
+		const apiKeyDesc = document.createDocumentFragment();
+		apiKeyDesc.append('Enter your Google Gemini API key.');
+
+		apiKeyDesc.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
+			const iconSpan = div.createSpan();
+			setIcon(iconSpan, 'lucide-info'); 
+
+			div.createSpan({}, (textSpan) => {
+				textSpan.append('You can obtain an API key from the ');
+				textSpan.createEl('a', {
+					href: 'https://console.cloud.google.com/apis/credentials',
+					text: 'Google Cloud Console'
+				});
+				textSpan.append('. Make sure to enable the Gemini API for your project.');
+			});
+		});
+
+        apiKeyDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+            const iconSpan = div.createSpan();
+            setIcon(iconSpan, 'lucide-alert-triangle');
+
+            div.createSpan({}, (textSpan) => {
+                textSpan.createEl('strong', { text: 'Note: ' });
+                textSpan.append(`This key is stored in plain text in your ${configDir}/ folder. Do not share your vault or commit it to public repositories.`);
+            });
+        });
 
 		new Setting(containerEl)
 			.setName('Google API key')
-			.setDesc('Enter your Google Gemini API key')
+			.setDesc(apiKeyDesc)
+			.setClass('vault-intelligence-api-setting')
 			.addText(text => {
 				text
 					.setPlaceholder('API key')
