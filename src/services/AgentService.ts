@@ -4,6 +4,7 @@ import { TFile, App, requestUrl } from "obsidian";
 import { FunctionDeclaration, SchemaType, TaskType } from "@google/generative-ai";
 import { logger } from "../utils/logger";
 import { Part } from "@google/generative-ai";
+import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 
 export interface ChatMessage {
     role: "user" | "model" | "system";
@@ -21,11 +22,13 @@ export class AgentService {
     private gemini: GeminiService;
     private vectorStore: VectorStore;
     private app: App;
+    private settings: VaultIntelligenceSettings;
 
-    constructor(app: App, gemini: GeminiService, vectorStore: VectorStore) {
+    constructor(app: App, gemini: GeminiService, vectorStore: VectorStore, settings: VaultIntelligenceSettings) {
         this.app = app;
         this.gemini = gemini;
         this.vectorStore = vectorStore;
+        this.settings = settings;
     }
 
     private getTools() {
@@ -86,12 +89,15 @@ export class AgentService {
             const embedding = await this.gemini.embedText(query, { taskType });
 
             // 2. Vector Search (Semantic)
-            let vectorResults = this.vectorStore.findSimilar(embedding, 5);
+            const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
+            const limit = Math.max(0, Math.trunc(rawLimit));
+
+            let vectorResults = this.vectorStore.findSimilar(embedding, limit);
 
             // Fallback for vector search
             if (vectorResults.length === 0) {
                 logger.debug("No results at default threshold, retrying with 0.25...");
-                vectorResults = this.vectorStore.findSimilar(embedding, 5, 0.25);
+                vectorResults = this.vectorStore.findSimilar(embedding, limit, 0.25);
             }
 
             // 3. Keyword Search (Exact Match)

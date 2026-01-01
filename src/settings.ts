@@ -9,6 +9,7 @@ export interface VaultIntelligenceSettings {
 	indexingDelayMs: number;
 	minSimilarityScore: number;
 	similarNotesLimit: number;
+	vaultSearchResultsLimit: number;
 	geminiRetries: number;
 	logLevel: LogLevel;
 }
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 	indexingDelayMs: 200,
 	minSimilarityScore: 0.5,
 	similarNotesLimit: 20,
+	vaultSearchResultsLimit: 25,
 	geminiRetries: 10,
 	logLevel: LogLevel.WARN
 }
@@ -90,7 +92,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Minimum similarity score')
-			.setDesc('Only notes with a similarity score above this threshold will be shown.')
+			.setDesc('Only notes with a similarity score above this threshold will be shown in the sidebar and will be used for context in the chat. Lower means more notes, but with higher risk of noise.')
 			.addSlider(slider => slider
 				.setLimits(0, 1, 0.05)
 				.setValue(this.plugin.settings.minSimilarityScore)
@@ -102,7 +104,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Similar notes limit')
-			.setDesc('Maximum number of similar notes to show in the sidebar. Set to 0 for no limit.')
+			.setDesc('Maximum number of similar notes to show in the sidebar. Set to 0 for no limit (ie limited only by the similarity score).')
 			.addText(text => text
 				.setPlaceholder(String(DEFAULT_SETTINGS.similarNotesLimit))
 				.setValue(String(this.plugin.settings.similarNotesLimit))
@@ -121,8 +123,25 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Vault search results limit')
+			.setDesc('Maximum number of results returned by the vault search tool. This is used for context in the chat.')
+			.addText(text => text
+				.setPlaceholder(String(DEFAULT_SETTINGS.vaultSearchResultsLimit))
+				.setValue(String(this.plugin.settings.vaultSearchResultsLimit))
+				.onChange(async (value) => {
+					let num = parseInt(value);
+					if (isNaN(num)) return;
+
+					// Treat negative values as 0 (no limit)
+					if (num < 0) num = 0;
+
+					this.plugin.settings.vaultSearchResultsLimit = num;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Gemini retries')
-			.setDesc('Number of times to retry a Gemini API call if it fails (e.g., due to rate limiting)')
+			.setDesc('Number of times to retry a Gemini API call if it fails (eg due to rate limiting)')
 			.addText(text => text
 				.setPlaceholder(String(DEFAULT_SETTINGS.geminiRetries))
 				.setValue(String(this.plugin.settings.geminiRetries))
