@@ -84,20 +84,24 @@ export class SimilarNotesView extends ItemView {
             }
 
             const list = container.createEl("ul");
+            list.addClass("similar-notes-list");
             similar.forEach(doc => {
                 const item = list.createEl("li");
-                const link = item.createEl("a", {
-                    text: doc.path.split('/').pop() || doc.path,
-                    cls: "nav-file-title-content"
-                });
-                link.setAttr("title", doc.path);
-
+                item.addClass("similar-notes-item");
                 // Display score
                 const scorePercent = Math.round(doc.score * 100);
                 item.createSpan({
-                    text: ` (${scorePercent}%)`,
-                    cls: "nav-file-tag" // use built-in style or similar
+                    text: `${scorePercent}%`,
+                    cls: "similar-notes-score" // use built-in style or similar
                 });
+                
+                const link = item.createEl("a", {
+                    text: doc.path.split('/').pop() || doc.path,
+                    cls: "similar-notes-link"
+                });
+                link.setAttr("title", doc.path);
+                link.setAttr("data-score", String(scorePercent));
+                link.setAttr("data-score-ten", String(Math.round(doc.score * 10)));
 
                 link.addEventListener("click", () => {
                     void this.plugin.app.workspace.openLinkText(doc.path, "", true);
