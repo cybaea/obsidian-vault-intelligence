@@ -1,9 +1,8 @@
 import { GeminiService } from "./GeminiService";
 import { VectorStore } from "../services/VectorStore";
 import { TFile, App, requestUrl } from "obsidian";
-import { FunctionDeclaration, SchemaType, TaskType } from "@google/generative-ai";
+import { FunctionDeclaration, SchemaType, TaskType, Part } from "@google/generative-ai";
 import { logger } from "../utils/logger";
-import { Part } from "@google/generative-ai";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 
 export interface ChatMessage {
