@@ -118,6 +118,11 @@ Search for "Vault Intelligence" in the Obsidian community plugin browser.
 
 MIT License
 
+## Contributing
+
+- **Users:** Report issues and request features via the [issue tracker](https://github.com/cybaea/obsidian-vault-intelligence/issues) on GitHub.
+- **Developers:** See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ## See also
 
 For users looking for more mature implementations of AI in Obsidian and who are comfortable with paying for it, we recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight, and open-source (MIT license) alternative, initially focused on the Gemini ecosystem.
