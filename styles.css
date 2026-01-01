@@ -74,3 +74,79 @@
     user-select: text !important;
     -webkit-user-select: text !important;
 }
+
+/* The container for our settings info box */
+
+.vault-intelligence-settings-info {
+    display: flex;
+    align-items: start;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
+    
+    /* Theming: Transparent background + dashed border */
+    background-color: transparent;
+    border: var(--border-width) dashed var(--background-modifier-border); /* Replaced 1px */
+    border-radius: var(--radius-s);
+    padding: var(--size-4-2);
+    
+    /* Typography */
+    font-size: var(--font-ui-smaller) !important;
+    color: var(--text-muted);
+}
+
+.vault-intelligence-settings-warning {
+    /* Reuse layout logic */
+    display: flex;
+    align-items: start;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
+    
+    /* Warning Visuals */
+    background-color: transparent;
+    border: var(--border-width) solid var(--text-warning); /* Replaced 1px */
+    border-radius: var(--radius-s);
+    padding: var(--size-4-2);
+    
+    /* Typography */
+    font-size: var(--font-ui-smaller) !important;
+    color: var(--text-muted);
+}
+
+.vault-intelligence-settings-info .lucide-info,
+.vault-intelligence-settings-warning .lucide-alert-triangle {
+    flex-shrink: 0;
+    
+    width: 1.1em;   
+    height: 1.1em;  
+    margin-top: 0.15em; 
+}
+
+.vault-intelligence-settings-info .lucide-info {
+    color: var(--text-accent);
+}
+
+.vault-intelligence-settings-warning .lucide-alert-triangle {
+    color: var(--text-warning);
+}
+
+/* 4. Links */
+.vault-intelligence-settings-info a,
+.vault-intelligence-settings-warning a {
+    font-size: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.15em; 
+}
+
+.vault-intelligence-settings-info a {
+    color: var(--text-accent);
+}
+
+.vault-intelligence-settings-warning a {
+    color: var(--text-warning);
+}
+
+/* Layout Fix: Align Input Box */
+.vault-intelligence-api-setting .setting-item-control {
+    align-self: flex-start;
+    margin-top: var(--size-4-2); 
+}
