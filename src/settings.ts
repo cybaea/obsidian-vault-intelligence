@@ -40,13 +40,17 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Google API key')
 			.setDesc('Enter your Google Gemini API key')
-			.addText(text => text
-				.setPlaceholder('API key')
-				.setValue(this.plugin.settings.googleApiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.googleApiKey = value;
-					await this.plugin.saveSettings();
-				}));
+			.addText(text => {
+				text
+					.setPlaceholder('API key')
+					.setValue(this.plugin.settings.googleApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.googleApiKey = value;
+						await this.plugin.saveSettings();
+					});
+				// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input#input_types
+				text.inputEl.type = 'password';
+			});
 
 		new Setting(containerEl)
 			.setName('Chat model')
