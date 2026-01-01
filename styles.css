@@ -75,6 +75,42 @@
     -webkit-user-select: text !important;
 }
 
+/* ++++++++++++++++++++++++++++++++++++ */
+/* Similar notes styles                 */
+
+.similar-notes-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin-left: 0;
+    font-family: var(--font-interface);
+    line-height: var(--line-height-normal);
+}
+
+.similar-notes-list {
+    padding-top: var(--size-2-1);
+    padding-bottom: var(--size-2-1);
+}
+
+a.similar-notes-link,
+a.similar-notes-link:visited {
+    color: var(--text-normal);
+}
+
+a.similar-notes-link[data-score-ten="9"],
+a.similar-notes-link[data-score-ten="10"],
+a.similar-notes-link[data-score-ten="9"]:visited,
+a.similar-notes-link[data-score-ten="10"]:visited {
+    font-weight: var(--font-semibold);
+    color: var(--text-accent);
+}
+
+.similar-notes-score {
+    padding-right: var(--size-4-2);
+    color: var(--text-faint);
+}
+
+/* ------------------------------------ */
+
 /* The container for our settings info box */
 
 .vault-intelligence-settings-info {
