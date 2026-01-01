@@ -78,13 +78,13 @@ Note that this is contextual similarity, not just word similarity.
 
 ## Configuration
 
-- **Embedding Model**: Defaulted to `gemini-embedding-001` for stable performance. See [Gemini API | Embeddings](https://ai.google.dev/gemini-api/docs/embeddings) for available models.
-- **Chat Model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities. See [Gemini API | Gemini Models](https://ai.google.dev/gemini-api/docs/models) for available models.
+- **Embedding model**: Defaulted to `gemini-embedding-001` for stable performance. See [Gemini API | Embeddings](https://ai.google.dev/gemini-api/docs/embeddings) for available models.
+- **Chat model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities. See [Gemini API | Gemini Models](https://ai.google.dev/gemini-api/docs/models) for available models.
 - **Vault search results limit**: Control how many results are returned by the hybrid vault search (default `25`). This affects both the Similar Notes view and the Research Chat. More results may improve answer quality but increase latency and cost.
-- **Minimum Similarity Score**: Fine-tune how "related" a note must be to appear in your sidebar (default `0.5`).
-- **Indexing Delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
-- **Gemini Retries**: Automatically retry failed API calls (useful for handling usage limits).
-- **Log Level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`). Level `Info` will show indexing progress.
+- **Minimum similarity score**: Fine-tune how "related" a note must be to appear in your sidebar (default `0.5`).
+- **Indexing delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
+- **Gemini retries**: Automatically retry failed API calls (useful for handling usage limits).
+- **Log level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`). Level `Info` will show indexing progress.
 
 ![Screenshot: Plugin options](images/options.webp)
 
