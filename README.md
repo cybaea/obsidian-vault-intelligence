@@ -99,6 +99,25 @@ Note that this is contextual similarity, not just word similarity.
 
 Search for "Vault Intelligence" in the Obsidian community plugin browser.
 
+You can check the status of community plugin submission [here](https://github.com/obsidianmd/obsidian-releases/pull/9166).
+
+### Beta versions via BART
+
+The Beta Reviewers Auto-update Tool or BRAT for short is a plugin that makes it easier for you to install and keep up-to-date with beta plugins.
+
+1.  Download and enable the community plugin [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
+2.  Open BRAT settings.
+3.  Press Add Beta Plugin.
+4.  Paste https://github.com/cybaea/obsidian-vault-intelligence in the text field.
+5.  Select Latest version.
+6.  Check Enable after installing the plugin.
+7.  Press Add Plugin.
+7.  Open settings for Vault Intelligence and enter your Gemini API key.
+8.  If this is your first time using the plugin, then you need to restart Obsidian to start indexing your vault.
+
+After this initial setup, the plugin will be automatically updated when new versions are released.
+
+
 ### Manual Installation
 
 1. Download the latest release (`main.js`, `manifest.json`, `styles.css`).
