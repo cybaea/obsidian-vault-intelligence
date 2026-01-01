@@ -1,20 +1,40 @@
-import { Setting, setIcon, App } from "obsidian";
+import { Setting, TextComponent, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin } from "../types";
 
 export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
-    
-    // 1. The Header (We can still use the helper or inline it)
     new Setting(containerEl).setName('Connection').setHeading();
 
-    // 2. The Description Logic
     const apiKeyDesc = getApiKeyDescription(plugin.app);
 
-    // 3. The Setting
+    // 1. Declare the variable up here so it is available to both blocks below
+    let apiTextInput: TextComponent;
+
     new Setting(containerEl)
         .setName('Google API key')
         .setDesc(apiKeyDesc)
         .setClass('vault-intelligence-api-setting')
+        
+        // 2. Add the BUTTON FIRST (This puts it on the left, fixing alignment)
+        .addExtraButton(btn => {
+            btn.setIcon('eye')
+               .setTooltip('Show API key')
+               .onClick(() => {
+                   // By the time the user clicks this, 'apiTextInput' will be defined
+                   if (apiTextInput.inputEl.type === 'password') {
+                       apiTextInput.inputEl.type = 'text';
+                       btn.setIcon('eye-off');
+                       btn.setTooltip('Hide API key');
+                   } else {
+                       apiTextInput.inputEl.type = 'password';
+                       btn.setIcon('eye');
+                       btn.setTooltip('Show API key');
+                   }
+               });
+        })
+
+        // 3. Add the TEXT SECOND (This puts it on the right)
         .addText(text => {
+            apiTextInput = text; // Assign the reference here
             text
                 .setPlaceholder('API key')
                 .setValue(plugin.settings.googleApiKey)
@@ -55,7 +75,7 @@ function getApiKeyDescription(app: App): DocumentFragment {
         setIcon(iconSpan, 'lucide-alert-triangle');
         div.createSpan({}, (textSpan) => {
             textSpan.createEl('strong', { text: 'Note: ' });
-            textSpan.append(`This key is stored in plain text in your ${configDir}/ folder. Do not share your vault or commit it to public repositories.`);
+            textSpan.append(`This key is stored in plain text in this plugin's settings within your ${configDir}/ folder. Do not share your vault or commit it to public repositories.`);
         });
     });
 
