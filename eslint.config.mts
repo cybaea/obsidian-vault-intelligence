@@ -2,7 +2,6 @@ import tseslint from 'typescript-eslint';
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import { globalIgnores } from "eslint/config";
-// @ts-expect-error -- No types available for this plugin
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 
 export default tseslint.config(
@@ -39,8 +38,8 @@ export default tseslint.config(
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-explicit-any": "error",
 			"obsidianmd/ui/sentence-case": ["error", {
-				brands: ["Google", "Gemini"],
-				acronyms: ["API", "HTML"]
+				brands: ["Google", "Gemini", "Google Cloud Console"],
+				acronyms: ["API", "HTML", "AI"]
 			}],
 			"no-console": "error",
 			"eslint-comments/require-description": "error",
