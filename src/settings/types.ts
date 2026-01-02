@@ -18,7 +18,7 @@ export interface VaultIntelligenceSettings {
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     embeddingModel: 'gemini-embedding-001',
-    chatModel: 'gemini-2.0-flash',
+    chatModel: 'gemini-3-flash-preview',
     groundingModel: 'gemini-2.5-flash-lite', 
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,
