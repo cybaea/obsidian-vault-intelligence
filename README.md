@@ -1,19 +1,29 @@
 # Obsidian Vault Intelligence
 
-**Obsidian Vault Intelligence** brings state-of-the-art semantic search and research capabilities to your Obsidian vault using Google Gemini.
+**Obsidian Vault Intelligence** transforms your static note collection into an active, intelligent partner. By integrating Google Gemini's state-of-the-art AI, it helps you reason across your entire vault, uncover hidden connections, and verify your private knowledge against the real world.
+
+## Why Vault Intelligence?
+
+Managing a growing Obsidian vault can be overwhelming. Notes get lost, connections are missed, and verifying old information becomes a chore. Vault Intelligence solves these frustrations by enabling you to:
+
+-   **Stop manually searching:** Instead of hunting for keywords, ask questions in plain English. The agent understands what you *mean*, not just what you type.
+-   **Connect the dots:** Automatically discover how a new idea relates to notes you wrote months or years ago—surfacing insights you might have forgotten.
+-   **Verify your knowledge:** Instantly check if the "facts" in your personal notes are still accurate by cross-referencing them with live Google Search results.
+-   **Draft with context:** Ask the AI to summarize, compare, or draft new content based specifically on the files you select, keeping your writing grounded in your own work.
 
 ## Features
 
-### 🧠 Research Chat
+### 🤖 Research Agent
 
-A dedicated research sidebar where you can talk to your vault.
+A dedicated sidebar where you can collaborate with your vault.
 
-- **Full Context**: The agent understands your conversation history.
-- **Multimodal**: Powered by Gemini 3 Flash, supporting text and more.
-- **Smart RAG**: Automatically searches your vault for relevant notes to answer your questions.
-- **File Mentions**: Use `@` to reference specific files in your chat with built-in autocomplete.
-- **Command History**: Quickly recall previous messages using the `Up` and `Down` arrow keys.
-- **Improved UI**: Full Markdown rendering, selectable text, and code block support.
+-   **Full Context**: The agent remembers your entire conversation history for seamless follow-up questions.
+-   **Multimodal**: Powered by Gemini supporting long-context reasoning for complex queries.
+-   **Smart RAG**: Automatically retrieves relevant notes to answer your questions using a hybrid search strategy.
+-   **Live Grounding**: The agent knows today's date and can verify facts from your vault against real-time Google Search results.
+-   **File Mentions**: Use `@` to reference specific files or folders (e.g., `@project-alpha`) to focus the AI's attention.
+-   **Command History**: Quickly recall previous prompts using the `Up` and `Down` arrow keys.
+-   **Improved UI**: Full Markdown rendering, selectable text, and code block support.
 
 #### Examples
 
@@ -21,77 +31,88 @@ A dedicated research sidebar where you can talk to your vault.
 
 You can ask:
 
-- _"What do I know about X?"_ to search your vault for insights.
-- _"What do I know about X and is it still factually correct?"_ to search your vault for insights and verify the information using external sources.
+-   _"What do I know about X?"_ to synthesize insights from across your vault.
+-   _"What do I know about X and is it still factually correct?"_ to validate your private notes against external sources.
 
-Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used:
-
-![Screenshot: Example prompt _"What do I know about Knight Capital and is my information factually correct?"_ with output showing detailed validation and a summary, as an example of how the plugin can be used.](images/knowledge-and-verification.webp)
+![Screenshot: Example prompt "What do I know about Knight Capital and is my information factually correct?" with output showing detailed validation and a summary.](images/knowledge-and-verification.webp)
 
 ##### Conversations about specific files
 
-You can limit to specific files by using `@` to reference documents from your vault with built-in autocomplete. For example:
+Focus the AI on specific documents using `@` mentions:
 
-- _"Summarise @bard in three bullet points."_
-- _"What are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points."_
-- _"Briefly summarise all @classes"_ where `classes` is a folder in your vault.
+-   _"Summarize @bard in three bullet points."_
+-   _"What are the key differences between @bard and @bard-college-of-lore? Keep it to three bullet points."_
+-   _"Briefly summarize all @classes"_ where `classes` is a folder in your vault.
 
-Screenshot: Prompts of _"summarise @bard in three bullet points"_ and _"what are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points"_ with output:
+![Screenshot: Prompts asking to summarize specific files with output.](images/single-file.webp)
 
-![Screenshot: Prompts of _"summarise @bard in three bullet points"_ and _"what are the key differences between @bard and @bard-college-of-lore ? Keep it to three bullet points"_ with output.](images/single-file.webp)
+![Screenshot: Prompt asking to summarize a folder with output.](images/folder-query.webp)
 
-Screenshot: Prompt _"Briefly summarise all @classes"_ with output:
+### 🔍 Adaptive Hybrid Search
 
-![Screenshot: Prompt _"Briefly summarise all @classes"_ with output.](images/folder-query.webp)
+The plugin uses an adaptive search engine to ensure you find the right information:
 
-(From the wonderful [DnD 5e SRD in Markdown vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown).)
-
-### 🔍 Hybrid Vault Search
-
-A robust search tool used by the Research Agent to find your information.
-
-- **Semantic Search**: Finds notes based on *meaning*, not just keywords. Uses Gemini embeddings.
-- **Keyword Fallback**: Automatically falls back to traditional keyword matching to ensure exact terms (like proper names or specific numbers) are never missed.
-- **Automatic Indexing**: Background indexing with rate-limit protection.
+-   **Semantic Vector Search**: Finds notes based on *meaning* (e.g., matching "financial ruin" to "bankruptcy").
+-   **Fuzzy Keyword Matching**: Automatically identifies specific terminology and boosts results that contain exact matches or close synonyms.
+-   **Automatic Indexing**: Background indexing ensures your search data is always up-to-date.
 
 ### 🖇️ Similar Notes View
 
-Automatically discover connections you didn't know existed.
+Automatically discover connections you did not know existed.
 
-- Shows a list of notes similar to your currently active file.
-- Real-time updates as you switch between documents.
-- Confidence scores for every match.
+-   Shows a list of notes similar to your currently active file.
+-   Real-time updates as you switch between documents.
+-   Confidence scores for every match help you judge relevance at a glance.
 
-#### Examples
-
-From the DnD 5e SRD in Markdown vault, we can see what is similar to bards:
-
-![Screenshot: Showing the page for the bard class with the similar documents shown in the right sidebar. Apparently, Wizards and Sorcerers are the most similar to Bards.](images/similar-documents-bard.webp)
-
-Note that this is contextual similarity, not just word similarity.
+![Screenshot: Showing the page for the bard class with similar documents shown in the right sidebar.](images/similar-documents-bard.webp)
 
 ## Getting Started
 
-1. **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-2. **Setup**: Enter your API key in the plugin settings.
-3. **Indexing**: The plugin will begin indexing your vault in the background. You can monitor progress in the developer console.
+1.  **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+2.  **Setup**: Install the plugin and enter your API key in the settings.
+3.  **Indexing**: The plugin will begin indexing your vault in the background. You can monitor progress in the developer console (Level: Info).
 
 ## Configuration
 
-- **Embedding model**: Defaulted to `gemini-embedding-001` for stable performance. See [Gemini API | Embeddings](https://ai.google.dev/gemini-api/docs/embeddings) for available models.
-- **Chat model**: Defaulted to `gemini-3-flash-preview` for cutting-edge capabilities. See [Gemini API | Gemini Models](https://ai.google.dev/gemini-api/docs/models) for available models.
-- **Vault search results limit**: Control how many results are returned by the hybrid vault search (default `25`). This affects both the Similar Notes view and the Research Chat. More results may improve answer quality but increase latency and cost.
-- **Minimum similarity score**: Fine-tune how "related" a note must be to appear in your sidebar (default `0.5`).
-- **Indexing delay**: Control the speed of background indexing. Higher values reduce the risk of rate limiting on large vaults.
-- **Gemini retries**: Automatically retry failed API calls (useful for handling usage limits).
-- **Log level**: Control the verbosity of logs in the developer console (`Debug`, `Info`, `Warn`, `Error`). Level `Info` will show indexing progress.
+The plugin is highly configurable, allowing you to tune the experience to your needs and manage API usage costs.
+
+### Connection
+
+-   **Google API key**: Your private key for accessing Gemini models. This is stored locally in your `.obsidian/` configuration folder.
+
+### Models
+
+-   **Chat model**: The main model used for reasoning and answering questions.
+    -   *Default:* `gemini-3-flash-preview` (Optimized for speed and long context).
+-   **Embedding model**: The model used to generate vector representations of your notes.
+    -   *Default:* `gemini-embedding-001`.
+-   **Grounding model**: A specialized, cost-effective model used specifically for performing live Google Searches to verify facts.
+    -   *Default:* `gemini-2.5-flash-lite`.
+
+### Indexing and Search
+
+-   **Indexing delay (ms)**: The pause between processing files during background indexing. Increasing this slows down indexing but reduces the risk of hitting API rate limits ("429" errors).
+    -   *Default:* `200`.
+-   **Minimum similarity score**: A threshold (0.0 to 1.0) for filtering results. Only notes with a similarity score above this value will be shown in the "Similar Notes" view or used by the Agent.
+    -   *Default:* `0.5`.
+-   **Similar notes limit**: The maximum number of related documents to display in the sidebar.
+    -   *Default:* `20`.
+-   **Vault search results limit**: The maximum number of notes retrieved by the Research Agent during a single search action. Increasing this gives the Agent more context but increases token usage.
+    -   *Default:* `25`.
+
+### Advanced
+
+-   **Max agent steps**: The maximum number of "reasoning loops" the Agent can take to answer a question. If the Agent needs to search the vault, verify on Google, and search again, each action counts as a step.
+    -   *Default:* `5`.
+-   **Embedding dimension**: The size of the vector used to represent your notes. Larger dimensions capture more nuance but increase storage size and API costs.
+    -   *Options:* `768` (Standard), `1536` (High Detail), `3072` (Max Detail).
+    -   *Warning:* Changing this setting requires a full re-index of your vault.
+-   **Gemini retries**: The number of times the plugin will attempt to resend a request if the API fails (e.g., due to rate limiting).
+    -   *Default:* `10`.
+-   **Log level**: Controls the verbosity of the developer console logs (`Ctrl+Shift+I`).
+    -   *Options:* `Debug`, `Info` (Recommended for initial setup), `Warn`, `Error`.
 
 ![Screenshot: Plugin options](images/options.webp)
-
-## Links
-
-- **Main Repository**: [GitHub](https://github.com/cybaea/obsidian-vault-intelligence)
-- **Issue Tracker**: [Report a Bug / Request a Feature](https://github.com/cybaea/obsidian-vault-intelligence/issues)
 
 ## Installation
 
@@ -99,39 +120,33 @@ Note that this is contextual similarity, not just word similarity.
 
 Search for "Vault Intelligence" in the Obsidian community plugin browser.
 
-You can check the status of community plugin submission [here](https://github.com/obsidianmd/obsidian-releases/pull/9166).
+You can track progress on [this issue](https://github.com/obsidianmd/obsidian-releases/pull/9166).
 
-### Beta versions via BART
+### Beta versions via BRAT
 
-The Beta Reviewers Auto-update Tool or BRAT for short is a plugin that makes it easier for you to install and keep up-to-date with beta plugins.
+The **Beta Reviewers Auto-update Tool** (BRAT) makes it easy to install and update beta plugins.
 
-1.  Download and enable the community plugin [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
-2.  Open BRAT settings.
-3.  Press Add Beta Plugin.
-4.  Paste https://github.com/cybaea/obsidian-vault-intelligence in the text field.
-5.  Select Latest version.
-6.  Check Enable after installing the plugin.
-7.  Press Add Plugin.
-7.  Open settings for Vault Intelligence and enter your Gemini API key.
-8.  If this is your first time using the plugin, then you need to restart Obsidian to start indexing your vault.
-
-After this initial setup, the plugin will be automatically updated when new versions are released.
-
+1.  Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) from the Community Plugins.
+2.  Open BRAT settings and click **Add Beta Plugin**.
+3.  Paste the repository URL: `https://github.com/cybaea/obsidian-vault-intelligence`.
+4.  Enable the plugin in Obsidian's settings.
 
 ### Manual Installation
 
-1. Download the latest release (`main.js`, `manifest.json`, `styles.css`).
-2. Create a folder `.obsidian/plugins/obsidian-vault-intelligence` in your vault.
-3. Copy the files into that folder.
-4. Reload Obsidian and enable the plugin.
+1.  Download the latest release (`main.js`, `manifest.json`, `styles.css`) from GitHub.
+2.  Create a folder `.obsidian/plugins/obsidian-vault-intelligence` in your vault.
+3.  Copy the files into that folder.
+4.  Reload Obsidian.
 
-## Common problems
+## Troubleshooting
 
-1. **Indexing fails with "429" (rate limited)** (visible in the developer console, which you can usually open with Ctrl+Shift+I): At the time of writing (December 2025), the servers for the Gemini API are under-provisioned and rate limiting is common, even with a paid account. This is the compute pool for all Gemini API users being exhausted. You will see this in the developer console:
+- **Indexing fails with "429" (Too Many Requests)**
+    - This indicates you are hitting the rate limits or, more likely, the server limits of the Gemini API.
+    - **Solution:** Increase the **Indexing delay** in settings (e.g., to `1000` ms) or increase **Gemini retries**. This is common with the free tier of the Gemini API.
 
-    ```
-    POST https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent 429 (Too Many Requests)
-    ```
+- **Search seems to ignore obvious keywords**
+    - The plugin uses a hybrid approach, but if the semantic meaning of a note is very different from your query, it might be filtered out.
+    - **Solution:** Try lowering the **Minimum similarity score** in settings.
 
 ## License
 
@@ -139,10 +154,10 @@ MIT License
 
 ## Contributing
 
-- **Users:** Report issues and request features via the [issue tracker](https://github.com/cybaea/obsidian-vault-intelligence/issues) on GitHub.
-- **Developers:** See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+-   **Users:** Report issues and request features via the [issue tracker](https://github.com/cybaea/obsidian-vault-intelligence/issues).
+-   **Developers:** See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## See also
 
-For users looking for more mature implementations of AI in Obsidian and who are comfortable with paying for it, we recommend checking out [Smart Connections](https://smartconnections.app/smart-connections/) and [Smart Chat](https://smartconnections.app/smart-chat/). Our plugin aims to provide a powerful, lightweight, and open-source (MIT license) alternative, initially focused on the Gemini ecosystem.
+For users looking for other AI implementations in Obsidian, check out [Smart Connections](https://smartconnections.app/). Our plugin aims to provide a lightweight, open-source alternative focused specifically on the Google Gemini ecosystem.
 
