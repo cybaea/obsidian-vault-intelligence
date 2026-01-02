@@ -157,7 +157,10 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// Update services if needed
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
-		if (this.vectorStore) this.vectorStore.updateSettings(this.settings);
+		if (this.vectorStore) {
+			this.vectorStore.updateSettings(this.settings);
+			void this.vectorStore.scanVault();
+		}
 	}
 
 	async activateView(viewType: string) {
