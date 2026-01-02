@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
-import { TaskType } from "@google/generative-ai";
+// Removed legacy SDK import
 import VaultIntelligencePlugin from "../main";
 import { VectorStore } from "../services/VectorStore";
 import { GeminiService } from "../services/GeminiService";
@@ -64,8 +64,9 @@ export class SimilarNotesView extends ItemView {
                 }
 
                 logger.debug(`Cached vector not found for ${file.path}, embedding live...`);
+                // FIX: Use string literal for taskType
                 embedding = await this.gemini.embedText(content, {
-                    taskType: TaskType.RETRIEVAL_DOCUMENT,
+                    taskType: 'RETRIEVAL_DOCUMENT',
                     title: file.basename
                 });
             }
