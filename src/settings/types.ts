@@ -4,6 +4,7 @@ import { LogLevel } from "../utils/logger";
 export interface VaultIntelligenceSettings {
     googleApiKey: string;
     embeddingModel: string;
+    embeddingDimension: number;
     chatModel: string;
     groundingModel: string; 
     indexingDelayMs: number;
@@ -18,7 +19,8 @@ export interface VaultIntelligenceSettings {
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     embeddingModel: 'gemini-embedding-001',
-    chatModel: 'gemini-2.0-flash',
+    embeddingDimension: 768,
+    chatModel: 'gemini-3-flash-preview', 
     groundingModel: 'gemini-2.5-flash-lite', 
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,

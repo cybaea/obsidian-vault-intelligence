@@ -1,4 +1,4 @@
-import { Setting } from "obsidian";
+import { Setting, Notice } from "obsidian";
 import { IVaultIntelligencePlugin } from "../types";
 import { DEFAULT_SETTINGS } from "../types";
 import { LogLevel } from "../../utils/logger"; 
@@ -6,7 +6,6 @@ import { LogLevel } from "../../utils/logger";
 export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Advanced').setHeading();
 
-    // --- NEW: Max Agent Steps ---
     new Setting(containerEl)
         .setName('Max agent steps')
         .setDesc(`The maximum number of reasoning loops (thinking steps) the agent is allowed to take. (Default: ${DEFAULT_SETTINGS.maxAgentSteps})`)
@@ -22,6 +21,23 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                 }
             }));
 
+    new Setting(containerEl)
+        .setName('Embedding dimension')
+        .setDesc('The vector size for your embeddings. Gemini supports 768, 1536, or 3072. Changing this will force a full index of your vault, which costs API credits.')
+        .addDropdown(dropdown => dropdown
+            .addOption('768', '768 (standard)')
+            .addOption('1536', '1536 (high detail)')
+            .addOption('3072', '3072 (max detail)')
+            .setValue(String(plugin.settings.embeddingDimension))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (num !== plugin.settings.embeddingDimension) {
+                    plugin.settings.embeddingDimension = num;
+                    await plugin.saveSettings();
+                    new Notice("Embedding dimension changed. A full vault re-scan will trigger on next reload.");
+                }
+            }));
+    
     new Setting(containerEl)
         .setName('Gemini retries')
         .setDesc('Number of times to retry a Gemini API call if it fails.')

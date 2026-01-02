@@ -90,7 +90,10 @@ export class AgentService {
 
         if (name === "google_search") {
             try {
-                const query = args.query as string;
+                // Safety check for query
+                const rawQuery = args.query;
+                const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
+                
                 logger.info(`Delegating search to sub-agent for: ${query}`);
                 const searchResult = await this.gemini.searchWithGrounding(query);
                 return { result: searchResult };
@@ -102,62 +105,118 @@ export class AgentService {
         }
 
         if (name === "vault_search") {
-            const query = (args.query as string).toLowerCase();
+            // Safety: Ensure query is a string
+            const rawQuery = args.query;
+            const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
+
+            if (!query || query.trim().length === 0) {
+                logger.warn("Vault search called with empty query.");
+                return { result: "Error: Search query was empty." };
+            }
+
+            logger.info(`[VaultSearch] Starting search for: "${query}"`);
+
             const taskType = 'RETRIEVAL_QUERY';
             
             // 1. Vector Search (Semantic)
-            // Use lower threshold (0.35) to capture more candidates for ranking
             const embedding = await this.gemini.embedText(query, { taskType });
             const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
             
             let vectorResults = this.vectorStore.findSimilar(embedding, limit, 0.35);
+            logger.info(`[VaultSearch] Vector search returned ${vectorResults.length} candidates.`);
 
-            // 2. Keyword Search (Exact Match)
+            // 2. Keyword Search (Hybrid: Exact + Bag-of-Words)
             const keywordResults: VaultSearchResult[] = [];
             
             if (query.length > 2) { 
                 const files = this.app.vault.getMarkdownFiles();
                 
+                // FIX: Token Cleaning
+                // 1. Remove quotes
+                // 2. Remove boolean operators (OR, AND) which the Agent likes to use
+                // 3. Filter short words
+                const cleanQuery = query.replace(/["'()]/g, " "); 
+                const tokens = cleanQuery.split(/\s+/)
+                    .map(t => t.trim())
+                    .filter(t => t.length > 2 && t !== "or" && t !== "and");
+
+                const isMultiWord = tokens.length > 1;
+
                 let keywordMatchesFound = 0;
-                // FIX: Limit increased to 100. 
-                // This means we scan the WHOLE vault until we find 100 *positive matches*.
-                // If "Knight Capital" is only in 1 file, we will find it.
                 const MAX_KEYWORD_MATCHES = 100; 
 
                 for (const file of files) {
                     if (keywordMatchesFound >= MAX_KEYWORD_MATCHES) break;
 
-                    // A. Title Match
-                    if (file.basename.toLowerCase().includes(query)) {
-                        keywordResults.push({
-                            path: file.path,
-                            score: 1.0, 
-                            isKeywordMatch: true,
-                            isTitleMatch: true
-                        });
+                    const titleLower = file.basename.toLowerCase();
+                    
+                    // A. Title Exact Match
+                    if (titleLower.includes(query)) {
+                        keywordResults.push({ path: file.path, score: 1.2, isKeywordMatch: true, isTitleMatch: true });
                         keywordMatchesFound++;
                         continue; 
                     }
 
-                    // B. Body Match (The Critical Fix)
-                    const inVector = vectorResults.some(r => r.path === file.path);
-                    if (!inVector) {
-                        try {
-                            const content = await this.app.vault.cachedRead(file);
-                            // This finds "Knight Capital" anywhere in the body text
-                            if (content.toLowerCase().includes(query)) {
-                                keywordResults.push({
-                                    path: file.path,
-                                    score: 0.5, 
-                                    isKeywordMatch: true,
-                                    isTitleMatch: false
-                                });
+                    // B. Body Scan
+                    try {
+                        const content = await this.app.vault.cachedRead(file);
+                        const contentLower = content.toLowerCase();
+
+                        // B1. Exact Phrase Match (Highest Body Score)
+                        if (contentLower.includes(query)) {
+                            keywordResults.push({ path: file.path, score: 0.85, isKeywordMatch: true, isTitleMatch: false });
+                            keywordMatchesFound++;
+                            continue;
+                        }
+
+                        // B2. "Bag of Words" Match (Flexible)
+                        if (isMultiWord) {
+                            let hits = 0;
+                            for (const token of tokens) {
+                                // Stemming checks
+                                let match = false;
+                                if (contentLower.includes(token)) {
+                                    match = true;
+                                } else if (token.endsWith('s') && contentLower.includes(token.slice(0, -1))) {
+                                    match = true;
+                                } else if (token.endsWith('ing') && contentLower.includes(token.slice(0, -3))) {
+                                    match = true;
+                                } else if (token.endsWith('ed') && contentLower.includes(token.slice(0, -2))) { // added 'ed' check
+                                    match = true;
+                                }
+                                
+                                if (match) hits++;
+                            }
+
+                            const matchRatio = hits / tokens.length;
+                            let fuzzyScore = 0;
+
+                            // FIX: Adaptive Thresholds
+                            // Scenario 1: Short Query (<4 tokens) -> Strict (Need high overlap)
+                            if (tokens.length < 4) {
+                                if (matchRatio > 0.6) {
+                                    fuzzyScore = 0.4 + (matchRatio * 0.3);
+                                }
+                            } 
+                            // Scenario 2: Long Query (>=4 tokens) -> Loose (Synonym stuffing)
+                            // If we hit at least 2 distinct words, or 30% of the query, it's relevant.
+                            else {
+                                if (hits >= 2 || matchRatio > 0.3) {
+                                    // Score based on raw hit count, capped at 0.75
+                                    // This allows "financial firm bankruptcy" to match "financial firms ... collapsed ... bankruptcy"
+                                    fuzzyScore = Math.min(0.4 + (hits * 0.08), 0.75);
+                                }
+                            }
+
+                            if (fuzzyScore > 0) {
+                                keywordResults.push({ path: file.path, score: fuzzyScore, isKeywordMatch: true, isTitleMatch: false });
                                 keywordMatchesFound++;
                             }
-                        } catch { /* ignore read errors */ }
-                    }
+                        }
+                    } catch { /* ignore read errors */ }
                 }
+                logger.info(`[VaultSearch] Keyword search found ${keywordResults.length} matches for "${query}" (Exact + Fuzzy).`);
             }
 
             // 3. Hybrid Merge & Rank
@@ -170,9 +229,11 @@ export class AgentService {
 
             // Add/Merge Keyword Results
             for (const res of keywordResults) {
-                if (mergedMap.has(res.path)) {
-                    const existing = mergedMap.get(res.path)!;
-                    existing.score += 0.3; // Boost score if matched both ways
+                const existing = mergedMap.get(res.path);
+                
+                if (existing !== undefined) {
+                    logger.debug(`[VaultSearch] Boosting score for: ${res.path} (Vector + Keyword)`);
+                    existing.score += 0.3; 
                     existing.isKeywordMatch = true;
                     if (res.isTitleMatch) existing.score += 0.5; 
                 } else {
@@ -184,12 +245,18 @@ export class AgentService {
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit); 
 
+            logger.info(`[VaultSearch] Final ranked results: ${finalResults.length} docs.`);
+            
+            const topMatch = finalResults[0];
+            if (topMatch) {
+                logger.info(`[VaultSearch] Top match: ${topMatch.path} (Score: ${topMatch.score.toFixed(2)})`);
+            }
+
             if (finalResults.length === 0) return { result: "No relevant notes found." };
 
             // 4. Build Context
             let context = "";
             let contextLength = 0;
-            // FIX: Large context window for Gemini Flash
             const MAX_TOTAL_CONTEXT = 200000; 
             const DOC_CHAR_LIMIT = 50000;     
 
@@ -202,17 +269,31 @@ export class AgentService {
                     if (content.length <= DOC_CHAR_LIMIT) {
                         clippedContent = content;
                     } else {
-                        // FIX: Smart Windowing
-                        // If we found the file via keyword match, center the view on that keyword.
+                        // Smart Windowing
+                        // Prefer exact match for windowing
                         if (doc.isKeywordMatch) {
                             const idx = content.toLowerCase().indexOf(query);
                             if (idx !== -1) {
-                                // Extract 10k chars before and 40k chars after the match
                                 const start = Math.max(0, idx - 10000); 
                                 const end = Math.min(content.length, idx + 40000);
                                 clippedContent = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
                             } else {
-                                clippedContent = content.substring(0, DOC_CHAR_LIMIT);
+                                // If fuzzy match, try to find the FIRST matching token to center window
+                                const cleanQuery = query.replace(/["'()]/g, " "); 
+                                const tokens = cleanQuery.split(/\s+/).filter(t => t.length > 3);
+                                let bestIdx = -1;
+                                for(const t of tokens) {
+                                    const tIdx = content.toLowerCase().indexOf(t);
+                                    if(tIdx !== -1) { bestIdx = tIdx; break; }
+                                }
+                                
+                                if (bestIdx !== -1) {
+                                    const start = Math.max(0, bestIdx - 10000);
+                                    const end = Math.min(content.length, bestIdx + 40000);
+                                    clippedContent = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
+                                } else {
+                                    clippedContent = content.substring(0, DOC_CHAR_LIMIT);
+                                }
                             }
                         } else {
                              clippedContent = content.substring(0, DOC_CHAR_LIMIT);
@@ -249,7 +330,7 @@ export class AgentService {
         if (contextFiles.length === 0) {
             const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (activeView && activeView.file) {
-                logger.debug(`Auto-injecting active file into context: ${activeView.file.path}`);
+                logger.info(`[Agent] Auto-injecting active file into context: ${activeView.file.path}`);
                 contextFiles.push(activeView.file);
             }
         }
@@ -272,7 +353,8 @@ export class AgentService {
             message = `${fileContext}User Query: ${message}`;
         }
 
-        const systemPrompt = "[SYSTEM: ALWAYS use 'google_search' to verify external facts, dates, and news. ALWAYS use 'vault_search' for personal notes.]";
+        const currentDate = new Date().toDateString();
+        const systemPrompt = `[SYSTEM: Today is ${currentDate}. ALWAYS use 'google_search' to verify external facts, dates, and news. ALWAYS use 'vault_search' for personal notes.]`;
 
         if (formattedHistory.length === 0) {
              message = `${systemPrompt}\n\n${message}`;

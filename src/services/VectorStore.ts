@@ -1,5 +1,4 @@
 import { TFile, Notice, Plugin, normalizePath } from "obsidian";
-// No @google/genai imports needed here as we pass the string to GeminiService
 import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
@@ -7,7 +6,6 @@ import { VaultIntelligenceSettings } from "../settings";
 const DATA_DIR = "data";
 const INDEX_FILE = "index.json";
 const VECTORS_FILE = "vectors.bin";
-const EMBEDDING_DIMENSION = 768;
 
 interface VectorEntry {
     id: number;
@@ -27,14 +25,10 @@ export class VectorStore {
     private gemini: GeminiService;
     private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
+    private settings: VaultIntelligenceSettings; 
 
     // Data Store
-    private index: VectorIndex = {
-        version: 1,
-        embeddingModel: "gemini-embedding-001",
-        dimensions: EMBEDDING_DIMENSION,
-        files: {}
-    };
+    private index: VectorIndex; 
     private vectors: Float32Array = new Float32Array(0);
 
     // Concurrency Control
@@ -46,17 +40,28 @@ export class VectorStore {
     private minSimilarityScore: number;
     private isBackingOff = false;
     private similarNotesLimit: number;
+    private isDirty = false;
 
     constructor(plugin: Plugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
         this.gemini = gemini;
+        this.settings = settings;
+
         this.baseDelayMs = settings.indexingDelayMs || 200;
         this.currentDelayMs = this.baseDelayMs;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
         this.similarNotesLimit = settings.similarNotesLimit ?? 5;
+
+        this.index = {
+            version: 1,
+            embeddingModel: settings.embeddingModel,
+            dimensions: settings.embeddingDimension,
+            files: {}
+        };
     }
 
     public updateSettings(settings: VaultIntelligenceSettings) {
+        this.settings = settings;
         this.baseDelayMs = settings.indexingDelayMs || 200;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
         this.similarNotesLimit = settings.similarNotesLimit ?? 5;
@@ -87,12 +92,18 @@ export class VectorStore {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
                 this.index = JSON.parse(indexStr) as VectorIndex;
 
-                if (this.index.embeddingModel !== this.gemini.getEmbeddingModelName()) {
-                    logger.warn(`Embedding model changed from ${this.index.embeddingModel} to ${this.gemini.getEmbeddingModelName()}. Wiping index.`);
+                // CHECK: Model Change OR Dimension Change
+                const modelChanged = this.index.embeddingModel !== this.gemini.getEmbeddingModelName();
+                const dimChanged = this.index.dimensions !== this.settings.embeddingDimension;
+
+                if (modelChanged || dimChanged) {
+                    const reason = modelChanged ? "Model changed" : "Dimension changed";
+                    logger.warn(`${reason}. Wiping index to rebuild.`);
+                    
                     this.index = {
                         version: 1,
                         embeddingModel: this.gemini.getEmbeddingModelName(),
-                        dimensions: EMBEDDING_DIMENSION,
+                        dimensions: this.settings.embeddingDimension,
                         files: {}
                     };
                     this.vectors = new Float32Array(0);
@@ -102,11 +113,15 @@ export class VectorStore {
                     await this.saveVectors(true);
                     return;
                 }
-
                 logger.info(`Loaded index for ${Object.keys(this.index.files).length} files.`);
             } catch (e) {
                 logger.error("Failed to load index.json", e);
-                this.index = { version: 1, embeddingModel: this.gemini.getEmbeddingModelName(), dimensions: EMBEDDING_DIMENSION, files: {} };
+                this.index = { 
+                    version: 1, 
+                    embeddingModel: this.gemini.getEmbeddingModelName(), 
+                    dimensions: this.settings.embeddingDimension, 
+                    files: {} 
+                };
             }
         }
 
@@ -115,6 +130,11 @@ export class VectorStore {
             try {
                 const buffer = await this.plugin.app.vault.adapter.readBinary(vectorsPath);
                 this.vectors = new Float32Array(buffer);
+                
+                // OPTIMIZATION: Normalize all loaded vectors immediately.
+                // This migrates old data to the new unit-vector standard.
+                this.normalizeAllVectors();
+                
                 logger.info(`Loaded vector buffer: ${this.vectors.length} floats.`);
             } catch (e) {
                 logger.error("Failed to load vectors.bin", e);
@@ -123,8 +143,41 @@ export class VectorStore {
         }
     }
 
+    // Helper to normalize the entire buffer in-place
+    private normalizeAllVectors() {
+        const dims = this.index.dimensions;
+        const count = this.vectors.length / dims;
+        
+        for (let i = 0; i < count; i++) {
+            const start = i * dims;
+            const end = start + dims;
+            const vec = this.vectors.subarray(start, end);
+            this.normalizeInPlace(vec);
+        }
+    }
+
+    // Helper to normalize a single vector (modifies input)
+    private normalizeInPlace(vec: Float32Array | number[]) {
+        let mag = 0;
+        for (let i = 0; i < vec.length; i++) {
+            // FIX: Assert existence with !
+            const val = vec[i]!;
+            mag += val * val;
+        }
+        if (mag === 0 || Math.abs(mag - 1) < 1e-6) return; // Already normalized or zero
+
+        const invMag = 1 / Math.sqrt(mag);
+        for (let i = 0; i < vec.length; i++) {
+            // FIX: Assert existence with ! and assign explicitly
+            vec[i] = vec[i]! * invMag;
+        }
+    }
+
     public async saveVectors(immediate = false) {
-        if (this.saveDebounceTimer) clearTimeout(this.saveDebounceTimer);
+        if (this.saveDebounceTimer) {
+            clearTimeout(this.saveDebounceTimer);
+            this.saveDebounceTimer = null;
+        }
 
         const doSave = async () => {
             try {
@@ -135,7 +188,8 @@ export class VectorStore {
                 await this.plugin.app.vault.adapter.write(indexPath, JSON.stringify(this.index, null, 2));
                 await this.plugin.app.vault.adapter.writeBinary(vectorsPath, this.vectors.buffer as ArrayBuffer);
 
-                logger.debug("Vectors db saved (binary + index).");
+                this.isDirty = false;
+                logger.debug("Vectors db saved.");
             } catch (e) {
                 logger.error("Failed to save vectors", e);
             }
@@ -144,18 +198,18 @@ export class VectorStore {
         if (immediate) {
             await doSave();
         } else {
+            this.isDirty = true;
             this.saveDebounceTimer = setTimeout(() => {
-                const timer = this.saveDebounceTimer;
-                if (timer) this.activeTimers.delete(timer);
+                this.saveDebounceTimer = null;
                 void doSave();
-            }, 2000);
+            }, 2000); 
             this.activeTimers.add(this.saveDebounceTimer);
         }
     }
 
     public async scanVault(fullScan = false) {
         if (!this.gemini.isReady()) {
-            logger.warn("Gemini Service not ready (missing API key?). Skipping vault scan.");
+            logger.warn("Gemini Service not ready. Skipping vault scan.");
             return;
         }
 
@@ -167,13 +221,23 @@ export class VectorStore {
         const pathsToDelete = Object.keys(this.index.files).filter(p => !currentPaths.has(p));
 
         for (const p of pathsToDelete) {
-            await this.deleteVector(p);
+            this.deleteVector(p);
             changedCount++;
         }
 
         for (const file of files) {
             const entry = this.index.files[file.path];
-            if (fullScan || !entry || entry.mtime !== file.stat.mtime) {
+            
+            const isNew = !entry;
+            const isModified = entry && entry.mtime !== file.stat.mtime;
+
+            if (fullScan || isNew || isModified) {
+                if (isNew) {
+                    logger.info(`[Scan] Queuing NEW file: "${file.path}"`);
+                } else if (isModified) {
+                    logger.info(`[Scan] Queuing MODIFIED file: "${file.path}"`);
+                }
+                
                 this.enqueueIndex(file);
                 changedCount++;
             }
@@ -230,7 +294,6 @@ export class VectorStore {
         if (!file || file.extension !== 'md') return;
 
         if (!this.gemini.isReady()) {
-            logger.debug("Gemini not ready, skipping index: " + file.path);
             return;
         }
 
@@ -239,18 +302,25 @@ export class VectorStore {
 
         try {
             const content = await this.plugin.app.vault.read(file);
-            if (!content.trim()) return;
+            
+            if (!content.trim()) {
+                logger.debug(`[Index] File is empty: "${file.path}". Marking as indexed (zero-vector).`);
+                // Use dynamic dimension
+                const zeroEmbedding = new Array<number>(this.index.dimensions).fill(0);
+                this.upsertVector(file.path, file.stat.mtime, zeroEmbedding);
+                void this.saveVectors(); 
+                return;
+            }
 
             logger.info(`Indexing: ${file.path}`);
 
-            // UPDATED: Using String literal for Task Type
             const embedding = await this.gemini.embedText(content, {
                 taskType: 'RETRIEVAL_DOCUMENT',
                 title: file.basename
             });
 
             this.upsertVector(file.path, file.stat.mtime, embedding);
-            void this.saveVectors();
+            void this.saveVectors(); 
 
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
@@ -259,7 +329,7 @@ export class VectorStore {
                 this.triggerBackoff();
                 this.requestQueue.unshift(async () => this.indexFileImmediate(file));
             } else {
-                logger.warn(`Failed to index file ${file.path}`, e);
+                logger.error(`Failed to index file "${file.path}": ${message}`);
             }
             throw e;
         }
@@ -270,6 +340,10 @@ export class VectorStore {
             logger.error(`Dimension mismatch! Expected ${this.index.dimensions}, got ${embedding.length}`);
             return;
         }
+
+        // OPTIMIZATION: Normalize BEFORE storing.
+        // This ensures the vector has magnitude 1.0
+        this.normalizeInPlace(embedding);
 
         let entry = this.index.files[path];
 
@@ -290,36 +364,34 @@ export class VectorStore {
                 path: path
             };
         }
+        this.isDirty = true;
     }
 
-    private async deleteVector(path: string) {
+    public deleteVector(path: string) {
         const entry = this.index.files[path];
         if (!entry) return;
 
         const idToRemove = entry.id;
-        const count = this.vectors.length / this.index.dimensions;
 
         delete this.index.files[path];
-        await this.saveVectors();
+        this.isDirty = true;
 
-        if (idToRemove === count - 1) {
-            this.vectors = this.vectors.slice(0, this.vectors.length - this.index.dimensions);
-        } else {
-            const newVectors = new Float32Array(this.vectors.length - this.index.dimensions);
-            if (idToRemove > 0) {
-                newVectors.set(this.vectors.subarray(0, idToRemove * this.index.dimensions), 0);
-            }
-            const afterStart = (idToRemove + 1) * this.index.dimensions;
-            if (afterStart < this.vectors.length) {
-                newVectors.set(this.vectors.subarray(afterStart), idToRemove * this.index.dimensions);
-            }
-            this.vectors = newVectors;
+        const newVectors = new Float32Array(this.vectors.length - this.index.dimensions);
+        
+        if (idToRemove > 0) {
+            newVectors.set(this.vectors.subarray(0, idToRemove * this.index.dimensions), 0);
+        }
+        
+        const afterStart = (idToRemove + 1) * this.index.dimensions;
+        if (afterStart < this.vectors.length) {
+            newVectors.set(this.vectors.subarray(afterStart), idToRemove * this.index.dimensions);
+        }
+        this.vectors = newVectors;
 
-            for (const key in this.index.files) {
-                const f = this.index.files[key];
-                if (f && f.id > idToRemove) {
-                    f.id--;
-                }
+        for (const key in this.index.files) {
+            const f = this.index.files[key];
+            if (f && f.id > idToRemove) {
+                f.id--;
             }
         }
     }
@@ -349,9 +421,12 @@ export class VectorStore {
     }
 
     public destroy() {
-        if (this.saveDebounceTimer) {
-            clearTimeout(this.saveDebounceTimer);
+        if (this.isDirty || this.saveDebounceTimer) {
+            logger.info("Plugin unloading: Saving pending vector updates...");
+            if (this.saveDebounceTimer) clearTimeout(this.saveDebounceTimer);
+            void this.saveVectors(true);
         }
+
         this.activeTimers.forEach(timer => clearTimeout(timer));
         this.activeTimers.clear();
         this.requestQueue = [];
@@ -369,8 +444,10 @@ export class VectorStore {
     }
 
     public findSimilar(queryVector: number[], limit?: number, threshold?: number, excludePath?: string): { path: string; score: number }[] {
-        let query: number[];
-        query = queryVector;
+        // OPTIMIZATION: Normalize query vector ONCE.
+        // We create a Float32Array copy to allow in-place normalization without affecting the caller.
+        const query = new Float32Array(queryVector);
+        this.normalizeInPlace(query);
 
         const minScore = threshold ?? this.minSimilarityScore;
         const finalLimit = limit ?? this.similarNotesLimit;
@@ -383,7 +460,9 @@ export class VectorStore {
         for (let i = 0; i < count; i++) {
             const start = i * this.index.dimensions;
             const vec = this.vectors.subarray(start, start + this.index.dimensions);
-            const score = this.cosineSimilarity(query, vec);
+            
+            // OPTIMIZATION: Use fast dot product since both vectors are normalized
+            const score = this.dotProduct(query, vec);
 
             if (score >= minScore) {
                 const path = Object.keys(this.index.files).find(p => this.index.files[p]?.id === i);
@@ -404,18 +483,15 @@ export class VectorStore {
         return matches;
     }
 
-    private cosineSimilarity(a: number[] | Float32Array, b: number[] | Float32Array): number {
+    // Replaced slow Cosine Similarity with fast Dot Product
+    // This is valid because we guarantee inputs are unit vectors.
+    private dotProduct(a: Float32Array, b: Float32Array): number {
         let dot = 0;
-        let magA = 0;
-        let magB = 0;
+        // Manual loop unrolling or just simple loop is fast in V8
         for (let i = 0; i < a.length; i++) {
-            const valA = a[i] ?? 0;
-            const valB = b[i] ?? 0;
-            dot += valA * valB;
-            magA += valA * valA;
-            magB += valB * valB;
+            // FIX: Assert existence with !
+            dot += a[i]! * b[i]!;
         }
-        if (magA === 0 || magB === 0) return 0;
-        return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+        return dot;
     }
 }
