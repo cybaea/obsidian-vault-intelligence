@@ -68,7 +68,8 @@ Automatically discover connections you did not know existed.
 
 1.  **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
 2.  **Setup**: Install the plugin and enter your API key in the settings.
-3.  **Indexing**: The plugin will begin indexing your vault in the background. You can monitor progress in the developer console (Level: Info).
+3.  **Restart**: Restart Obsidian.
+4.  **Indexing**: The plugin will begin indexing your vault in the background. You can monitor progress in the developer console (Level: Info).
 
 ## Configuration
 
