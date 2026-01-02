@@ -1,8 +1,3 @@
----
-layout: default
-title: Home
----
-
 # Obsidian Vault Intelligence
 
 **Obsidian Vault Intelligence** transforms your static note collection into an active, intelligent partner. By integrating Google's state-of-the-art AI, it helps you reason across your entire vault, uncover hidden connections, and verify your private knowledge against the real world.
