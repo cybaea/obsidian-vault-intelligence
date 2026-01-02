@@ -354,14 +354,14 @@ export class AgentService {
         }
 
         const currentDate = new Date().toDateString();
-        const systemPrompt = `[SYSTEM: Today is ${currentDate}. ALWAYS use 'google_search' to verify external facts, dates, and news. ALWAYS use 'vault_search' for personal notes.]`;
+        const rawSystemInstruction = this.settings.systemInstruction || DEFAULT_SETTINGS.systemInstruction;
+        
+        // Replace {{DATE}} placeholder
+        const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
 
-        if (formattedHistory.length === 0) {
-             message = `${systemPrompt}\n\n${message}`;
-        }
-
-        const chat = await this.gemini.startChat(formattedHistory, this.getTools());
-
+        // Pass dynamic systemInstruction to the service
+        const chat = await this.gemini.startChat(formattedHistory, this.getTools(), systemInstruction);
+        
         try {
             let result = await chat.sendMessage({ message: message });
             

@@ -81,7 +81,7 @@ export class GeminiService {
         });
     }
 
-    public async startChat(history: Content[], tools?: Tool[]) {
+    public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "") {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -89,7 +89,8 @@ export class GeminiService {
                 model: this.settings.chatModel,
                 history: history,
                 config: {
-                    tools: tools
+                    tools: tools,
+                    systemInstruction: systemInstruction
                 }
             });
             return await Promise.resolve(chat);

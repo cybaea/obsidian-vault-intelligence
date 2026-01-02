@@ -111,6 +111,33 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 /* ------------------------------------ */
 
+/* In styles.css */
+
+/* Force the System Instruction setting to stack vertically */
+.vault-intelligence-system-instruction-setting {
+    display: block !important;
+    padding-bottom: 18px !important;
+}
+
+/* Ensure the label/description has space */
+.vault-intelligence-system-instruction-setting .setting-item-info {
+    margin-bottom: 12px;
+}
+
+/* Force the control container to take full width */
+.vault-intelligence-system-instruction-setting .setting-item-control {
+    width: 100%;
+    display: block;
+}
+
+/* Make the text area fill the container */
+.vault-intelligence-system-instruction-setting textarea {
+    width: 100%;
+    max-width: 100%;
+    font-family: var(--font-monospace); /* Optional: nice for editing prompts */
+    font-size: 0.9em;
+}
+
 /* The container for our settings info box */
 
 .vault-intelligence-settings-info {
