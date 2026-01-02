@@ -4,7 +4,11 @@
 
 ## Why Vault Intelligence?
 
-Managing a growing Obsidian vault can be overwhelming. Notes get lost, connections are missed, and verifying old information becomes a chore. Vault Intelligence solves these frustrations by enabling you to:
+Managing a growing Obsidian vault can be overwhelming. Notes get lost, connections are missed, and verifying old information becomes a chore. 
+
+**Ever wanted to ask questions like "What do I know about X?" instead of hunting for keywords?** Now you can.
+
+Vault Intelligence solves these frustrations by enabling you to:
 
 -   **Stop manually searching:** Instead of hunting for keywords, ask questions in plain English. The agent understands what you *mean*, not just what you type.
 -   **Connect the dots:** Automatically discover how a new idea relates to notes you wrote months or years ago—surfacing insights you might have forgotten.
