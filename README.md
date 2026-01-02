@@ -25,9 +25,7 @@ A dedicated sidebar where you can collaborate with your vault.
 -   **Command History**: Quickly recall previous prompts using the `Up` and `Down` arrow keys.
 -   **Improved UI**: Full Markdown rendering, selectable text, and code block support.
 
-#### Examples
-
-##### Insights from your vault
+#### Example: Insights from your vault
 
 You can ask:
 
@@ -36,7 +34,7 @@ You can ask:
 
 ![Screenshot: Example prompt "What do I know about Knight Capital and is my information factually correct?" with output showing detailed validation and a summary.](images/knowledge-and-verification.webp)
 
-##### Conversations about specific files
+#### Example: Conversations about specific files
 
 Focus the AI on specific documents using `@` mentions:
 
