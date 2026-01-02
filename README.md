@@ -2,12 +2,12 @@
 
 **Obsidian Vault Intelligence** transforms your static note collection into an active, intelligent partner. By integrating Google's state-of-the-art AI, it helps you reason across your entire vault, uncover hidden connections, and verify your private knowledge against the real world.
 
+**Ever wanted to ask questions like "What do I know about X?" instead of hunting for keywords?** Now you can.
+
+
 ## Why Vault Intelligence?
 
 Managing a growing Obsidian vault can be overwhelming. Notes get lost, connections are missed, and verifying old information becomes a chore. 
-
-**Ever wanted to ask questions like "What do I know about X?" instead of hunting for keywords?** Now you can.
-
 Vault Intelligence solves these frustrations by enabling you to:
 
 -   **Stop manually searching:** Instead of hunting for keywords, ask questions in plain English. The agent understands what you *mean*, not just what you type.
