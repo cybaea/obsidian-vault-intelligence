@@ -207,7 +207,6 @@ export class AgentService {
             let result = await chat.sendMessage({ message: message });
             
             let loops = 0;
-            // FIX: Use configured setting instead of magic number 5
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
 
             while (loops < maxLoops) {
@@ -239,6 +238,14 @@ export class AgentService {
                     break;
                 }
                 loops++;
+            }
+
+            // FIX: Check for pending function calls before accessing text.
+            // If functionCalls exist here, we hit the max step limit.
+            // Accessing .text on a functionCall response triggers a console warning in the SDK.
+            if (result.functionCalls && result.functionCalls.length > 0) {
+                logger.warn("Agent hit max steps limit with pending tool calls.");
+                return "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting.";
             }
 
             return result.text || "";
