@@ -290,12 +290,12 @@ export class VectorStore {
         this.enqueueIndex(file);
     }
 
+    // In src/services/VectorStore.ts
+
     private async indexFileImmediate(file: TFile) {
         if (!file || file.extension !== 'md') return;
 
-        if (!this.gemini.isReady()) {
-            return;
-        }
+        if (!this.gemini.isReady()) return;
 
         const entry = this.index.files[file.path];
         if (entry && entry.mtime === file.stat.mtime) return;
@@ -303,9 +303,56 @@ export class VectorStore {
         try {
             const content = await this.plugin.app.vault.read(file);
             
-            if (!content.trim()) {
-                logger.debug(`[Index] File is empty: "${file.path}". Marking as indexed (zero-vector).`);
-                // Use dynamic dimension
+            // 1. Get Metadata to optimize the embedding input
+            const cache = this.plugin.app.metadataCache.getFileCache(file);
+            let textToEmbed = content;
+
+            if (cache && cache.frontmatter) {
+                // Remove the raw YAML block from the body
+                if (cache.frontmatterPosition) {
+                    const { end } = cache.frontmatterPosition;
+                    const body = content.substring(end.offset).trim();
+                    
+                    // 2. Construct Semantic Header
+                    // PREFERENCE: Use YAML title if available, else filename
+                    let displayTitle = file.basename;
+                    if (cache.frontmatter.title && typeof cache.frontmatter.title === 'string') {
+                        displayTitle = cache.frontmatter.title;
+                    }
+
+                    const titleLine = `Title: ${displayTitle}`;
+                    let metaString = titleLine;
+
+                    // Boost Aliases
+                    if (cache.frontmatter.aliases) {
+                        // FIX: Explicitly cast 'any' to string | string[]
+                        const rawAliases = cache.frontmatter.aliases as string | string[];
+                        const aliases = Array.isArray(rawAliases) 
+                            ? rawAliases.join(", ") 
+                            : rawAliases;
+                        metaString += `\nAliases: ${aliases}`;
+                    }
+
+                    // Boost Tags
+                    if (cache.frontmatter.tags) {
+                        // FIX: Explicitly cast 'any' to string | string[]
+                        const rawTags = cache.frontmatter.tags as string | string[];
+                        const tags = Array.isArray(rawTags) 
+                            ? rawTags.join(", ") 
+                            : rawTags;
+                        metaString += `\nTags: ${tags}`;
+                    }
+
+                    // Combine: Optimized Header + Clean Body
+                    textToEmbed = `${metaString}\n\n${body}`;
+                }
+            } else {
+                // No YAML? Just prepend the filename
+                textToEmbed = `Title: ${file.basename}\n\n${content}`;
+            }
+
+            if (!textToEmbed.trim()) {
+                logger.debug(`[Index] File effectively empty: "${file.path}". Marking as indexed (zero-vector).`);
                 const zeroEmbedding = new Array<number>(this.index.dimensions).fill(0);
                 this.upsertVector(file.path, file.stat.mtime, zeroEmbedding);
                 void this.saveVectors(); 
@@ -314,9 +361,10 @@ export class VectorStore {
 
             logger.info(`Indexing: ${file.path}`);
 
-            const embedding = await this.gemini.embedText(content, {
+            // Pass the selected title to Gemini for context as well
+            const embedding = await this.gemini.embedText(textToEmbed, {
                 taskType: 'RETRIEVAL_DOCUMENT',
-                title: file.basename
+                title: file.basename // Keep basename here for API consistency or swap to displayTitle if you prefer
             });
 
             this.upsertVector(file.path, file.stat.mtime, embedding);
