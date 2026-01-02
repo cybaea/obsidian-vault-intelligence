@@ -111,6 +111,46 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 /* ------------------------------------ */
 
+/* Force the System Instruction setting to stack vertically */
+.vault-intelligence-system-instruction-setting {
+    display: block !important;
+    /* Use standard Obsidian spacing variables */
+    padding-bottom: var(--size-4-4) !important; 
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Ensure the label/description has space below it */
+.vault-intelligence-system-instruction-setting .setting-item-info {
+    margin-bottom: var(--size-4-2);
+}
+
+/* Force the control container to take full width */
+.vault-intelligence-system-instruction-setting .setting-item-control {
+    width: 100%;
+    display: block;
+}
+
+/* Make the text area fill the container and look like a code editor */
+.vault-intelligence-system-instruction-setting textarea {
+    width: 100%;
+    max-width: 100%;
+    
+    /* Native Obsidian variables for fonts */
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    line-height: var(--line-height-normal);
+    
+    /* Ensure it matches the theme's input styling */
+    background-color: var(--background-modifier-form-field);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+
+    /* Make it resizable vertically only */
+    resize: vertical;
+    min-height: calc(var(--input-height) * 5);
+}
+
+
 /* The container for our settings info box */
 
 .vault-intelligence-settings-info {

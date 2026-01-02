@@ -1,20 +1,35 @@
 import { Setting, Notice } from "obsidian";
-import { IVaultIntelligencePlugin } from "../types";
-import { DEFAULT_SETTINGS } from "../types";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { LogLevel } from "../../utils/logger"; 
 
 export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Advanced').setHeading();
 
     new Setting(containerEl)
+        .setName('System instruction')
+        .setDesc('Defines the behavior and persona of the agent. Use {{DATE}} to insert the current date.')
+        .setClass('vault-intelligence-system-instruction-setting') // Critical for the CSS fix
+        .addTextArea(text => {
+            text
+                .setPlaceholder(DEFAULT_SETTINGS.systemInstruction)
+                .setValue(plugin.settings.systemInstruction)
+                .onChange(async (value) => {
+                    plugin.settings.systemInstruction = value;
+                    await plugin.saveSettings();
+                });
+            
+            text.inputEl.rows = 10;
+        });
+
+    new Setting(containerEl)
         .setName('Max agent steps')
+        // ... (rest of the file remains the same)
         .setDesc(`The maximum number of reasoning loops (thinking steps) the agent is allowed to take. (Default: ${DEFAULT_SETTINGS.maxAgentSteps})`)
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.maxAgentSteps))
             .setValue(String(plugin.settings.maxAgentSteps))
             .onChange(async (value) => {
                 const num = parseInt(value);
-                // Ensure it's a valid number and at least 1
                 if (!isNaN(num) && num >= 1) {
                     plugin.settings.maxAgentSteps = num;
                     await plugin.saveSettings();
@@ -23,7 +38,7 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
 
     new Setting(containerEl)
         .setName('Embedding dimension')
-        .setDesc('The vector size for your embeddings. Gemini supports 768, 1536, or 3072. Changing this will force a full index of your vault, which costs API credits.')
+        .setDesc('The vector size for your embeddings. Gemini supports 768, 1536, or 3072. Changing this will wipe your index and cost API credits to rebuild.')
         .addDropdown(dropdown => dropdown
             .addOption('768', '768 (standard)')
             .addOption('1536', '1536 (high detail)')
@@ -34,7 +49,7 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                 if (num !== plugin.settings.embeddingDimension) {
                     plugin.settings.embeddingDimension = num;
                     await plugin.saveSettings();
-                    new Notice("Embedding dimension changed. A full vault re-scan will trigger on next reload.");
+                    new Notice("Embedding dimension changed. Re-indexing vault...");
                 }
             }));
     
