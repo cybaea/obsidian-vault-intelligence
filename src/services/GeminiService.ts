@@ -1,24 +1,15 @@
-import {
-    GoogleGenerativeAI,
-    GenerativeModel,
-    TaskType,
-    Tool,
-    Content,
-    EmbedContentRequest
-} from "@google/generative-ai";
+import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
 export interface EmbedOptions {
-    taskType?: TaskType;
+    taskType?: string;
     title?: string;
     outputDimensionality?: number;
 }
 
 export class GeminiService {
-    private genAI: GoogleGenerativeAI;
-    private embeddingModel: GenerativeModel;
-    private chatModel: GenerativeModel;
+    private client: GoogleGenAI;
     private settings: VaultIntelligenceSettings;
 
     constructor(settings: VaultIntelligenceSettings) {
@@ -33,10 +24,8 @@ export class GeminiService {
         }
 
         try {
-            this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
-            this.embeddingModel = this.genAI.getGenerativeModel({ model: this.settings.embeddingModel });
-            this.chatModel = this.genAI.getGenerativeModel({ model: this.settings.chatModel });
-            logger.info("GeminiService initialized.");
+            this.client = new GoogleGenAI({ apiKey: this.settings.googleApiKey });
+            logger.info("GeminiService initialized with @google/genai.");
         } catch (error) {
             logger.error("Failed to initialize GeminiService:", error);
         }
@@ -48,7 +37,7 @@ export class GeminiService {
     }
 
     public isReady(): boolean {
-        return !!this.embeddingModel && !!this.chatModel;
+        return !!this.client;
     }
 
     public getEmbeddingModelName(): string {
@@ -57,20 +46,51 @@ export class GeminiService {
 
     public async generateContent(prompt: string): Promise<string> {
         return this.retryOperation(async () => {
-            if (!this.chatModel) throw new Error("Chat model not initialized.");
-            const result = await this.chatModel.generateContent(prompt);
-            return result.response.text();
+            if (!this.client) throw new Error("GenAI client not initialized.");
+            
+            const response = await this.client.models.generateContent({
+                model: this.settings.chatModel,
+                contents: prompt
+            });
+            
+            return response.text || "";
+        });
+    }
+
+    // --- Search Sub-Agent ---
+    public async searchWithGrounding(query: string): Promise<string> {
+        return this.retryOperation(async () => {
+            if (!this.client) throw new Error("GenAI client not initialized.");
+
+            // OPTIMIZATION 1: Terse Prompt
+            const prompt = `Search for: "${query}". List key facts, dates, and details. Be concise.`;
+
+            // OPTIMIZATION 2: Use Configured Grounding Model (User Setting)
+            // Defaults to 'gemini-2.5-flash-lite'
+            const groundingModel = this.settings.groundingModel;
+
+            const response = await this.client.models.generateContent({
+                model: groundingModel, 
+                contents: prompt,
+                config: {
+                    tools: [{ googleSearch: {} }]
+                }
+            });
+
+            return response.text || "No search results could be generated.";
         });
     }
 
     public async startChat(history: Content[], tools?: Tool[]) {
-        // Note: startChat is synchronous in the SDK, but we wrap it in retryOperation 
-        // for consistency if it ever needs to be async or handles initial token/auth checks.
         return this.retryOperation(async () => {
-            if (!this.chatModel) throw new Error("Chat model not initialized.");
-            const chat = this.chatModel.startChat({
+            if (!this.client) throw new Error("GenAI client not initialized.");
+
+            const chat = this.client.chats.create({
+                model: this.settings.chatModel,
                 history: history,
-                tools: tools
+                config: {
+                    tools: tools
+                }
             });
             return await Promise.resolve(chat);
         });
@@ -78,27 +98,42 @@ export class GeminiService {
 
     public async embedText(text: string, options: EmbedOptions = {}): Promise<number[]> {
         return this.retryOperation(async () => {
-            if (!this.embeddingModel) throw new Error("Embedding model not initialized.");
+            if (!this.client) throw new Error("GenAI client not initialized.");
 
-            // For now, assuming it's a valid property on EmbedContentRequest for the target environment.
-            const request: EmbedContentRequest & { outputDimensionality?: number } = {
-                content: { role: 'user', parts: [{ text }] },
-            };
+            const config: EmbedContentConfig = {};
+            
             if (options.outputDimensionality) {
-                request.outputDimensionality = options.outputDimensionality;
+                config.outputDimensionality = options.outputDimensionality;
             } else {
-                request.outputDimensionality = 768; // Default to 768 if not specified
+                config.outputDimensionality = 768; 
             }
 
-            if (options.taskType) request.taskType = options.taskType;
-            if (options.title) request.title = options.title;
+            if (options.taskType) config.taskType = options.taskType;
+            if (options.title) config.title = options.title;
 
-            const result = await this.embeddingModel.embedContent(request);
-            return result.embedding.values;
+            const result = await this.client.models.embedContent({
+                model: this.settings.embeddingModel,
+                contents: text,
+                config: config
+            });
+
+            const embeddings = result.embeddings;
+            
+            if (!embeddings || embeddings.length === 0) {
+                throw new Error("No embeddings returned.");
+            }
+
+            const firstEmbedding = embeddings[0];
+            
+            if (!firstEmbedding || !firstEmbedding.values) {
+                throw new Error("No embedding values found.");
+            }
+
+            return firstEmbedding.values;
         });
     }
 
-    private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.geminiRetries, contentWindow: number = 0): Promise<T> {
+    private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.geminiRetries): Promise<T> {
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
                 return await operation();

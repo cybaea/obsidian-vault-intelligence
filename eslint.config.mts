@@ -15,7 +15,8 @@ export default tseslint.config(
 					allowDefaultProject: [
 						'eslint.config.js',
 						'eslint.config.mts',
-						'manifest.json'
+						'manifest.json',
+						'declarations.d.ts'
 					]
 				},
 				// @ts-expect-error -- Node 20.11+ feature, might not be in types yet
@@ -39,7 +40,7 @@ export default tseslint.config(
 			"@typescript-eslint/no-explicit-any": "error",
 			"obsidianmd/ui/sentence-case": ["error", {
 				brands: ["Google", "Gemini", "Google Cloud Console"],
-				acronyms: ["API", "HTML", "AI"]
+				acronyms: ["API", "HTML", "AI", "ID", "CX"]
 			}],
 			"no-console": "error",
 			"eslint-comments/require-description": "error",

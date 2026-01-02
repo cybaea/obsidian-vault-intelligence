@@ -5,10 +5,12 @@ export interface VaultIntelligenceSettings {
     googleApiKey: string;
     embeddingModel: string;
     chatModel: string;
+    groundingModel: string; 
     indexingDelayMs: number;
     minSimilarityScore: number;
     similarNotesLimit: number;
     vaultSearchResultsLimit: number;
+    maxAgentSteps: number; 
     geminiRetries: number;
     logLevel: LogLevel;
 }
@@ -17,10 +19,12 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     embeddingModel: 'gemini-embedding-001',
     chatModel: 'gemini-2.0-flash',
+    groundingModel: 'gemini-2.5-flash-lite', 
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,
     vaultSearchResultsLimit: 25,
+    maxAgentSteps: 5, 
     geminiRetries: 10,
     logLevel: LogLevel.WARN
 };

@@ -1,5 +1,5 @@
 import { TFile, Notice, Plugin, normalizePath } from "obsidian";
-import { TaskType } from "@google/generative-ai";
+// No @google/genai imports needed here as we pass the string to GeminiService
 import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
@@ -7,12 +7,12 @@ import { VaultIntelligenceSettings } from "../settings";
 const DATA_DIR = "data";
 const INDEX_FILE = "index.json";
 const VECTORS_FILE = "vectors.bin";
-const EMBEDDING_DIMENSION = 768; // Gemini Embedding 001 is 768, 1536, or 3072 dimensions
+const EMBEDDING_DIMENSION = 768;
 
 interface VectorEntry {
-    id: number;       // Index in the binary array (row number)
-    mtime: number;    // File modification time
-    path: string;     // File path
+    id: number;
+    mtime: number;
+    path: string;
 }
 
 interface VectorIndex {
@@ -60,15 +60,12 @@ export class VectorStore {
         this.baseDelayMs = settings.indexingDelayMs || 200;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
         this.similarNotesLimit = settings.similarNotesLimit ?? 5;
-        // If not currently backing off, sync current delay? 
         if (!this.isBackingOff) {
             this.currentDelayMs = this.baseDelayMs;
         }
     }
 
     private getDataPath(filename: string): string {
-        // Use the plugin's data directory inside the vault
-        // e.g., .obsidian/plugins/obsidian-vault-intelligence/data/vectors.bin
         return normalizePath(`${this.plugin.manifest.dir}/${DATA_DIR}/${filename}`);
     }
 
@@ -90,7 +87,6 @@ export class VectorStore {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
                 this.index = JSON.parse(indexStr) as VectorIndex;
 
-                // Check for Model Mismatch
                 if (this.index.embeddingModel !== this.gemini.getEmbeddingModelName()) {
                     logger.warn(`Embedding model changed from ${this.index.embeddingModel} to ${this.gemini.getEmbeddingModelName()}. Wiping index.`);
                     this.index = {
@@ -100,18 +96,16 @@ export class VectorStore {
                         files: {}
                     };
                     this.vectors = new Float32Array(0);
-                    // Delete vectors file if exists to allow fresh start
                     if (await this.plugin.app.vault.adapter.exists(vectorsPath)) {
                         await this.plugin.app.vault.adapter.remove(vectorsPath);
                     }
                     await this.saveVectors(true);
-                    return; // Done reset
+                    return;
                 }
 
                 logger.info(`Loaded index for ${Object.keys(this.index.files).length} files.`);
             } catch (e) {
                 logger.error("Failed to load index.json", e);
-                // Reset on corrupt index
                 this.index = { version: 1, embeddingModel: this.gemini.getEmbeddingModelName(), dimensions: EMBEDDING_DIMENSION, files: {} };
             }
         }
@@ -126,14 +120,6 @@ export class VectorStore {
                 logger.error("Failed to load vectors.bin", e);
                 this.vectors = new Float32Array(0);
             }
-        }
-
-        // 3. Simple Consistency Check (Optional)
-        const expectedSize = Object.keys(this.index.files).length * this.index.dimensions;
-        if (this.vectors.length !== expectedSize) {
-            logger.warn(`Vector store inconsistency! Index says ${Object.keys(this.index.files).length} files (${expectedSize} floats), but buffer has ${this.vectors.length}.`);
-            // To be safe, we could wipe, but for now just log. 
-            // In a real scenario, we might want to rebuild or truncate.
         }
     }
 
@@ -167,9 +153,6 @@ export class VectorStore {
         }
     }
 
-    /**
-     * Scans the entire vault for files that need indexing.
-     */
     public async scanVault(fullScan = false) {
         if (!this.gemini.isReady()) {
             logger.warn("Gemini Service not ready (missing API key?). Skipping vault scan.");
@@ -180,7 +163,6 @@ export class VectorStore {
         const files = this.plugin.app.vault.getMarkdownFiles();
         let changedCount = 0;
 
-        // Cleanup: Identify deleted files
         const currentPaths = new Set(files.map(f => f.path));
         const pathsToDelete = Object.keys(this.index.files).filter(p => !currentPaths.has(p));
 
@@ -191,7 +173,6 @@ export class VectorStore {
 
         for (const file of files) {
             const entry = this.index.files[file.path];
-            // Check if missing or outdated
             if (fullScan || !entry || entry.mtime !== file.stat.mtime) {
                 this.enqueueIndex(file);
                 changedCount++;
@@ -201,7 +182,6 @@ export class VectorStore {
         if (changedCount > 0) {
             logger.info(`Found ${changedCount} files to update/remove.`);
             new Notice(`Vault Intelligence: Updating ${changedCount} files...`);
-            // Explicit save to persist deletions immediately if any
             if (pathsToDelete.length > 0) await this.saveVectors();
         } else {
             logger.info("Vault scan complete. No changes.");
@@ -226,7 +206,6 @@ export class VectorStore {
         if (task) {
             try {
                 await task();
-                // Success: slowly recover delay
                 if (this.currentDelayMs > this.baseDelayMs) {
                     this.currentDelayMs = Math.max(this.baseDelayMs, this.currentDelayMs - 1000);
                 }
@@ -255,10 +234,6 @@ export class VectorStore {
             return;
         }
 
-        /* 
-           Double check mtime to avoid redundant work if queue got backed up 
-           (though scanVault checks this, manual saves might not)
-        */
         const entry = this.index.files[file.path];
         if (entry && entry.mtime === file.stat.mtime) return;
 
@@ -268,24 +243,20 @@ export class VectorStore {
 
             logger.info(`Indexing: ${file.path}`);
 
+            // UPDATED: Using String literal for Task Type
             const embedding = await this.gemini.embedText(content, {
-                taskType: TaskType.RETRIEVAL_DOCUMENT,
+                taskType: 'RETRIEVAL_DOCUMENT',
                 title: file.basename
             });
 
-            // Update Store
             this.upsertVector(file.path, file.stat.mtime, embedding);
             void this.saveVectors();
-
-            // logger.info(`Successfully indexed: ${file.path}`);
 
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             if (message.includes('429')) {
                 logger.warn(`Hit 429 in VectorStore for ${file.path}. Pausing queue.`);
                 this.triggerBackoff();
-                // Re-queue this task at the front? Or just let scan pick it up next time.
-                // Let's re-queue it to be nice.
                 this.requestQueue.unshift(async () => this.indexFileImmediate(file));
             } else {
                 logger.warn(`Failed to index file ${file.path}`, e);
@@ -303,18 +274,11 @@ export class VectorStore {
         let entry = this.index.files[path];
 
         if (entry) {
-            // Update existing
             const start = entry.id * this.index.dimensions;
             this.vectors.set(embedding, start);
-            entry.mtime = mtime; // update mtime
+            entry.mtime = mtime; 
         } else {
-            // Append new
-            // IDs must be stable or we track them.
-            // If we use "compact" IDs 0..N-1, then new ID is always current count.
-            // But if we delete, we shift.
             const currentCount = this.vectors.length / this.index.dimensions;
-
-            // Grow buffer
             const newVectors = new Float32Array(this.vectors.length + this.index.dimensions);
             newVectors.set(this.vectors);
             newVectors.set(embedding, this.vectors.length);
@@ -335,31 +299,22 @@ export class VectorStore {
         const idToRemove = entry.id;
         const count = this.vectors.length / this.index.dimensions;
 
-        // 1. Remove from Index
         delete this.index.files[path];
         await this.saveVectors();
 
-        // 2. Remove from Buffer (Shift everyone after `idToRemove` down by 1 slot)
-        // If it's the last one, just slice.
         if (idToRemove === count - 1) {
             this.vectors = this.vectors.slice(0, this.vectors.length - this.index.dimensions);
         } else {
             const newVectors = new Float32Array(this.vectors.length - this.index.dimensions);
-
-            // Copy before
             if (idToRemove > 0) {
                 newVectors.set(this.vectors.subarray(0, idToRemove * this.index.dimensions), 0);
             }
-
-            // Copy after (shifted)
             const afterStart = (idToRemove + 1) * this.index.dimensions;
             if (afterStart < this.vectors.length) {
                 newVectors.set(this.vectors.subarray(afterStart), idToRemove * this.index.dimensions);
             }
-
             this.vectors = newVectors;
 
-            // 3. Update IDs of all shifted files
             for (const key in this.index.files) {
                 const f = this.index.files[key];
                 if (f && f.id > idToRemove) {
@@ -389,7 +344,7 @@ export class VectorStore {
             this.isBackingOff = false;
             logger.info("Resuming queue after backoff.");
             void this.processQueue();
-        }, 60000); // Wait 60s
+        }, 60000); 
         this.activeTimers.add(timer);
     }
 
@@ -401,7 +356,7 @@ export class VectorStore {
         this.activeTimers.clear();
         this.requestQueue = [];
         this.activeRequests = 0;
-        this.isBackingOff = true; // Prevent further processing
+        this.isBackingOff = true; 
     }
 
     public getVector(path: string): number[] | null {
@@ -425,14 +380,12 @@ export class VectorStore {
 
         const scores: { path: string, score: number }[] = [];
 
-        // Brute force cosine similarity against the flat buffer
         for (let i = 0; i < count; i++) {
             const start = i * this.index.dimensions;
             const vec = this.vectors.subarray(start, start + this.index.dimensions);
             const score = this.cosineSimilarity(query, vec);
 
             if (score >= minScore) {
-                // Find path for this ID
                 const path = Object.keys(this.index.files).find(p => this.index.files[p]?.id === i);
                 if (path && path !== excludePath) {
                     scores.push({ path, score });
@@ -451,12 +404,10 @@ export class VectorStore {
         return matches;
     }
 
-    // Adjusted to take Float32Array or number[]
     private cosineSimilarity(a: number[] | Float32Array, b: number[] | Float32Array): number {
         let dot = 0;
         let magA = 0;
         let magB = 0;
-        // Assuming equal length 
         for (let i = 0; i < a.length; i++) {
             const valA = a[i] ?? 0;
             const valB = b[i] ?? 0;
