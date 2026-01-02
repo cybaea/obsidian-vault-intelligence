@@ -1,6 +1,6 @@
 # Obsidian Vault Intelligence
 
-**Obsidian Vault Intelligence** transforms your static note collection into an active, intelligent partner. By integrating Google Gemini's state-of-the-art AI, it helps you reason across your entire vault, uncover hidden connections, and verify your private knowledge against the real world.
+**Obsidian Vault Intelligence** transforms your static note collection into an active, intelligent partner. By integrating Google's state-of-the-art AI, it helps you reason across your entire vault, uncover hidden connections, and verify your private knowledge against the real world.
 
 ## Why Vault Intelligence?
 
@@ -10,6 +10,12 @@ Managing a growing Obsidian vault can be overwhelming. Notes get lost, connectio
 -   **Connect the dots:** Automatically discover how a new idea relates to notes you wrote months or years ago—surfacing insights you might have forgotten.
 -   **Verify your knowledge:** Instantly check if the "facts" in your personal notes are still accurate by cross-referencing them with live Google Search results.
 -   **Draft with context:** Ask the AI to summarize, compare, or draft new content based specifically on the files you select, keeping your writing grounded in your own work.
+
+## Getting Started
+
+1.  **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+2.  **Setup**: Install the plugin and enter your API key in the settings. Review and change any other options as needed.
+3.  **Restart**: Restart Obsidian. The plugin will begin indexing your vault in the background. You can monitor progress in the developer console (Level: Info).
 
 ## Features
 
@@ -63,12 +69,6 @@ Automatically discover connections you did not know existed.
 -   Confidence scores for every match help you judge relevance at a glance.
 
 ![Screenshot: Showing the page for the bard class with similar documents shown in the right sidebar.](images/similar-documents-bard.webp)
-
-## Getting Started
-
-1.  **API Key**: Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-2.  **Setup**: Install the plugin and enter your API key in the settings. Review and change any other options as needed.
-3.  **Restart**: Restart Obsidian. The plugin will begin indexing your vault in the background. You can monitor progress in the developer console (Level: Info).
 
 ## Configuration
 
