@@ -1,6 +1,6 @@
 import { GeminiService } from "./GeminiService";
 import { VectorStore } from "../services/VectorStore";
-import { TFile, App, requestUrl } from "obsidian";
+import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
@@ -15,6 +15,7 @@ interface VaultSearchResult {
     path: string;
     score: number;
     isKeywordMatch?: boolean;
+    isTitleMatch?: boolean;
 }
 
 export class AgentService {
@@ -101,59 +102,126 @@ export class AgentService {
         }
 
         if (name === "vault_search") {
-            const query = args.query as string;
+            const query = (args.query as string).toLowerCase();
             const taskType = 'RETRIEVAL_QUERY';
-            const embedding = await this.gemini.embedText(query, { taskType });
             
+            // 1. Vector Search (Semantic)
+            // Use lower threshold (0.35) to capture more candidates for ranking
+            const embedding = await this.gemini.embedText(query, { taskType });
             const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
+            
+            let vectorResults = this.vectorStore.findSimilar(embedding, limit, 0.35);
 
-            let vectorResults = this.vectorStore.findSimilar(embedding, limit);
-
-            if (vectorResults.length === 0) {
-                logger.debug("No results at default threshold, retrying with 0.25...");
-                vectorResults = this.vectorStore.findSimilar(embedding, limit, 0.25);
-            }
-
+            // 2. Keyword Search (Exact Match)
             const keywordResults: VaultSearchResult[] = [];
-            if (query.length > 3) {
+            
+            if (query.length > 2) { 
                 const files = this.app.vault.getMarkdownFiles();
-                let matchesFound = 0;
-                for (const file of files) {
-                    if (matchesFound >= 3) break; 
-                    if (vectorResults.some(r => r.path === file.path)) continue;
+                
+                let keywordMatchesFound = 0;
+                // FIX: Limit increased to 100. 
+                // This means we scan the WHOLE vault until we find 100 *positive matches*.
+                // If "Knight Capital" is only in 1 file, we will find it.
+                const MAX_KEYWORD_MATCHES = 100; 
 
-                    try {
-                        const content = await this.app.vault.cachedRead(file); 
-                        if (content.toLowerCase().includes(query.toLowerCase())) {
-                            keywordResults.push({
-                                path: file.path,
-                                score: 1.0, 
-                                isKeywordMatch: true
-                            });
-                            matchesFound++;
-                        }
-                    } catch { /* ignore */ }
+                for (const file of files) {
+                    if (keywordMatchesFound >= MAX_KEYWORD_MATCHES) break;
+
+                    // A. Title Match
+                    if (file.basename.toLowerCase().includes(query)) {
+                        keywordResults.push({
+                            path: file.path,
+                            score: 1.0, 
+                            isKeywordMatch: true,
+                            isTitleMatch: true
+                        });
+                        keywordMatchesFound++;
+                        continue; 
+                    }
+
+                    // B. Body Match (The Critical Fix)
+                    const inVector = vectorResults.some(r => r.path === file.path);
+                    if (!inVector) {
+                        try {
+                            const content = await this.app.vault.cachedRead(file);
+                            // This finds "Knight Capital" anywhere in the body text
+                            if (content.toLowerCase().includes(query)) {
+                                keywordResults.push({
+                                    path: file.path,
+                                    score: 0.5, 
+                                    isKeywordMatch: true,
+                                    isTitleMatch: false
+                                });
+                                keywordMatchesFound++;
+                            }
+                        } catch { /* ignore read errors */ }
+                    }
                 }
             }
 
-            const allResults = [...keywordResults, ...vectorResults];
+            // 3. Hybrid Merge & Rank
+            const mergedMap = new Map<string, VaultSearchResult>();
 
-            if (allResults.length === 0) return { result: "No relevant notes found." };
+            // Add Vector Results
+            for (const res of vectorResults) {
+                mergedMap.set(res.path, res);
+            }
 
+            // Add/Merge Keyword Results
+            for (const res of keywordResults) {
+                if (mergedMap.has(res.path)) {
+                    const existing = mergedMap.get(res.path)!;
+                    existing.score += 0.3; // Boost score if matched both ways
+                    existing.isKeywordMatch = true;
+                    if (res.isTitleMatch) existing.score += 0.5; 
+                } else {
+                    mergedMap.set(res.path, res);
+                }
+            }
+
+            const finalResults = Array.from(mergedMap.values())
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit); 
+
+            if (finalResults.length === 0) return { result: "No relevant notes found." };
+
+            // 4. Build Context
             let context = "";
             let contextLength = 0;
-            const MAX_CONTEXT = 12000; 
+            // FIX: Large context window for Gemini Flash
+            const MAX_TOTAL_CONTEXT = 200000; 
+            const DOC_CHAR_LIMIT = 50000;     
 
-            for (const doc of allResults as VaultSearchResult[]) {
+            for (const doc of finalResults) {
                 const file = this.app.vault.getAbstractFileByPath(doc.path);
                 if (file instanceof TFile) {
                     const content = await this.app.vault.read(file);
-                    const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}${doc.isKeywordMatch ? " [Keyword Match]" : ""}) ---\n`;
-                    const docLimit = 2000;
-                    const clippedContent = content.substring(0, docLimit);
+                    
+                    let clippedContent = "";
+                    if (content.length <= DOC_CHAR_LIMIT) {
+                        clippedContent = content;
+                    } else {
+                        // FIX: Smart Windowing
+                        // If we found the file via keyword match, center the view on that keyword.
+                        if (doc.isKeywordMatch) {
+                            const idx = content.toLowerCase().indexOf(query);
+                            if (idx !== -1) {
+                                // Extract 10k chars before and 40k chars after the match
+                                const start = Math.max(0, idx - 10000); 
+                                const end = Math.min(content.length, idx + 40000);
+                                clippedContent = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
+                            } else {
+                                clippedContent = content.substring(0, DOC_CHAR_LIMIT);
+                            }
+                        } else {
+                             clippedContent = content.substring(0, DOC_CHAR_LIMIT);
+                        }
+                    }
 
-                    if (contextLength + clippedContent.length > MAX_CONTEXT) break;
+                    const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}${doc.isKeywordMatch ? " [Match]" : ""}) ---\n`;
+                    
+                    if (contextLength + clippedContent.length > MAX_TOTAL_CONTEXT) break;
 
                     context += header + clippedContent + "\n";
                     contextLength += clippedContent.length;
@@ -177,13 +245,22 @@ export class AgentService {
     }
 
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
+        // Auto-inject active file if none provided
+        if (contextFiles.length === 0) {
+            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (activeView && activeView.file) {
+                logger.debug(`Auto-injecting active file into context: ${activeView.file.path}`);
+                contextFiles.push(activeView.file);
+            }
+        }
+
         const formattedHistory = history.map(h => ({
             role: h.role as "user" | "model",
             parts: [{ text: h.text }]
         })) as Content[];
 
         if (contextFiles.length > 0) {
-            let fileContext = "The user has explicitly referenced the following notes. Please prioritize this information:\n\n";
+            let fileContext = "The user has explicitly referenced the following notes (or has them open). Please prioritize this information:\n\n";
             for (const file of contextFiles) {
                 try {
                     const content = await this.app.vault.read(file);
@@ -240,9 +317,6 @@ export class AgentService {
                 loops++;
             }
 
-            // FIX: Check for pending function calls before accessing text.
-            // If functionCalls exist here, we hit the max step limit.
-            // Accessing .text on a functionCall response triggers a console warning in the SDK.
             if (result.functionCalls && result.functionCalls.length > 0) {
                 logger.warn("Agent hit max steps limit with pending tool calls.");
                 return "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting.";
