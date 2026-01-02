@@ -102,10 +102,11 @@ export class GeminiService {
 
             const config: EmbedContentConfig = {};
             
+            // FIX: Use setting instead of magic number 768
             if (options.outputDimensionality) {
                 config.outputDimensionality = options.outputDimensionality;
             } else {
-                config.outputDimensionality = 768; 
+                config.outputDimensionality = this.settings.embeddingDimension; 
             }
 
             if (options.taskType) config.taskType = options.taskType;

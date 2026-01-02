@@ -127,10 +127,10 @@ export default class VaultIntelligencePlugin extends Plugin {
 			}
 		}));
 
-		this.registerEvent(this.app.vault.on('delete', async (file) => {
+		this.registerEvent(this.app.vault.on('delete', (file) => {
 			if (file instanceof TFile) {
 				// @ts-ignore - access private for deletion
-				await this.vectorStore.deleteVector(file.path);
+				this.vectorStore.deleteVector(file.path);
 			}
 		}));
 
