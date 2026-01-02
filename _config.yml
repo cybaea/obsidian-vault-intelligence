@@ -1,5 +1,3 @@
 title: Vault Intelligence
 description: AI research assistant for your Obsidian vault.
-remote_theme: pages-themes/primer
-plugins:
-  - jekyll-remote-theme
+theme: jekyll-theme-minimal
