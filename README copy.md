@@ -11,7 +11,6 @@ Vault Intelligence integrates Google's state-of-the-art **Gemini 3** models to h
 ---
 
 ## 🔮 The Vision
-
 We believe knowledge management should be active, not passive. Your vault shouldn't just store ideas—it should help you develop them.
 
 See our **[Roadmap](ROADMAP.md)** to explore our journey toward autonomous research, multimodal analysis, and agentic workflows.
@@ -36,13 +35,6 @@ A dedicated sidebar for collaborating with your vault.
 -   **Live Grounding:** Verifies claims against real-time Google Search data.
 -   **Smart Context:** Use `@` to mention specific files (e.g., `@meeting-notes`) or folders to focus the AI's attention.
 
-<details>
-<summary>📸 <strong>See the Research Agent in action</strong></summary>
-
-![Research Agent verification example](images/knowledge-and-verification.webp)
-
-</details>
-
 ### 🔍 Adaptive Hybrid Search
 Finds the right note, even if you use the wrong words.
 -   **Semantic Search:** Matches meaning (e.g., "financial ruin" finds "bankruptcy").
@@ -51,14 +43,7 @@ Finds the right note, even if you use the wrong words.
 
 ### 🖇️ Similar Notes View
 -   **Active Discovery:** Shows a dynamic list of notes related to your *current* open file.
--   **Confidence Scores:** Clearly indicates how relevant each connection is.
-
-<details>
-<summary>📸 <strong>See the Similar Notes Sidebar</strong></summary>
-
-![Similar Notes Sidebar example](images/similar-documents-bard.webp)
-
-</details>
+-   **Confidence Scores:** clearly indicates how relevant each connection is.
 
 ---
 
@@ -80,16 +65,17 @@ Finds the right note, even if you use the wrong words.
 -   **Grounding model:** Default: `gemini-2.5-flash-lite` (Cost-effective Google Search).
 -   **Indexing delay:** Adjust background processing speed to prevent rate limits.
 
-<details>
-<summary>🛠️ <strong>See the Settings Panel</strong></summary>
-
-![Settings Panel](images/options.webp)
-
-</details>
+### Advanced
+-   **Log level:** Set to `Debug` to see detailed "Chain of Thought" and context packing decisions in the developer console.
 
 ---
 
-For more details, check our **[Documentation](docs/)** (Coming Soon).
+## Troubleshooting
+
+-   **"429" (Too Many Requests):** You are hitting the API rate limit (TPM).
+    * *Fix:* Increase **Indexing delay** (e.g., to `1000ms`) or lower your **Context window budget** to reduce the size of each prompt.
+-   **Search ignores keywords:**
+    * *Fix:* Lower the **Minimum similarity score** in settings (e.g., to `0.4`) to broaden the search net.
 
 ## Contributing
 We welcome contributions!
