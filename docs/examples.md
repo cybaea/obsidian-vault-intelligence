@@ -22,21 +22,19 @@ Get the most out of Vault Intelligence with these advanced prompts.
 
 The true power of the solver is **analyzing your own data**. The agent can extract tables, lists, or CSV data from your notes and run real Python analysis on them.
 
-### Personal Finance & Data
+### Case Study: Personal Finance
 
-* **Context:** You have a note called `Monthly Expenses` with a markdown table of costs.
-* **Prompt:** "Read `@Monthly Expenses`. Calculate the standard deviation of my grocery spending and forecast next month's total using a linear trend."
+**Setup:** You have a note named `Monthly Expenses` containing a Markdown table of transactions (Date, Category, Amount).
 
-### Health & Quantified Self
+**Prompt:**
+> "Read `@Monthly Expenses`. First, calculate the standard deviation of my 'Groceries' transactions to measure volatility. Then, group the data by month to find the total Q4 spend and forecast my January total based on the trend."
 
-* **Context:** You log your weight or run times in your `Daily Journal` notes.
-* **Prompt:** "Extract my weight logs from all notes in the `@Journals/2025` folder. Plot a trend line and tell me the average weekly rate of change."
+**Why this works:** The agent writes code to parse your table into a dataframe, runs the statistical functions (which an LLM cannot guess accurately), and interprets the result in context.
 
-### Project Estimation
+### More Examples
 
-* **Context:** You have a project note with a list of tasks and estimated hours.
-* **Prompt:** "Look at `@Project Beta`. Sum the total estimated hours. If I work 6 hours a day with a 15% buffer for delays, what is the realistic completion date?"
+* **Quantified Self:** "Extract my weight logs from all notes in the `@Journals/2025` folder. Plot a trend line and calculate the average weekly rate of change."
+* **Project Management:** "Look at `@Project Beta`. Sum the total estimated hours. If I work 6 hours a day with a 15% buffer for delays, what is the realistic completion date?"
+* **Logic Puzzles:** "Solve this logic puzzle: If A implies B, and B implies C, but C is false, what is A?"
 
-### Vault Analytics
 
-* **Prompt:** "Analyze the creation dates of all notes in `@Inbox`. Create a bar chart showing which days of the week I am most productive."
