@@ -8,7 +8,7 @@ This document outlines the strategic direction for Vault Intelligence. It is a l
 
 ## 🟢 Phase 1: The Open Foundation (Current Focus)
 
-> *Goal: Removing vendor lock-in and establishing a "Batteries Included" privacy-first experience.*
+_**Goal**: Removing vendor lock-in and establishing a "Batteries Included" privacy-first experience._
 
 We believe you shouldn't need a PhD or an expensive API key just to search your own notes, and you should always know exactly what data is leaving your machine.
 
@@ -32,7 +32,7 @@ We believe you shouldn't need a PhD or an expensive API key just to search your 
 
 ## 🟡 Phase 2: Breaking Silos (Next Up)
 
-> *Goal: The Agent stops living in the sidebar. It works IN your editor and OUT with other apps.*
+_**Goal**: The Agent stops living in the sidebar. It works IN your editor and OUT with other apps._
 
 A true partner doesn't just chat from the sidelines. It gets its hands dirty in your documents and connects your vault to the rest of your digital life.
 
@@ -55,7 +55,7 @@ A true partner doesn't just chat from the sidelines. It gets its hands dirty in 
 
 ## 🟠 Phase 3: Visual Intelligence (The "Excalidraw" Stream)
 
-> *Goal: Treating diagrams, sketches, and spatial layouts as first-class citizens.*
+_**Goal**: Treating diagrams, sketches, and spatial layouts as first-class citizens._
 
 We recognize that for many users, "drawing on the other side of the note" is as important as writing. We will leverage the "Hybrid" Markdown format to make your diagrams intelligent.
 
@@ -80,7 +80,7 @@ We recognize that for many users, "drawing on the other side of the note" is as 
 
 ## 🔵 Phase 4: The Agentic Leap (Future Horizons)
 
-> *Goal: Moving from "Questions" to "Tasks." The agent goes off, does work, and comes back.*
+_**Goal**: Moving from "Questions" to "Tasks." The agent goes off, does work, and comes back._
 
 - [ ] **Voice Interface (Desktop First)**
     - **The Vision:** Talk to your vault while you work.
@@ -98,7 +98,7 @@ We recognize that for many users, "drawing on the other side of the note" is as 
 
 ## 🟣 Phase 5: Blue Sky (Experimental)
 
-> *Goal: Novel interaction paradigms that define the future of PKM.*
+_**Goal**: Novel interaction paradigms that define the future of PKM._
 
 - [ ] **"Graph Gardener" (Maintenance Agent)**
     - A background agent that studies your vault's structure while you sleep, suggesting merges, splits, and bridges between isolated clusters of knowledge.
