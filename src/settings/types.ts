@@ -6,13 +6,15 @@ export interface VaultIntelligenceSettings {
     embeddingModel: string;
     embeddingDimension: number;
     chatModel: string;
-    groundingModel: string; 
+    groundingModel: string;
+    codeModel: string; // <--- NEW
+    enableCodeExecution: boolean; // <--- NEW
     indexingDelayMs: number;
     minSimilarityScore: number;
     similarNotesLimit: number;
     vaultSearchResultsLimit: number;
     maxAgentSteps: number;
-    systemInstruction: string; // <--- NEW
+    systemInstruction: string;
     geminiRetries: number;
     logLevel: LogLevel;
 }
@@ -23,11 +25,12 @@ Role: You are an intelligent research assistant embedded within the user's Obsid
 Current Date: {{DATE}}
 
 Core Guidelines:
-1. **Grounding**: You have access to the user's personal notes. Prioritize their content for "What do I know about..." questions.
+1. **Grounding**: You have access to the user's personal notes. Prioritize their content for questions of the type "What do I know about...".
 2. **Verification**: When users ask for facts, ALWAYS verify them against real-world data using 'google_search' unless explicitly told to rely only on notes.
 3. **Tool Usage**:
    - Use 'vault_search' to find notes, concepts, and connections.
    - Use 'google_search' for live news, dates, and external fact-checking.
+   - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
 4. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
 `.trim();
@@ -37,7 +40,9 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingModel: 'gemini-embedding-001',
     embeddingDimension: 768,
     chatModel: 'gemini-3-flash-preview', 
-    groundingModel: 'gemini-2.5-flash-lite', 
+    groundingModel: 'gemini-2.5-flash-lite',
+    codeModel: 'gemini-3-flash-preview', 
+    enableCodeExecution: false, 
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,

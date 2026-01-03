@@ -62,11 +62,7 @@ export class GeminiService {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
-            // OPTIMIZATION 1: Terse Prompt
             const prompt = `Search for: "${query}". List key facts, dates, and details. Be concise.`;
-
-            // OPTIMIZATION 2: Use Configured Grounding Model (User Setting)
-            // Defaults to 'gemini-2.5-flash-lite'
             const groundingModel = this.settings.groundingModel;
 
             const response = await this.client.models.generateContent({
@@ -78,6 +74,54 @@ export class GeminiService {
             });
 
             return response.text || "No search results could be generated.";
+        });
+    }
+
+    // --- Code Execution Sub-Agent ---
+
+    public async solveWithCode(query: string): Promise<string> {
+        return this.retryOperation(async () => {
+            if (!this.client) throw new Error("GenAI client not initialized.");
+            
+            if (!this.settings.enableCodeExecution || !this.settings.codeModel) {
+                return "Code execution is currently disabled in settings.";
+            }
+
+            const codeModel = this.settings.codeModel;
+
+            const response = await this.client.models.generateContent({
+                model: codeModel,
+                contents: query,
+                config: {
+                    tools: [{ codeExecution: {} }]
+                }
+            });
+
+            // FIX: Manually parse parts to avoid SDK warning about non-text parts.
+            // This also ensures the Main Agent sees the code and the result.
+            const parts = response.candidates?.[0]?.content?.parts;
+            if (!parts) return "No result generated.";
+
+            let resultString = "";
+            
+            for (const part of parts) {
+                // 1. Standard Text (Reasoning or Answer)
+                if (part.text) {
+                    resultString += part.text + "\n";
+                }
+                
+                // 2. The Python Code Generated
+                if (part.executableCode) {
+                    resultString += `\n[Generated Code]\n\`\`\`python\n${part.executableCode.code}\n\`\`\`\n`;
+                }
+                
+                // 3. The Output of the Code
+                if (part.codeExecutionResult) {
+                    resultString += `\n[Execution Result]\n${part.codeExecutionResult.output}\n`;
+                }
+            }
+
+            return resultString.trim() || "No result generated from code execution.";
         });
     }
 
@@ -103,7 +147,6 @@ export class GeminiService {
 
             const config: EmbedContentConfig = {};
             
-            // FIX: Use setting instead of magic number 768
             if (options.outputDimensionality) {
                 config.outputDimensionality = options.outputDimensionality;
             } else {
