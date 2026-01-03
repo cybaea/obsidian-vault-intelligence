@@ -43,6 +43,8 @@ A dedicated sidebar for collaborating with your vault.
 <details>
 <summary>📸 <strong>Click to see the Research Agent in action</strong></summary>
 
+Prompt: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_
+
 <img src="images/knowledge-and-verification.webp" alt="Research Agent verification example" width="100%">
 
 </details>
