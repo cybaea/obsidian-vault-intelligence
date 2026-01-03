@@ -6,9 +6,9 @@
 
 Vault Intelligence integrates Google's state-of-the-art **Gemini 3** models to help you reason across your entire knowledge base, uncover hidden connections, and verify your private notes against the real world.
 
-> **Ever wanted to ask, *"What do I know about X?"* instead of hunting for keywords?**
->
-> Now you can. The Agent understands what you *mean*, not just what you type.
+**Ever wanted to ask, *"What do I know about X?"* instead of hunting for keywords?**
+
+Now you can. The Agent understands what you *mean*, not just what you type.
 
 ---
 
