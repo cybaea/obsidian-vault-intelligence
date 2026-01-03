@@ -67,21 +67,37 @@ export class AgentService {
         // 3. Google Search (Sub-Agent)
         const googleSearch: FunctionDeclaration = {
             name: "google_search",
-            description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
-            parameters: {
-                type: Type.OBJECT,
-                properties: {
-                    query: {
-                        type: Type.STRING,
-                        description: "The search terms."
-                    }
-                },
-                required: ["query"]
-            }
+             description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
+             parameters: {
+                 type: Type.OBJECT,
+                 properties: { query: { type: Type.STRING } },
+                 required: ["query"]
+             }
         };
 
+        const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch];
+
+        // 4. Computational Solver (Conditional)
+        if (this.settings.enableCodeExecution && this.settings.codeModel.trim().length > 0) {
+            const computationalSolver: FunctionDeclaration = {
+                name: "computational_solver",
+                description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
+                parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                        task: { 
+                            type: Type.STRING, 
+                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number')." 
+                        }
+                    },
+                    required: ["task"]
+                }
+            };
+            toolsList.push(computationalSolver);
+        }
+
         return [{
-            functionDeclarations: [vaultSearch, urlReader, googleSearch]
+            functionDeclarations: toolsList
         }];
     }
 
@@ -319,6 +335,26 @@ export class AgentService {
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
                 return { error: `Failed to read URL: ${message}` };
+            }
+        }
+
+        if (name === "computational_solver") {
+            try {
+                // Double check settings at runtime
+                if (!this.settings.enableCodeExecution) {
+                    return { error: "Code execution tool is disabled in settings." };
+                }
+
+                const task = args.task as string;
+                logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
+                
+                // Call GeminiService
+                const result = await this.gemini.solveWithCode(task);
+                return { result: result };
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : String(e);
+                logger.error("Code sub-agent failed", e);
+                return { error: `Calculation failed: ${message}` };
             }
         }
 
