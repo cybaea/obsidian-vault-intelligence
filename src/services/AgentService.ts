@@ -5,6 +5,9 @@ import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 
+const CHARS_PER_TOKEN_ESTIMATE = 4; // Standard approximation for English text
+const CONTEXT_SAFETY_MARGIN = 0.8;  // Reserve 20% for output and "Thinking" overhead
+
 export interface ChatMessage {
     role: "user" | "model" | "system";
     text: string;
@@ -99,6 +102,91 @@ export class AgentService {
         return [{
             functionDeclarations: toolsList
         }];
+    }
+
+    /**
+     * Dynamically assembles context from search results based on the current token budget.
+     */
+    private async assembleContext(results: VaultSearchResult[], query: string): Promise<string> {
+        // 1. Calculate Budget based on Settings
+        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+        const totalCharBudget = Math.floor(totalTokens * CHARS_PER_TOKEN_ESTIMATE * CONTEXT_SAFETY_MARGIN);
+        
+        // 2. Define "Starvation Protection" limit
+        // No single document should take up more than 25% of the budget if there are other results.
+        // For Gemini 3 (1M tokens), this is still a massive ~1M chars per doc, so it rarely triggers.
+        const singleDocSoftLimit = Math.floor(totalCharBudget * 0.25);
+
+        logger.debug(`[Context] Budget: ${totalCharBudget} chars. Soft Cap: ${singleDocSoftLimit} chars.`);
+
+        let constructedContext = "";
+        let currentUsage = 0;
+        let includedCount = 0;
+
+        for (const doc of results) {
+            // Check if we are already full
+            if (currentUsage >= totalCharBudget) {
+                logger.info(`[Context] Budget exhausted after ${includedCount} documents.`);
+                break;
+            }
+
+            const file = this.app.vault.getAbstractFileByPath(doc.path);
+            if (!(file instanceof TFile)) continue;
+
+            try {
+                const content = await this.app.vault.read(file);
+                let contentToAdd = "";
+
+                // DECISION: Full Content vs. Smart Window
+                // We use full content IF:
+                // 1. It fits in the remaining budget AND
+                // 2. It is smaller than the 'Soft Limit' (to prevent starvation of other docs)
+                const fitsInBudget = (currentUsage + content.length) < totalCharBudget;
+                const isNotTooHuge = content.length < singleDocSoftLimit;
+
+                if (fitsInBudget && isNotTooHuge) {
+                    contentToAdd = content;
+                    logger.debug(`[Context] Added full file: ${file.path} (${content.length} chars)`);
+                } else {
+                    // Fallback: Use Smart Windowing (clipping)
+                    // We take a slice of the document centered on the keyword
+                    logger.debug(`[Context] Clipping file ${file.path} (Size: ${content.length}).`);
+                    
+                    // Calculate how much space we can reasonably give this doc
+                    // (Either the remaining budget OR the soft limit, whichever is smaller)
+                    const availableSpace = Math.min(singleDocSoftLimit, totalCharBudget - currentUsage);
+                    
+                    if (availableSpace < 500) continue; // Skip if too little space left
+
+                    if (doc.isKeywordMatch) {
+                        // Center window on match
+                        const idx = content.toLowerCase().indexOf(query.toLowerCase());
+                        if (idx !== -1) {
+                            const halfWindow = Math.floor(availableSpace / 2);
+                            const start = Math.max(0, idx - halfWindow);
+                            const end = Math.min(content.length, idx + halfWindow);
+                            contentToAdd = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
+                        } else {
+                            contentToAdd = content.substring(0, availableSpace) + "\n...[clipped]...";
+                        }
+                    } else {
+                        // Vector match without keyword? Just take the start.
+                        contentToAdd = content.substring(0, availableSpace) + "\n...[clipped]...";
+                    }
+                    logger.debug(`[Context] Added clipped file: ${file.path} (${contentToAdd.length} chars)`);
+                }
+
+                const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}) ---\n`;
+                constructedContext += header + contentToAdd + "\n";
+                currentUsage += contentToAdd.length;
+                includedCount++;
+
+            } catch (e) {
+                logger.error(`Failed to read file for context: ${doc.path}`, e);
+            }
+        }
+
+        return constructedContext;
     }
 
     private async executeFunction(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -271,60 +359,10 @@ export class AgentService {
             if (finalResults.length === 0) return { result: "No relevant notes found." };
 
             // 4. Build Context
-            let context = "";
-            let contextLength = 0;
-            const MAX_TOTAL_CONTEXT = 200000; 
-            const DOC_CHAR_LIMIT = 50000;     
-
-            for (const doc of finalResults) {
-                const file = this.app.vault.getAbstractFileByPath(doc.path);
-                if (file instanceof TFile) {
-                    const content = await this.app.vault.read(file);
-                    
-                    let clippedContent = "";
-                    if (content.length <= DOC_CHAR_LIMIT) {
-                        clippedContent = content;
-                    } else {
-                        // Smart Windowing
-                        // Prefer exact match for windowing
-                        if (doc.isKeywordMatch) {
-                            const idx = content.toLowerCase().indexOf(query);
-                            if (idx !== -1) {
-                                const start = Math.max(0, idx - 10000); 
-                                const end = Math.min(content.length, idx + 40000);
-                                clippedContent = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
-                            } else {
-                                // If fuzzy match, try to find the FIRST matching token to center window
-                                const cleanQuery = query.replace(/["'()]/g, " "); 
-                                const tokens = cleanQuery.split(/\s+/).filter(t => t.length > 3);
-                                let bestIdx = -1;
-                                for(const t of tokens) {
-                                    const tIdx = content.toLowerCase().indexOf(t);
-                                    if(tIdx !== -1) { bestIdx = tIdx; break; }
-                                }
-                                
-                                if (bestIdx !== -1) {
-                                    const start = Math.max(0, bestIdx - 10000);
-                                    const end = Math.min(content.length, bestIdx + 40000);
-                                    clippedContent = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
-                                } else {
-                                    clippedContent = content.substring(0, DOC_CHAR_LIMIT);
-                                }
-                            }
-                        } else {
-                             clippedContent = content.substring(0, DOC_CHAR_LIMIT);
-                        }
-                    }
-
-                    const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}${doc.isKeywordMatch ? " [Match]" : ""}) ---\n`;
-                    
-                    if (contextLength + clippedContent.length > MAX_TOTAL_CONTEXT) break;
-
-                    context += header + clippedContent + "\n";
-                    contextLength += clippedContent.length;
-                }
-            }
-            return { result: context };
+            const context = await this.assembleContext(finalResults, query);
+             
+             if (!context) return { result: "No relevant notes found or context budget exceeded." };
+             return { result: context };
         }
 
         if (name === "read_url") {

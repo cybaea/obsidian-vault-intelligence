@@ -7,8 +7,9 @@ export interface VaultIntelligenceSettings {
     embeddingDimension: number;
     chatModel: string;
     groundingModel: string;
-    codeModel: string; // <--- NEW
-    enableCodeExecution: boolean; // <--- NEW
+    codeModel: string;
+    enableCodeExecution: boolean;
+    contextWindowTokens: number;
     indexingDelayMs: number;
     minSimilarityScore: number;
     similarNotesLimit: number;
@@ -43,6 +44,11 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     groundingModel: 'gemini-2.5-flash-lite',
     codeModel: 'gemini-3-flash-preview', 
     enableCodeExecution: false, 
+    // CHANGED: Lowered from 1,000,000 to 200,000.
+    // Why: While the model supports 1M, sending 1M tokens in a single 
+    // request instantly exhausts the standard 1M TPM (Tokens Per Minute) rate limit.
+    // 200k tokens is roughly 800,000 characters, which is plenty for 99% of queries.
+    contextWindowTokens: 200000,
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,

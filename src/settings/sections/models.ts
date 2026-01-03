@@ -38,6 +38,21 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 plugin.settings.chatModel = value;
                 await plugin.saveSettings();
             }));
+    
+    // 1.a. Context Window Tokens
+    new Setting(containerEl)
+        .setName('Context window budget')
+        .setDesc('Maximum tokens to use for context. While Gemini 3 supports 1 million tokens, sending them all in a single request instantly exhausts the standard 1 million tokens per minute rate limit.. Lower this to save costs.')
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
+            .setValue(String(plugin.settings.contextWindowTokens))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num > 0) {
+                    plugin.settings.contextWindowTokens = num;
+                    await plugin.saveSettings();
+                }
+            }));
 
     // 2. Embedding Model
     new Setting(containerEl)
