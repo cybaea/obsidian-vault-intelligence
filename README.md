@@ -8,8 +8,6 @@ Vault Intelligence integrates Google's state-of-the-art **Gemini 3** models to h
 >
 > Now you can. The Agent understands what you *mean*, not just what you type.
 
-
-
 ---
 
 ## 🔮 The Vision
@@ -26,39 +24,44 @@ Managing a growing vault is hard. Notes get lost, facts get outdated, and connec
 
 -   **Chat with your notes:** Ask complex questions like *"How has my thinking on Project Alpha evolved?"* to synthesize insights across hundreds of files.
 -   **Verify facts:** Instantly cross-reference your private notes with live Google Search results to check accuracy.
--   **Solve problems:** Use the integrated **Computational Solver** to run Python code for math, data analysis, and logic puzzles directly within your chat.
+-   **Analyze your data:** Use the integrated **Computational Solver** to extract tables or logs from your notes and run real Python analysis (forecasting, trends, statistics) directly in the chat.
 -   **Connect the dots:** Automatically discover related notes you wrote months ago, surfacing insights you might have forgotten.
 
 ## Key Features
 
 ### 🤖 Research Agent
+
 A dedicated sidebar for collaborating with your vault.
+
 -   **Deep Context:** Uses a "Greedy Packing" engine to read **full documents** (up to 200k tokens), understanding the nuance of long reports rather than just snippets.
--   **Computational Solver:** Handles math and logic queries (e.g., *"Calculate the 102nd prime number"*) using a specialized code-execution sub-agent.
+-   **Computational Solver:** A specialized sub-agent that writes and executes Python code. Perfect for analyzing personal data, such as *"Read my @Expenses note and forecast next month's spend based on the Q4 trend"* or *"Plot my weight loss progress from my @Journal entries."*
 -   **Live Grounding:** Verifies claims against real-time Google Search data.
 -   **Smart Context:** Use `@` to mention specific files (e.g., `@meeting-notes`) or folders to focus the AI's attention.
 
 <details>
-<summary>📸 <strong>See the Research Agent in action</strong></summary>
+<summary>📸 <strong>Click to see the Research Agent in action</strong></summary>
 
-![Research Agent verification example](images/knowledge-and-verification.webp)
+<img src="images/knowledge-and-verification.webp" alt="Research Agent verification example" width="100%">
 
 </details>
 
 ### 🔍 Adaptive Hybrid Search
+
 Finds the right note, even if you use the wrong words.
+
 -   **Semantic Search:** Matches meaning (e.g., "financial ruin" finds "bankruptcy").
 -   **Fuzzy Keyword Matching:** Boosts exact phrase matches for precision.
 -   **Automatic Indexing:** Your vault is re-indexed in the background as you work.
 
 ### 🖇️ Similar Notes View
+
 -   **Active Discovery:** Shows a dynamic list of notes related to your *current* open file.
 -   **Confidence Scores:** Clearly indicates how relevant each connection is.
 
 <details>
-<summary>📸 <strong>See the Similar Notes Sidebar</strong></summary>
+<summary>📸 <strong>Click to see the Similar Notes Sidebar</strong></summary>
 
-![Similar Notes Sidebar example](images/similar-documents-bard.webp)
+<img src="images/similar-documents-bard.webp" alt="Similar Notes Sidebar example" width="100%">
 
 </details>
 
@@ -71,27 +74,22 @@ Finds the right note, even if you use the wrong words.
 3.  **Configure:** Enter your API key in **Settings > Vault Intelligence**.
 4.  **Restart:** Restart Obsidian to begin background indexing.
 
-## Configuration
+## Configuration & Documentation
 
-### Models & Capabilities
--   **Chat model:** Default: `gemini-3-flash-preview` (Best for speed and agentic reasoning).
--   **Enable code execution:** Toggle the specialized Python sub-agent for math/logic tasks.
--   **Context window budget:** Set your token limit (Default: `200,000`). Lower this if you want to save costs; raise it (up to 1M) for massive context, mindful of API rate limits.
+The plugin is designed to work out-of-the-box, but is highly customizable.
 
-### Grounding & Search
--   **Grounding model:** Default: `gemini-2.5-flash-lite` (Cost-effective Google Search).
--   **Indexing delay:** Adjust background processing speed to prevent rate limits.
+* **[Configuration Guide](docs/configuration.md)**: Detailed explanation of every setting (Models, Context Window, Embeddings).
+* **[Example Prompts](docs/examples.md)**: A "Cookbook" for advanced reasoning, data analysis, and fact-checking.
+* **[Troubleshooting](docs/troubleshooting.md)**: Fixes for "429 Too Many Requests" and other common issues.
 
 <details>
-<summary>🛠️ <strong>See the Settings Panel</strong></summary>
+<summary>🛠️ <strong>Click to see the Settings Panel</strong></summary>
 
-![Settings Panel](images/options.webp)
+<img src="images/options.webp" alt="Settings Panel" width="100%">
 
 </details>
 
 ---
-
-For more details, check our **[Documentation](docs/)** (Coming Soon).
 
 ## Contributing
 We welcome contributions!
