@@ -1,6 +1,6 @@
 # Obsidian Vault Intelligence
 
-![](/images/vault-intelligence-social.webp)
+![](images/vault-intelligence-social.webp)
 
 **Transform your Obsidian vault from static storage into an active, intelligent partner.**
 
