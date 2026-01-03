@@ -113,20 +113,24 @@ We recognize that for many users, "drawing on the other side of the note" is as 
 This section serves as a compass for architects and contributors, outlining the engineering hurdles we must clear to achieve the roadmap.
 
 ### 1. The "Batteries Included" Embedding Layer
+
 * **Constraint:** Obsidian plugins run in an Electron environment. We cannot easily ship a Python backend.
 * **Strategy:** Adopt **ONNX Runtime Web** or **Transformers.js** to run quantized models directly in the plugin's JavaScript runtime.
 * **Challenge:** Balancing plugin bundle size (<100MB target) vs. inference quality. We may need to implement a "Download on Demand" flow for model weights.
 
 ### 2. Editor Integration ("Ghostwriter")
+
 * **Constraint:** Safely editing the active markdown file while the user is typing (concurrency).
 * **Strategy:** Leverage Obsidian's `Editor` transaction API to inject text or apply diffs without breaking the user's undo history.
 * **Inspiration:** VS Code's Inline Chat API.
 
 ### 3. Model Context Protocol (MCP) Implementation
+
 * **Constraint:** Exposing a local server from within Obsidian requires careful handling of network ports and security.
 * **Architecture:** Spin up a local WebSocket/HTTP server on a configurable port (default `3000`) with token-based authentication.
 
 ### 4. Handling Excalidraw Hybrid Files
+
 * **Format:** Markdown with `compressed-json` (LZ-String) blocks.
 * **Strategy:** Implement `LZString.decompressFromBase64()` to expand the diagram data for the AI, and compress the AI's JSON output for rendering. We extract structure (arrows/relationships) programmatically to augment the semantic search index.
 
@@ -138,3 +142,50 @@ This roadmap is not set in stone. We welcome community feedback!
 
 * **Have an idea?** Open a [Feature Request](https://github.com/cybaea/obsidian-vault-intelligence/issues).
 * **Want to build it?** Look for issues tagged `help wanted` or `good first issue`.
+
+
+
+## 🔮 Research Horizons (2026)
+
+*Experimental features targeting the new capabilities of Gemini 3, GPT-5, and Llama 4.*
+
+### 1. Visual Vault Indexing (Multimodal RAG)
+
+**Context:** With **Gemini 3's** native multimodal context window and **GPT-5's** visual perception improvements, text-only RAG is now a legacy constraint.
+
+* **Goal:** Index every chart, whiteboard photo, and PDF diagram in the vault.
+* **Implementation:**
+    * Generate multimodal embeddings (using models like **Nano Banana** or **LumiRAG** architectures) for all image assets.
+    * Allow users to query: *"Look at the architecture diagram in the 'Q3 Review' PDF and list the microservices."*
+    * Pass retrieved images directly to the Gemini 3 context window for analysis.
+
+### 2. Autonomous Verification Layers (Corrective RAG)
+
+**Context:** 2026 "Agentic Workflow" standards emphasize "Bounded Autonomy" and self-correction rather than blind generation.
+
+* **Goal:** The agent should verify its own retrieval quality before answering.
+* **Implementation:**
+    * **Confidence Check:** If internal retrieval yields low similarity scores (e.g., outdated notes from 2023), the Agent automatically flags this gap.
+    * **Active Grounding:** Trigger a "Deep Research" sub-loop (similar to **Gemini Deep Research Agent**) to fetch up-to-date facts from the web, then synthesize them with the private notes.
+    * **User Outcome:** *"Your notes on React are from 2023. I cross-referenced with the web, and the API has changed. Here is the comparison."*
+
+### 3. "Agent OS" Orchestration (Knowledge Runtimes)
+
+**Context:** The industry is shifting from single-turn chats to "Agent Orchestration Platforms" (or Agent OS) where specialized agents handle specific domains.
+
+* **Goal:** Treat the Vault as a "Knowledge Runtime" rather than just a database.
+* **Implementation:**
+    * **Router Layer:** A lightweight classifier (using **Gemini 3 Flash**) determines the user's intent: *Drafting, Debugging, or Fact-Checking*.
+    * **Specialized Prompts:**
+        * *Drafting Mode:* Retrieves stylistic matches from your previous essays.
+        * *Debugging Mode:* Prioritizes code snippets and StackOverflow-style notes.
+    * **Goal State:** Maintain a "Session Goal" (e.g., "Write a newsletter") that persists across multiple messages, reducing the need to re-prompt context.
+
+### 4. Federated RAG (Privacy & Silos)
+
+**Context:** With the rise of "Enterprise Agentic Systems" and governance controls, data often lives in decentralized, encrypted silos.
+
+* **Goal:** Connect to data *outside* the Obsidian vault without importing it.
+* **Implementation:**
+    * **External Connectors:** Index local folders (e.g., Zotero libraries, local Code Repos, or 'Work' folders) as separate "Data Silos."
+    * **Federated Retrieval:** The Agent queries these external indices only when relevant, respecting the privacy boundaries of each source.
