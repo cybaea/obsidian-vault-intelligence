@@ -143,7 +143,7 @@ This roadmap is not set in stone. We welcome community feedback!
 * **Have an idea?** Open a [Feature Request](https://github.com/cybaea/obsidian-vault-intelligence/issues).
 * **Want to build it?** Look for issues tagged `help wanted` or `good first issue`.
 
-
+---
 
 # 🔮 Research Horizons (2026)
 
