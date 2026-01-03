@@ -145,11 +145,11 @@ This roadmap is not set in stone. We welcome community feedback!
 
 
 
-## 🔮 Research Horizons (2026)
+# 🔮 Research Horizons (2026)
 
 *Experimental features targeting the new capabilities of Gemini 3, GPT-5, and Llama 4.*
 
-### 1. Visual Vault Indexing (Multimodal RAG)
+## 1. Visual Vault Indexing (Multimodal RAG)
 
 **Context:** With **Gemini 3's** native multimodal context window and **GPT-5's** visual perception improvements, text-only RAG is now a legacy constraint.
 
@@ -159,7 +159,7 @@ This roadmap is not set in stone. We welcome community feedback!
     * Allow users to query: *"Look at the architecture diagram in the 'Q3 Review' PDF and list the microservices."*
     * Pass retrieved images directly to the Gemini 3 context window for analysis.
 
-### 2. Autonomous Verification Layers (Corrective RAG)
+## 2. Autonomous Verification Layers (Corrective RAG)
 
 **Context:** 2026 "Agentic Workflow" standards emphasize "Bounded Autonomy" and self-correction rather than blind generation.
 
@@ -169,7 +169,7 @@ This roadmap is not set in stone. We welcome community feedback!
     * **Active Grounding:** Trigger a "Deep Research" sub-loop (similar to **Gemini Deep Research Agent**) to fetch up-to-date facts from the web, then synthesize them with the private notes.
     * **User Outcome:** *"Your notes on React are from 2023. I cross-referenced with the web, and the API has changed. Here is the comparison."*
 
-### 3. "Agent OS" Orchestration (Knowledge Runtimes)
+## 3. "Agent OS" Orchestration (Knowledge Runtimes)
 
 **Context:** The industry is shifting from single-turn chats to "Agent Orchestration Platforms" (or Agent OS) where specialized agents handle specific domains.
 
@@ -181,7 +181,7 @@ This roadmap is not set in stone. We welcome community feedback!
         * *Debugging Mode:* Prioritizes code snippets and StackOverflow-style notes.
     * **Goal State:** Maintain a "Session Goal" (e.g., "Write a newsletter") that persists across multiple messages, reducing the need to re-prompt context.
 
-### 4. Federated RAG (Privacy & Silos)
+## 4. Federated RAG (Privacy & Silos)
 
 **Context:** With the rise of "Enterprise Agentic Systems" and governance controls, data often lives in decentralized, encrypted silos.
 
