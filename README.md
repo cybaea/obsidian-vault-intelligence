@@ -1,5 +1,7 @@
 # Obsidian Vault Intelligence
 
+![](/images/vault-intelligence-social.webp)
+
 **Transform your Obsidian vault from static storage into an active, intelligent partner.**
 
 Vault Intelligence integrates Google's state-of-the-art **Gemini 3** models to help you reason across your entire knowledge base, uncover hidden connections, and verify your private notes against the real world.
