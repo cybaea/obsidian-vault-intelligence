@@ -8,6 +8,18 @@ Vault Intelligence integrates Google's state-of-the-art **Gemini 3** models to h
 >
 > Now you can. The Agent understands what you *mean*, not just what you type.
 
+<details>
+<summary>My top languages</summary>
+
+| Rank | Languages |
+|-----:|-----------|
+|     1| JavaScript|
+|     2| Python    |
+|     3| SQL       |
+
+</details>
+
+
 ---
 
 ## 🔮 The Vision
