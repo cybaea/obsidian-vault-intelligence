@@ -1,6 +1,6 @@
 # Examples
 
-## <a id="knowledge"></a>Knowledge retrieval
+## Knowledge retrieval
 
 Scenario: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
 
@@ -14,7 +14,7 @@ The agent used its adaptive hybrid search to find notes that were relevant even 
 
 ![Prompt: "What do I know about a company that went bust because of software?" showing results for Knight Capital, UK Post Office, and others](/images/knowledge-retrieval.webp)
 
-## <a id="knowledge-verification"></a>Knowledge verification
+## Knowledge verification
 
 Scenario: I am implementing Retrieval-Augmented Generation (RAG) and want to check if my understanding is up to date.
 
