@@ -68,7 +68,7 @@ We recognize that for many users, "drawing on the other side of the note" is as 
     - **The Integration:** Deep support for [ExcaliBrain](https://github.com/zsviczian/excalibrain).
     - **The Feature:** The agent will respect the explicit `parents`, `children`, and `friends` relationships defined in your ExcaliBrain frontmatter.
 
-- [ ] **"Sketch-to-Structure" (Derendering)**
+- [ ] **"Sketch-to-Structure" (De-rendering)**
     - **The Vision:** Turn a messy whiteboard sketch into a clean note.
     - **The Use Case:** Drag a hybrid `.md` file into the chat and ask: *"Convert this visual logic flow into a Markdown checklist."*
 

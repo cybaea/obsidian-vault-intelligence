@@ -1,4 +1,39 @@
-# Example Prompts
+# Examples
+
+## <a id="knowledge"></a>Knowledge retrieval
+
+Scenario: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
+
+_**Query**: "What do I know about a company that went bust because of software?"_
+
+Ah, yes, it was Knight Capital. [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) found what I was looking for but also surfaced the UK Post Office scandal and three others which I had no idea I had any notes about.
+
+The agent used its adaptive hybrid search to find notes that were relevant even though I did not use the exact same words. My note is on [The AI Arms Race Has a Fatal Flaw](https://www.linkedin.com/pulse/ai-arms-race-has-fatal-flaw-you-measuring-what-allan-engelhardt-7qnse) and only briefly mentions Knight Capital:
+
+> On 1 August 2012, the financial firm Knight Capital lost $440 million in 45 minutes and was driven to bankruptcy. The cause was not one faulty algorithm. It was the unintended, destructive interaction between a _new_ trading system and a piece of _old_, supposedly defunct code. The components, safe in isolation, created a devastating feedback loop when combined. As the US Securities and Exchange Commission (SEC) later confirmed, this was a failure of systems interacting in an unforeseen way, running "without any substantial human intervention"
+
+![Prompt: "What do I know about a company that went bust because of software?" showing results for Knight Capital, UK Post Office, and others](/images/knowledge-retrieval.webp)
+
+## <a id="knowledge-verification"></a>Knowledge verification
+
+Scenario: I am implementing Retrieval-Augmented Generation (RAG) and want to check if my understanding is up to date.
+
+_**Query**: "What do I know about RAG and is my information comprehensive, factually correct, and up to date?"_
+
+[Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) not only retrieved my notes on RAG but also cross-verified the facts against a live Google Search.
+
+![Prompt: "What do I know about RAG and is my information comprehensive, factually correct, and up to date?" showing retrieval and verification results](/images/knowledge-and-verification.webp)
+
+This is useful, even if the agent sounds like an over-excited puppy altogether too happy to please. It doesn't find everything but it is a helpful start for additional research.
+
+The real problem is that I have not yet read all these documents in my vault! I use [Readwise](https://readwise.io/) to manage my research and the [Readwise to Obsidian integration](https://docs.readwise.io/readwise/docs/exporting-highlights/obsidian) to synchronize everything to my vault. Several of these papers are still languishing in my Readwise inbox.
+
+But the AI agent does not (yet) understand what I have read versus what I have just stashed in my vault for later reading.
+
+
+---
+
+# Advanced Prompt Examples
 
 Get the most out of Vault Intelligence with these advanced prompts.
 
@@ -20,7 +55,7 @@ Get the most out of Vault Intelligence with these advanced prompts.
 
 *Requires 'Enable code execution' to be ON.*
 
-The true power of the solver is **analyzing your own data**. The agent can extract tables, lists, or CSV data from your notes and run real Python analysis on them.
+The true power of the solver is **analysing your own data**. The agent can extract tables, lists, or CSV data from your notes and run real Python analysis on them.
 
 ### Case Study: Personal Finance
 

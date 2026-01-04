@@ -36,7 +36,7 @@ Managing a growing vault is hard. Notes get lost, facts get outdated, and connec
 A dedicated sidebar for collaborating with your vault.
 
 -   **Deep Context:** Uses a "Greedy Packing" engine to read **full documents** (up to 200k tokens), understanding the nuance of long reports rather than just snippets.
--   **Computational Solver:** A specialized sub-agent that writes and executes Python code. Perfect for analyzing personal data, such as *"Read my @Expenses note and forecast next month's spend based on the Q4 trend"* or *"Plot my weight loss progress from my @Journal entries."*
+-   **Computational Solver:** A specialized sub-agent that writes and executes Python code. Perfect for analysing personal data, such as *"Read my @Expenses note and forecast next month's spend based on the Q4 trend"* or *"Plot my weight loss progress from my @Journal entries."*
 -   **Live Grounding:** Verifies claims against real-time Google Search data.
 -   **Smart Context:** Use `@` to mention specific files (e.g., `@meeting-notes`) or folders to focus the AI's attention.
 
