@@ -99,6 +99,14 @@ _**Query**: Briefly summarise all @classes_.
 ![Prompt: _Briefly summarise all @classes_ showing summaries of various D&D classes](/images/folder-context.webp)
 
 
+# Similar documents
+
+**Scenario**: I want to find similar documents to a given note.
+
+_**Answer**: Use the command palette and select "Vault Intelligence: Open similar notes view" while viewing a note._
+
+![Similar notes view showing notes similar to "bard"](/images/similar-documents.webp)
+
 
 ---
 

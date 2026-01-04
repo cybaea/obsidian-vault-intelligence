@@ -18,6 +18,8 @@ Examples:
 - **[Document context](docs/examples.md#document-context)**: _Briefly summarise @bard._ (Single document; D&D 5e vault).
 - **[Multiple documents](docs/examples.md#multiple-documents)**: _Briefly compare @bard with @bard-college-of-lore _. (Multiple documents; D&D 5e vault).
 - **[Folder context](docs/examples.md#folder-context)**: _Briefly summarise all @classes _. (Multiple documents in a folder; D&D 5e vault).
+- **[Similar documents](docs/examples.md#similar-documents)**: Shows related notes for the current document in a sidebar (D&D 5e vault).
+
 
 ---
 
