@@ -12,7 +12,7 @@ Now you can. The Agent understands what you *mean*, not just what you type.
 
 Examples:
 
-- **[Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _"What do I know about a company that went bust because of software?"_ (Personal vault).
+- **[Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _"WWhat do I know about Knight Capital?"_ (Personal vault).
 - **[Knowledge verification](docs/examples.md#knowledge-verification)**: _"What do I know about RAG and is my information comprehensive, factually correct, and up to date?"_ (Personal vault and Google Search).
 
 ---

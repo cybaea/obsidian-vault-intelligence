@@ -2,6 +2,18 @@
 
 ## Knowledge retrieval
 
+**Scenario**: I need a summary of what I know about a specific topic but can't remember where I wrote it down.
+
+_**Query**: "What do I know about Knight Capital?"_
+
+![Prompt: "What do I know about Knight Capital?" showing retrieved notes and summary](/images/knowledge-retrieval-simple.webp)
+
+Ah, yes, I have a note on Knight Capital's 2012 trading disaster. The agent found it and provided a concise summary.
+
+### Contextual example
+
+Sometimes I don't even remember the right keywords to find what I'm looking for.
+
 **Scenario**: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
 
 _**Query**: "What do I know about a company that went bust because of software?"_
