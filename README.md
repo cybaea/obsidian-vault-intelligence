@@ -12,9 +12,12 @@ Now you can. The Agent understands what you *mean*, not just what you type.
 
 Examples:
 
-- **[Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _"What do I know about Knight Capital?"_ (Personal vault).
-    - Also [contextual understanding](docs/examples.md#contextual-example) for when you can't quite remember the search.
-- **[Knowledge verification](docs/examples.md#knowledge-verification)**: _"What do I know about RAG and is my information comprehensive, factually correct, and up to date?"_ (Personal vault and Google Search).
+- **[Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _What do I know about Knight Capital?_ (Personal vault).
+- **[Knowledge verification](docs/examples.md#knowledge-verification)**: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_ (Personal vault and Google Search).
+- **[Computational solver](docs/examples.md#computational-solver)**: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ (Personal vault with Python code execution). You can even plot the data.
+- **[Document context](docs/examples.md#document-context)**: _Briefly summarise @bard._ (Single document; D&D 5e vault).
+- **[Multiple documents](docs/examples.md#multiple-documents)**: _Briefly compare @bard with @bard-college-of-lore _. (Multiple documents; D&D 5e vault).
+- **[Folder context](docs/examples.md#folder-context)**: _Briefly summarise all @classes _. (Multiple documents in a folder; D&D 5e vault).
 
 ---
 

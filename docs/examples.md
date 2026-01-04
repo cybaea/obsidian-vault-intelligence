@@ -12,7 +12,7 @@ Ah, yes, [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intellige
 
 ### Contextual example
 
-Sometimes I don't even remember the right keywords to find what I'm looking for.
+Sometimes I don't remember the right keywords to find what I'm looking for.
 
 **Scenario**: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
 
@@ -41,6 +41,63 @@ This is useful, even if the agent sounds like an over-excited puppy altogether t
 **The real problem** is that I have not yet read all these documents in my vault! I use [Readwise](https://readwise.io/) to manage my research and the [Readwise to Obsidian integration](https://docs.readwise.io/readwise/docs/exporting-highlights/obsidian) to synchronize everything to my vault. Several of these papers are still languishing in my Readwise inbox.
 
 But the AI agent does not (yet) understand what I have read versus what I have just stashed in my vault for later reading.
+
+## Computational solver
+
+**Scenario**: I track my monthly expenses in a Markdown table within Obsidian and want to forecast next month's spend based on the Q4 trend.
+
+_**Query**: Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._
+
+![Prompt: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ Output shows awareness of Thanksgiving and flags possible missing rent data.](/images/computational-solver.webp)
+
+[Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) extracted the table from my note, wrote Python code to analyse it, executed the code, and interpreted the results in context. It clearly showed awareness of Thanksgiving and the Christmas holidays and it flags possible missing entries for rent. 
+
+The some assumptions made (eg Thanksgiving) are probably appropriate for spending in dollars at retailers that are clearly based in the US. 
+
+### Plotting example
+
+You can also ask the agent to plot your data.
+
+_**Query**: plot my total monthly expenses with a trendline to include January._
+
+![Prompt: _plot my total monthly expenses with a trendline to include January._ showing a plot of monthly expenses with a trendline](/images/computational-solver-plot.webp)
+
+
+
+## Document context
+
+You can use the `@` symbol to mention specific notes or folders to focus the agent's attention. The example here uses the [D&D 5e example vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown).
+
+**Scenario**: I want to summarise or otherwise process a single document.
+
+_**Query**: Briefly summarise @bard_.
+
+![Prompt: _Briefly summarise @bard_ showing summary of bard class features](/images/document-context.webp)
+
+> Based on the note compendium/classes/bard.md, the Bard is a versatile support class that uses music and speech to manipulate the "Words of Creation." They excel as spellcasters, skill experts, and force multipliers for their allies. ...
+
+Seems reasonable to me.
+
+## Multiple documents
+
+You can mention multiple documents.
+
+**Scenario**: I want to compare two documents.
+
+_**Query**: Briefly compare @bard with @bard-college-of-lore ._
+
+![Prompt: _Briefly compare @bard with @bard-college-of-lore_ showing comparison of bard class and college of lore subclass](/images/multiple-documents.webp)
+
+## Folder context
+
+You can mention entire folders using the `@` symbol.
+
+**Scenario**: I want to summarise all notes in a folder.
+
+_**Query**: Briefly summarise all @classes_.
+
+![Prompt: _Briefly summarise all @classes_ showing summaries of various D&D classes](/images/folder-context.webp)
+
 
 
 ---
