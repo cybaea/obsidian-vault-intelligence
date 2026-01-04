@@ -90,7 +90,7 @@ _**Query**: Briefly compare @bard with @bard-college-of-lore ._
 
 ## Folder context
 
-You can mention entire folders using the `@` symbol.
+You can mention entire folders using the `@` symbol to an index note for the folder.
 
 **Scenario**: I want to summarise all notes in a folder.
 
