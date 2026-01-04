@@ -6,6 +6,20 @@
 - Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
 - Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
 
+This project is for the Obsidian **Vault Intelligence** plugin, which provides advanced AI-powered features for managing and interacting with your notes. It includes capabilities such as a Research Agent, Adaptive Hybrid Search, and Similar Notes View to enhance your note-taking experience.
+
+Important context is provided in the following files:
+
+- [README.md](README.md): Overview, installation, configuration, and usage instructions.
+- [CHANGELOG.md](CHANGELOG.md): Version history and release notes.
+- [CONTRIBUTING.md](CONTRIBUTING.md): Guidelines for contributing to the project.
+- [ROADMAP.md](ROADMAP.md): Planned features and improvements.
+- [docs/](docs/): Additional documentation, including configuration guides, examples, and troubleshooting tips.
+
+## Using latest technologies
+
+**IMPORTANT**: It is now 2026. All the information you have on AI technologies is outdated. Ground yourself using search engines and the latest documentation from OpenAI, Google, and other AI providers. Use the most recent models, techniques, and best practices available.
+
 ## Environment & tooling
 
 - Node.js: use current LTS (Node 18+ recommended).
