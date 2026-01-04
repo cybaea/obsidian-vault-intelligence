@@ -8,7 +8,7 @@ _**Query**: "What do I know about Knight Capital?"_
 
 ![Prompt: "What do I know about Knight Capital?" showing retrieved notes and summary](/images/knowledge-retrieval-simple.webp)
 
-Ah, yes, I have a note on Knight Capital's 2012 trading disaster. The agent found it and provided a concise summary.
+Ah, yes, [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) found my note on Knight Capital's 2012 trading disaster and provided a concise summary.
 
 ### Contextual example
 
