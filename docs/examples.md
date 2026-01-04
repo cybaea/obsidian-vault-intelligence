@@ -26,7 +26,7 @@ _**Query**: "What do I know about RAG and is my information comprehensive, factu
 
 This is useful, even if the agent sounds like an over-excited puppy altogether too happy to please. It doesn't find everything but it is a helpful start for additional research.
 
-The real problem is that I have not yet read all these documents in my vault! I use [Readwise](https://readwise.io/) to manage my research and the [Readwise to Obsidian integration](https://docs.readwise.io/readwise/docs/exporting-highlights/obsidian) to synchronize everything to my vault. Several of these papers are still languishing in my Readwise inbox.
+**The real problem** is that I have not yet read all these documents in my vault! I use [Readwise](https://readwise.io/) to manage my research and the [Readwise to Obsidian integration](https://docs.readwise.io/readwise/docs/exporting-highlights/obsidian) to synchronize everything to my vault. Several of these papers are still languishing in my Readwise inbox.
 
 But the AI agent does not (yet) understand what I have read versus what I have just stashed in my vault for later reading.
 
