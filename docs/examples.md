@@ -2,7 +2,7 @@
 
 ## Knowledge retrieval
 
-Scenario: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
+**Scenario**: I _know_ I wrote something about a famous bankruptcy due to software interactions and risk controls, but which one was it?
 
 _**Query**: "What do I know about a company that went bust because of software?"_
 
@@ -16,7 +16,7 @@ The agent used its adaptive hybrid search to find notes that were relevant even 
 
 ## Knowledge verification
 
-Scenario: I am implementing Retrieval-Augmented Generation (RAG) and want to check if my understanding is up to date.
+**Scenario**: I am implementing Retrieval-Augmented Generation (RAG) and want to check if my understanding is up to date.
 
 _**Query**: "What do I know about RAG and is my information comprehensive, factually correct, and up to date?"_
 
