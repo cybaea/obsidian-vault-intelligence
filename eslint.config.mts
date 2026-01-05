@@ -14,9 +14,7 @@ export default tseslint.config(
 				projectService: {
 					allowDefaultProject: [
 						'eslint.config.js',
-						'eslint.config.mts',
-						'manifest.json',
-						'declarations.d.ts'
+						'manifest.json'
 					]
 				},
 				// @ts-expect-error -- Node 20.11+ feature, might not be in types yet
