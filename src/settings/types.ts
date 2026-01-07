@@ -1,8 +1,12 @@
 import { App } from "obsidian";
 import { LogLevel } from "../utils/logger";
 
+export type EmbeddingProvider = 'gemini' | 'local';
+
 export interface VaultIntelligenceSettings {
     googleApiKey: string;
+    // New: Provider Selector
+    embeddingProvider: EmbeddingProvider; 
     embeddingModel: string;
     embeddingDimension: number;
     chatModel: string;
@@ -38,16 +42,14 @@ Core Guidelines:
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
+    // Default to Gemini for now to preserve existing behavior
+    embeddingProvider: 'gemini',
     embeddingModel: 'gemini-embedding-001',
     embeddingDimension: 768,
     chatModel: 'gemini-3-flash-preview', 
     groundingModel: 'gemini-2.5-flash-lite',
     codeModel: 'gemini-3-flash-preview', 
     enableCodeExecution: false, 
-    // CHANGED: Lowered from 1,000,000 to 200,000.
-    // Why: While the model supports 1M, sending 1M tokens in a single 
-    // request instantly exhausts the standard 1M TPM (Tokens Per Minute) rate limit.
-    // 200k tokens is roughly 800,000 characters, which is plenty for 99% of queries.
     contextWindowTokens: 200000,
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,

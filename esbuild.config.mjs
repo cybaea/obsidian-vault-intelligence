@@ -15,7 +15,11 @@ const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ["src/main.ts"],
+	// CHANGE: Two entry points mapping to specific output names
+	entryPoints: [
+		{ in: "src/main.ts", out: "main" },
+		{ in: "src/workers/embedding.worker.ts", out: "worker" }
+	],
 	bundle: true,
 	external: [
 		"obsidian",
@@ -33,11 +37,12 @@ const context = await esbuild.context({
 		"@lezer/lr",
 		...builtinModules],
 	format: "cjs",
-	target: "es2018",
+	target: "es2020", // Bumped slightly for better worker support
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outfile: "main.js",
+	// CHANGE: Use outdir instead of outfile to support multiple outputs
+	outdir: ".", 
 	minify: prod,
 });
 

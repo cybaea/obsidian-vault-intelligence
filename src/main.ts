@@ -1,17 +1,20 @@
-import { Plugin, WorkspaceLeaf, TFile, debounce, Menu } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, debounce, Menu, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
-import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
 import { VectorStore } from "./services/VectorStore";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
 import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
 import { logger } from "./utils/logger";
+import { IEmbeddingService } from "./services/IEmbeddingService";
+import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
+import { LocalEmbeddingService } from "./services/LocalEmbeddingService";
 
 export default class VaultIntelligencePlugin extends Plugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiService;
+	// Store the interface, not the concrete implementation
+	embeddingService: IEmbeddingService;
 	vectorStore: VectorStore;
-	similarNotesView: SimilarNotesView;
 
 	async onload() {
 		await this.loadSettings();
@@ -19,12 +22,30 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// Initialize Logger
 		logger.setLevel(this.settings.logLevel);
 
-		// Initialize Services
+		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
 		this.geminiService = new GeminiService(this.settings);
-		const embeddingService = new GeminiEmbeddingService(this.geminiService, this.settings);
-		this.vectorStore = new VectorStore(this, this.geminiService, embeddingService, this.settings);
+
+		// 2. Initialize Embedding Provider based on Settings
+		if (this.settings.embeddingProvider === 'local') {
+			logger.info("Using Local Embedding Service");
+			const localService = new LocalEmbeddingService(this, this.settings);
+			// Start the worker early
+			void localService.initialize().catch(err => {
+				logger.error("Failed to init local worker", err);
+				new Notice("Local worker failed to start.");
+			});
+			this.embeddingService = localService;
+		} else {
+			logger.info("Using Gemini Embedding Service");
+			this.embeddingService = new GeminiEmbeddingService(this.geminiService, this.settings);
+		}
+
+		// 3. Inject into VectorStore
+		this.vectorStore = new VectorStore(this, this.geminiService, this.embeddingService, this.settings);
 		await this.vectorStore.loadVectors();
 
+		// ... (Rest of the file remains the same: Event listeners, Ribbon, Commands) ...
+		
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(() => {
 			void this.vectorStore.scanVault();
@@ -54,16 +75,14 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		// Register View
 		this.registerView(
-            SIMILAR_NOTES_VIEW_TYPE,
-            // Update SimilarNotesView constructor signature in its file too!
-            (leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService, embeddingService)
-        );
+			SIMILAR_NOTES_VIEW_TYPE,
+			(leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService, this.embeddingService)
+		);
 
-        this.registerView(
-            RESEARCH_CHAT_VIEW_TYPE,
-            // Update ResearchChatView constructor signature in its file too!
-            (leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore, embeddingService)
-        );
+		this.registerView(
+			RESEARCH_CHAT_VIEW_TYPE,
+			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore, this.embeddingService)
+		);
 
 		// Activate View Command
 		this.addCommand({
@@ -89,27 +108,22 @@ export default class VaultIntelligencePlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				if (file) {
-					// 1. Update the sidebar view
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
 					for (const leaf of leaves) {
 						if (leaf.view instanceof SimilarNotesView) {
 							void leaf.view.updateForFile(file);
 						}
 					}
-
-					// 2. Index this file if needed (opportunistic indexing)
 					this.vectorStore.indexFile(file);
 				}
 			})
 		);
 
-		// File Modification Handling (Debounced)
 		const onMetadataChange = debounce((file: TFile) => {
 			if (file instanceof TFile && file.extension === 'md') {
 				logger.debug(`File changed (metadata): ${file.path}`);
 				this.vectorStore.indexFile(file);
 
-				// Update view if it's the active file
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.path === file.path) {
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
@@ -122,7 +136,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 			}
 		}, 2000, true);
 
-		// More reliable than vault.on('modify') for external changes
 		this.registerEvent(this.app.metadataCache.on('changed', onMetadataChange));
 
 		this.registerEvent(this.app.vault.on('create', (file) => {
@@ -133,7 +146,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		this.registerEvent(this.app.vault.on('delete', (file) => {
 			if (file instanceof TFile) {
-				// @ts-ignore - access private for deletion
+				// @ts-ignore
 				this.vectorStore.deleteVector(file.path);
 			}
 		}));
@@ -149,36 +162,45 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 	onunload() {
 		if (this.vectorStore) this.vectorStore.destroy();
+		
+		// Cleanup Local Worker if active
+		if (this.embeddingService instanceof LocalEmbeddingService) {
+			this.embeddingService.terminate();
+		}
+		
 		logger.info("Vault Intelligence Plugin Unloaded");
 	}
 
-	async loadSettings() {
+    // ... (rest of class: loadSettings, saveSettings, activateView) ...
+    async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		// Update services if needed
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
+		
+		// Note: We don't hot-swap embedding services yet. 
+		// The settings tab warns the user to restart if they change providers.
+		
 		if (this.vectorStore) {
 			this.vectorStore.updateSettings(this.settings);
-			void this.vectorStore.scanVault();
+			// Only scan if not currently using local service (which might be initializing)
+            // or better, just let the next restart handle big changes
+			// void this.vectorStore.scanVault(); 
 		}
 	}
 
-	async activateView(viewType: string) {
+    async activateView(viewType: string) {
 		const { workspace } = this.app;
 
 		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(viewType);
 
 		if (leaves.length > 0) {
-			// A leaf with our view already exists, use that
 			leaf = leaves[0] ?? null;
 		} else {
-			// Our view could not be found in the workspace, create a new leaf
-			// in the right sidebar for it
 			const rightLeaf = workspace.getRightLeaf(false);
 			if (rightLeaf) {
 				leaf = rightLeaf;
