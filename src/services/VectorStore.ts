@@ -28,6 +28,8 @@ export class VectorStore {
     private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
     private settings: VaultIntelligenceSettings; 
+    private consecutiveErrors = 0; // Circuit breaker
+    private readonly MAX_ERRORS_BEFORE_BACKOFF = 5;
 
     // Data Store
     private index: VectorIndex; 
@@ -264,16 +266,27 @@ export class VectorStore {
         if (this.requestQueue.length === 0) return;
         if (this.isBackingOff) return;
 
+        // NEW: Check circuit breaker
+        if (this.consecutiveErrors >= this.MAX_ERRORS_BEFORE_BACKOFF) {
+            logger.error(`[VectorStore] Too many consecutive errors (${this.consecutiveErrors}). Pausing queue for 1 minute.`);
+            this.triggerBackoff();
+            return;
+        }
+
         this.activeRequests++;
         const task = this.requestQueue.shift();
 
         if (task) {
             try {
                 await task();
+                // Success! Reset breaker.
+                this.consecutiveErrors = 0; 
                 if (this.currentDelayMs > this.baseDelayMs) {
                     this.currentDelayMs = Math.max(this.baseDelayMs, this.currentDelayMs - 1000);
                 }
             } catch (e) {
+                // Failure! Increment breaker.
+                this.consecutiveErrors++;
                 logger.error("Error processing queue task", e);
             } finally {
                 this.activeRequests--;

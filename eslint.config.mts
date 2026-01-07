@@ -9,6 +9,8 @@ export default tseslint.config(
 		languageOptions: {
 			globals: {
 				...globals.browser,
+				// FIX: Tell ESLint this global exists (injected by esbuild)
+				TRANSFORMERS_VERSION: "readonly", 
 			},
 			parserOptions: {
 				projectService: {

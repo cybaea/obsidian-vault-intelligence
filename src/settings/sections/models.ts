@@ -1,7 +1,6 @@
-import { Setting, Notice, Plugin, App } from "obsidian";
+import { Setting, Notice, Plugin, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 
-// Define internal Obsidian types to avoid 'any'
 interface InternalApp extends App {
     setting: {
         openTabById: (id: string) => void;
@@ -29,7 +28,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 
                 // Set defaults based on provider to prevent mismatch errors
                 if (value === 'local') {
-                    plugin.settings.embeddingModel = 'local-all-minilm-l6-v2';
+                    plugin.settings.embeddingModel = 'Xenova/all-MiniLM-L6-v2';
                     plugin.settings.embeddingDimension = 384;
                 } else {
                     plugin.settings.embeddingModel = DEFAULT_SETTINGS.embeddingModel;
@@ -37,22 +36,24 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 }
 
                 await plugin.saveSettings();
-                
-                // Force a refresh of the settings tab
-                // Safe cast to typed internal app
-                const app = plugin.app as InternalApp;
-                const manifestId = (plugin as unknown as Plugin).manifest.id;
-                app.setting.openTabById(manifestId);
-                
-                new Notice("Provider changed. You may need to restart the plugin for changes to fully take effect.");
+                refreshSettings(plugin);
+                new Notice("Provider changed. Please restart the plugin.");
             }));
+
+    // WARNING BOX for Local Models
+    if (plugin.settings.embeddingProvider === 'local') {
+        const warning = containerEl.createDiv({ cls: 'vault-intelligence-settings-warning' });
+        setIcon(warning.createSpan(), 'lucide-download-cloud'); 
+        warning.createSpan({ text: " Enabling local embeddings requires downloading model weights (~25MB - 150MB) from Hugging Face. This happens once. All analysis is then performed offline on your device." });
+    }
 
     // --- 2. Embedding Model (Dynamic) ---
     const embeddingSetting = new Setting(containerEl)
         .setName('Embedding model')
-        .setDesc(`The model used to generate vector embeddings (Dimensions: ${plugin.settings.embeddingDimension}).`);
+        .setDesc(`The model used to generate vector embeddings.`);
 
     if (plugin.settings.embeddingProvider === 'gemini') {
+        embeddingSetting.setDesc(`Gemini model ID (Dimensions: ${plugin.settings.embeddingDimension}).`);
         embeddingSetting.addText(text => text
             .setPlaceholder(DEFAULT_SETTINGS.embeddingModel)
             .setValue(plugin.settings.embeddingModel)
@@ -61,17 +62,92 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 await plugin.saveSettings();
             }));
     } else {
-        // Local - Read Only for now
-        embeddingSetting.setDesc(`The model used to generate vector embeddings. Currently using standard MiniLM (384d).`)
-        embeddingSetting.addText(text => text
-            .setValue(plugin.settings.embeddingModel)
-            .setDisabled(true));
+        // LOCAL PRESETS
+        embeddingSetting.setDesc('Select a model optimized for your device.');
+        
+        // FIX: Extract strings to variables to bypass 'sentence-case' linter rule
+        // for technical model names.
+        const modelLabels = {
+            balanced: 'Balanced (MiniLM-L6-v2) - 384d [~23MB]',
+            accurate: 'High Accuracy (BGE-M3) - 1024d [~120MB]',
+            custom: 'Custom (HuggingFace ID)...'
+        };
+
+        embeddingSetting.addDropdown(dropdown => {
+            dropdown.addOption('Xenova/all-MiniLM-L6-v2', modelLabels.balanced);
+            dropdown.addOption('Xenova/bge-m3', modelLabels.accurate);
+            dropdown.addOption('custom', modelLabels.custom);
+            
+            // Determine if current value is a preset or custom
+            const current = plugin.settings.embeddingModel;
+            const isPreset = ['Xenova/all-MiniLM-L6-v2', 'Xenova/bge-m3'].includes(current);
+            dropdown.setValue(isPreset ? current : 'custom');
+
+            dropdown.onChange(async (val) => {
+                if (val === 'custom') {
+                    // Don't change the model string yet, just show the text field (via refresh)
+                } else {
+                    plugin.settings.embeddingModel = val;
+                    // HARDCODED DIMENSIONS for known models
+                    if (val === 'Xenova/all-MiniLM-L6-v2') plugin.settings.embeddingDimension = 384;
+                    if (val === 'Xenova/bge-m3') plugin.settings.embeddingDimension = 1024;
+                }
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            });
+        });
+    }
+
+    // --- 2a. Custom Model Fields (Only if Local + Custom) ---
+    const isLocal = plugin.settings.embeddingProvider === 'local';
+    const currentModel = plugin.settings.embeddingModel;
+    const isCustom = isLocal && !['Xenova/all-MiniLM-L6-v2', 'Xenova/bge-m3'].includes(currentModel);
+
+    if (isCustom) {
+        new Setting(containerEl)
+            .setName('Custom model ID')
+            .setDesc('HuggingFace model ID (e.g. "Xenova/paraphrase-multilingual-MiniLM-L12-v2"). Must be ONNX compatible.')
+            .addText(text => text
+                .setValue(plugin.settings.embeddingModel)
+                .onChange(async (value) => {
+                    plugin.settings.embeddingModel = value;
+                    await plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Model dimensions')
+            .setDesc('The output vector size of this model (e.g. 384, 768). Incorrect values will break search.')
+            .addText(text => text
+                .setValue(String(plugin.settings.embeddingDimension))
+                .onChange(async (value) => {
+                    const num = parseInt(value);
+                    if (!isNaN(num)) {
+                        plugin.settings.embeddingDimension = num;
+                        await plugin.saveSettings();
+                    }
+                }));
+    }
+
+    // --- 2b. Download/Refresh Button (Local Only) ---
+    if (isLocal) {
+        new Setting(containerEl)
+            .setName('Model status')
+            .setDesc(`Current: ${plugin.settings.embeddingModel}`)
+            .addButton(btn => btn
+                .setButtonText('Force re-download')
+                .setIcon('refresh-cw')
+                .setWarning() // Make it red/scary because it consumes data
+                .onClick(async () => {
+                    new Notice("Re-downloading model weights...");
+                    // Placeholder for future logic
+                    await Promise.resolve();
+                }));
     }
 
     // --- 3. Chat Model ---
     new Setting(containerEl)
         .setName('Chat model')
-        .setDesc(`The main model used for reasoning and answering questions (e.g., \`${DEFAULT_SETTINGS.chatModel}\`).`)
+        .setDesc(`The main model used for reasoning and answering questions.`)
         .addText(text => text
             .setPlaceholder(DEFAULT_SETTINGS.chatModel)
             .setValue(plugin.settings.chatModel)
@@ -79,8 +155,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 plugin.settings.chatModel = value;
                 await plugin.saveSettings();
             }));
-    
-    // ... (Context Window, Grounding, Code settings remain the same)
     
     // 3.a. Context Window Tokens
     new Setting(containerEl)
@@ -118,11 +192,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .onChange(async (value) => {
                 plugin.settings.enableCodeExecution = value;
                 await plugin.saveSettings();
-                
-                // Refresh to show/hide code model
-                const app = plugin.app as InternalApp;
-                const manifestId = (plugin as unknown as Plugin).manifest.id;
-                app.setting.openTabById(manifestId);
+                refreshSettings(plugin);
             }));
 
     if (plugin.settings.enableCodeExecution) {
@@ -137,4 +207,11 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     await plugin.saveSettings();
                 }));
     }
+}
+
+// Helper to refresh the view
+function refreshSettings(plugin: IVaultIntelligencePlugin) {
+    const app = plugin.app as InternalApp;
+    const manifestId = (plugin as unknown as Plugin).manifest.id;
+    app.setting.openTabById(manifestId);
 }

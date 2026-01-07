@@ -3,6 +3,11 @@ import { Plugin, Notice } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
+// FIX: Use @ts-expect-error because the source file has no export (to run in browser),
+// but the build plugin generates a default export (the Worker constructor).
+// @ts-expect-error: Build plugin auto-generates default export for workers.
+import EmbeddingWorker from "../workers/embedding.worker";
+
 interface WorkerMessage {
     id: number;
     status: 'success' | 'error';
@@ -10,13 +15,15 @@ interface WorkerMessage {
     error?: string;
 }
 
+// Define the constructor type matching the worker module
+type EmbeddingWorkerConstructor = new (options?: WorkerOptions) => Worker;
+
 export class LocalEmbeddingService implements IEmbeddingService {
     private plugin: Plugin;
     private settings: VaultIntelligenceSettings;
     private worker: Worker | null = null;
     
     private messageId = 0;
-    // FIX 1: Use 'unknown' for rejection type instead of 'any'
     private pendingRequests = new Map<number, { resolve: (val: number[]) => void, reject: (err: unknown) => void }>();
 
     constructor(plugin: Plugin, settings: VaultIntelligenceSettings) {
@@ -25,52 +32,42 @@ export class LocalEmbeddingService implements IEmbeddingService {
     }
 
     get modelName(): string {
-        return "local-all-minilm-l6-v2";
+        return this.settings.embeddingModel;
     }
 
     get dimensions(): number {
-        return 384; 
+        return this.settings.embeddingDimension;
     }
 
     public async initialize() {
         if (this.worker) return;
 
-        // FIX 2: Satisfy 'require-await' rule. 
-        // This is useful anyway if we later move to a loading strategy that is async.
         await Promise.resolve();
 
-        const workerPath = this.plugin.manifest.dir + "/worker.js";
-        
         try {
-            const url = this.plugin.app.vault.adapter.getResourcePath(workerPath);
-            
-            this.worker = new Worker(url);
+            // MAGIC LINE: Just instantiate it like a class
+            const WorkerClass = EmbeddingWorker as unknown as EmbeddingWorkerConstructor;
+            this.worker = new WorkerClass({ name: 'VaultIntelligenceWorker' });
 
             this.worker.onmessage = (e) => this._onMessage(e);
             this.worker.onerror = (e) => {
-                // FIX 3: Use logger instead of console
                 logger.error("[LocalEmbedding] Worker Error:", e);
-                // FIX 4: Sentence case for UI text
                 new Notice("Local worker crashed.");
             };
             
-            logger.info("Local embedding worker initialized.");
+            logger.info("Local embedding worker initialized (Inline).");
         } catch (e) {
             logger.error("Failed to spawn worker:", e);
-            // FIX 4: Sentence case
             new Notice("Failed to load local worker.");
         }
     }
 
     private _onMessage(event: MessageEvent) {
-        // FIX 5: cast to unknown first, then to our interface
         const data = event.data as unknown as WorkerMessage;
         const { id, status, output, error } = data;
         
         const promise = this.pendingRequests.get(id);
-
         if (promise) {
-            // FIX 6: Ensure output exists before resolving
             if (status === 'success' && output) {
                 promise.resolve(output);
             } else {
@@ -91,7 +88,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
             this.worker!.postMessage({
                 id,
                 type: 'embed',
-                text
+                text,
+                model: this.settings.embeddingModel
             });
         });
     }
