@@ -1,8 +1,8 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
-// Removed legacy SDK import
 import VaultIntelligencePlugin from "../main";
 import { VectorStore } from "../services/VectorStore";
 import { GeminiService } from "../services/GeminiService";
+import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
 import { logger } from "../utils/logger";
 
 export const SIMILAR_NOTES_VIEW_TYPE = "similar-notes-view";
@@ -11,12 +11,21 @@ export class SimilarNotesView extends ItemView {
     plugin: VaultIntelligencePlugin;
     vectorStore: VectorStore;
     gemini: GeminiService;
+    embeddingService: IEmbeddingService; // Add Property
 
-    constructor(leaf: WorkspaceLeaf, plugin: VaultIntelligencePlugin, vectorStore: VectorStore, gemini: GeminiService) {
+    // Update Constructor
+    constructor(
+        leaf: WorkspaceLeaf, 
+        plugin: VaultIntelligencePlugin, 
+        vectorStore: VectorStore, 
+        gemini: GeminiService,
+        embeddingService: IEmbeddingService // Add Argument
+    ) {
         super(leaf);
         this.plugin = plugin;
         this.vectorStore = vectorStore;
         this.gemini = gemini;
+        this.embeddingService = embeddingService;
     }
 
     getViewType() {
@@ -38,7 +47,6 @@ export class SimilarNotesView extends ItemView {
     }
 
     public async updateForFile(file: TFile | null) {
-        // Use contentEl usually
         const container = this.contentEl;
         container.empty();
 
@@ -54,8 +62,7 @@ export class SimilarNotesView extends ItemView {
             // 1. Try to get cached vector from store
             let embedding = this.vectorStore.getVector(file.path);
 
-            // 2. Fallback to Gemini API if missing or if file was modified after indexing
-            // (Note: indexingDelayMs makes it possible for mtime to be higher than store entry mtime)
+            // 2. Fallback to API if missing
             if (!embedding) {
                 const content = await this.plugin.app.vault.read(file);
                 if (!content.trim()) {
@@ -64,18 +71,16 @@ export class SimilarNotesView extends ItemView {
                 }
 
                 logger.debug(`Cached vector not found for ${file.path}, embedding live...`);
-                // FIX: Use string literal for taskType
-                embedding = await this.gemini.embedText(content, {
-                    taskType: 'RETRIEVAL_DOCUMENT',
-                    title: file.basename
-                });
+                
+                // CHANGE: Use embeddingService instead of gemini.embedText
+                embedding = await this.embeddingService.embedDocument(content, file.basename);
             }
 
             const similar = this.vectorStore.findSimilar(
                 embedding,
-                this.plugin.settings.similarNotesLimit, // Limit
-                this.plugin.settings.minSimilarityScore, // Threshold
-                file.path // Exclude active file
+                this.plugin.settings.similarNotesLimit,
+                this.plugin.settings.minSimilarityScore,
+                file.path
             );
 
             loadingEl.remove();

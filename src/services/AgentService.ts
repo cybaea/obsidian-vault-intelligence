@@ -228,8 +228,6 @@ export class AgentService {
             }
 
             logger.info(`[VaultSearch] Starting search for: "${query}"`);
-
-            const taskType = 'RETRIEVAL_QUERY';
             
             // 1. Vector Search (Semantic)
             const embedding = await this.embeddingService.embedQuery(query);
