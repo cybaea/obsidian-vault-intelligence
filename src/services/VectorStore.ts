@@ -1,5 +1,6 @@
 import { TFile, Notice, Plugin, normalizePath } from "obsidian";
-import { IEmbeddingService } from "./IEmbeddingService"; // Import interface
+import { IEmbeddingService } from "./IEmbeddingService";
+import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
 
@@ -23,6 +24,7 @@ interface VectorIndex {
 export class VectorStore {
     private plugin: Plugin;
     private gemini: GeminiService;
+    private embeddingService: IEmbeddingService;
     private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
     private settings: VaultIntelligenceSettings; 
@@ -42,11 +44,11 @@ export class VectorStore {
     private similarNotesLimit: number;
     private isDirty = false;
 
-    constructor(plugin: Plugin, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
+    constructor(plugin: Plugin, gemini: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
-        this.embeddingService = embeddingService; 
+        this.gemini = gemini; 
+        this.embeddingService = embeddingService; // Injected
         this.settings = settings;
-        // ...
         
         this.index = {
             version: 1,

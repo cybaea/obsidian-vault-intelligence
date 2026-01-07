@@ -1,5 +1,6 @@
 import { IEmbeddingService } from "./IEmbeddingService";
 import { VectorStore } from "../services/VectorStore";
+import { GeminiService } from "./GeminiService";
 import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
 import { logger } from "../utils/logger";
