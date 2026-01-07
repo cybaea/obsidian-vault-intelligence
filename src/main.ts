@@ -1,6 +1,7 @@
 import { Plugin, WorkspaceLeaf, TFile, debounce, Menu } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
+import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
 import { VectorStore } from "./services/VectorStore";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
 import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
@@ -20,7 +21,8 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		// Initialize Services
 		this.geminiService = new GeminiService(this.settings);
-		this.vectorStore = new VectorStore(this, this.geminiService, this.settings);
+		const embeddingService = new GeminiEmbeddingService(this.geminiService, this.settings);
+		this.vectorStore = new VectorStore(this, this.geminiService, embeddingService, this.settings);
 		await this.vectorStore.loadVectors();
 
 		// Background scan for new/changed files
@@ -52,14 +54,16 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		// Register View
 		this.registerView(
-			SIMILAR_NOTES_VIEW_TYPE,
-			(leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService)
-		);
+            SIMILAR_NOTES_VIEW_TYPE,
+            // Update SimilarNotesView constructor signature in its file too!
+            (leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService, embeddingService)
+        );
 
-		this.registerView(
-			RESEARCH_CHAT_VIEW_TYPE,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore)
-		);
+        this.registerView(
+            RESEARCH_CHAT_VIEW_TYPE,
+            // Update ResearchChatView constructor signature in its file too!
+            (leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore, embeddingService)
+        );
 
 		// Activate View Command
 		this.addCommand({

@@ -1,5 +1,5 @@
 import { TFile, Notice, Plugin, normalizePath } from "obsidian";
-import { GeminiService } from "./GeminiService";
+import { IEmbeddingService } from "./IEmbeddingService"; // Import interface
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
 
@@ -42,20 +42,17 @@ export class VectorStore {
     private similarNotesLimit: number;
     private isDirty = false;
 
-    constructor(plugin: Plugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
+    constructor(plugin: Plugin, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
-        this.gemini = gemini;
+        this.embeddingService = embeddingService; 
         this.settings = settings;
-
-        this.baseDelayMs = settings.indexingDelayMs || 200;
-        this.currentDelayMs = this.baseDelayMs;
-        this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
-        this.similarNotesLimit = settings.similarNotesLimit ?? 5;
-
+        // ...
+        
         this.index = {
             version: 1,
-            embeddingModel: settings.embeddingModel,
-            dimensions: settings.embeddingDimension,
+            // CHANGE: Use service property instead of settings directly/gemini getter
+            embeddingModel: this.embeddingService.modelName,
+            dimensions: this.embeddingService.dimensions,
             files: {}
         };
     }
@@ -92,9 +89,8 @@ export class VectorStore {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
                 this.index = JSON.parse(indexStr) as VectorIndex;
 
-                // CHECK: Model Change OR Dimension Change
-                const modelChanged = this.index.embeddingModel !== this.gemini.getEmbeddingModelName();
-                const dimChanged = this.index.dimensions !== this.settings.embeddingDimension;
+                const modelChanged = this.index.embeddingModel !== this.embeddingService.modelName;
+                const dimChanged = this.index.dimensions !== this.embeddingService.dimensions;
 
                 if (modelChanged || dimChanged) {
                     const reason = modelChanged ? "Model changed" : "Dimension changed";
@@ -102,8 +98,9 @@ export class VectorStore {
                     
                     this.index = {
                         version: 1,
-                        embeddingModel: this.gemini.getEmbeddingModelName(),
-                        dimensions: this.settings.embeddingDimension,
+                        // CHANGE: Use embeddingService
+                        embeddingModel: this.embeddingService.modelName,
+                        dimensions: this.embeddingService.dimensions,
                         files: {}
                     };
                     this.vectors = new Float32Array(0);
@@ -116,10 +113,11 @@ export class VectorStore {
                 logger.info(`Loaded index for ${Object.keys(this.index.files).length} files.`);
             } catch (e) {
                 logger.error("Failed to load index.json", e);
+                // CHANGE: Fallback initialization now uses embeddingService
                 this.index = { 
                     version: 1, 
-                    embeddingModel: this.gemini.getEmbeddingModelName(), 
-                    dimensions: this.settings.embeddingDimension, 
+                    embeddingModel: this.embeddingService.modelName, 
+                    dimensions: this.embeddingService.dimensions, 
                     files: {} 
                 };
             }
@@ -362,10 +360,7 @@ export class VectorStore {
             logger.info(`Indexing: ${file.path}`);
 
             // Pass the selected title to Gemini for context as well
-            const embedding = await this.gemini.embedText(textToEmbed, {
-                taskType: 'RETRIEVAL_DOCUMENT',
-                title: file.basename // Keep basename here for API consistency or swap to displayTitle if you prefer
-            });
+            const embedding = await this.embeddingService.embedDocument(textToEmbed, file.basename);
 
             this.upsertVector(file.path, file.stat.mtime, embedding);
             void this.saveVectors(); 
