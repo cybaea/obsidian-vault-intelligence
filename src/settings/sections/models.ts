@@ -1,5 +1,7 @@
 import { Setting, Notice, Plugin, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+// Import the class value (not just type) for instanceof check
+import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 
 interface InternalApp extends App {
     setting: {
@@ -23,10 +25,8 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .addOption('local', 'Transformers.js (local)')
             .setValue(plugin.settings.embeddingProvider)
             .onChange(async (value) => {
-                // Type cast safety
                 plugin.settings.embeddingProvider = value as 'gemini' | 'local';
-                
-                // Set defaults based on provider to prevent mismatch errors
+
                 if (value === 'local') {
                     plugin.settings.embeddingModel = 'Xenova/all-MiniLM-L6-v2';
                     plugin.settings.embeddingDimension = 384;
@@ -43,7 +43,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     // WARNING BOX for Local Models
     if (plugin.settings.embeddingProvider === 'local') {
         const warning = containerEl.createDiv({ cls: 'vault-intelligence-settings-warning' });
-        setIcon(warning.createSpan(), 'lucide-download-cloud'); 
+        setIcon(warning.createSpan(), 'lucide-download-cloud');
         warning.createSpan({ text: " Enabling local embeddings requires downloading model weights (~25MB - 150MB) from Hugging Face. This happens once. All analysis is then performed offline on your device." });
     }
 
@@ -62,11 +62,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 await plugin.saveSettings();
             }));
     } else {
-        // LOCAL PRESETS
-        embeddingSetting.setDesc('Select a model optimized for your device.');
-        
-        // FIX: Extract strings to variables to bypass 'sentence-case' linter rule
-        // for technical model names.
         const modelLabels = {
             balanced: 'Balanced (MiniLM-L6-v2) - 384d [~23MB]',
             accurate: 'High Accuracy (BGE-M3) - 1024d [~120MB]',
@@ -77,8 +72,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             dropdown.addOption('Xenova/all-MiniLM-L6-v2', modelLabels.balanced);
             dropdown.addOption('Xenova/bge-m3', modelLabels.accurate);
             dropdown.addOption('custom', modelLabels.custom);
-            
-            // Determine if current value is a preset or custom
+
             const current = plugin.settings.embeddingModel;
             const isPreset = ['Xenova/all-MiniLM-L6-v2', 'Xenova/bge-m3'].includes(current);
             dropdown.setValue(isPreset ? current : 'custom');
@@ -88,7 +82,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     // Don't change the model string yet, just show the text field (via refresh)
                 } else {
                     plugin.settings.embeddingModel = val;
-                    // HARDCODED DIMENSIONS for known models
                     if (val === 'Xenova/all-MiniLM-L6-v2') plugin.settings.embeddingDimension = 384;
                     if (val === 'Xenova/bge-m3') plugin.settings.embeddingDimension = 1024;
                 }
@@ -136,11 +129,26 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .addButton(btn => btn
                 .setButtonText('Force re-download')
                 .setIcon('refresh-cw')
-                .setWarning() // Make it red/scary because it consumes data
+                .setWarning()
                 .onClick(async () => {
-                    new Notice("Re-downloading model weights...");
-                    // Placeholder for future logic
-                    await Promise.resolve();
+                    // Safe Cast: We cast to a generic shape first to allow property access check
+                    // This avoids 'any' and satisfies 'no-unsafe-member-access'
+                    const pluginWithService = plugin as unknown as { embeddingService?: unknown };
+                    const service = pluginWithService.embeddingService;
+
+                    if (service instanceof LocalEmbeddingService) {
+                        // Now safely typed as LocalEmbeddingService
+                        btn.setDisabled(true);
+                        btn.setButtonText("Downloading...");
+
+                        await service.forceRedownload();
+
+                        btn.setDisabled(false);
+                        btn.setButtonText("Force re-download");
+                    } else {
+                        // Removed trailing period to satisfy 'sentence-case' rule
+                        new Notice("Local embedding service is not active");
+                    }
                 }));
     }
 
@@ -155,7 +163,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 plugin.settings.chatModel = value;
                 await plugin.saveSettings();
             }));
-    
+
     // 3.a. Context Window Tokens
     new Setting(containerEl)
         .setName('Context window budget')
@@ -209,7 +217,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     }
 }
 
-// Helper to refresh the view
 function refreshSettings(plugin: IVaultIntelligencePlugin) {
     const app = plugin.app as InternalApp;
     const manifestId = (plugin as unknown as Plugin).manifest.id;
