@@ -55,6 +55,7 @@ The worker runs in a separate thread. To see its logs:
 If the model is corrupted or stuck, use the "Force Redownload" feature in settings. This clears the `transformers-cache` in Browser Cache Storage and restarts the worker.
 
 ## Suggestions for Next Steps
-1. **Quantization Support**: Investigate why some specialized models fail to find `.onnx` quantized files on the CDN and provide better local fallbacks.
-2. **Worker Pool**: For very high-throughput indexing, consider a pool of 2 workers, though memory pressure must be carefully monitored.
-3. **Progress Reporting**: Add a progress callback from the worker to the main thread during the ONNX `model()` call for better UI feedback during long inferences.
+1. **Text Chunking**: Currently, the entire document is sent as a single string. Implementing a chunking strategy (e.g., recursive character splitting or sentence-based) is critical for handling long notes without truncation.
+2. **Quantization Support**: Investigate why some specialized models fail to find `.onnx` quantized files on the CDN and provide better local fallbacks.
+3. **Worker Pool**: For very high-throughput indexing, consider a pool of 2 workers, though memory pressure must be carefully monitored.
+4. **Progress Reporting**: Add a progress callback from the worker to the main thread during the ONNX `model()` call for better UI feedback during long inferences.
