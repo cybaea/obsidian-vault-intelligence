@@ -1,10 +1,10 @@
-import { pipeline, env, PipelineType, FeatureExtractionPipeline } from '@xenova/transformers';
+import { pipeline, env, PipelineType } from '@xenova/transformers';
 
-// --- Environment Typing ---
+// --- 1. Strong Typing for Environment ---
 interface TransformersEnv {
     allowLocalModels: boolean;
     useBrowserCache: boolean;
-    useFS: boolean; // CRITICAL: This was missing
+    useFS: boolean;
     backends?: {
         onnx?: {
             wasm?: {
@@ -17,23 +17,39 @@ interface TransformersEnv {
     }
 }
 
+// --- 2. Strong Typing for Pipeline ---
+// We define the output shape to avoid 'any' errors on result.data
+interface PipelineOutput {
+    data: Float32Array | number[];
+    dims: number[];
+}
+
+// Define the signature of the extractor function
+interface FeatureExtractorPipeline {
+    (text: string | string[], options?: Record<string, unknown>): Promise<PipelineOutput>;
+}
+
 // Cast env for safe configuration
 const safeEnv = env as unknown as TransformersEnv;
 
-// 1. FORCE BROWSER MODE (The Fix)
-// Electron has 'fs' (file system) access, which confuses the library.
-// We must disable it so the library uses the WASM backend instead of trying native Node bindings.
+// --- 3. Configure Environment ---
+// Fix: "Unsafe member access .useFS" -> Now safe because of TransformersEnv
 safeEnv.useFS = false; 
 safeEnv.allowLocalModels = false;
 safeEnv.useBrowserCache = true;
 
-// 2. Configure Backend
-if (!safeEnv.backends) safeEnv.backends = {};
-if (!safeEnv.backends.onnx) safeEnv.backends.onnx = {};
-if (!safeEnv.backends.onnx.wasm) safeEnv.backends.onnx.wasm = {};
+// Initialize backends structure safely
+if (!safeEnv.backends) {
+    safeEnv.backends = {};
+}
+if (!safeEnv.backends.onnx) {
+    safeEnv.backends.onnx = {};
+}
+if (!safeEnv.backends.onnx.wasm) {
+    safeEnv.backends.onnx.wasm = {};
+}
 
-// 3. Explicit CDN Paths
-// We define the specific files to ensure no relative path resolution is attempted.
+// Explicit CDN Paths
 const CDN_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
 safeEnv.backends.onnx.wasm.wasmPaths = {
     'ort-wasm.wasm': `${CDN_URL}ort-wasm.wasm`,
@@ -42,10 +58,9 @@ safeEnv.backends.onnx.wasm.wasmPaths = {
     'ort-wasm-simd-threaded.wasm': `${CDN_URL}ort-wasm-simd-threaded.wasm`,
 };
 
-// 4. Compatibility Settings
-safeEnv.backends.onnx.wasm.numThreads = 1; // Prevent thread contention
-safeEnv.backends.onnx.wasm.simd = false;   // Disable SIMD to ensure broad hardware compatibility
-safeEnv.backends.onnx.wasm.proxy = false;  // Disable proxying inside the inline worker
+safeEnv.backends.onnx.wasm.numThreads = 1;
+safeEnv.backends.onnx.wasm.simd = false;
+safeEnv.backends.onnx.wasm.proxy = false;
 
 // --- Types ---
 interface EmbedMessage {
@@ -70,20 +85,30 @@ interface WorkerErrorResponse {
 // --- Pipeline Singleton ---
 class PipelineSingleton {
     static task: PipelineType = 'feature-extraction';
-    static instance: Promise<FeatureExtractionPipeline> | null = null;
+    static instance: Promise<FeatureExtractorPipeline> | null = null;
     static currentModel: string = '';
 
-    static async getInstance(model: string) {
+    static async getInstance(model: string): Promise<FeatureExtractorPipeline> {
         if (this.currentModel && this.currentModel !== model) {
             this.instance = null;
         }
 
         if (this.instance === null) {
             this.currentModel = model;
+            // Fix: Cast the result of pipeline() to our strongly typed interface
+            // This satisfies "Unsafe return" and "Unsafe assignment" errors
             this.instance = pipeline(this.task, model, {
-                // Optional: Progress callback could be added here
-            }) as Promise<FeatureExtractionPipeline>;
+                // progress_callback: (x: any) => console.log(x),
+            }) as unknown as Promise<FeatureExtractorPipeline>;
         }
+        
+        // FIX: Explicitly check for null to satisfy @typescript-eslint/no-misused-promises
+        // The linter complains about `if (!this.instance)` because checking the truthiness 
+        // of a Promise is ambiguous.
+        if (this.instance === null) {
+            throw new Error("Failed to create pipeline instance");
+        }
+
         return this.instance;
     }
 }
@@ -100,7 +125,7 @@ function isEmbedMessage(data: unknown): data is EmbedMessage {
     );
 }
 
-ctx.addEventListener('message', (event) => {
+ctx.addEventListener('message', (event: MessageEvent) => {
     void (async () => {
         const data = event.data as unknown;
         
@@ -109,14 +134,17 @@ ctx.addEventListener('message', (event) => {
         const { id, text, model = 'Xenova/all-MiniLM-L6-v2' } = data;
 
         try {
+            // Extractor is now typed as FeatureExtractorPipeline
             const extractor = await PipelineSingleton.getInstance(model);
             
+            // Output is now typed as PipelineOutput
             const output = await extractor(text, { 
                 pooling: 'mean', 
                 normalize: true 
             });
 
-            const vector = Array.from(output.data as Float32Array);
+            // output.data is known (Float32Array | number[]), so Array.from is safe
+            const vector = Array.from(output.data);
 
             const response: WorkerSuccessResponse = {
                 id,
