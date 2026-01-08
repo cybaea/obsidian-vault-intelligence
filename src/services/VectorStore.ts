@@ -27,12 +27,12 @@ export class VectorStore {
     private embeddingService: IEmbeddingService;
     private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
-    private settings: VaultIntelligenceSettings; 
+    private settings: VaultIntelligenceSettings;
     private consecutiveErrors = 0; // Circuit breaker
     private readonly MAX_ERRORS_BEFORE_BACKOFF = 5;
 
     // Data Store
-    private index: VectorIndex; 
+    private index: VectorIndex;
     private vectors: Float32Array = new Float32Array(0);
 
     // Concurrency Control
@@ -48,10 +48,10 @@ export class VectorStore {
 
     constructor(plugin: Plugin, gemini: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
-        this.gemini = gemini; 
+        this.gemini = gemini;
         this.embeddingService = embeddingService; // Injected
         this.settings = settings;
-        
+
         this.index = {
             version: 1,
             // CHANGE: Use service property instead of settings directly/gemini getter
@@ -99,7 +99,7 @@ export class VectorStore {
                 if (modelChanged || dimChanged) {
                     const reason = modelChanged ? "Model changed" : "Dimension changed";
                     logger.warn(`${reason}. Wiping index to rebuild.`);
-                    
+
                     this.index = {
                         version: 1,
                         // CHANGE: Use embeddingService
@@ -118,11 +118,11 @@ export class VectorStore {
             } catch (e) {
                 logger.error("Failed to load index.json", e);
                 // CHANGE: Fallback initialization now uses embeddingService
-                this.index = { 
-                    version: 1, 
-                    embeddingModel: this.embeddingService.modelName, 
-                    dimensions: this.embeddingService.dimensions, 
-                    files: {} 
+                this.index = {
+                    version: 1,
+                    embeddingModel: this.embeddingService.modelName,
+                    dimensions: this.embeddingService.dimensions,
+                    files: {}
                 };
             }
         }
@@ -132,11 +132,11 @@ export class VectorStore {
             try {
                 const buffer = await this.plugin.app.vault.adapter.readBinary(vectorsPath);
                 this.vectors = new Float32Array(buffer);
-                
+
                 // OPTIMIZATION: Normalize all loaded vectors immediately.
                 // This migrates old data to the new unit-vector standard.
                 this.normalizeAllVectors();
-                
+
                 logger.info(`Loaded vector buffer: ${this.vectors.length} floats.`);
             } catch (e) {
                 logger.error("Failed to load vectors.bin", e);
@@ -149,7 +149,7 @@ export class VectorStore {
     private normalizeAllVectors() {
         const dims = this.index.dimensions;
         const count = this.vectors.length / dims;
-        
+
         for (let i = 0; i < count; i++) {
             const start = i * dims;
             const end = start + dims;
@@ -187,8 +187,16 @@ export class VectorStore {
                 const indexPath = this.getDataPath(INDEX_FILE);
                 const vectorsPath = this.getDataPath(VECTORS_FILE);
 
+                const usedLength = Object.keys(this.index.files).length * this.index.dimensions;
+                const dataToSave = this.vectors.buffer.slice(0, usedLength * Float32Array.BYTES_PER_ELEMENT) as ArrayBuffer;
+
                 await this.plugin.app.vault.adapter.write(indexPath, JSON.stringify(this.index, null, 2));
-                await this.plugin.app.vault.adapter.writeBinary(vectorsPath, this.vectors.buffer as ArrayBuffer);
+                await this.plugin.app.vault.adapter.writeBinary(vectorsPath, dataToSave);
+
+                // Optional: Shrink in-memory buffer to fit
+                if (this.vectors.length > usedLength) {
+                    this.vectors = new Float32Array(dataToSave);
+                }
 
                 this.isDirty = false;
                 logger.debug("Vectors db saved.");
@@ -204,7 +212,7 @@ export class VectorStore {
             this.saveDebounceTimer = setTimeout(() => {
                 this.saveDebounceTimer = null;
                 void doSave();
-            }, 2000); 
+            }, 2000);
             this.activeTimers.add(this.saveDebounceTimer);
         }
     }
@@ -229,7 +237,7 @@ export class VectorStore {
 
         for (const file of files) {
             const entry = this.index.files[file.path];
-            
+
             const isNew = !entry;
             const isModified = entry && entry.mtime !== file.stat.mtime;
 
@@ -239,7 +247,7 @@ export class VectorStore {
                 } else if (isModified) {
                     logger.info(`[Scan] Queuing MODIFIED file: "${file.path}"`);
                 }
-                
+
                 this.enqueueIndex(file);
                 changedCount++;
             }
@@ -248,7 +256,11 @@ export class VectorStore {
         if (changedCount > 0) {
             logger.info(`Found ${changedCount} files to update/remove.`);
             new Notice(`Vault Intelligence: Updating ${changedCount} files...`);
-            if (pathsToDelete.length > 0) await this.saveVectors();
+
+            // Optimization: Only save once at the end of a bulk scan
+            // We use immediate=true for the very last one, or just let the debounce handle it.
+            // But we need to make sure we SAVE eventually.
+            // The processQueue will eventually call indexFileImmediate which calls saveVectors().
         } else {
             logger.info("Vault scan complete. No changes.");
         }
@@ -280,7 +292,7 @@ export class VectorStore {
             try {
                 await task();
                 // Success! Reset breaker.
-                this.consecutiveErrors = 0; 
+                this.consecutiveErrors = 0;
                 if (this.currentDelayMs > this.baseDelayMs) {
                     this.currentDelayMs = Math.max(this.baseDelayMs, this.currentDelayMs - 1000);
                 }
@@ -315,7 +327,7 @@ export class VectorStore {
 
         try {
             const content = await this.plugin.app.vault.read(file);
-            
+
             // 1. Get Metadata to optimize the embedding input
             const cache = this.plugin.app.metadataCache.getFileCache(file);
             let textToEmbed = content;
@@ -325,7 +337,7 @@ export class VectorStore {
                 if (cache.frontmatterPosition) {
                     const { end } = cache.frontmatterPosition;
                     const body = content.substring(end.offset).trim();
-                    
+
                     // 2. Construct Semantic Header
                     // PREFERENCE: Use YAML title if available, else filename
                     let displayTitle = file.basename;
@@ -340,8 +352,8 @@ export class VectorStore {
                     if (cache.frontmatter.aliases) {
                         // FIX: Explicitly cast 'any' to string | string[]
                         const rawAliases = cache.frontmatter.aliases as string | string[];
-                        const aliases = Array.isArray(rawAliases) 
-                            ? rawAliases.join(", ") 
+                        const aliases = Array.isArray(rawAliases)
+                            ? rawAliases.join(", ")
                             : rawAliases;
                         metaString += `\nAliases: ${aliases}`;
                     }
@@ -350,8 +362,8 @@ export class VectorStore {
                     if (cache.frontmatter.tags) {
                         // FIX: Explicitly cast 'any' to string | string[]
                         const rawTags = cache.frontmatter.tags as string | string[];
-                        const tags = Array.isArray(rawTags) 
-                            ? rawTags.join(", ") 
+                        const tags = Array.isArray(rawTags)
+                            ? rawTags.join(", ")
                             : rawTags;
                         metaString += `\nTags: ${tags}`;
                     }
@@ -368,7 +380,7 @@ export class VectorStore {
                 logger.debug(`[Index] File effectively empty: "${file.path}". Marking as indexed (zero-vector).`);
                 const zeroEmbedding = new Array<number>(this.index.dimensions).fill(0);
                 this.upsertVector(file.path, file.stat.mtime, zeroEmbedding);
-                void this.saveVectors(); 
+                void this.saveVectors();
                 return;
             }
 
@@ -378,7 +390,7 @@ export class VectorStore {
             const embedding = await this.embeddingService.embedDocument(textToEmbed, file.basename);
 
             this.upsertVector(file.path, file.stat.mtime, embedding);
-            void this.saveVectors(); 
+            void this.saveVectors();
 
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
@@ -408,13 +420,21 @@ export class VectorStore {
         if (entry) {
             const start = entry.id * this.index.dimensions;
             this.vectors.set(embedding, start);
-            entry.mtime = mtime; 
+            entry.mtime = mtime;
         } else {
             const currentCount = this.vectors.length / this.index.dimensions;
-            const newVectors = new Float32Array(this.vectors.length + this.index.dimensions);
-            newVectors.set(this.vectors);
-            newVectors.set(embedding, this.vectors.length);
-            this.vectors = newVectors;
+            const newCount = currentCount + 1;
+
+            // Optimization: Grow the buffer in chunks to reduce O(N^2) churn
+            if (this.vectors.length < newCount * this.index.dimensions) {
+                const growthFactor = 50; // Grow by 50 vectors at a time
+                const newSize = (currentCount + growthFactor) * this.index.dimensions;
+                const newVectors = new Float32Array(newSize);
+                newVectors.set(this.vectors);
+                this.vectors = newVectors;
+            }
+
+            this.vectors.set(embedding, currentCount * this.index.dimensions);
 
             this.index.files[path] = {
                 id: currentCount,
@@ -435,11 +455,11 @@ export class VectorStore {
         this.isDirty = true;
 
         const newVectors = new Float32Array(this.vectors.length - this.index.dimensions);
-        
+
         if (idToRemove > 0) {
             newVectors.set(this.vectors.subarray(0, idToRemove * this.index.dimensions), 0);
         }
-        
+
         const afterStart = (idToRemove + 1) * this.index.dimensions;
         if (afterStart < this.vectors.length) {
             newVectors.set(this.vectors.subarray(afterStart), idToRemove * this.index.dimensions);
@@ -474,7 +494,7 @@ export class VectorStore {
             this.isBackingOff = false;
             logger.info("Resuming queue after backoff.");
             void this.processQueue();
-        }, 60000); 
+        }, 60000);
         this.activeTimers.add(timer);
     }
 
@@ -489,7 +509,7 @@ export class VectorStore {
         this.activeTimers.clear();
         this.requestQueue = [];
         this.activeRequests = 0;
-        this.isBackingOff = true; 
+        this.isBackingOff = true;
     }
 
     public getVector(path: string): number[] | null {
@@ -518,7 +538,7 @@ export class VectorStore {
         for (let i = 0; i < count; i++) {
             const start = i * this.index.dimensions;
             const vec = this.vectors.subarray(start, start + this.index.dimensions);
-            
+
             // OPTIMIZATION: Use fast dot product since both vectors are normalized
             const score = this.dotProduct(query, vec);
 

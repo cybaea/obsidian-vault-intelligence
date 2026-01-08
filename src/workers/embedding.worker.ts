@@ -1,4 +1,4 @@
-import { pipeline, env, PipelineType } from '@xenova/transformers';
+import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedTokenizer, PreTrainedModel } from '@xenova/transformers';
 
 // --- 1. Strong Typing for Environment ---
 interface TransformersEnv {
@@ -34,7 +34,7 @@ const safeEnv = env as unknown as TransformersEnv;
 
 // --- 3. Configure Environment ---
 // Fix: "Unsafe member access .useFS" -> Now safe because of TransformersEnv
-safeEnv.useFS = false; 
+safeEnv.useFS = false;
 safeEnv.allowLocalModels = false;
 safeEnv.useBrowserCache = true;
 
@@ -95,21 +95,107 @@ class PipelineSingleton {
 
         if (this.instance === null) {
             this.currentModel = model;
-            // Fix: Cast the result of pipeline() to our strongly typed interface
-            // This satisfies "Unsafe return" and "Unsafe assignment" errors
-            this.instance = pipeline(this.task, model, {
-                // progress_callback: (x: any) => console.log(x),
-            }) as unknown as Promise<FeatureExtractorPipeline>;
-        }
-        
-        // FIX: Explicitly check for null to satisfy @typescript-eslint/no-misused-promises
-        // The linter complains about `if (!this.instance)` because checking the truthiness 
-        // of a Promise is ambiguous.
-        if (this.instance === null) {
-            throw new Error("Failed to create pipeline instance");
+            // Create a custom loader that handles retries for non-quantized models
+            this.instance = this.loadPipeline(model);
         }
 
         return this.instance;
+    }
+
+    private static async loadPipeline(model: string): Promise<FeatureExtractorPipeline> {
+        // SPECIAL CASE: Model2Vec models (like potion) require manual offsets in transformers.js currently
+        if (model.includes('potion') || model.includes('model2vec')) {
+            return this.loadModel2Vec(model);
+        }
+
+        try {
+            // 1. Try default load (quantized: true by default)
+            return await pipeline(this.task, model) as unknown as FeatureExtractorPipeline;
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+
+            // 2. If it fails because the quantized file is missing, retry with quantized: false
+            if (errorMessage.includes("Could not locate file") || errorMessage.includes("404")) {
+                console.warn(`[Worker] Quantized model not found for ${model}. Retrying with unquantized weights...`);
+                try {
+                    return await pipeline(this.task, model, {
+                        quantized: false
+                    }) as unknown as FeatureExtractorPipeline;
+                } catch (retryErr) {
+                    console.error(`[Worker] Failed to load unquantized model for ${model}:`, retryErr);
+                    throw retryErr;
+                }
+            }
+
+            throw err;
+        }
+    }
+
+    /**
+     * Specialized loader for Model2Vec models that require manual offset calculation.
+     */
+    private static async loadModel2Vec(modelName: string): Promise<FeatureExtractorPipeline> {
+        console.debug(`[Worker] Loading Model2Vec specialized pipeline for: ${modelName}`);
+
+        // We load tokenizer and model separately
+        const tokenizer = await AutoTokenizer.from_pretrained(modelName) as PreTrainedTokenizer;
+
+        let model: PreTrainedModel;
+        try {
+            model = await AutoModel.from_pretrained(modelName) as PreTrainedModel;
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            if (errorMessage.includes("Could not locate file") || errorMessage.includes("404")) {
+                console.warn(`[Worker] Quantized model not found for ${modelName}. Retrying with unquantized weights...`);
+                model = await AutoModel.from_pretrained(modelName, {
+                    quantized: false
+                }) as PreTrainedModel;
+            } else {
+                throw err;
+            }
+        }
+
+        // Return a function that implements the FeatureExtractorPipeline interface
+        return (async (text: string | string[]) => {
+            const texts = Array.isArray(text) ? text : [text];
+
+            // Tokenize
+            const { input_ids } = await tokenizer(texts, {
+                add_special_tokens: false,
+                return_tensor: false
+            }) as { input_ids: number[][] };
+
+            // Calculate offsets for Model2Vec
+            // offsets = [0, ...cumsum(input_ids.slice(0, -1).map(x => x.length))]
+            const offsets: number[] = [0];
+            for (let i = 0; i < input_ids.length - 1; ++i) {
+                const length = input_ids[i]?.length ?? 0;
+                offsets.push(offsets[offsets.length - 1]! + length);
+            }
+
+            const flattened_input_ids = input_ids.flat();
+            console.debug(`[Worker] Text length: ${texts.reduce((a, b) => a + b.length, 0)}, Tokens: ${flattened_input_ids.length}, Batches: ${input_ids.length}`);
+
+            const model_inputs = {
+                input_ids: new Tensor('int64', new BigInt64Array(flattened_input_ids.map(BigInt)), [flattened_input_ids.length]),
+                offsets: new Tensor('int64', new BigInt64Array(offsets.map(BigInt)), [offsets.length]),
+            };
+
+            // Run model
+            // Model2Vec models in transformers.js have 'embeddings' in output
+            const output = await model(model_inputs) as Record<string, Tensor>;
+            const embeddings = output['embeddings'];
+            if (!embeddings) {
+                throw new Error("Model2Vec output missing 'embeddings' tensor");
+            }
+
+            console.debug(`[Worker] Successfully generated Model2Vec embeddings. Dims: ${embeddings.dims}`);
+
+            return {
+                data: Array.from(embeddings.data as Float32Array),
+                dims: embeddings.dims
+            } as PipelineOutput;
+        }) as unknown as FeatureExtractorPipeline;
     }
 }
 
@@ -128,7 +214,7 @@ function isEmbedMessage(data: unknown): data is EmbedMessage {
 ctx.addEventListener('message', (event: MessageEvent) => {
     void (async () => {
         const data = event.data as unknown;
-        
+
         if (!isEmbedMessage(data)) return;
 
         const { id, text, model = 'Xenova/all-MiniLM-L6-v2' } = data;
@@ -136,15 +222,16 @@ ctx.addEventListener('message', (event: MessageEvent) => {
         try {
             // Extractor is now typed as FeatureExtractorPipeline
             const extractor = await PipelineSingleton.getInstance(model);
-            
+
             // Output is now typed as PipelineOutput
-            const output = await extractor(text, { 
-                pooling: 'mean', 
-                normalize: true 
+            const output = await extractor(text, {
+                pooling: 'mean',
+                normalize: true
             });
 
             // output.data is known (Float32Array | number[]), so Array.from is safe
             const vector = Array.from(output.data);
+            console.debug(`[Worker] Sending success response for ID ${id}. Vector length: ${vector.length}`);
 
             const response: WorkerSuccessResponse = {
                 id,
@@ -155,7 +242,7 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         } catch (err) {
             console.error("[Worker] Error:", err);
-            
+
             const response: WorkerErrorResponse = {
                 id,
                 status: 'error',
@@ -165,3 +252,5 @@ ctx.addEventListener('message', (event: MessageEvent) => {
         }
     })();
 });
+// --- Export for TypeScript ---
+export default {} as unknown as new (options?: WorkerOptions) => Worker;

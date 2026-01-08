@@ -10,7 +10,7 @@ export default tseslint.config(
 			globals: {
 				...globals.browser,
 				// FIX: Tell ESLint this global exists (injected by esbuild)
-				TRANSFORMERS_VERSION: "readonly", 
+				TRANSFORMERS_VERSION: "readonly",
 			},
 			parserOptions: {
 				projectService: {
@@ -56,6 +56,8 @@ export default tseslint.config(
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
-		"worker.js" 
+		"worker.js",
+		"scripts/**",
+		"src/**/*.d.ts"
 	]),
 );

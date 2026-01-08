@@ -3,9 +3,6 @@ import { Plugin, Notice } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
-// FIX: Use @ts-expect-error because the source file has no export (to run in browser),
-// but the build plugin generates a default export (the Worker constructor).
-// @ts-expect-error: Build plugin auto-generates default export for workers.
 import EmbeddingWorker from "../workers/embedding.worker";
 
 interface WorkerMessage {
@@ -15,8 +12,6 @@ interface WorkerMessage {
     error?: string;
 }
 
-// Define the constructor type matching the worker module
-type EmbeddingWorkerConstructor = new (options?: WorkerOptions) => Worker;
 
 export class LocalEmbeddingService implements IEmbeddingService {
     private plugin: Plugin;
@@ -81,11 +76,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
         try {
             // MAGIC LINE: Just instantiate it like a class
-            const WorkerClass = EmbeddingWorker as unknown as EmbeddingWorkerConstructor;
-            this.worker = new WorkerClass({ name: 'VaultIntelligenceWorker' });
+            const instance = new EmbeddingWorker({ name: 'VaultIntelligenceWorker' });
+            this.worker = instance;
 
-            this.worker.onmessage = (e) => this._onMessage(e);
-            this.worker.onerror = (e) => {
+            instance.onmessage = (e: MessageEvent) => this._onMessage(e);
+            instance.onerror = (e: ErrorEvent) => {
                 logger.error("[LocalEmbedding] Worker Error:", e);
                 new Notice("Local worker crashed.");
             };

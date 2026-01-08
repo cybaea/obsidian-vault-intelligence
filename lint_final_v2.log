@@ -1,0 +1,11 @@
+
+> obsidian-vault-intelligence@1.4.0 lint
+> eslint .
+
+
+/home/allane/Code/GitHub/obsidian-vault-intelligence/src/workers/embedding.worker.ts
+  144:43  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+✖ 1 problem (1 error, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

@@ -1,0 +1,16 @@
+
+> obsidian-vault-intelligence@1.4.0 lint
+> eslint .
+
+
+/home/allane/Code/GitHub/obsidian-vault-intelligence/src/workers/embedding.worker.ts
+  138:9   error  Unexpected console statement. Only these console methods are allowed: warn, error, debug  no-console
+  144:36  error  This assertion is unnecessary since it does not change the type of the expression         @typescript-eslint/no-unnecessary-type-assertion
+  173:19  error  Unsafe assignment of an `any` value                                                       @typescript-eslint/no-unsafe-assignment
+  176:45  error  Unsafe member access .data on an `any` value                                              @typescript-eslint/no-unsafe-member-access
+  177:17  error  Unsafe assignment of an `any` value                                                       @typescript-eslint/no-unsafe-assignment
+  177:34  error  Unsafe member access .dims on an `any` value                                              @typescript-eslint/no-unsafe-member-access
+
+✖ 6 problems (6 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
