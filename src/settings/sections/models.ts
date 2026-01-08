@@ -9,6 +9,20 @@ interface InternalApp extends App {
     };
 }
 
+// Model Defaults
+export const MODELS = {
+    SMALL: 'MinishLab/potion-base-8M',
+    BALANCED: 'Xenova/bge-small-en-v1.5',
+    ADVANCED: 'Xenova/nomic-embed-text-v1.5'
+};
+
+export const MODEL_LABELS = {
+    SMALL: 'Small (Potion-8M) - 256d [~15MB]',
+    BALANCED: 'Balanced (BGE-Small) - 384d [~30MB]',
+    ADVANCED: 'Advanced (Nomic-Embed) - 768d [~130MB]',
+    CUSTOM: 'Custom (HuggingFace ID)...'
+};
+
 export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Models').setHeading();
 
@@ -60,32 +74,32 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .onChange(async (value) => {
                 plugin.settings.embeddingModel = value;
                 await plugin.saveSettings();
+                await plugin.saveSettings();
             }));
     } else {
-        const modelLabels = {
-            balanced: 'Balanced (MiniLM-L6-v2) - 384d [~23MB]',
-            accurate: 'High Accuracy (BGE-M3) - 1024d [~120MB]',
-            custom: 'Custom (HuggingFace ID)...'
-        };
-
         embeddingSetting.addDropdown(dropdown => {
-            dropdown.addOption('Xenova/all-MiniLM-L6-v2', modelLabels.balanced);
-            dropdown.addOption('Xenova/bge-m3', modelLabels.accurate);
-            dropdown.addOption('custom', modelLabels.custom);
+            dropdown.addOption(MODELS.SMALL, MODEL_LABELS.SMALL);
+            dropdown.addOption(MODELS.BALANCED, MODEL_LABELS.BALANCED);
+            dropdown.addOption(MODELS.ADVANCED, MODEL_LABELS.ADVANCED);
+            dropdown.addOption('custom', MODEL_LABELS.CUSTOM);
 
             const current = plugin.settings.embeddingModel;
-            const isPreset = ['Xenova/all-MiniLM-L6-v2', 'Xenova/bge-m3'].includes(current);
+            const isPreset = Object.values(MODELS).includes(current);
             dropdown.setValue(isPreset ? current : 'custom');
 
             dropdown.onChange(async (val) => {
-                if (val === 'custom') {
-                    // Don't change the model string yet, just show the text field (via refresh)
-                } else {
+                if (val !== 'custom') {
                     plugin.settings.embeddingModel = val;
-                    if (val === 'Xenova/all-MiniLM-L6-v2') plugin.settings.embeddingDimension = 384;
-                    if (val === 'Xenova/bge-m3') plugin.settings.embeddingDimension = 1024;
+                    if (val === MODELS.SMALL) plugin.settings.embeddingDimension = 256;
+                    if (val === MODELS.BALANCED) plugin.settings.embeddingDimension = 384;
+                    if (val === MODELS.ADVANCED) plugin.settings.embeddingDimension = 768;
+
+                    await plugin.saveSettings();
+                    // Trigger Re-index check automatically
+                    // Note: We might want to warn the user first, but the implementation plan says "Update onChange to call reindexVault"
+                    // Ideally we'd show a modal confirmation, but for now we'll rely on the "Re-index" button or do it if they confirm.
+                    // For safety, let's just refresh settings and let them click "Re-index" or "Download".
                 }
-                await plugin.saveSettings();
                 refreshSettings(plugin);
             });
         });
@@ -94,7 +108,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     // --- 2a. Custom Model Fields (Only if Local + Custom) ---
     const isLocal = plugin.settings.embeddingProvider === 'local';
     const currentModel = plugin.settings.embeddingModel;
-    const isCustom = isLocal && !['Xenova/all-MiniLM-L6-v2', 'Xenova/bge-m3'].includes(currentModel);
+    const isCustom = isLocal && !Object.values(MODELS).includes(currentModel);
 
     if (isCustom) {
         new Setting(containerEl)
@@ -105,6 +119,30 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 .onChange(async (value) => {
                     plugin.settings.embeddingModel = value;
                     await plugin.saveSettings();
+                }))
+            .addButton(btn => btn
+                .setButtonText("Validate")
+                .onClick(async () => {
+                    btn.setDisabled(true);
+                    btn.setButtonText("Checking...");
+
+                    // Import dynamically to avoid circular dependencies if any, or just direct import
+                    const { validateModel } = await import("../../utils/validation");
+                    const result = await validateModel(plugin.settings.embeddingModel);
+
+                    if (result.valid) {
+                        new Notice(`Model Valid! ${result.recommendedDims ? `Dims: ${result.recommendedDims}` : ''}`);
+                        if (result.recommendedDims) {
+                            plugin.settings.embeddingDimension = result.recommendedDims;
+                            await plugin.saveSettings();
+                            refreshSettings(plugin);
+                        }
+                    } else {
+                        new Notice(`Invalid Model: ${result.reason}`, 5000);
+                    }
+
+                    btn.setDisabled(false);
+                    btn.setButtonText("Validate");
                 }));
 
         new Setting(containerEl)
@@ -148,6 +186,29 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     } else {
                         // Removed trailing period to satisfy 'sentence-case' rule
                         new Notice("Local embedding service is not active");
+                    }
+                }));
+
+        new Setting(containerEl)
+            .setName('Re-index vault')
+            .setDesc('Clear existing embeddings and re-scan the vault. Required if you change models.')
+            .addButton(btn => btn
+                .setButtonText('Re-index vault')
+                .setTooltip('Wipes all vector data and starts fresh')
+                .onClick(async () => {
+                    if (btn.buttonEl.textContent === 'Re-index vault') {
+                        btn.setButtonText('Confirm re-index?');
+                        btn.setWarning();
+                        setTimeout(() => {
+                            if (btn.buttonEl.textContent === 'Confirm re-index?') {
+                                btn.setButtonText('Re-index vault');
+                                btn.buttonEl.classList.remove('mod-warning');
+                            }
+                        }, 5000);
+                    } else {
+                        await plugin.vectorStore.reindexVault();
+                        btn.setButtonText('Re-index vault');
+                        btn.buttonEl.classList.remove('mod-warning');
                     }
                 }));
     }

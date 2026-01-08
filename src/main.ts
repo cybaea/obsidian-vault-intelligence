@@ -45,7 +45,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 		await this.vectorStore.loadVectors();
 
 		// ... (Rest of the file remains the same: Event listeners, Ribbon, Commands) ...
-		
+
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(() => {
 			void this.vectorStore.scanVault();
@@ -162,37 +162,56 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 	onunload() {
 		if (this.vectorStore) this.vectorStore.destroy();
-		
+
 		// Cleanup Local Worker if active
 		if (this.embeddingService instanceof LocalEmbeddingService) {
 			this.embeddingService.terminate();
 		}
-		
+
 		logger.info("Vault Intelligence Plugin Unloaded");
 	}
 
-    // ... (rest of class: loadSettings, saveSettings, activateView) ...
-    async loadSettings() {
+	// ... (rest of class: loadSettings, saveSettings, activateView) ...
+	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
+
+		// Sanity check: Ensure dimensions match presets if using a local provider
+		// This fixes "poisoned" settings where a model change didn't update the dimension
+		if (this.settings.embeddingProvider === 'local') {
+			const { MODELS } = await import("./settings/sections/models");
+			if (this.settings.embeddingModel === MODELS.SMALL && this.settings.embeddingDimension !== 256) {
+				logger.warn(`Fixing stale dimension for Small model: ${this.settings.embeddingDimension} -> 256`);
+				this.settings.embeddingDimension = 256;
+				await this.saveData(this.settings);
+			} else if (this.settings.embeddingModel === MODELS.BALANCED && this.settings.embeddingDimension !== 384) {
+				logger.warn(`Fixing stale dimension for Balanced model: ${this.settings.embeddingDimension} -> 384`);
+				this.settings.embeddingDimension = 384;
+				await this.saveData(this.settings);
+			} else if (this.settings.embeddingModel === MODELS.ADVANCED && this.settings.embeddingDimension !== 768) {
+				logger.warn(`Fixing stale dimension for Advanced model: ${this.settings.embeddingDimension} -> 768`);
+				this.settings.embeddingDimension = 768;
+				await this.saveData(this.settings);
+			}
+		}
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
-		
+
 		// Note: We don't hot-swap embedding services yet. 
 		// The settings tab warns the user to restart if they change providers.
-		
+
 		if (this.vectorStore) {
 			this.vectorStore.updateSettings(this.settings);
 			// Only scan if not currently using local service (which might be initializing)
-            // or better, just let the next restart handle big changes
-			// void this.vectorStore.scanVault(); 
+			// or better, just let the next restart handle big changes
+			void this.vectorStore.scanVault();
 		}
 	}
 
-    async activateView(viewType: string) {
+	async activateView(viewType: string) {
 		const { workspace } = this.app;
 
 		let leaf: WorkspaceLeaf | null = null;

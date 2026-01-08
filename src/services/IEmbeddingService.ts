@@ -22,5 +22,5 @@ export interface IEmbeddingService {
      * @param text - The full text content to embed.
      * @param title - Optional title to provide additional context to the model.
      */
-    embedDocument(text: string, title?: string): Promise<number[]>;
+    embedDocument(text: string, title?: string): Promise<number[][]>;
 }

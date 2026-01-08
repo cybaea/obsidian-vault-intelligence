@@ -15,9 +15,9 @@ export class SimilarNotesView extends ItemView {
 
     // Update Constructor
     constructor(
-        leaf: WorkspaceLeaf, 
-        plugin: VaultIntelligencePlugin, 
-        vectorStore: VectorStore, 
+        leaf: WorkspaceLeaf,
+        plugin: VaultIntelligencePlugin,
+        vectorStore: VectorStore,
         gemini: GeminiService,
         embeddingService: IEmbeddingService // Add Argument
     ) {
@@ -71,9 +71,15 @@ export class SimilarNotesView extends ItemView {
                 }
 
                 logger.debug(`Cached vector not found for ${file.path}, embedding live...`);
-                
+
                 // CHANGE: Use embeddingService instead of gemini.embedText
-                embedding = await this.embeddingService.embedDocument(content, file.basename);
+                const multiVector = await this.embeddingService.embedDocument(content, file.basename);
+                embedding = multiVector.length > 0 ? multiVector[0]! : null;
+            }
+
+            if (!embedding) {
+                loadingEl.setText("Failed to generate embedding.");
+                return;
             }
 
             const similar = this.vectorStore.findSimilar(
@@ -100,7 +106,7 @@ export class SimilarNotesView extends ItemView {
                     text: `${scorePercent}%`,
                     cls: "similar-notes-score" // use built-in style or similar
                 });
-                
+
                 const link = item.createEl("a", {
                     text: doc.path.split('/').pop() || doc.path,
                     cls: "similar-notes-link"

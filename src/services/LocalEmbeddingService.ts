@@ -8,7 +8,7 @@ import EmbeddingWorker from "../workers/embedding.worker";
 interface WorkerMessage {
     id: number;
     status: 'success' | 'error';
-    output?: number[];
+    output?: number[][];
     error?: string;
 }
 
@@ -19,7 +19,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
     private worker: Worker | null = null;
 
     private messageId = 0;
-    private pendingRequests = new Map<number, { resolve: (val: number[]) => void, reject: (err: unknown) => void }>();
+    private pendingRequests = new Map<number, { resolve: (val: number[][]) => void, reject: (err: unknown) => void }>();
 
     constructor(plugin: Plugin, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
@@ -107,11 +107,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
         }
     }
 
-    private async runTask(text: string): Promise<number[]> {
+    private async runTask(text: string): Promise<number[][]> {
         await this.initialize();
         if (!this.worker) throw new Error("Worker not active");
 
-        return new Promise<number[]>((resolve, reject) => {
+        return new Promise<number[][]>((resolve, reject) => {
             const id = this.messageId++;
             this.pendingRequests.set(id, { resolve, reject });
 
@@ -125,10 +125,13 @@ export class LocalEmbeddingService implements IEmbeddingService {
     }
 
     async embedQuery(text: string): Promise<number[]> {
-        return this.runTask(text);
+        const vectors = await this.runTask(text);
+        // Queries should be single chunk. If multiple, take first? 
+        // Or average? taking first is safer for now.
+        return vectors[0] || [];
     }
 
-    async embedDocument(text: string, title?: string): Promise<number[]> {
+    async embedDocument(text: string, title?: string): Promise<number[][]> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
         return this.runTask(content);
     }

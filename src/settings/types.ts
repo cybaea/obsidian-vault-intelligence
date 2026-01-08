@@ -6,7 +6,7 @@ export type EmbeddingProvider = 'gemini' | 'local';
 export interface VaultIntelligenceSettings {
     googleApiKey: string;
     // New: Provider Selector
-    embeddingProvider: EmbeddingProvider; 
+    embeddingProvider: EmbeddingProvider;
     embeddingModel: string;
     embeddingDimension: number;
     chatModel: string;
@@ -46,16 +46,16 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingProvider: 'gemini',
     embeddingModel: 'gemini-embedding-001',
     embeddingDimension: 768,
-    chatModel: 'gemini-3-flash-preview', 
+    chatModel: 'gemini-3-flash-preview',
     groundingModel: 'gemini-2.5-flash-lite',
-    codeModel: 'gemini-3-flash-preview', 
-    enableCodeExecution: false, 
+    codeModel: 'gemini-3-flash-preview',
+    enableCodeExecution: false,
     contextWindowTokens: 200000,
     indexingDelayMs: 200,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,
     vaultSearchResultsLimit: 25,
-    maxAgentSteps: 5, 
+    maxAgentSteps: 5,
     systemInstruction: DEFAULT_SYSTEM_PROMPT,
     geminiRetries: 10,
     logLevel: LogLevel.WARN
@@ -65,4 +65,7 @@ export interface IVaultIntelligencePlugin {
     app: App;
     settings: VaultIntelligenceSettings;
     saveSettings(): Promise<void>;
+    vectorStore: {
+        reindexVault(): Promise<void>;
+    };
 }

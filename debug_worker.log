@@ -1,8 +1,0 @@
-Starting log capture...
-Found 4 targets
-Found 2 blob workers
-Connecting to worker 0: blob:app://obsidian.md/f5ab23ab-c161-4994-a981-1c0cf64d3493
-Connecting to worker 1: blob:app://obsidian.md/ddc2bf7e-6705-4cd2-a9ef-dfe5b401e64f
-WS Open for worker 0
-WS Open for worker 1
-Stopping log capture after 60s...

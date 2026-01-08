@@ -25,10 +25,12 @@ export class GeminiEmbeddingService implements IEmbeddingService {
         });
     }
 
-    async embedDocument(text: string, title?: string): Promise<number[]> {
-        return this.gemini.embedText(text, {
+    async embedDocument(text: string, title?: string): Promise<number[][]> {
+        // The Gemini API handles long text/chunking internally.
+        const vector = await this.gemini.embedText(text, {
             taskType: "RETRIEVAL_DOCUMENT",
             title: title
         });
+        return [vector];
     }
 }

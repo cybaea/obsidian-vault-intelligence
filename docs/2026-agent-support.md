@@ -126,4 +126,9 @@ We should test the following to ensure the plugin works as expected:
     - Open the plugin settings and change the model. This should trigger a re-embedding of the documents.
 5. Add additional tests for the entire UI and process flow.
 
+## Questions
+
+- Do we need a warning for mobile and tablet users?
+- How do we handle memory and compute constraints and -failures gracefully?
+
 
