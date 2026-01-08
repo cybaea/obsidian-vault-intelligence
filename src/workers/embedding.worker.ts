@@ -1,4 +1,4 @@
-import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedTokenizer, PreTrainedModel } from '@xenova/transformers';
+import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
 
 // --- 1. Strong Typing for Environment ---
 interface TransformersEnv {
@@ -138,18 +138,18 @@ class PipelineSingleton {
         console.debug(`[Worker] Loading Model2Vec specialized pipeline for: ${modelName}`);
 
         // We load tokenizer and model separately
-        const tokenizer = await AutoTokenizer.from_pretrained(modelName) as PreTrainedTokenizer;
+        const tokenizer = await AutoTokenizer.from_pretrained(modelName);
 
         let model: PreTrainedModel;
         try {
-            model = await AutoModel.from_pretrained(modelName) as PreTrainedModel;
+            model = await AutoModel.from_pretrained(modelName);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             if (errorMessage.includes("Could not locate file") || errorMessage.includes("404")) {
                 console.warn(`[Worker] Quantized model not found for ${modelName}. Retrying with unquantized weights...`);
                 model = await AutoModel.from_pretrained(modelName, {
                     quantized: false
-                }) as PreTrainedModel;
+                });
             } else {
                 throw err;
             }
@@ -189,7 +189,7 @@ class PipelineSingleton {
                 throw new Error("Model2Vec output missing 'embeddings' tensor");
             }
 
-            console.debug(`[Worker] Successfully generated Model2Vec embeddings. Dims: ${embeddings.dims}`);
+            console.debug(`[Worker] Successfully generated Model2Vec embeddings. Dims: ${JSON.stringify(embeddings.dims)}`);
 
             return {
                 data: Array.from(embeddings.data as Float32Array),

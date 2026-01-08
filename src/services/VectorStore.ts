@@ -217,7 +217,7 @@ export class VectorStore {
         }
     }
 
-    public async scanVault(fullScan = false) {
+    public scanVault(fullScan = false) {
         if (!this.gemini.isReady()) {
             logger.warn("Gemini Service not ready. Skipping vault scan.");
             return;
