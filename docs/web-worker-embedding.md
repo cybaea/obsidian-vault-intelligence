@@ -42,10 +42,10 @@ Loading large models or indexing thousands of files can pressure the 4GB V8 heap
 
 ### Connecting to the Worker
 The worker runs in a separate thread. To see its logs:
-1. Launch Obsidian with remote debugging:
+1. Launch Obsidian with remote debugging (use a random port number; we show 9223 below for example purposes):
    ```bash
    # Example for Flatpak
-   flatpak run md.obsidian.Obsidian --remote-debugging-port=9223
+   flatpak run md.obsidian.Obsidian --remote-debugging-port=9223 --remote-allow-origins=*
    ```
 2. In your browser, navigate to `http://localhost:9223`.
 3. Find the entry labeled `blob:app://obsidian.md/...` (this is the worker).

@@ -99,10 +99,17 @@ This is an **incomplete** list of changes to make:
 1. Change the current model selection to be a dropdown of the three models listed above and a custom model option.
 2. If custom model is selected, show a text input for the model identifier. Validate the model identifier using a function similar in spirit to the function above. If it is invalid, show an error message.
 3. Make sure that we use the right tokeniser for the model.
-4. Make sure we store the model identifier in the `data/index.json` file so we can re-embed the documents when it changes.
-5. Make sure we re-embed the documents when the model changes in the settings.
-6. Add a button to re-embed the documents.
-7. Add a button to re-download the model. If it has changed, we should re-embed the documents.
+    - You need the AutoTokenizer class. This downloads the generic tokenizer.json file associated with your model (about 500KB - 1MB) and calculates the exact IDs.
+4. Use the tokenizer to get the document token count.
+5. Implement chunking for large files. YOu need to know the max token count for the model.
+    - Remember that almost all BERT-based models (BGE, Nomic, etc.) automatically add two "Special Tokens" to every input:
+        - [CLS] (Start of sentence)
+        - [SEP] (End of sentence)
+    - This means you need to subtract 2 from the max token count for the model.
+6. Make sure we store the model identifier in the `data/index.json` file so we can re-embed the documents when it changes.
+7. Make sure we re-embed the documents when the model changes in the settings.
+8. Add a button to re-embed the documents.
+9. Add a button to re-download the model. If it has changed, we should re-embed the documents.
 
 ## Testing
 
