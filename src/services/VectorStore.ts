@@ -375,7 +375,6 @@ export class VectorStore {
         const entry = this.index.files[file.path];
         if (entry && entry.mtime === file.stat.mtime) {
             // If already indexed, we might still want to return the vectors
-            const startId = entry.ids[0]!;
             const dims = this.index.dimensions;
             const vectors: number[][] = [];
             for (const id of entry.ids) {

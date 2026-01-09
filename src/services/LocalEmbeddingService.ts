@@ -1,5 +1,5 @@
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, Platform } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
@@ -12,6 +12,11 @@ interface WorkerMessage {
     error?: string;
 }
 
+interface ConfigureMessage {
+    type: 'configure';
+    numThreads: number;
+    simd: boolean;
+}
 
 export class LocalEmbeddingService implements IEmbeddingService {
     private plugin: Plugin;
@@ -87,7 +92,19 @@ export class LocalEmbeddingService implements IEmbeddingService {
                 new Notice("Local worker crashed.");
             };
 
-            logger.info("Local embedding worker initialized (Inline).");
+            // Configure based on Platform
+            const numThreads = Platform.isMobile ? 1 : 4;
+            const simd = !Platform.isMobile; // Disable SIMD on mobile by default to be safe? 
+            // Actually Transformers.js usually handles SIMD detection, but we forced it on.
+            // Let's stick to 1 thread for mobile.
+
+            instance.postMessage({
+                type: 'configure',
+                numThreads,
+                simd
+            } as ConfigureMessage);
+
+            logger.info(`Local embedding worker initialized (${numThreads} threads, SIMD: ${simd}).`);
         } catch (e) {
             logger.error("Failed to spawn worker:", e);
             new Notice("Failed to load local worker.");

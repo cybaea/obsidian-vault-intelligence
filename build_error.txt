@@ -1,9 +1,0 @@
-
-> obsidian-vault-intelligence@1.4.0 build
-> tsc -noEmit -skipLibCheck && node esbuild.config.mjs production
-
-src/services/VectorStore.ts(370,61): error TS2304: Cannot find name 'EmbeddingPriority'.
-src/services/VectorStore.ts(407,17): error TS2322: Type 'undefined' is not assignable to type 'number[][] | null'.
-src/services/VectorStore.ts(425,55): error TS2322: Type 'Promise<number[][] | null>' is not assignable to type 'Promise<void>'.
-  Type 'number[][] | null' is not assignable to type 'void'.
-    Type 'null' is not assignable to type 'void'.
