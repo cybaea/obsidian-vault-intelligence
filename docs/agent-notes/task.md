@@ -46,3 +46,4 @@
     - [x] Optimize Local Worker (SIMD + Multi-threading)
     - [x] Implement Platform-Aware Threading (1 thread for Mobile)
     - [x] Verify sub-second search speed during re-indexing
+    - [x] Resolve build/lint failures from service swap & fetch proxy

@@ -54,6 +54,24 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                         await plugin.vectorStore.reindexVault();
                     }
                 }));
+    } else {
+        // Local Threading Settings
+        new Setting(containerEl)
+            .setName('Local embedding threads')
+            .setDesc('Number of threads to use for local embedding. More threads are faster but use more memory.')
+            .addSlider(slider => slider
+                .setLimits(1, 4, 1)
+                .setValue(plugin.settings.embeddingThreads)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    plugin.settings.embeddingThreads = value;
+                    await plugin.saveSettings();
+
+                    // Surgical update without restart
+                    if (plugin.embeddingService.updateConfiguration) {
+                        plugin.embeddingService.updateConfiguration();
+                    }
+                }));
     }
 
     new Setting(containerEl)

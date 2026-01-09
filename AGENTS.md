@@ -151,6 +151,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Bundle everything into `main.js` (no unbundled runtime deps).
 - Avoid Node/Electron APIs if you want mobile compatibility; set `isDesktopOnly` accordingly.
 - Prefer `async/await` over promise chains; handle errors gracefully.
+- Never use `any` type.
 
 ## Mobile
 

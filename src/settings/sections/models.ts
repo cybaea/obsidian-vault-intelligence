@@ -13,7 +13,7 @@ interface InternalApp extends App {
 export const MODELS = {
     SMALL: 'MinishLab/potion-base-8M',
     BALANCED: 'Xenova/bge-small-en-v1.5',
-    ADVANCED: 'Xenova/nomic-embed-text-v1.5'
+    ADVANCED: 'Xenova/nomic-embed-text-v1'
 };
 
 export const MODEL_LABELS = {

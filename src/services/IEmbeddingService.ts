@@ -26,4 +26,9 @@ export interface IEmbeddingService {
      * @param priority - Optional priority (high/low). High priority tasks move to the front of the queue.
      */
     embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]>;
+
+    /**
+     * Optional: Update configuration on the fly (e.g. thread count).
+     */
+    updateConfiguration?(): void;
 }

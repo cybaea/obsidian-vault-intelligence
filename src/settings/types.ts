@@ -1,5 +1,6 @@
-import { App } from "obsidian";
+import { App, Platform } from "obsidian";
 import { LogLevel } from "../utils/logger";
+import { IEmbeddingService } from "../services/IEmbeddingService";
 
 export type EmbeddingProvider = 'gemini' | 'local';
 
@@ -21,6 +22,7 @@ export interface VaultIntelligenceSettings {
     maxAgentSteps: number;
     systemInstruction: string;
     geminiRetries: number;
+    embeddingThreads: number;
     logLevel: LogLevel;
 }
 
@@ -58,12 +60,14 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     maxAgentSteps: 5,
     systemInstruction: DEFAULT_SYSTEM_PROMPT,
     geminiRetries: 10,
+    embeddingThreads: Platform.isMobile ? 1 : 2,
     logLevel: LogLevel.WARN
 };
 
 export interface IVaultIntelligencePlugin {
     app: App;
     settings: VaultIntelligenceSettings;
+    embeddingService: IEmbeddingService;
     saveSettings(): Promise<void>;
     vectorStore: {
         reindexVault(): Promise<void>;

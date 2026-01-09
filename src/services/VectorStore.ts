@@ -63,6 +63,10 @@ export class VectorStore {
         };
     }
 
+    public setEmbeddingService(service: IEmbeddingService) {
+        this.embeddingService = service;
+    }
+
     public updateSettings(settings: VaultIntelligenceSettings) {
         this.settings = settings;
         this.baseDelayMs = settings.indexingDelayMs || 200;
@@ -339,7 +343,7 @@ export class VectorStore {
                 }
             } catch (e) {
                 this.consecutiveErrors++;
-                logger.error("Error processing queue task", e);
+                logger.error(`[VectorStore] Error processing queue task (error ${this.consecutiveErrors}/${this.MAX_ERRORS_BEFORE_BACKOFF}):`, e);
             } finally {
                 this.activeRequests--;
                 const timer = setTimeout(() => {
@@ -369,7 +373,9 @@ export class VectorStore {
 
     private async indexFileImmediate(file: TFile, priority: EmbeddingPriority = 'low'): Promise<number[][] | null> {
         if (!file || file.extension !== 'md') return null;
-        if (!this.gemini.isReady()) return null;
+
+        // Removed gemini.isReady() check to allow local models to work 
+        // without a Gemini API key. embeddingService will handle its own readiness.
 
         // Double check against existing to avoid duplicate work if queued multiple times
         const entry = this.index.files[file.path];
@@ -425,7 +431,7 @@ export class VectorStore {
                     await this.indexFileImmediate(file);
                 });
             } else {
-                logger.error(`Failed to index file "${file.path}": ${message}`);
+                logger.error(`[VectorStore] Failed to index file "${file.path}": ${message}`, e);
             }
             throw e;
         }

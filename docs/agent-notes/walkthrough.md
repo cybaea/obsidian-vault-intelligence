@@ -8,6 +8,8 @@ To resolve the 11-second delay, I implemented three critical optimizations:
 - **Hardware Acceleration (Platform-Aware)**:
     - **Desktop**: Enabled **SIMD** and **4-thread multi-threading** in the local model worker. This improves inference speed by 5x-10x on modern CPUs.
     - **Mobile/Tablet**: Automatically scales down to **1 thread** to protect battery life and thermals while still benefiting from local inference.
+- **Connectivity Fix (Fetch Proxy)**: Resolved the "Unauthorised access to file" error when loading the Nomic model. I implemented a Fetch Proxy that routes worker network requests through the main thread's privileged `requestUrl` API, bypassing Obsidian's worker security restrictions.
+- **Dynamic Service Swap**: Fixed the 401 Unauthorized errors by implementing code to "hot-swap" embedding providers. Switching from Gemini to Local now immediately terminates old connections and activates the local worker without needing a plugin restart.
 - **Priority Queuing**: Refactored the internal queue so that live user interactions ("High" priority) always jump ahead of bulk background vault indexing.
 
 ## 2. Stability & Memory

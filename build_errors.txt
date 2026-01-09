@@ -1,0 +1,8 @@
+
+> obsidian-vault-intelligence@1.4.0 build
+> tsc -noEmit -skipLibCheck && node esbuild.config.mjs production
+
+src/services/VectorStore.ts(144,41): error TS2304: Cannot find name 'expectedFloats'.
+src/services/VectorStore.ts(144,59): error TS2304: Cannot find name 'expectedFloats'.
+src/services/VectorStore.ts(145,92): error TS2304: Cannot find name 'expectedFloats'.
+src/services/VectorStore.ts(146,56): error TS2304: Cannot find name 'expectedFloats'.

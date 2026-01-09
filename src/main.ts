@@ -192,6 +192,14 @@ export default class VaultIntelligencePlugin extends Plugin {
 				this.settings.embeddingDimension = 768;
 				await this.saveData(this.settings);
 			}
+
+			// Migration: v1.5 -> v1 (v1.5 seems to be broken/unavailable in Xenova repo)
+			if (this.settings.embeddingModel === 'Xenova/nomic-embed-text-v1.5') {
+				logger.info(`Migrating model from v1.5 to v1: ${this.settings.embeddingModel} -> ${MODELS.ADVANCED}`);
+				this.settings.embeddingModel = MODELS.ADVANCED;
+				this.settings.embeddingDimension = 768;
+				await this.saveData(this.settings);
+			}
 		}
 	}
 
@@ -205,8 +213,28 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		if (this.vectorStore) {
 			this.vectorStore.updateSettings(this.settings);
-			// Only scan if not currently using local service (which might be initializing)
-			// or better, just let the next restart handle big changes
+
+			// Handle Provider Swap
+			const currentProvider = this.settings.embeddingProvider;
+			const isLocalActive = this.embeddingService instanceof LocalEmbeddingService;
+			const isGeminiActive = this.embeddingService instanceof GeminiEmbeddingService;
+
+			if (currentProvider === 'local' && !isLocalActive) {
+				logger.info("Swapping to Local Embedding Service");
+				const localService = new LocalEmbeddingService(this, this.settings);
+				void localService.initialize().catch(err => logger.error("Failed to init local worker", err));
+				this.embeddingService = localService;
+				this.vectorStore.setEmbeddingService(localService);
+			} else if (currentProvider === 'gemini' && !isGeminiActive) {
+				logger.info("Swapping to Gemini Embedding Service");
+				if (isLocalActive) {
+					(this.embeddingService as LocalEmbeddingService).terminate();
+				}
+				const geminiService = new GeminiEmbeddingService(this.geminiService, this.settings);
+				this.embeddingService = geminiService;
+				this.vectorStore.setEmbeddingService(geminiService);
+			}
+
 			void this.vectorStore.scanVault();
 		}
 	}

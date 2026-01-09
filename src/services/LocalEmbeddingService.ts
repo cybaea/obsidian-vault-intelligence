@@ -1,5 +1,5 @@
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
-import { Plugin, Notice, Platform } from "obsidian";
+import { Plugin, Notice, Platform, requestUrl } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
@@ -10,6 +10,22 @@ interface WorkerMessage {
     status: 'success' | 'error';
     output?: number[][];
     error?: string;
+    type?: string;
+    // For fetch proxy
+    url?: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string | ArrayBuffer;
+    requestId?: number;
+    // For progress reporting
+    file?: string;
+    progress?: number;
+}
+
+interface ProgressPayload {
+    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
+    file?: string;
+    progress?: number;
 }
 
 interface ConfigureMessage {
@@ -22,6 +38,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
     private plugin: Plugin;
     private settings: VaultIntelligenceSettings;
     private worker: Worker | null = null;
+    private lastNotice: Notice | null = null;
+    private lastNoticeTime = 0;
 
     private messageId = 0;
     private pendingRequests = new Map<number, { resolve: (val: number[][]) => void, reject: (err: unknown) => void }>();
@@ -93,8 +111,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
             };
 
             // Configure based on Platform
-            const numThreads = Platform.isMobile ? 1 : 4;
-            const simd = !Platform.isMobile; // Disable SIMD on mobile by default to be safe? 
+            const numThreads = this.settings.embeddingThreads;
+            const simd = !Platform.isMobile;
             // Actually Transformers.js usually handles SIMD detection, but we forced it on.
             // Let's stick to 1 thread for mobile.
 
@@ -111,8 +129,43 @@ export class LocalEmbeddingService implements IEmbeddingService {
         }
     }
 
-    private _onMessage(event: MessageEvent) {
+    public updateConfiguration() {
+        if (!this.worker) return;
+        this.worker.postMessage({
+            type: 'configure',
+            numThreads: this.settings.embeddingThreads,
+            simd: !Platform.isMobile
+        });
+    }
+
+    private async _onMessage(event: MessageEvent) {
         const data = event.data as unknown as WorkerMessage;
+
+        // Handle Fetch Proxy
+        if (data.type === 'fetch') {
+            await this.handleWorkerFetch(data);
+            return;
+        }
+
+        // Handle Progress Reporting
+        if (data.type === 'progress') {
+            const payload = data as unknown as ProgressPayload;
+            const now = Date.now();
+
+            // Show notice every 2 seconds or on status change
+            if (now - this.lastNoticeTime > 2000 || payload.status === 'done' || payload.status === 'initiate') {
+                if (this.lastNotice) this.lastNotice.hide();
+
+                let message = `[Intelligence] Loading model...`;
+                if (payload.file) message = `[Intelligence] Downloading ${payload.file.split('/').pop() || payload.file}: ${Math.round(payload.progress || 0)}%`;
+                if (payload.status === 'done') message = `[Intelligence] Model loaded!`;
+
+                this.lastNotice = new Notice(message, payload.status === 'done' ? 5000 : 0);
+                this.lastNoticeTime = now;
+            }
+            return;
+        }
+
         const { id, status, output, error } = data;
 
         const promise = this.pendingRequests.get(id);
@@ -120,6 +173,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
             if (status === 'success' && output) {
                 promise.resolve(output);
             } else {
+                logger.error(`[LocalEmbedding] Worker task ${id} failed:`, error);
                 promise.reject(error || "Unknown worker error");
             }
             this.pendingRequests.delete(id);
@@ -149,6 +203,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
             reject: task.reject
         });
 
+        logger.debug(`[LocalEmbedding] Posting to worker: id=${task.id}, model=${this.settings.embeddingModel}, textLength=${task.text.length}`);
         this.worker.postMessage({
             id: task.id,
             type: 'embed',
@@ -190,6 +245,48 @@ export class LocalEmbeddingService implements IEmbeddingService {
     async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
         return this.runTask(content, priority);
+    }
+
+    private async handleWorkerFetch(data: WorkerMessage) {
+        if (!data.url || !this.worker) return;
+
+        try {
+            logger.debug(`[LocalEmbedding] Proxying fetch: ${data.url}`);
+
+            // Robust header handling to prevent 401 leakage or auto-credential attachment
+            const headers = { ...(data.headers || {}) };
+
+            // Explicitly set User-Agent as some CDNs/HF require it or reject default ones
+            if (!headers['User-Agent'] && !headers['user-agent']) {
+                headers['User-Agent'] = 'Mozilla/5.0 (Obsidian Plugin; Vault Intelligence)';
+            }
+
+            const response = await requestUrl({
+                url: data.url,
+                method: data.method || 'GET',
+                headers: headers,
+                body: data.body,
+                throw: false, // Don't throw on 401, let the worker handle the status
+            });
+
+            if (response.status >= 400) {
+                logger.error(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
+            }
+
+            this.worker.postMessage({
+                type: 'fetch_response',
+                requestId: data.requestId,
+                status: response.status,
+                headers: response.headers,
+                body: response.arrayBuffer,
+            }, [response.arrayBuffer]); // Use transferrable
+        } catch (e) {
+            this.worker.postMessage({
+                type: 'fetch_response',
+                requestId: data.requestId,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
 
     public terminate() {
