@@ -1,5 +1,5 @@
 import { TFile, Notice, Plugin, normalizePath } from "obsidian";
-import { IEmbeddingService } from "./IEmbeddingService";
+import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
@@ -132,7 +132,19 @@ export class VectorStore {
         if (await this.plugin.app.vault.adapter.exists(vectorsPath)) {
             try {
                 const buffer = await this.plugin.app.vault.adapter.readBinary(vectorsPath);
-                this.vectors = new Float32Array(buffer);
+                // Important: Only use the portion that matches the index
+                const dims = this.index.dimensions;
+                const count = Object.values(this.index.files).reduce((acc, f) => acc + f.ids.length, 0);
+                const expectedFloats = count * dims;
+
+                const rawVectors = new Float32Array(buffer);
+                if (rawVectors.length > expectedFloats && expectedFloats > 0) {
+                    logger.warn(`Trimming bloated vector buffer: ${rawVectors.length} -> ${expectedFloats} floats.`);
+                    this.vectors = rawVectors.slice(0, expectedFloats);
+                } else {
+                    this.vectors = rawVectors;
+                }
+
                 this.normalizeAllVectors();
                 logger.info(`Loaded vector buffer: ${this.vectors.length} floats.`);
             } catch (e) {
@@ -211,8 +223,13 @@ export class VectorStore {
 
                 // No logic to shrink vectors here beyond relying on deletes to maintain compactness
 
+                // Compact the buffer for saving
+                const count = this.vectorIdToPath.length;
+                const dims = this.index.dimensions;
+                const activeData = this.vectors.slice(0, count * dims);
+
                 await this.plugin.app.vault.adapter.write(indexPath, JSON.stringify(this.index, null, 2));
-                await this.plugin.app.vault.adapter.writeBinary(vectorsPath, this.vectors.buffer as ArrayBuffer);
+                await this.plugin.app.vault.adapter.writeBinary(vectorsPath, activeData.buffer);
 
                 this.isDirty = false;
                 logger.debug("Vectors db saved.");
@@ -334,17 +351,39 @@ export class VectorStore {
         }
     }
 
+    public async getOrIndexFile(file: TFile): Promise<number[] | null> {
+        // 1. Try cache
+        const vector = this.getVector(file.path);
+        if (vector) return vector;
+
+        // 2. Index immediately (High priority)
+        // This handles cases where the background scanner hasn't reached this file yet
+        logger.debug(`File not indexed, performing priority indexing: ${file.path}`);
+        const embeddings = await this.indexFileImmediate(file, 'high');
+        return embeddings && embeddings.length > 0 ? embeddings[0]! : null;
+    }
+
     public indexFile(file: TFile) {
         this.enqueueIndex(file);
     }
 
-    private async indexFileImmediate(file: TFile) {
-        if (!file || file.extension !== 'md') return;
-        if (!this.gemini.isReady()) return;
+    private async indexFileImmediate(file: TFile, priority: EmbeddingPriority = 'low'): Promise<number[][] | null> {
+        if (!file || file.extension !== 'md') return null;
+        if (!this.gemini.isReady()) return null;
 
         // Double check against existing to avoid duplicate work if queued multiple times
         const entry = this.index.files[file.path];
-        if (entry && entry.mtime === file.stat.mtime) return;
+        if (entry && entry.mtime === file.stat.mtime) {
+            // If already indexed, we might still want to return the vectors
+            const startId = entry.ids[0]!;
+            const dims = this.index.dimensions;
+            const vectors: number[][] = [];
+            for (const id of entry.ids) {
+                const start = id * dims;
+                vectors.push(Array.from(this.vectors.slice(start, start + dims)));
+            }
+            return vectors;
+        }
 
         try {
             const content = await this.plugin.app.vault.read(file);
@@ -365,23 +404,27 @@ export class VectorStore {
 
             if (!textToEmbed.trim()) {
                 this.deleteVector(file.path); // Just remove if empty
-                return;
+                return null;
             }
 
             logger.info(`Indexing: ${file.path}`);
 
             // Embed Document now returns number[][]
-            const embeddings = await this.embeddingService.embedDocument(textToEmbed, file.basename);
+            const embeddings = await this.embeddingService.embedDocument(textToEmbed, file.basename, priority);
 
             this.upsertVector(file.path, file.stat.mtime, embeddings);
             void this.saveVectors();
+
+            return embeddings;
 
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             if (message.includes('429')) {
                 logger.warn(`Hit 429 for ${file.path}. Backoff.`);
                 this.triggerBackoff();
-                this.requestQueue.unshift(async () => this.indexFileImmediate(file));
+                this.requestQueue.unshift(async () => {
+                    await this.indexFileImmediate(file);
+                });
             } else {
                 logger.error(`Failed to index file "${file.path}": ${message}`);
             }
@@ -407,18 +450,20 @@ export class VectorStore {
         // 2. Normalize and Append
         newVectors.forEach(v => this.normalizeInPlace(v));
 
-        const startId = this.vectors.length / dims;
+        const startId = this.vectorIdToPath.length;
         const newIds: number[] = [];
 
         const totalNewFloats = newVectors.length * dims;
 
         // Ensure buffer space
-        const requiredSize = this.vectors.length + totalNewFloats;
+        const requiredSize = (startId * dims) + totalNewFloats;
+        // Optimization: Use capacity-based growth to avoid frequent re-allocations
         if (this.vectors.length < requiredSize) {
-            // Grow strategy: specific or doubling? specific avoids waste
-            // const newSize = requiredSize * 1.5; // Optional buffer
-            const newBuffer = new Float32Array(requiredSize);
-            newBuffer.set(this.vectors);
+            // Grow to next power of 2 or at least 50% larger than required for smoothing
+            const currentLogicalSize = startId * dims;
+            const newCapacity = Math.max(requiredSize, currentLogicalSize * 1.5);
+            const newBuffer = new Float32Array(Math.ceil(newCapacity));
+            newBuffer.set(this.vectors.subarray(0, currentLogicalSize));
             this.vectors = newBuffer;
         }
 
@@ -462,16 +507,21 @@ export class VectorStore {
             // 1. Remove form vectors buffer
             const removeStart = startId * dims;
             const removeEnd = (startId + count) * dims;
-            const lengthToRemove = removeEnd - removeStart;
 
             // Manual partial shift is possibly faster/cleaner than creating new float32array every time?
             // But creating new view is safer.
             // Actually, we can just copy the tail over.
-            if (removeEnd < this.vectors.length) {
-                this.vectors.copyWithin(removeStart, removeEnd);
-            }
-            // Truncate
-            this.vectors = this.vectors.subarray(0, this.vectors.length - lengthToRemove);
+            // Truncate (this reduces the length but keeps the backing buffer same size unless we slice)
+            // Actually, with our new startId = vectorIdToPath.length logic, 
+            // the spare capacity at the end is fine. 
+            // We just need to shift the data.
+            this.vectors.copyWithin(removeStart, removeEnd);
+
+            // We don't strictly need to subarray here because startId uses vectorIdToPath.length,
+            // but it helps keep it consistent if any other code uses this.vectors.length.
+            // Note: subarray is cheap (view only).
+            const nextCount = (this.vectorIdToPath.length - count);
+            this.vectors = this.vectors.subarray(0, nextCount * dims);
 
             // 2. Remove from reverse index
             this.vectorIdToPath.splice(startId, count);
@@ -577,25 +627,33 @@ export class VectorStore {
     }
 
     public findSimilar(queryVector: number[], limit?: number, threshold?: number, excludePath?: string): { path: string; score: number }[] {
+        const startTime = Date.now();
         const query = new Float32Array(queryVector);
         this.normalizeInPlace(query);
 
         const minScore = threshold ?? this.minSimilarityScore;
         const finalLimit = limit ?? this.similarNotesLimit;
-        const count = this.vectors.length / this.index.dimensions;
+        const count = this.vectorIdToPath.length;
 
         const scores: { path: string, score: number }[] = [];
         // Track best score per path to support multi-vector matches (MaxSim)
         const bestScoreByPath = new Map<string, number>();
 
+        const dims = this.index.dimensions;
+        const vectors = this.vectors;
+        const vectorIdToPath = this.vectorIdToPath;
+
         for (let i = 0; i < count; i++) {
-            const start = i * this.index.dimensions;
-            const vec = this.vectors.subarray(start, start + this.index.dimensions);
-            const score = this.dotProduct(query, vec);
+            const start = i * dims;
+
+            // Inline dot product for maximum speed
+            let score = 0;
+            for (let j = 0; j < dims; j++) {
+                score += query[j]! * vectors[start + j]!;
+            }
 
             if (score >= minScore) {
-                // Optimize: usage of reverse index
-                const path = this.vectorIdToPath[i];
+                const path = vectorIdToPath[i];
                 if (path && path !== excludePath) {
                     const existing = bestScoreByPath.get(path) ?? -1;
                     if (score > existing) {
@@ -612,16 +670,9 @@ export class VectorStore {
 
         scores.sort((a, b) => b.score - a.score);
 
-        return (finalLimit > 0) ? scores.slice(0, finalLimit) : scores;
+        const result = (finalLimit > 0) ? scores.slice(0, finalLimit) : scores;
+        logger.debug(`findSimilar took ${Date.now() - startTime}ms for ${count} vectors. Results: ${result.length}`);
+        return result;
     }
 
-    private dotProduct(a: Float32Array, b: Float32Array): number {
-        let dot = 0;
-        const len = Math.min(a.length, b.length);
-        for (let i = 0; i < len; i++) {
-            const val = a[i]! * b[i]!;
-            if (!isNaN(val)) dot += val;
-        }
-        return dot;
-    }
 }

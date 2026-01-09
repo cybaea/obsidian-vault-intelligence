@@ -39,8 +39,8 @@ safeEnv.backends.onnx.wasm.wasmPaths = {
     'ort-wasm-simd-threaded.wasm': `${CDN_URL}ort-wasm-simd-threaded.wasm`,
 };
 
-safeEnv.backends.onnx.wasm.numThreads = 1;
-safeEnv.backends.onnx.wasm.simd = false;
+safeEnv.backends.onnx.wasm.numThreads = 4;
+safeEnv.backends.onnx.wasm.simd = true;
 safeEnv.backends.onnx.wasm.proxy = false;
 
 // --- Types ---

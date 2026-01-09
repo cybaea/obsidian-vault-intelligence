@@ -1,4 +1,4 @@
-import { IEmbeddingService } from "./IEmbeddingService";
+import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { Plugin, Notice } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
@@ -20,6 +20,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
     private messageId = 0;
     private pendingRequests = new Map<number, { resolve: (val: number[][]) => void, reject: (err: unknown) => void }>();
+    private requestQueue: { id: number, text: string, priority: EmbeddingPriority, resolve: (val: number[][]) => void, reject: (err: unknown) => void }[] = [];
+    private isWorkerBusy = false;
 
     constructor(plugin: Plugin, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
@@ -105,35 +107,72 @@ export class LocalEmbeddingService implements IEmbeddingService {
             }
             this.pendingRequests.delete(id);
         }
+
+        // Process next task in queue
+        this.isWorkerBusy = false;
+        void this.processQueue();
     }
 
-    private async runTask(text: string): Promise<number[][]> {
-        await this.initialize();
-        if (!this.worker) throw new Error("Worker not active");
+    private async processQueue() {
+        if (this.isWorkerBusy || this.requestQueue.length === 0) return;
 
-        return new Promise<number[][]>((resolve, reject) => {
-            const id = this.messageId++;
-            this.pendingRequests.set(id, { resolve, reject });
+        // Ensure worker is initialized
+        if (!this.worker) await this.initialize();
+        if (!this.worker) return;
 
-            this.worker!.postMessage({
-                id,
-                type: 'embed',
-                text,
-                model: this.settings.embeddingModel
-            });
+        this.isWorkerBusy = true;
+
+        // Find highest priority task
+        const highPriorityIdx = this.requestQueue.findIndex(r => r.priority === 'high');
+        const taskIdx = highPriorityIdx !== -1 ? highPriorityIdx : 0;
+        const task = this.requestQueue.splice(taskIdx, 1)[0]!;
+
+        this.pendingRequests.set(task.id, {
+            resolve: task.resolve,
+            reject: task.reject
+        });
+
+        this.worker.postMessage({
+            id: task.id,
+            type: 'embed',
+            text: task.text,
+            model: this.settings.embeddingModel
         });
     }
 
-    async embedQuery(text: string): Promise<number[]> {
-        const vectors = await this.runTask(text);
+    private async runTask(text: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
+        const startTime = Date.now();
+
+        return new Promise<number[][]>((resolve, reject) => {
+            const id = this.messageId++;
+
+            const wrappedResolve = (val: number[][]) => {
+                logger.debug(`[LocalEmbedding] Task ${id} (${priority}) took ${Date.now() - startTime}ms`);
+                resolve(val);
+            };
+
+            this.requestQueue.push({
+                id,
+                text,
+                priority,
+                resolve: wrappedResolve,
+                reject
+            });
+
+            void this.processQueue();
+        });
+    }
+
+    async embedQuery(text: string, priority: EmbeddingPriority = 'high'): Promise<number[]> {
+        const vectors = await this.runTask(text, priority);
         // Queries should be single chunk. If multiple, take first? 
         // Or average? taking first is safer for now.
         return vectors[0] || [];
     }
 
-    async embedDocument(text: string, title?: string): Promise<number[][]> {
+    async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
-        return this.runTask(content);
+        return this.runTask(content, priority);
     }
 
     public terminate() {

@@ -59,23 +59,8 @@ export class SimilarNotesView extends ItemView {
         const loadingEl = container.createEl("div", { text: "Finding similar notes..." });
 
         try {
-            // 1. Try to get cached vector from store
-            let embedding = this.vectorStore.getVector(file.path);
-
-            // 2. Fallback to API if missing
-            if (!embedding) {
-                const content = await this.plugin.app.vault.read(file);
-                if (!content.trim()) {
-                    loadingEl.setText("File is empty.");
-                    return;
-                }
-
-                logger.debug(`Cached vector not found for ${file.path}, embedding live...`);
-
-                // CHANGE: Use embeddingService instead of gemini.embedText
-                const multiVector = await this.embeddingService.embedDocument(content, file.basename);
-                embedding = multiVector.length > 0 ? multiVector[0]! : null;
-            }
+            // Use getOrIndexFile which handles both cache lookups and prioritized re-indexing
+            const embedding = await this.vectorStore.getOrIndexFile(file);
 
             if (!embedding) {
                 loadingEl.setText("Failed to generate embedding.");

@@ -1,4 +1,4 @@
-import { IEmbeddingService } from "./IEmbeddingService";
+import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings";
 
@@ -19,13 +19,13 @@ export class GeminiEmbeddingService implements IEmbeddingService {
         return this.settings.embeddingDimension;
     }
 
-    async embedQuery(text: string): Promise<number[]> {
+    async embedQuery(text: string, _priority?: EmbeddingPriority): Promise<number[]> {
         return this.gemini.embedText(text, {
             taskType: "RETRIEVAL_QUERY"
         });
     }
 
-    async embedDocument(text: string, title?: string): Promise<number[][]> {
+    async embedDocument(text: string, title?: string, _priority?: EmbeddingPriority): Promise<number[][]> {
         // The Gemini API handles long text/chunking internally.
         const vector = await this.gemini.embedText(text, {
             taskType: "RETRIEVAL_DOCUMENT",
