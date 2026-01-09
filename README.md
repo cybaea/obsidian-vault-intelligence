@@ -82,6 +82,20 @@ Finds the right note, even if you use the wrong words.
 
 ---
 
+## 🌐 Network Use
+
+To provide intelligent reasoning and search capabilities, this plugin uses external network services. In compliance with [Obsidian developer policies](https://docs.obsidian.md/Developer+policies), here is a clear explanation of how and why network access is used:
+
+- **Google Gemini API** (`https://generativelanguage.googleapis.com`): Processes your notes for chat, reasoning, and semantic search. It also powers the **Google Search Grounding** and **Computational Solver** (Python execution) features.
+- **Hugging Face** (`https://huggingface.co`): Used to download open-source embedding models (e.g., Nomic, BERT) for **local processing** when you prefer not to send note content to an external API for indexing.
+- **jsDelivr** (`https://cdn.jsdelivr.net`): Downloads the WebAssembly (WASM) runtimes required to execute the embedding models locally within Obsidian.
+- **User-Initiated Web Access**: Use of the **URL Reader** tool (via the Research Agent) will trigger a request to the specific URL you provide to retrieve its content for the AI to analyze.
+
+> [!NOTE]
+> All note content used for indexing or chat is only sent to the service provider (Google) if you use the cloud-based Gemini models. Local models downloaded from Hugging Face run entirely on your device.
+
+---
+
 ## Getting Started
 
 1.  **Get an API Key:** Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
