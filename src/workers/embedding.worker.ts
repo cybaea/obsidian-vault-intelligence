@@ -147,12 +147,6 @@ interface ProgressPayload {
     task?: string;
 }
 
-interface ProgressMessage {
-    type: 'progress';
-    status: string;
-    file: string;
-    progress: number;
-}
 type TokenIds = number[] | BigInt64Array | Tensor;
 
 interface TokenizerOutput {

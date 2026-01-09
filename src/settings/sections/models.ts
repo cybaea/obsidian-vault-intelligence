@@ -74,7 +74,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .onChange(async (value) => {
                 plugin.settings.embeddingModel = value;
                 await plugin.saveSettings();
-                await plugin.saveSettings();
             }));
     } else {
         embeddingSetting.addDropdown(dropdown => {
@@ -95,10 +94,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     if (val === MODELS.ADVANCED) plugin.settings.embeddingDimension = 768;
 
                     await plugin.saveSettings();
-                    // Trigger Re-index check automatically
-                    // Note: We might want to warn the user first, but the implementation plan says "Update onChange to call reindexVault"
-                    // Ideally we'd show a modal confirmation, but for now we'll rely on the "Re-index" button or do it if they confirm.
-                    // For safety, let's just refresh settings and let them click "Re-index" or "Download".
                 }
                 refreshSettings(plugin);
             });
@@ -126,7 +121,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     btn.setDisabled(true);
                     btn.setButtonText("Checking...");
 
-                    // Import dynamically to avoid circular dependencies if any, or just direct import
                     const { validateModel } = await import("../../utils/validation");
                     const result = await validateModel(plugin.settings.embeddingModel);
 
@@ -169,13 +163,10 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 .setIcon('refresh-cw')
                 .setWarning()
                 .onClick(async () => {
-                    // Safe Cast: We cast to a generic shape first to allow property access check
-                    // This avoids 'any' and satisfies 'no-unsafe-member-access'
                     const pluginWithService = plugin as unknown as { embeddingService?: unknown };
                     const service = pluginWithService.embeddingService;
 
                     if (service instanceof LocalEmbeddingService) {
-                        // Now safely typed as LocalEmbeddingService
                         btn.setDisabled(true);
                         btn.setButtonText("Downloading...");
 
@@ -184,34 +175,33 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                         btn.setDisabled(false);
                         btn.setButtonText("Force re-download");
                     } else {
-                        // Removed trailing period to satisfy 'sentence-case' rule
                         new Notice("Local embedding service is not active");
                     }
                 }));
-
-        new Setting(containerEl)
-            .setName('Re-index vault')
-            .setDesc('Clear existing embeddings and re-scan the vault. Required if you change models.')
-            .addButton(btn => btn
-                .setButtonText('Re-index vault')
-                .setTooltip('Wipes all vector data and starts fresh')
-                .onClick(async () => {
-                    if (btn.buttonEl.textContent === 'Re-index vault') {
-                        btn.setButtonText('Confirm re-index?');
-                        btn.setWarning();
-                        setTimeout(() => {
-                            if (btn.buttonEl.textContent === 'Confirm re-index?') {
-                                btn.setButtonText('Re-index vault');
-                                btn.buttonEl.classList.remove('mod-warning');
-                            }
-                        }, 5000);
-                    } else {
-                        await plugin.vectorStore.reindexVault();
-                        btn.setButtonText('Re-index vault');
-                        btn.buttonEl.classList.remove('mod-warning');
-                    }
-                }));
     }
+
+    new Setting(containerEl)
+        .setName('Re-index vault')
+        .setDesc('Clear existing embeddings and re-scan the vault. Required if you change models.')
+        .addButton(btn => btn
+            .setButtonText('Re-index vault')
+            .setTooltip('Wipes all vector data and starts fresh')
+            .onClick(async () => {
+                if (btn.buttonEl.textContent === 'Re-index vault') {
+                    btn.setButtonText('Confirm re-index?');
+                    btn.setWarning();
+                    setTimeout(() => {
+                        if (btn.buttonEl.textContent === 'Confirm re-index?') {
+                            btn.setButtonText('Re-index vault');
+                            btn.buttonEl.classList.remove('mod-warning');
+                        }
+                    }, 5000);
+                } else {
+                    await plugin.vectorStore.reindexVault();
+                    btn.setButtonText('Re-index vault');
+                    btn.buttonEl.classList.remove('mod-warning');
+                }
+            }));
 
     // --- 3. Chat Model ---
     new Setting(containerEl)
