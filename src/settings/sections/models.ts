@@ -206,7 +206,7 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     // --- 3. Chat Model ---
     new Setting(containerEl)
         .setName('Chat model')
-        .setDesc(`The main model used for reasoning and answering questions.`)
+        .setDesc('Main model used for reasoning and answering questions.')
         .addText(text => text
             .setPlaceholder(DEFAULT_SETTINGS.chatModel)
             .setValue(plugin.settings.chatModel)
@@ -215,10 +215,9 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 await plugin.saveSettings();
             }));
 
-    // 3.a. Context Window Tokens
     new Setting(containerEl)
         .setName('Context window budget')
-        .setDesc('Maximum tokens to use for context.')
+        .setDesc("Max tokens the AI can consider. This is also limited by your chosen chat model's capacity.")
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
             .setValue(String(plugin.settings.contextWindowTokens))
