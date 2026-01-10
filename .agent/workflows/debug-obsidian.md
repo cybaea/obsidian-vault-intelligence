@@ -27,4 +27,15 @@ nc -zv 127.0.0.1 $PORT
    - Connect to its WebSocket (found in `http://localhost:$PORT/json`).
    - Enable `Runtime` and `Log` domains to capture console output.
 
-6. **Monitor Logs**: Specifically look for `[VaultIntelligence]` prefixed logs to track plugin behavior and errors.
+6. **Verify Target Vault**: Ensure you are debugging the 'Allan-Dev' vault.
+   - Look for the text **Allan-Dev** in the bottom-left corner of the Obsidian window (visible even if Settings are open).
+   - **If incorrect**:
+     1. Dismiss any open modals (Settings, etc).
+     2. Click the vault name in the bottom-left to open the switcher.
+     3. Select **Allan-Dev**.
+     4. **Note**: This opens a NEW window. You must locate the new window/process to debug.
+     5. If 'Allan-Dev' is not in the list, **STOP** and ask the user for help.
+
+7. **Monitor Logs**: specifically look for `[VaultIntelligence]` prefixed logs.
+   - **Success**: "Vault Intelligence loaded", "Index loaded", "Worker initialized".
+   - **Failure**: Any red text or stack traces associated with the plugin ID.
