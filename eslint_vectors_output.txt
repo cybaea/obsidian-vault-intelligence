@@ -1,6 +1,0 @@
-
-/home/allane/Code/GitHub/obsidian-vault-intelligence/src/services/VectorStore.ts
-  346:23  warning  'message' is assigned a value but never used  @typescript-eslint/no-unused-vars
-
-✖ 1 problem (0 errors, 1 warning)
-

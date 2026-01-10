@@ -31,14 +31,8 @@ if (!safeEnv.backends) safeEnv.backends = {};
 if (!safeEnv.backends.onnx) safeEnv.backends.onnx = {};
 if (!safeEnv.backends.onnx.wasm) safeEnv.backends.onnx.wasm = {};
 
-// Explicit CDN Paths
-const CDN_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
-safeEnv.backends.onnx.wasm.wasmPaths = {
-    'ort-wasm.wasm': `${CDN_URL}ort-wasm.wasm`,
-    'ort-wasm-simd.wasm': `${CDN_URL}ort-wasm-simd.wasm`,
-    'ort-wasm-threaded.wasm': `${CDN_URL}ort-wasm-threaded.wasm`,
-    'ort-wasm-simd-threaded.wasm': `${CDN_URL}ort-wasm-simd-threaded.wasm`,
-};
+// Initialized with dummy values, will be set via 'configure' message
+safeEnv.backends.onnx.wasm.wasmPaths = {};
 
 safeEnv.backends.onnx.wasm.numThreads = 1; // Default to safe single thread
 safeEnv.backends.onnx.wasm.simd = true;
@@ -111,6 +105,8 @@ interface ConfigureMessage {
     type: 'configure';
     numThreads: number;
     simd: boolean;
+    cdnUrl?: string; // NEW
+    version?: string; // NEW
 }
 
 interface EmbedMessage {
@@ -349,6 +345,19 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         if ('type' in data && (data as { type: string }).type === 'configure') {
             const config = data as ConfigureMessage;
+
+            // Set dynamic CDN paths if provided
+            if (config.cdnUrl) {
+                const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : `${config.cdnUrl}/`;
+                safeEnv.backends!.onnx!.wasm!.wasmPaths = {
+                    'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
+                    'ort-wasm-simd.wasm': `${baseUrl}ort-wasm-simd.wasm`,
+                    'ort-wasm-threaded.wasm': `${baseUrl}ort-wasm-threaded.wasm`,
+                    'ort-wasm-simd-threaded.wasm': `${baseUrl}ort-wasm-simd-threaded.wasm`,
+                };
+                logger.info(`[Worker] CDN set to: ${baseUrl}`);
+            }
+
             if (safeEnv.backends!.onnx!.wasm!.numThreads !== config.numThreads || safeEnv.backends!.onnx!.wasm!.simd !== config.simd) {
                 logger.debug(`[Worker] Configuration changed. Resetting pipeline instance.`);
                 PipelineSingleton.instance = null;

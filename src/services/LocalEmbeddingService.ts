@@ -2,6 +2,7 @@ import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { Plugin, Notice, Platform, requestUrl } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
+import { WORKER_CONSTANTS } from "../constants";
 
 import EmbeddingWorker from "../workers/embedding.worker";
 
@@ -32,6 +33,8 @@ interface ConfigureMessage {
     type: 'configure';
     numThreads: number;
     simd: boolean;
+    cdnUrl: string;
+    version: string;
 }
 
 export class LocalEmbeddingService implements IEmbeddingService {
@@ -104,8 +107,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
             const instance = new EmbeddingWorker({ name: 'VaultIntelligenceWorker' });
             this.worker = instance;
 
-            instance.onmessage = (e: MessageEvent) => this._onMessage(e);
-            instance.onerror = (e: ErrorEvent) => {
+            this.worker.onmessage = (e: MessageEvent) => this._onMessage(e);
+            this.worker.onerror = (e: ErrorEvent) => {
                 logger.error("[LocalEmbedding] Worker Error:", e);
                 new Notice("Local worker crashed.");
             };
@@ -119,7 +122,9 @@ export class LocalEmbeddingService implements IEmbeddingService {
             instance.postMessage({
                 type: 'configure',
                 numThreads,
-                simd
+                simd,
+                cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
+                version: WORKER_CONSTANTS.WASM_VERSION
             } as ConfigureMessage);
 
             logger.info(`Local embedding worker initialized (${numThreads} threads, SIMD: ${simd}).`);
@@ -134,8 +139,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
         this.worker.postMessage({
             type: 'configure',
             numThreads: this.settings.embeddingThreads,
-            simd: !Platform.isMobile
-        });
+            simd: !Platform.isMobile,
+            cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
+            version: WORKER_CONSTANTS.WASM_VERSION
+        } as ConfigureMessage);
     }
 
     private async _onMessage(event: MessageEvent) {
@@ -173,8 +180,9 @@ export class LocalEmbeddingService implements IEmbeddingService {
             if (status === 'success' && output) {
                 promise.resolve(output);
             } else {
-                logger.error(`[LocalEmbedding] Worker task ${id} failed:`, error);
-                promise.reject(error || "Unknown worker error");
+                const message = error || "Unknown worker error";
+                logger.error(`[LocalEmbedding] Worker task ${id} failed:`, message);
+                promise.reject(message);
             }
             this.pendingRequests.delete(id);
         }
@@ -280,11 +288,12 @@ export class LocalEmbeddingService implements IEmbeddingService {
                 headers: response.headers,
                 body: response.arrayBuffer,
             }, [response.arrayBuffer]); // Use transferrable
-        } catch (e) {
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
             this.worker.postMessage({
                 type: 'fetch_response',
                 requestId: data.requestId,
-                error: e instanceof Error ? e.message : String(e),
+                error: message,
             });
         }
     }

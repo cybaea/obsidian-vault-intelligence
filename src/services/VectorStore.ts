@@ -3,14 +3,16 @@ import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings";
+import { EMBEDDING_CONSTANTS } from "../constants";
 
 const DATA_DIR = "data";
 const INDEX_FILE = "index.json";
 const VECTORS_FILE = "vectors.bin";
 
 interface VectorEntry {
-    ids: number[]; // Changed from 'id' to 'ids'
+    ids: number[];
     mtime: number;
+    size: number;
     path: string;
 }
 
@@ -30,18 +32,15 @@ export class VectorStore {
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
     private settings: VaultIntelligenceSettings;
     private consecutiveErrors = 0;
-    private readonly MAX_ERRORS_BEFORE_BACKOFF = 5;
 
     // Data Store
     private index: VectorIndex;
     private vectors: Float32Array = new Float32Array(0);
-    // NEW: In-memory reverse index for fast lookups (Vector ID -> File Path)
     private vectorIdToPath: string[] = [];
 
     // Concurrency Control
     private requestQueue: (() => Promise<void>)[] = [];
     private activeRequests = 0;
-    private readonly MAX_CONCURRENT_REQUESTS = 1;
     private baseDelayMs: number;
     private currentDelayMs: number;
     private minSimilarityScore: number;
@@ -63,11 +62,7 @@ export class VectorStore {
             files: {}
         };
 
-        this.initDebouncedIndex();
-    }
-
-    private initDebouncedIndex() {
-        // No longer using Obsidian debounce for per-file indexing
+        this.updateSettings(settings);
     }
 
     public setEmbeddingService(service: IEmbeddingService) {
@@ -76,15 +71,12 @@ export class VectorStore {
 
     public updateSettings(settings: VaultIntelligenceSettings) {
         this.settings = settings;
-        this.baseDelayMs = settings.queueDelayMs || 300;
+        this.baseDelayMs = settings.queueDelayMs || EMBEDDING_CONSTANTS.DEFAULT_QUEUE_DELAY_MS;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
         this.similarNotesLimit = settings.similarNotesLimit ?? 5;
         if (!this.isBackingOff) {
             this.currentDelayMs = this.baseDelayMs;
         }
-
-        // Re-initialize debounce if delay changed
-        this.initDebouncedIndex();
     }
 
     private getDataPath(filename: string): string {
@@ -103,24 +95,22 @@ export class VectorStore {
         const indexPath = this.getDataPath(INDEX_FILE);
         const vectorsPath = this.getDataPath(VECTORS_FILE);
 
-        // 1. Load Index
         if (await this.plugin.app.vault.adapter.exists(indexPath)) {
             try {
                 const indexStr = await this.plugin.app.vault.adapter.read(indexPath);
-                // Cast to unknown first for safe processing
                 const loadedRaw = JSON.parse(indexStr) as Record<string, unknown>;
 
-                // Compatibility Update: Convert old 'id' entries to 'ids' if needed
-                const files = loadedRaw.files;
-                if (files && typeof files === 'object' && files !== null && !Array.isArray(files)) {
-                    const filesMap = files as Record<string, Record<string, unknown>>;
-                    for (const key in filesMap) {
-                        const entry = filesMap[key];
-                        if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-                            if ('id' in entry && !('ids' in entry)) {
-                                entry.ids = [entry.id];
-                                delete entry.id;
-                            }
+                // Compatibility Update
+                const files = loadedRaw.files as Record<string, Record<string, unknown>> | undefined;
+                if (files && typeof files === 'object') {
+                    for (const key in files) {
+                        const entry = files[key] as Record<string, unknown>;
+                        if (entry && 'id' in entry && !('ids' in entry)) {
+                            entry.ids = [entry.id];
+                            delete entry.id;
+                        }
+                        if (entry && !('size' in entry)) {
+                            entry.size = 0; // Default for old indices
                         }
                     }
                 }
@@ -130,9 +120,8 @@ export class VectorStore {
                 const dimChanged = this.index.dimensions !== this.embeddingService.dimensions;
 
                 if (modelChanged || dimChanged) {
-                    const reason = modelChanged ? "Model changed" : "Dimension changed";
-                    logger.warn(`${reason}. Wiping index to rebuild.`);
-                    await this.reindexVault(); // Use reindex logic
+                    logger.warn(`${modelChanged ? "Model" : "Dimension"} changed. Wiping index.`);
+                    await this.reindexVault();
                     return;
                 }
                 logger.info(`Loaded index for ${Object.keys(this.index.files).length} files.`);
@@ -142,22 +131,17 @@ export class VectorStore {
             }
         }
 
-        // 2. Load Binary Vectors
         if (await this.plugin.app.vault.adapter.exists(vectorsPath)) {
             try {
                 const buffer = await this.plugin.app.vault.adapter.readBinary(vectorsPath);
-                // Important: Only use the portion that matches the index
                 const dims = this.index.dimensions;
                 const count = Object.values(this.index.files).reduce((acc, f) => acc + f.ids.length, 0);
                 const expectedFloats = count * dims;
 
                 const rawVectors = new Float32Array(buffer);
-                if (rawVectors.length > expectedFloats && expectedFloats > 0) {
-                    logger.warn(`Trimming bloated vector buffer: ${rawVectors.length} -> ${expectedFloats} floats.`);
-                    this.vectors = rawVectors.slice(0, expectedFloats);
-                } else {
-                    this.vectors = rawVectors;
-                }
+                this.vectors = rawVectors.length > expectedFloats && expectedFloats > 0
+                    ? rawVectors.slice(0, expectedFloats)
+                    : rawVectors;
 
                 this.normalizeAllVectors();
                 logger.info(`Loaded vector buffer: ${this.vectors.length} floats.`);
@@ -167,7 +151,6 @@ export class VectorStore {
             }
         }
 
-        // 3. Rebuild Reverse Index
         this.rebuildReverseIndex();
     }
 
@@ -189,11 +172,9 @@ export class VectorStore {
 
         for (const path in this.index.files) {
             const entry = this.index.files[path];
-            if (entry && entry.ids) {
+            if (entry) {
                 for (const id of entry.ids) {
-                    if (id < numVectors) {
-                        this.vectorIdToPath[id] = path;
-                    }
+                    if (id < numVectors) this.vectorIdToPath[id] = path;
                 }
             }
         }
@@ -201,24 +182,18 @@ export class VectorStore {
 
     private normalizeAllVectors() {
         const dims = this.index.dimensions;
-        // Check alignment
         if (this.vectors.length % dims !== 0) {
-            logger.warn("Vector buffer size alignment error. Truncating.");
-            const alignedSize = Math.floor(this.vectors.length / dims) * dims;
-            this.vectors = this.vectors.subarray(0, alignedSize);
+            this.vectors = this.vectors.subarray(0, Math.floor(this.vectors.length / dims) * dims);
         }
-
-        const count = this.vectors.length / dims;
-        for (let i = 0; i < count; i++) {
-            const start = i * dims;
-            this.normalizeInPlace(this.vectors.subarray(start, start + dims));
+        for (let i = 0; i < this.vectors.length / dims; i++) {
+            this.normalizeInPlace(this.vectors.subarray(i * dims, (i + 1) * dims));
         }
     }
 
     private normalizeInPlace(vec: Float32Array | number[]) {
         let mag = 0;
         for (let i = 0; i < vec.length; i++) mag += vec[i]! * vec[i]!;
-        if (mag === 0 || Math.abs(mag - 1) < 1e-6) return;
+        if (mag === 0 || Math.abs(mag - 1) < EMBEDDING_CONSTANTS.NORMALIZATION_PRECISION) return;
         const invMag = 1 / Math.sqrt(mag);
         for (let i = 0; i < vec.length; i++) vec[i]! *= invMag;
     }
@@ -234,10 +209,6 @@ export class VectorStore {
                 await this.ensureDataDir();
                 const indexPath = this.getDataPath(INDEX_FILE);
                 const vectorsPath = this.getDataPath(VECTORS_FILE);
-
-                // No logic to shrink vectors here beyond relying on deletes to maintain compactness
-
-                // Compact the buffer for saving
                 const count = this.vectorIdToPath.length;
                 const dims = this.index.dimensions;
                 const activeData = this.vectors.slice(0, count * dims);
@@ -252,9 +223,8 @@ export class VectorStore {
             }
         };
 
-        if (immediate) {
-            await doSave();
-        } else {
+        if (immediate) await doSave();
+        else {
             this.isDirty = true;
             this.saveDebounceTimer = setTimeout(() => {
                 this.saveDebounceTimer = null;
@@ -266,19 +236,18 @@ export class VectorStore {
 
     public scanVault(fullScan = false) {
         if (!this.gemini.isReady()) {
-            logger.warn("Gemini Service not ready. Skipping vault scan.");
+            logger.warn("Gemini Service not ready. Skipping scan.");
             return;
         }
 
-        // Automatic re-index if dimensions changed mid-session
         const serviceDims = this.embeddingService.dimensions;
         if (this.index.dimensions > 0 && this.index.dimensions !== serviceDims) {
-            logger.warn(`Dimension mismatch detected during scan (${this.index.dimensions} vs ${serviceDims}). Re-indexing...`);
+            logger.warn("Dimension mismatch. Re-indexing...");
             void this.reindexVault();
             return;
         }
 
-        logger.info("Starting vault scan...");
+        logger.info("Scanning vault...");
         const files = this.plugin.app.vault.getMarkdownFiles();
         let changedCount = 0;
 
@@ -292,10 +261,9 @@ export class VectorStore {
 
         for (const file of files) {
             const entry = this.index.files[file.path];
-            const isNew = !entry;
-            const isModified = entry && entry.mtime !== file.stat.mtime;
+            const isModified = !entry || entry.mtime !== file.stat.mtime || entry.size !== file.stat.size;
 
-            if (fullScan || isNew || isModified) {
+            if (fullScan || isModified) {
                 this.enqueueIndex(file);
                 changedCount++;
             }
@@ -304,22 +272,15 @@ export class VectorStore {
         if (changedCount > 0) {
             logger.info(`Found ${changedCount} files to update/remove.`);
             new Notice(`Vault intelligence: updating ${changedCount} files`);
-        } else {
-            logger.info("Vault scan complete. No changes.");
         }
     }
 
     public async reindexVault() {
-        logger.info("Re-indexing vault...");
-        new Notice("Vault intelligence: re-indexing vault for new model");
-
         this.isReindexing = true;
-        this.requestQueue = []; // Clear pending requests for old model
-
+        this.requestQueue = [];
         this.resetIndex();
-        await this.saveVectors(); // Wipe disk
+        await this.saveVectors(true);
         this.scanVault(true);
-
         this.isReindexing = false;
     }
 
@@ -331,12 +292,10 @@ export class VectorStore {
     }
 
     private async processQueue() {
-        if (this.activeRequests >= this.MAX_CONCURRENT_REQUESTS) return;
-        if (this.requestQueue.length === 0) return;
-        if (this.isBackingOff) return;
+        if (this.activeRequests >= EMBEDDING_CONSTANTS.MAX_CONCURRENT_REQUESTS || this.requestQueue.length === 0 || this.isBackingOff) return;
 
-        if (this.consecutiveErrors >= this.MAX_ERRORS_BEFORE_BACKOFF) {
-            logger.error(`[VectorStore] Too many consecutive errors. Backing off.`);
+        if (this.consecutiveErrors >= EMBEDDING_CONSTANTS.MAX_ERRORS_BEFORE_BACKOFF) {
+            logger.error(`Too many errors. Backing off.`);
             this.triggerBackoff();
             return;
         }
@@ -353,7 +312,7 @@ export class VectorStore {
                 }
             } catch (e) {
                 this.consecutiveErrors++;
-                logger.error(`[VectorStore] Error processing queue task (error ${this.consecutiveErrors}/${this.MAX_ERRORS_BEFORE_BACKOFF}):`, e);
+                logger.error(`Queue error (${this.consecutiveErrors}/${EMBEDDING_CONSTANTS.MAX_ERRORS_BEFORE_BACKOFF}):`, e);
             } finally {
                 this.activeRequests--;
                 const timer = setTimeout(() => {
@@ -366,71 +325,40 @@ export class VectorStore {
     }
 
     public async getOrIndexFile(file: TFile): Promise<number[] | null> {
-        // 1. Try cache
         const vector = this.getVector(file.path);
         if (vector) return vector;
-
-        // 2. Index immediately (High priority)
-        // This handles cases where the background scanner hasn't reached this file yet
-        logger.debug(`File not indexed, performing priority indexing: ${file.path}`);
         const embeddings = await this.indexFileImmediate(file, 'high');
         return embeddings && embeddings.length > 0 ? embeddings[0]! : null;
     }
 
-    public indexFile(file: TFile) {
-        this.enqueueIndex(file);
-    }
-
-    /**
-     * Consolidates all indexing requests.
-     * Uses a per-file timer to debounce frequent updates (e.g. typing).
-     */
     public requestIndex(file: TFile, delayMs?: number) {
         if (!file || file.extension !== 'md') return;
 
-        // Clear existing timer for this file
         const existingTimer = this.pendingIndexTimers.get(file.path);
         if (existingTimer) {
             clearTimeout(existingTimer);
             this.activeTimers.delete(existingTimer);
         }
 
-        const waitTime = delayMs ?? this.settings.indexingDelayMs ?? 5000;
-
-        logger.debug(`Requesting index for ${file.path} (delay: ${waitTime}ms)`);
+        const waitTime = delayMs ?? this.settings.indexingDelayMs ?? EMBEDDING_CONSTANTS.DEFAULT_INDEXING_DELAY_MS;
 
         const timer = setTimeout(() => {
             this.pendingIndexTimers.delete(file.path);
             this.activeTimers.delete(timer);
-            this.indexFile(file);
+            this.enqueueIndex(file);
         }, waitTime);
 
         this.pendingIndexTimers.set(file.path, timer);
         this.activeTimers.add(timer);
     }
 
-    public debouncedIndexFile(file: TFile) {
-        // Compatibility: Route to requestIndex
-        this.requestIndex(file);
-    }
-
     private async indexFileImmediate(file: TFile, priority: EmbeddingPriority = 'low'): Promise<number[][] | null> {
         if (!file || file.extension !== 'md') return null;
 
-        // Removed gemini.isReady() check to allow local models to work 
-        // without a Gemini API key. embeddingService will handle its own readiness.
-
-        // Double check against existing to avoid duplicate work if queued multiple times
         const entry = this.index.files[file.path];
-        if (entry && entry.mtime === file.stat.mtime) {
-            // If already indexed, we might still want to return the vectors
+        if (entry && entry.mtime === file.stat.mtime && entry.size === file.stat.size) {
             const dims = this.index.dimensions;
-            const vectors: number[][] = [];
-            for (const id of entry.ids) {
-                const start = id * dims;
-                vectors.push(Array.from(this.vectors.slice(start, start + dims)));
-            }
-            return vectors;
+            return entry.ids.map(id => Array.from(this.vectors.slice(id * dims, (id + 1) * dims)));
         }
 
         try {
@@ -438,97 +366,64 @@ export class VectorStore {
             const cache = this.plugin.app.metadataCache.getFileCache(file);
             let textToEmbed = content;
 
-            // Simple frontmatter removal / title extraction
-            if (cache && cache.frontmatter && cache.frontmatterPosition) {
-                const { end } = cache.frontmatterPosition;
-                const body = content.substring(end.offset).trim();
-                let displayTitle = (cache.frontmatter.title as string | undefined) || file.basename;
-                if (Array.isArray(displayTitle)) displayTitle = (displayTitle as string[]).join(" ");
-
-                textToEmbed = `Title: ${displayTitle}\n\n${body}`;
+            if (cache?.frontmatter && cache.frontmatterPosition) {
+                const body = content.substring(cache.frontmatterPosition.end.offset).trim();
+                let title = (cache.frontmatter.title as unknown) || file.basename;
+                if (Array.isArray(title)) title = (title as string[]).join(" ");
+                textToEmbed = `Title: ${title as string}\n\n${body}`;
             } else {
                 textToEmbed = `Title: ${file.basename}\n\n${content}`;
             }
 
             if (!textToEmbed.trim()) {
-                this.deleteVector(file.path); // Just remove if empty
+                this.deleteVector(file.path);
                 return null;
             }
 
             logger.info(`Indexing: ${file.path}`);
-
-            // Embed Document now returns number[][]
             const embeddings = await this.embeddingService.embedDocument(textToEmbed, file.basename, priority);
 
-            this.upsertVector(file.path, file.stat.mtime, embeddings);
+            this.upsertVector(file.path, file.stat.mtime, file.stat.size, embeddings);
             void this.saveVectors();
-
             return embeddings;
-
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
-            if (message.includes('429')) {
+            if (message.includes('429') || (typeof e === 'object' && e !== null && 'status' in e && (e as Record<string, unknown>).status === 429)) {
                 logger.warn(`Hit 429 for ${file.path}. Backoff.`);
                 this.triggerBackoff();
                 this.requestQueue.unshift(async () => {
-                    await this.indexFileImmediate(file);
+                    await this.indexFileImmediate(file, priority);
                 });
             } else {
-                logger.error(`[VectorStore] Failed to index file "${file.path}": ${message}`, e);
+                logger.error(`Failed to index "${file.path}": ${message}`, e);
             }
             throw e;
         }
     }
 
-    private upsertVector(path: string, mtime: number, newVectors: number[][]) {
+    private upsertVector(path: string, mtime: number, size: number, newVectors: number[][]) {
         if (newVectors.length === 0) return;
-
         const dims = this.index.dimensions;
-        if (newVectors[0]!.length !== dims) {
-            if (!this.isReindexing) {
-                logger.error(`Dimension mismatch! Expected ${dims}, got ${newVectors[0]!.length}. Model in index: ${this.index.embeddingModel}. Current service model: ${this.embeddingService.modelName}`);
-            }
-            return;
-        }
-
-        // 1. Remove existing vectors for this file (always replace logic)
-        // This keeps logic simple and avoids fragmentation within a file's chunks
         this.deleteVector(path);
-
-        // 2. Normalize and Append
         newVectors.forEach(v => this.normalizeInPlace(v));
 
         const startId = this.vectorIdToPath.length;
         const newIds: number[] = [];
+        const requiredSize = (startId + newVectors.length) * dims;
 
-        const totalNewFloats = newVectors.length * dims;
-
-        // Ensure buffer space
-        const requiredSize = (startId * dims) + totalNewFloats;
-        // Optimization: Use capacity-based growth to avoid frequent re-allocations
         if (this.vectors.length < requiredSize) {
-            // Grow to next power of 2 or at least 50% larger than required for smoothing
-            const currentLogicalSize = startId * dims;
-            const newCapacity = Math.max(requiredSize, currentLogicalSize * 1.5);
-            const newBuffer = new Float32Array(Math.ceil(newCapacity));
-            newBuffer.set(this.vectors.subarray(0, currentLogicalSize));
+            const newBuffer = new Float32Array(Math.ceil(requiredSize * 1.5));
+            newBuffer.set(this.vectors.subarray(0, startId * dims));
             this.vectors = newBuffer;
         }
 
         for (let i = 0; i < newVectors.length; i++) {
-            const vec = newVectors[i]!;
-            this.vectors.set(vec, (startId + i) * dims);
+            this.vectors.set(newVectors[i]!, (startId + i) * dims);
             newIds.push(startId + i);
-            // Reverse index update
             this.vectorIdToPath[startId + i] = path;
         }
 
-        // 3. Update Index Entry
-        this.index.files[path] = {
-            ids: newIds,
-            mtime: mtime,
-            path: path
-        };
+        this.index.files[path] = { ids: newIds, mtime, size, path };
         this.isDirty = true;
     }
 
@@ -536,64 +431,20 @@ export class VectorStore {
         const entry = this.index.files[path];
         if (!entry) return;
 
-        // Assuming IDs are typically contiguous because of upsertVector approach,
-        // but robustly handle if they aren't (one by one deletion from end).
-        // Sorting IDs descending is critical to not invalidate indices of earlier removals in same batch operation...
-        // BUT, a standard splice affects everything after it.
-
-        // OPTIMIZED BATCH REMOVAL for Contiguous Block (Common case)
-        const ids = entry.ids.sort((a, b) => a - b);
-
-        const isContiguous = ids.length > 0 &&
-            (ids[ids.length - 1]! - ids[0]! + 1 === ids.length);
-
-        if (isContiguous && ids.length > 0) {
-            const startId = ids[0]!;
-            const count = ids.length;
+        const ids = entry.ids.sort((a, b) => b - a);
+        for (const id of ids) {
             const dims = this.index.dimensions;
+            if ((id + 1) * dims < this.vectors.length) {
+                this.vectors.copyWithin(id * dims, (id + 1) * dims);
+            }
+            this.vectors = this.vectors.subarray(0, this.vectors.length - dims);
+            this.vectorIdToPath.splice(id, 1);
 
-            // 1. Remove form vectors buffer
-            const removeStart = startId * dims;
-            const removeEnd = (startId + count) * dims;
-
-            // Manual partial shift is possibly faster/cleaner than creating new float32array every time?
-            // But creating new view is safer.
-            // Actually, we can just copy the tail over.
-            // Truncate (this reduces the length but keeps the backing buffer same size unless we slice)
-            // Actually, with our new startId = vectorIdToPath.length logic, 
-            // the spare capacity at the end is fine. 
-            // We just need to shift the data.
-            this.vectors.copyWithin(removeStart, removeEnd);
-
-            // We don't strictly need to subarray here because startId uses vectorIdToPath.length,
-            // but it helps keep it consistent if any other code uses this.vectors.length.
-            // Note: subarray is cheap (view only).
-            const nextCount = (this.vectorIdToPath.length - count);
-            this.vectors = this.vectors.subarray(0, nextCount * dims);
-
-            // 2. Remove from reverse index
-            this.vectorIdToPath.splice(startId, count);
-
-            // 3. Update all other IDs
-            // Since we removed `count` items at `startId`, all IDs >= `startId + count` (initially) shift down by `count`.
-            // With reverse index, we can iterate files or just reverse index?
-            // We need to update `index.files` entries. iterating entries is safest.
             for (const key in this.index.files) {
                 const f = this.index.files[key]!;
-                // Mutate the array
-                for (let i = 0; i < f.ids.length; i++) {
-                    if (f.ids[i]! > startId) {
-                        f.ids[i]! -= count;
-                    }
+                for (let k = 0; k < f.ids.length; k++) {
+                    if (f.ids[k]! > id) f.ids[k]!--;
                 }
-            }
-        } else {
-            // Fallback: Delete one by one backwards
-            // If we delete largest ID first, it doesn't affect smaller IDs?
-            // Deleting ID 100 shifts 101+. ID 50 is unaffected.
-            // So iterating descending is correct.
-            for (let i = ids.length - 1; i >= 0; i--) {
-                this.deleteSingleId(ids[i]!);
             }
         }
 
@@ -601,52 +452,25 @@ export class VectorStore {
         this.isDirty = true;
     }
 
-    private deleteSingleId(id: number) {
-        const dims = this.index.dimensions;
-        const removeStart = id * dims;
-        const removeEnd = removeStart + dims;
-
-        if (removeEnd < this.vectors.length) {
-            this.vectors.copyWithin(removeStart, removeEnd);
-        }
-        this.vectors = this.vectors.subarray(0, this.vectors.length - dims);
-        this.vectorIdToPath.splice(id, 1);
-
-        for (const key in this.index.files) {
-            const f = this.index.files[key]!;
-            for (let k = 0; k < f.ids.length; k++) {
-                if (f.ids[k]! > id) f.ids[k]!--;
-            }
-        }
-    }
-
     public async renameVector(oldPath: string, newPath: string) {
         const entry = this.index.files[oldPath];
         if (!entry) return;
-
-        logger.info(`Renaming vector from ${oldPath} to ${newPath}`);
         this.index.files[newPath] = { ...entry, path: newPath };
         delete this.index.files[oldPath];
-
-        // Update reverse index
-        entry.ids.forEach(id => {
-            this.vectorIdToPath[id] = newPath;
-        });
-
+        entry.ids.forEach(id => this.vectorIdToPath[id] = newPath);
         await this.saveVectors();
     }
 
     private triggerBackoff() {
         if (this.isBackingOff) return;
         this.isBackingOff = true;
-        this.currentDelayMs = 30000;
-
+        this.currentDelayMs = EMBEDDING_CONSTANTS.BACKOFF_DELAY_MS;
         const timer = setTimeout(() => {
             this.activeTimers.delete(timer);
             this.isBackingOff = false;
             logger.info("Resuming queue after backoff.");
             void this.processQueue();
-        }, 60000);
+        }, EMBEDDING_CONSTANTS.RESUME_TIMEOUT_MS);
         this.activeTimers.add(timer);
     }
 
@@ -664,64 +488,36 @@ export class VectorStore {
     }
 
     public getVector(path: string): number[] | null {
-        // Return first vector for debugging/compatibility? 
-        // Or change signature? Use case: getting vector for similarity?
-        // Usually we don't retrieve single file vector externally. SImilarity uses internal buffer.
         const entry = this.index.files[path];
         if (!entry || entry.ids.length === 0) return null;
-
-        const id = entry.ids[0]!;
-        const start = id * this.index.dimensions;
+        const start = entry.ids[0]! * this.index.dimensions;
         return Array.from(this.vectors.slice(start, start + this.index.dimensions));
     }
 
     public findSimilar(queryVector: number[], limit?: number, threshold?: number, excludePath?: string): { path: string; score: number }[] {
-        const startTime = Date.now();
         const query = new Float32Array(queryVector);
         this.normalizeInPlace(query);
 
         const minScore = threshold ?? this.minSimilarityScore;
         const finalLimit = limit ?? this.similarNotesLimit;
-        const count = this.vectorIdToPath.length;
-
-        const scores: { path: string, score: number }[] = [];
-        // Track best score per path to support multi-vector matches (MaxSim)
         const bestScoreByPath = new Map<string, number>();
-
         const dims = this.index.dimensions;
-        const vectors = this.vectors;
-        const vectorIdToPath = this.vectorIdToPath;
 
-        for (let i = 0; i < count; i++) {
-            const start = i * dims;
-
-            // Inline dot product for maximum speed
+        for (let i = 0; i < this.vectorIdToPath.length; i++) {
             let score = 0;
-            for (let j = 0; j < dims; j++) {
-                score += query[j]! * vectors[start + j]!;
-            }
+            const start = i * dims;
+            for (let j = 0; j < dims; j++) score += query[j]! * this.vectors[start + j]!;
 
             if (score >= minScore) {
-                const path = vectorIdToPath[i];
+                const path = this.vectorIdToPath[i];
                 if (path && path !== excludePath) {
-                    const existing = bestScoreByPath.get(path) ?? -1;
-                    if (score > existing) {
-                        bestScoreByPath.set(path, score);
-                    }
+                    bestScoreByPath.set(path, Math.max(bestScoreByPath.get(path) ?? -1, score));
                 }
             }
         }
 
-        // Convert Map to Array
-        for (const [path, score] of bestScoreByPath.entries()) {
-            scores.push({ path, score });
-        }
-
+        const scores = Array.from(bestScoreByPath.entries()).map(([path, score]) => ({ path, score }));
         scores.sort((a, b) => b.score - a.score);
-
-        const result = (finalLimit > 0) ? scores.slice(0, finalLimit) : scores;
-        logger.debug(`findSimilar took ${Date.now() - startTime}ms for ${count} vectors. Results: ${result.length}`);
-        return result;
+        return finalLimit > 0 ? scores.slice(0, finalLimit) : scores;
     }
-
 }
