@@ -69,8 +69,24 @@ Complex heuristic scoring is isolated in the `ScoringStrategy.ts` class.
 *   **`src/services/ModelRegistry.ts`:** Acts as the single source of truth for supported AI models and their capabilities (dimensions, provider).
 *   **Worker Injection:** CDN URLs and versions for Web Workers are injected from `WORKER_CONSTANTS` at runtime, avoiding hardcoded strings in the worker scripts.
 
-## 5. Maintenance Checklist (Annual)
+### Dependency Locking & Version Synchronization
 
+Special care must be taken with hybrid dependencies like `@xenova/transformers`, which require local NPM packages to be in sync with remote WASM/CDN assets.
+
+*   **Pinned Versions:** Always use exact versions (no `^` or `~`) in `package.json` for libraries that fetch remote assets for specialized environments (e.g., workers).
+*   **Three-Way Validation:** We use `scripts/validate-dependencies.cjs` to ensure:
+    1.  `package.json` matches the installed `node_modules`.
+    2.  `src/constants.ts` (`WASM_VERSION` and `WASM_CDN_URL`) matches `package.json`.
+    3.  The remote CDN assets are reachable and correctly versioned.
+*   **Update Flow:** To upgrade `@xenova/transformers`:
+    1.  Update the version string in `package.json`.
+    2.  Run `npm install`.
+    3.  Update `WASM_VERSION` and `WASM_CDN_URL` in `src/constants.ts`.
+    4.  Run `node scripts/validate-dependencies.cjs` to verify.
+
+## 5. Maintenance Checklist (Annual/Per-Update)
+
+*   [ ] Run `node scripts/validate-dependencies.cjs` to ensure version parity.
 *   [ ] Review `manifest.json` `minAppVersion`.
 *   [ ] Audit dependencies (npm audit).
 *   [ ] Check for deprecated Obsidian API usage.
