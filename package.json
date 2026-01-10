@@ -10,7 +10,8 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"preversion": "npm run lint && npm run build",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
-		"lint": "eslint ."
+		"lint": "eslint .",
+		"upgrade-transformers": "node scripts/upgrade-transformers.cjs"
 	},
 	"keywords": [],
 	"license": "MIT",
