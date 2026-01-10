@@ -9,7 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Model Selector Dropdowns:** Replaced manual text fields with intuitive dropdown menus for Chat, Grounding, and Code models, pre-populated with the latest Gemini models.
+- **Custom Model Support:** Added "Custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
+- **Local Model Management:** Standardized selection for local embedding models with automatic dimension validation and a new "Force re-download" utility for easier troubleshooting.
+- **Improved Synchronization:** Refined the indexing engine to detect changes in file size and modification time, ensuring search results are always accurate.
+
 ### Developers
+
+- **Model Registry:** Centralized all model metadata (IDs, labels, types, and dimensions) into a single `ModelRegistry.ts` source of truth.
+- **Scoring Strategy:** Extracted search ranking heuristics into a dedicated `ScoringStrategy` class to improve maintainability and simplify hybrid search logic.
+- **Constants Architecture:** Consolidated hardware thresholds, search ratios, and timing delays into a unified `src/constants.ts` file.
+- **Lifecycle Management:** Implemented explicit worker termination and improved cleanup during plugin unload.
+- **Code Quality:** Enforced strict typing and resolved persistent linting warnings across the settings and service layers.
 
 
 ## [1.5.0] - 2026-01-10
