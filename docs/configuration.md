@@ -40,7 +40,33 @@ Choose how your document vectors are calculated and stored.
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | **Local embedding threads** | `1` (Mobile) / `2` (Desktop) | Only relevant for the **Local** provider. Number of CPU threads used for calculations. Higher is faster but uses more memory/battery. |
-| **Indexing delay (ms)** | `200ms` | Pause between indexing files. Increase if you see "429 Rate Limit" errors. |
+| **Indexing delay (ms)** | `5000ms` | The debounce delay for user edits. The plugin waits this long after your last keystroke before re-indexing the current note. High values prevent "spamming" your API quota or CPU while typing. |
+| **Bulk indexing delay (ms)** | `300ms` | The delay between individual files during bulk operations (like a full vault scan). Keeps the system responsive and respects API rate limits during large updates. |
 | **Gemini retries** | `10` | Automatic retries for spotty connections. |
 | **System instruction** | *Default Persona* | The core personality and rules for the Agent. |
 | **Log level** | `Warn` | Developer console verbosity. Set to `Debug` to see detailed "Chain of Thought". |
+
+---
+
+## 🆚 Gemini vs. Local Models
+
+Choosing the right embedding provider involves balancing privacy, performance, and accuracy.
+
+### ☁️ Google Gemini (Cloud)
+
+**Ideal for:** Users with reliable internet who want the highest possible retrieval quality.
+- **Pros:** State-of-the-art accuracy (`gemini-embedding-004`), zero local CPU/RAM overhead for embeddings, handles large documents gracefully.
+- **Cons:** Requires an API key, subject to remote rate limits, notes are processed by Google (though not used for training per their AI Studio terms).
+
+### 💻 Transformers.js (Local)
+
+**Ideal for:** Privacy-conscious users, offline use, or those wanting to avoid API rate limits.
+- **Pros:** 100% private and offline, no API costs or rate limits, works with any ONNX-compatible model.
+- **Cons:** Uses local CPU/RAM (can slow down older devices), slightly lower retrieval quality on the smallest presets.
+
+| Model Preset | Quality | Speed | Local RAM | Recommendation |
+| :--- | :--- | :--- | :--- | :--- |
+| **Gemini 004** | ⭐⭐⭐⭐⭐ | ⚡⚡⚡ | 0MB | Best for deep research. |
+| **Nomic-Embed** | ⭐⭐⭐⭐ | ⚡⚡ | ~150MB | Best local quality. |
+| **BGE-Small** | ⭐⭐⭐ | ⚡⚡⚡ | ~40MB | For general use. |
+| **Potion-8M** | ⭐⭐ | ⚡⚡⚡⚡ | ~15MB | Best for mobile/older PCs. |

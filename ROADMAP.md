@@ -14,8 +14,9 @@ We believe you shouldn't need a PhD or an expensive API key just to search your 
 
 - [ ] **Universal "Batteries Included" Embeddings**
     - **The Vision:** Install the plugin and it *just works*. No API keys required for basic search.
-    - **The Tech:** We will bundle a lightweight, high-performance model (like `all-MiniLM-L6-v2`) directly into the plugin. It runs 100% locally on your device, ensuring total privacy and zero cost.
-    - **For Power Users:** Support for connecting to local **Ollama** endpoints or other providers (OpenAI, Anthropic, Azure).
+    - [x] **The Tech:** We will bundle a lightweight, high-performance model (like `all-MiniLM-L6-v2`) directly into the plugin. It runs 100% locally on your device, ensuring total privacy and zero cost.
+    - [ ] **Performance:** Upgrade to **Transformers.js v3** to leverage **WebGPU** for hardware-accelerated indexing (5x–10x speedup on compatible GPUs).
+    - [ ] **For Power Users:** Support for connecting to local **Ollama** endpoints or other providers (OpenAI, Anthropic, Azure).
 
 - [ ] **The "Active Graph" Visualization**
     - **The Vision:** Move beyond the static "spaghetti" graph. When you view a note, see a focused, living constellation of related ideas.
@@ -116,6 +117,7 @@ This section serves as a compass for architects and contributors, outlining the 
 
 * **Constraint:** Obsidian plugins run in an Electron environment. We cannot easily ship a Python backend.
 * **Strategy:** Adopt **ONNX Runtime Web** or **Transformers.js** to run quantized models directly in the plugin's JavaScript runtime.
+    * **WebGPU:** Transition to Transformers.js v3 to move inference from the CPU to the GPU, dramatically reducing indexing time for larger vaults.
 * **Challenge:** Balancing plugin bundle size (<100MB target) vs. inference quality. We may need to implement a "Download on Demand" flow for model weights.
 
 ### 2. Editor Integration ("Ghostwriter")

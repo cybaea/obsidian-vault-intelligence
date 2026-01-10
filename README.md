@@ -98,10 +98,17 @@ To provide intelligent reasoning and search capabilities, this plugin uses exter
 
 ## Getting Started
 
-1.  **Get an API Key:** Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-2.  **Install:** Search for "Vault Intelligence" in Community Plugins (or use [BRAT](https://github.com/TfTHacker/obsidian42-brat) with this repo URL).
-3.  **Configure:** Enter your API key in **Settings > Vault Intelligence**.
-4.  **Restart:** Restart Obsidian to begin background indexing.
+1.  **Install**: Search for "Vault Intelligence" in the Obsidian Community Plugins gallery (or use [BRAT](https://github.com/TfTHacker/obsidian42-brat)).
+2.  **API Key**: Obtain a free API key from [Google AI Studio](https://aistudio.google.com/).
+3.  **Configure**:
+    - Enter your API key in **Settings > Vault Intelligence**.
+    - Choose your **Embedding Provider**: 
+        - Choose `Google Gemini` for multi-lingual support, low local compute requirements (ideal for mobile), and best accuracy and ease of use.
+        - Choose `Local` if you prefer 100% privacy and offline functionality.
+4.  **Activate**: Click the **Vault Intelligence** ribbon icon (looks like a robot) and select **Similar notes** from the menu. This sidebar will show you real-time connections to your current note as you work.
+
+> [!TIP]
+> Check the **[Configuration Guide](docs/configuration.md)** to optimize performance for your device, especially if using the local provider on mobile or older hardware.
 
 ## Configuration & Documentation
 
