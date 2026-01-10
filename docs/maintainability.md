@@ -79,10 +79,12 @@ Special care must be taken with hybrid dependencies like `@xenova/transformers`,
     2.  `src/constants.ts` (`WASM_VERSION` and `WASM_CDN_URL`) matches `package.json`.
     3.  The remote CDN assets are reachable and correctly versioned.
 *   **Update Flow:** To upgrade `@xenova/transformers`:
-    1.  Update the version string in `package.json`.
-    2.  Run `npm install`.
-    3.  Update `WASM_VERSION` and `WASM_CDN_URL` in `src/constants.ts`.
-    4.  Run `node scripts/validate-dependencies.cjs` to verify.
+    1.  Simply run `npm run upgrade-transformers`. This script will:
+        - Fetch the latest version from NPM.
+        - Update `package.json` and `src/constants.ts` automatically.
+        - Run `npm install`.
+        - Verify CDN reachability and code sync.
+    2.  Review the changes and commit.
 
 ## 5. Maintenance Checklist (Annual/Per-Update)
 
