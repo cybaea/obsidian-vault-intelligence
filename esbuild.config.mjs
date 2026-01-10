@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
-import { builtinModules } from 'node:module';
+import { builtinModules } from "node:module";
+import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 
 const banner =
 `/*
@@ -11,34 +12,80 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === "production");
 
+// 1. Main Process Externals (Obsidian Desktop)
+const mainExternalModules = [
+	"obsidian",
+	"electron",
+	"@codemirror/autocomplete",
+	"@codemirror/collab",
+	"@codemirror/commands",
+	"@codemirror/language",
+	"@codemirror/lint",
+	"@codemirror/search",
+	"@codemirror/state",
+	"@codemirror/view",
+	"@lezer/common",
+	"@lezer/highlight",
+	"@lezer/lr",
+	"sharp",
+	"onnxruntime-node",
+	...builtinModules
+];
+
+// 2. Worker Process Externals (Browser)
+// We keep 'obsidian' external just in case, but we mock everything else.
+const workerExternalModules = [
+	"obsidian",
+	"electron",
+];
+
+// 3. Mock Plugin
+// Replaces Node.js dependencies with empty objects to prevent 'Module not found' errors
+const mockPlugin = {
+	name: 'mock-plugin',
+	setup(build) {
+		build.onResolve({ filter: /^(sharp|onnxruntime-node|fs|path|url|node:fs|node:path|node:url)$/ }, args => ({
+			path: args.path,
+			namespace: 'mock-ns'
+		}));
+		
+		build.onLoad({ filter: /.*/, namespace: 'mock-ns' }, () => ({
+			contents: 'module.exports = {};',
+			loader: 'js'
+		}));
+	}
+};
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
 	entryPoints: ["src/main.ts"],
 	bundle: true,
-	external: [
-		"obsidian",
-		"electron",
-		"@codemirror/autocomplete",
-		"@codemirror/collab",
-		"@codemirror/commands",
-		"@codemirror/language",
-		"@codemirror/lint",
-		"@codemirror/search",
-		"@codemirror/state",
-		"@codemirror/view",
-		"@lezer/common",
-		"@lezer/highlight",
-		"@lezer/lr",
-		...builtinModules],
+	external: mainExternalModules,
 	format: "cjs",
-	target: "es2018",
+	target: "es2020",
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	plugins: [
+		inlineWorkerPlugin({
+			bundle: true,
+			format: 'iife',
+			platform: 'browser',
+			target: 'es2020',
+			minify: prod,
+			external: workerExternalModules,
+			// [!code ++] CRITICAL FIX: Force library to detect "browser" environment
+			define: {
+				'process.release.name': '"browser"',
+				'process.versions.node': 'false' 
+			},
+			plugins: [mockPlugin]
+		})
+	]
 });
 
 if (prod) {

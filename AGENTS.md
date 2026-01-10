@@ -151,6 +151,7 @@ Follow Obsidian's **Developer Policies** and **Plugin Guidelines**. In particula
 - Bundle everything into `main.js` (no unbundled runtime deps).
 - Avoid Node/Electron APIs if you want mobile compatibility; set `isDesktopOnly` accordingly.
 - Prefer `async/await` over promise chains; handle errors gracefully.
+- Never use `any` type.
 
 ## Mobile
 
@@ -258,7 +259,7 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 
 ## References
 
-- Obsidian Vault Intelligence: https://github.com/obsidianmd/obsidian-sample-plugin
+- Obsidian Sample Plugin: https://github.com/obsidianmd/obsidian-sample-plugin
 - API documentation: https://docs.obsidian.md
 - Developer policies: https://docs.obsidian.md/Developer+policies
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines

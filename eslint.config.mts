@@ -9,6 +9,8 @@ export default tseslint.config(
 		languageOptions: {
 			globals: {
 				...globals.browser,
+				// FIX: Tell ESLint this global exists (injected by esbuild)
+				TRANSFORMERS_VERSION: "readonly",
 			},
 			parserOptions: {
 				projectService: {
@@ -37,7 +39,7 @@ export default tseslint.config(
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-explicit-any": "error",
 			"obsidianmd/ui/sentence-case": ["error", {
-				brands: ["Google", "Gemini", "Google Cloud Console"],
+				brands: ["Google", "Gemini", "Google Cloud Console", "Transformers.js"],
 				acronyms: ["API", "HTML", "AI", "ID", "CX"]
 			}],
 			"no-console": "error",
@@ -54,5 +56,8 @@ export default tseslint.config(
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
+		"worker.js",
+		"scripts/**",
+		"src/**/*.d.ts"
 	]),
 );

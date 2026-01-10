@@ -1,0 +1,6 @@
+
+/home/allane/Code/GitHub/obsidian-vault-intelligence/src/workers/embedding.worker.ts
+  163:13  error  Unexpected console statement. Only these console methods are allowed: warn, error, debug  no-console
+
+✖ 1 problem (1 error, 0 warnings)
+

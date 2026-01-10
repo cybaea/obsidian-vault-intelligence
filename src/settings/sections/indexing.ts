@@ -5,19 +5,7 @@ import { DEFAULT_SETTINGS } from "../types";
 export function renderIndexingSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Indexing and search').setHeading();
 
-    new Setting(containerEl)
-        .setName('Indexing delay (ms)')
-        .setDesc('Background indexing delay. Lower = faster, but higher risk of rate limiting.')
-        .addText(text => text
-            .setPlaceholder(String(DEFAULT_SETTINGS.indexingDelayMs))
-            .setValue(String(plugin.settings.indexingDelayMs))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num)) {
-                    plugin.settings.indexingDelayMs = num;
-                    await plugin.saveSettings();
-                }
-            }));
+    new Setting(containerEl).setName('Indexing and search').setHeading();
 
     new Setting(containerEl)
         .setName('Minimum similarity score')
@@ -40,11 +28,11 @@ export function renderIndexingSettings(containerEl: HTMLElement, plugin: IVaultI
             .onChange(async (value) => {
                 const num = parseInt(value);
                 if (!isNaN(num) && num >= 0) {
-                        plugin.settings.similarNotesLimit = num;
-                        await plugin.saveSettings();
+                    plugin.settings.similarNotesLimit = num;
+                    await plugin.saveSettings();
                 }
             }));
-    
+
     new Setting(containerEl)
         .setName('Vault search results limit')
         .setDesc('Maximum number of results returned by the vault search tool.')

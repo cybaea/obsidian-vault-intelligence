@@ -1,6 +1,6 @@
 import { Setting, Notice } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { LogLevel } from "../../utils/logger"; 
+import { LogLevel } from "../../utils/logger";
 
 export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Advanced').setHeading();
@@ -17,7 +17,7 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                     plugin.settings.systemInstruction = value;
                     await plugin.saveSettings();
                 });
-            
+
             text.inputEl.rows = 10;
         });
 
@@ -36,23 +36,44 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                 }
             }));
 
-    new Setting(containerEl)
-        .setName('Embedding dimension')
-        .setDesc('The vector size for your embeddings. Gemini supports 768, 1536, or 3072. Changing this will wipe your index and cost API credits to rebuild.')
-        .addDropdown(dropdown => dropdown
-            .addOption('768', '768 (standard)')
-            .addOption('1536', '1536 (high detail)')
-            .addOption('3072', '3072 (max detail)')
-            .setValue(String(plugin.settings.embeddingDimension))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (num !== plugin.settings.embeddingDimension) {
-                    plugin.settings.embeddingDimension = num;
+    if (plugin.settings.embeddingProvider === 'gemini') {
+        new Setting(containerEl)
+            .setName('Embedding dimension')
+            .setDesc('The vector size for your embeddings. Gemini supports 768, 1536, or 3072. Changing this will wipe your index and cost API credits to rebuild.')
+            .addDropdown(dropdown => dropdown
+                .addOption('768', '768 (standard)')
+                .addOption('1536', '1536 (high detail)')
+                .addOption('3072', '3072 (max detail)')
+                .setValue(String(plugin.settings.embeddingDimension))
+                .onChange(async (value) => {
+                    const num = parseInt(value);
+                    if (num !== plugin.settings.embeddingDimension) {
+                        plugin.settings.embeddingDimension = num;
+                        await plugin.saveSettings();
+                        new Notice("Embedding dimension changed. Re-indexing vault...");
+                        await plugin.vectorStore.reindexVault();
+                    }
+                }));
+    } else {
+        // Local Threading Settings
+        new Setting(containerEl)
+            .setName('Local embedding threads')
+            .setDesc('Number of threads to use for local embedding. More threads are faster but use more memory.')
+            .addSlider(slider => slider
+                .setLimits(1, 4, 1)
+                .setValue(plugin.settings.embeddingThreads)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    plugin.settings.embeddingThreads = value;
                     await plugin.saveSettings();
-                    new Notice("Embedding dimension changed. Re-indexing vault...");
-                }
-            }));
-    
+
+                    // Surgical update without restart
+                    if (plugin.embeddingService.updateConfiguration) {
+                        plugin.embeddingService.updateConfiguration();
+                    }
+                }));
+    }
+
     new Setting(containerEl)
         .setName('Gemini retries')
         .setDesc('Number of times to retry a Gemini API call if it fails.')

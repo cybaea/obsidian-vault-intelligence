@@ -1,5 +1,6 @@
-import { GeminiService } from "./GeminiService";
+import { IEmbeddingService } from "./IEmbeddingService";
 import { VectorStore } from "../services/VectorStore";
+import { GeminiService } from "./GeminiService";
 import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
 import { logger } from "../utils/logger";
@@ -24,13 +25,21 @@ interface VaultSearchResult {
 export class AgentService {
     private gemini: GeminiService;
     private vectorStore: VectorStore;
+    private embeddingService: IEmbeddingService;
     private app: App;
     private settings: VaultIntelligenceSettings;
 
-    constructor(app: App, gemini: GeminiService, vectorStore: VectorStore, settings: VaultIntelligenceSettings) {
+    constructor(
+        app: App, 
+        gemini: GeminiService, 
+        vectorStore: VectorStore, 
+        embeddingService: IEmbeddingService, // Injected here
+        settings: VaultIntelligenceSettings
+    ) {
         this.app = app;
-        this.gemini = gemini;
+        this.gemini = gemini; // Still needed for chat/grounding/code
         this.vectorStore = vectorStore;
+        this.embeddingService = embeddingService;
         this.settings = settings;
     }
 
@@ -219,11 +228,9 @@ export class AgentService {
             }
 
             logger.info(`[VaultSearch] Starting search for: "${query}"`);
-
-            const taskType = 'RETRIEVAL_QUERY';
             
             // 1. Vector Search (Semantic)
-            const embedding = await this.gemini.embedText(query, { taskType });
+            const embedding = await this.embeddingService.embedQuery(query);
             const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
             

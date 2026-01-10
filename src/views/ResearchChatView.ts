@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, Ma
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { VectorStore } from "../services/VectorStore";
+import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
 
@@ -11,23 +12,32 @@ export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
     gemini: GeminiService;
     vectorStore: VectorStore;
+    embeddingService: IEmbeddingService; // Add property
     agent: AgentService;
     private messages: ChatMessage[] = [];
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
-
-    // Input History
     inputHistory: string[] = [];
     historyIndex = -1;
     private currentDraft = "";
 
-    constructor(leaf: WorkspaceLeaf, plugin: VaultIntelligencePlugin, gemini: GeminiService, vectorStore: VectorStore) {
+    // Update Constructor
+    constructor(
+        leaf: WorkspaceLeaf, 
+        plugin: VaultIntelligencePlugin, 
+        gemini: GeminiService, 
+        vectorStore: VectorStore,
+        embeddingService: IEmbeddingService // Add argument
+    ) {
         super(leaf);
         this.plugin = plugin;
         this.gemini = gemini;
         this.vectorStore = vectorStore;
-        this.agent = new AgentService(plugin.app, gemini, vectorStore, plugin.settings);
+        this.embeddingService = embeddingService;
+        
+        // Pass embeddingService to Agent
+        this.agent = new AgentService(plugin.app, gemini, vectorStore, embeddingService, plugin.settings);
     }
 
     getViewType() {

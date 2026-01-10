@@ -10,9 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User Features
 
+#### 🛡️ Sovereign Intelligence (Local + Offline)
+
+- **Zero Data Leakage:** You can now switch the Embedding Provider to `Local` in settings. This downloads an open-source model (like *Nomic-Embed* or *Potion-8M*) to your device, allowing you to index and search your vault without data ever leaving your machine.
+- **Cost Savings:** "Similar Notes" and search now work completely free, without consuming your Gemini API quota.
+
+#### ⚡ Efficiency
+
+- **Smart Indexing:** The plugin now intelligently waits 5 seconds after you stop typing before active re-indexing. This prevents "spamming" the Gemini API with partial edits, significantly reducing your token usage and billing costs.
 
 ### 🛠 Developers
 
+- **Transformers.js Integration:** Implemented a dedicated Web Worker using `@xenova/transformers` to run ONNX models inside the plugin environment.
+- **Fetch Proxy:** Created a message-passing proxy to route worker network requests through the main process, bypassing strict CORS/CSP policies and sanitizing headers to prevent 401 errors from Hugging Face.
+- **Debounce Refactor:** Consolidated all indexing triggers into a single `VectorStore.requestIndex` method with a `Map<FilePath, Timer>` registry. This prevents race conditions and eliminates redundant "double-debouncing".
+- **Type Safety:** Fixed critical `Float32Array` buffer detachment issues (`copyWithin` errors) during vector storage resizing.
+- **Fine-Tuning:** Added dedicated settings for `queueDelayMs` and `embeddingThreads` to fine-tune performance on different hardware.
 - **Fixed InteliSense errors** in Visual Studio Code. No user impact, but it makes the developer happy. [PR44](https://github.com/cybaea/obsidian-vault-intelligence/pull/44)
 
 

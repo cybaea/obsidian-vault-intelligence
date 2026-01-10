@@ -1,0 +1,409 @@
+import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
+import { logger } from '../utils/logger';
+
+// --- 1. Strong Typing for Environment ---
+interface TransformersEnv {
+    allowLocalModels: boolean;
+    useBrowserCache: boolean;
+    useFS: boolean;
+    backends?: {
+        onnx?: {
+            wasm?: {
+                numThreads?: number;
+                simd?: boolean;
+                wasmPaths?: string | Record<string, string>;
+                proxy?: boolean;
+            }
+        }
+    }
+}
+
+// Cast env for safe configuration
+const safeEnv = env as unknown as TransformersEnv;
+
+// --- 3. Configure Environment ---
+safeEnv.useFS = false;
+safeEnv.allowLocalModels = false;
+safeEnv.useBrowserCache = true;
+
+// Initialize backends structure safely
+if (!safeEnv.backends) safeEnv.backends = {};
+if (!safeEnv.backends.onnx) safeEnv.backends.onnx = {};
+if (!safeEnv.backends.onnx.wasm) safeEnv.backends.onnx.wasm = {};
+
+// Explicit CDN Paths
+const CDN_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
+safeEnv.backends.onnx.wasm.wasmPaths = {
+    'ort-wasm.wasm': `${CDN_URL}ort-wasm.wasm`,
+    'ort-wasm-simd.wasm': `${CDN_URL}ort-wasm-simd.wasm`,
+    'ort-wasm-threaded.wasm': `${CDN_URL}ort-wasm-threaded.wasm`,
+    'ort-wasm-simd-threaded.wasm': `${CDN_URL}ort-wasm-simd-threaded.wasm`,
+};
+
+safeEnv.backends.onnx.wasm.numThreads = 1; // Default to safe single thread
+safeEnv.backends.onnx.wasm.simd = true;
+safeEnv.backends.onnx.wasm.proxy = false;
+
+// --- 4. Fetch Proxy Implementation ---
+const pendingFetches = new Map<number, { resolve: (resp: Response) => void, reject: (err: Error) => void }>();
+let fetchRequestId = 0;
+
+// Override global fetch to proxy through main thread (bypasses Obsidian CSP/CORS)
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = input instanceof Request ? input.url : input.toString();
+
+    // Only proxy HuggingFace or remote calls. Local WASM paths should use original fetch (cached)
+    if (!url.startsWith('http')) {
+        return originalFetch(input, init);
+    }
+
+    return new Promise((resolve, reject) => {
+        const requestId = fetchRequestId++;
+        pendingFetches.set(requestId, { resolve, reject });
+
+        // Properly convert Headers to Record
+        const headers: Record<string, string> = {};
+        if (init?.headers) {
+            if (init.headers instanceof Headers) {
+                init.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+            } else if (Array.isArray(init.headers)) {
+                init.headers.forEach(([key, value]) => {
+                    headers[key] = value;
+                });
+            } else {
+                Object.assign(headers, init.headers);
+            }
+        }
+
+        // --- Header Sanitization ---
+        // Aggressively strip Authorization headers for HuggingFace and Public CDNs 
+        // as they cause 401s if malformed or present on public models.
+        const isPublicUrl = url.includes('huggingface.co') || url.includes('jsdelivr.net');
+        if (isPublicUrl) {
+            delete headers['authorization'];
+            delete headers['Authorization'];
+        } else {
+            // Standard cleanup for other URLs
+            if (headers['authorization']?.includes('undefined') || !headers['authorization']) {
+                delete headers['authorization'];
+            }
+            if (headers['Authorization']?.includes('undefined') || !headers['Authorization']) {
+                delete headers['Authorization'];
+            }
+        }
+
+        ctx.postMessage({
+            type: 'fetch',
+            requestId,
+            url,
+            method: init?.method || 'GET',
+            headers,
+            body: init?.body
+        });
+    });
+};
+
+// --- Types ---
+interface ConfigureMessage {
+    type: 'configure';
+    numThreads: number;
+    simd: boolean;
+}
+
+interface EmbedMessage {
+    id: number;
+    type: 'embed';
+    text: string;
+    model?: string;
+}
+
+interface PipelineOutput {
+    data: Float32Array | Int32Array | BigInt64Array;
+}
+
+interface WorkerSuccessResponse {
+    id: number;
+    status: 'success';
+    output: number[][]; // Changed to Array of Vectors
+}
+
+interface WorkerErrorResponse {
+    id: number;
+    status: 'error';
+    error: string;
+}
+
+// Define types for progress reporting
+interface ProgressPayload {
+    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
+    file?: string;
+    progress?: number;
+    loaded?: number;
+    total?: number;
+    name?: string;
+    task?: string;
+}
+
+type TokenIds = number[] | BigInt64Array | Tensor;
+
+interface TokenizerOutput {
+    input_ids: TokenIds;
+    attention_mask?: TokenIds;
+}
+
+interface FeatureExtractorPipeline {
+    (text: string | string[], options?: Record<string, unknown>): Promise<PipelineOutput>;
+    tokenizer: {
+        (text: string, options?: Record<string, unknown>): Promise<TokenizerOutput | TokenIds>;
+        decode(tokens: TokenIds, options?: Record<string, unknown>): string;
+    };
+}
+
+// Type for our unified extractor function
+type ChunkedExtractor = (text: string) => Promise<number[][]>;
+
+// --- Pipeline Singleton ---
+class PipelineSingleton {
+    static task: PipelineType = 'feature-extraction';
+    static instance: Promise<ChunkedExtractor> | null = null;
+    static currentModel: string = '';
+
+    static async getInstance(model: string): Promise<ChunkedExtractor> {
+        if (this.currentModel && this.currentModel !== model) {
+            logger.debug(`[Worker] Model changed from ${this.currentModel} to ${model}. Resetting instance.`);
+            this.instance = null;
+        }
+
+        if (this.instance === null) {
+            logger.info(`[Worker] Initializing new pipeline for model: ${model}`);
+            this.currentModel = model;
+
+            // Define progress callback for model loading
+            const progress_callback = (progress: ProgressPayload) => {
+                if (progress.status === 'progress' || progress.status === 'initiate' || progress.status === 'downloading' || progress.status === 'done') {
+                    ctx.postMessage({
+                        type: 'progress',
+                        status: progress.status,
+                        file: progress.file || '',
+                        progress: progress.progress || 0
+                    });
+                }
+            };
+
+            this.instance = this.createChunkedExtractor(model, progress_callback);
+        }
+
+        return this.instance;
+    }
+
+    private static async createChunkedExtractor(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+        // SPECIAL CASE: Model2Vec
+        if (modelName.includes('potion') || modelName.includes('model2vec')) {
+            return this.loadModel2Vec(modelName, progress_callback);
+        }
+
+        // STANDARD CASE: Transformers.js Pipeline
+        // 1. Try generic load
+        let pipe: FeatureExtractorPipeline;
+        try {
+            pipe = await pipeline(this.task, modelName, { progress_callback }) as unknown as FeatureExtractorPipeline;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("404")) {
+                console.warn(`[Worker] Retrying unquantized for ${modelName}...`);
+                pipe = await pipeline(this.task, modelName, { quantized: false, progress_callback }) as unknown as FeatureExtractorPipeline;
+            } else {
+                throw err;
+            }
+        }
+
+        // Return wrapper that requires no manual chunking? 
+        // Actually, pipeline() does NOT chunk automatically for feature-extraction. It truncates.
+        // So we MUST implement chunking using pipe.tokenizer.
+
+        return async (text: string) => {
+            const tokenizer = pipe.tokenizer;
+            // 512 is standard, but some models vary. Safe default is 512.
+            const MAX_TOKENS = 512;
+            // CLS + SEP = 2 tokens overhead usually
+            const CHUNK_SIZE = MAX_TOKENS - 2;
+
+            // --- Memory Safety: Character-level pre-segmentation ---
+            // Tokenizing very large documents (>100k chars) at once causes the WASM heap to exhaust
+            // during the tokenizer's internal string processing and array allocation.
+            // We split into blocks that roughly translate to ~2,000-3,000 tokens (well within WASM limits).
+            const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
+            const input_ids: number[] = [];
+
+            for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
+                const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
+                const result = await tokenizer(segment, { add_special_tokens: false });
+
+                // result can be { input_ids: ... } or just the ids
+                const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
+
+                // Get data safely from Tensor or array
+                let data: ArrayLike<number | bigint>;
+                if (segmentIds instanceof Tensor) {
+                    data = segmentIds.data as ArrayLike<number | bigint>;
+                } else {
+                    data = segmentIds as ArrayLike<number | bigint>;
+                }
+
+                input_ids.push(...Array.from(data).map(num => Number(num)));
+            }
+
+            // If empty
+            if (input_ids.length === 0) return [];
+
+            // Chunking Loop (Token level)
+            const vectors: number[][] = [];
+            for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
+                const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
+                // Decode back to string for pipeline call (cleanest way to ensure pooling works)
+                const chunkText = tokenizer.decode(chunkIds, {
+                    skip_special_tokens: true,
+                    clean_up_tokenization_spaces: true
+                });
+
+                if (!chunkText.trim()) continue;
+
+                // pipeline() handles its own tensor management
+                const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
+                vectors.push(Array.from(output.data as ArrayLike<number>));
+            }
+
+            return vectors;
+        };
+    }
+
+    private static async loadModel2Vec(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+        console.debug(`[Worker] Loading Model2Vec: ${modelName}`);
+        const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
+        let model: PreTrainedModel;
+
+        try {
+            model = await AutoModel.from_pretrained(modelName, { progress_callback });
+        } catch {
+            console.warn(`[Worker] Retrying unquantized...`);
+            model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+        }
+
+        return async (text: string) => {
+            const MAX_TOKENS = 512;
+
+            // --- Memory Safety: Character-level pre-segmentation ---
+            const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
+            const input_ids: number[] = [];
+
+            for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
+                const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
+                const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
+                input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
+            }
+
+            // If empty
+            if (input_ids.length === 0) return [];
+
+            const vectors: number[][] = [];
+            const idsArray = input_ids; // number[]
+
+            // Chunk loop
+            for (let i = 0; i < idsArray.length; i += MAX_TOKENS) {
+                const chunkIds = idsArray.slice(i, i + MAX_TOKENS);
+
+                const model_inputs = {
+                    input_ids: new Tensor('int64', new BigInt64Array(chunkIds.map(BigInt)), [chunkIds.length]),
+                    offsets: new Tensor('int64', new BigInt64Array([BigInt(0)]), [1]),
+                };
+
+                const output = await model(model_inputs) as Record<string, Tensor>;
+                const embeddings = output['embeddings'];
+                if (!embeddings) throw new Error("Missing embeddings");
+
+                vectors.push(Array.from(embeddings.data as ArrayLike<number>));
+            }
+
+            return vectors;
+        };
+    }
+}
+
+// --- Message Handling ---
+const ctx = self as unknown as Worker;
+
+function isEmbedMessage(data: unknown): data is EmbedMessage {
+    return (
+        typeof data === 'object' && data !== null &&
+        'type' in data && (data as { type: string }).type === 'embed'
+    );
+}
+
+ctx.addEventListener('message', (event: MessageEvent) => {
+    void (async () => {
+        const data = event.data as unknown;
+        if (!data || typeof data !== 'object') return;
+
+        if ('type' in data && (data as { type: string }).type === 'configure') {
+            const config = data as ConfigureMessage;
+            if (safeEnv.backends!.onnx!.wasm!.numThreads !== config.numThreads || safeEnv.backends!.onnx!.wasm!.simd !== config.simd) {
+                logger.debug(`[Worker] Configuration changed. Resetting pipeline instance.`);
+                PipelineSingleton.instance = null;
+            }
+            safeEnv.backends!.onnx!.wasm!.numThreads = config.numThreads;
+            safeEnv.backends!.onnx!.wasm!.simd = config.simd;
+            logger.debug(`[Worker] Configured: threads=${config.numThreads}, simd=${config.simd}`);
+            return;
+        }
+
+        if ('type' in data && (data as { type: string }).type === 'fetch_response') {
+            const response = data as unknown as { requestId: number, status: number, headers: Record<string, string>, body: ArrayBuffer, error?: string };
+            const pending = pendingFetches.get(response.requestId);
+            if (pending) {
+                if (response.error) {
+                    pending.reject(new Error(response.error));
+                } else {
+                    const resp = new Response(response.body, {
+                        status: response.status,
+                        headers: response.headers
+                    });
+                    pending.resolve(resp);
+                }
+                pendingFetches.delete(response.requestId);
+            }
+            return;
+        }
+
+        if (!isEmbedMessage(data)) return;
+
+        const { id, text, model = 'Xenova/all-MiniLM-L6-v2' } = data;
+
+        try {
+            const extractor = await PipelineSingleton.getInstance(model);
+            const vectors = await extractor(text);
+
+            logger.debug(`[Worker] Generated ${vectors.length} vectors for ID ${id}`);
+
+            const response: WorkerSuccessResponse = {
+                id,
+                status: 'success',
+                output: vectors
+            };
+            ctx.postMessage(response);
+
+        } catch (err) {
+            logger.error("[Worker] Error:", err);
+            const response: WorkerErrorResponse = {
+                id,
+                status: 'error',
+                error: err instanceof Error ? err.message : String(err)
+            };
+            ctx.postMessage(response);
+        }
+    })();
+});
+
+export default {} as unknown as new (options?: WorkerOptions) => Worker;

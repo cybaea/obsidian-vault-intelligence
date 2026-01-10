@@ -1,8 +1,13 @@
-import { App } from "obsidian";
+import { App, Platform } from "obsidian";
 import { LogLevel } from "../utils/logger";
+import { IEmbeddingService } from "../services/IEmbeddingService";
+
+export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
     googleApiKey: string;
+    // New: Provider Selector
+    embeddingProvider: EmbeddingProvider;
     embeddingModel: string;
     embeddingDimension: number;
     chatModel: string;
@@ -11,12 +16,14 @@ export interface VaultIntelligenceSettings {
     enableCodeExecution: boolean;
     contextWindowTokens: number;
     indexingDelayMs: number;
+    queueDelayMs: number;
     minSimilarityScore: number;
     similarNotesLimit: number;
     vaultSearchResultsLimit: number;
     maxAgentSteps: number;
     systemInstruction: string;
     geminiRetries: number;
+    embeddingThreads: number;
     logLevel: LogLevel;
 }
 
@@ -38,29 +45,33 @@ Core Guidelines:
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
+    // Default to Gemini for now to preserve existing behavior
+    embeddingProvider: 'gemini',
     embeddingModel: 'gemini-embedding-001',
     embeddingDimension: 768,
-    chatModel: 'gemini-3-flash-preview', 
+    chatModel: 'gemini-3-flash-preview',
     groundingModel: 'gemini-2.5-flash-lite',
-    codeModel: 'gemini-3-flash-preview', 
-    enableCodeExecution: false, 
-    // CHANGED: Lowered from 1,000,000 to 200,000.
-    // Why: While the model supports 1M, sending 1M tokens in a single 
-    // request instantly exhausts the standard 1M TPM (Tokens Per Minute) rate limit.
-    // 200k tokens is roughly 800,000 characters, which is plenty for 99% of queries.
+    codeModel: 'gemini-3-flash-preview',
+    enableCodeExecution: false,
     contextWindowTokens: 200000,
-    indexingDelayMs: 200,
+    indexingDelayMs: 5000,
+    queueDelayMs: 300,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,
     vaultSearchResultsLimit: 25,
-    maxAgentSteps: 5, 
+    maxAgentSteps: 5,
     systemInstruction: DEFAULT_SYSTEM_PROMPT,
     geminiRetries: 10,
+    embeddingThreads: Platform.isMobile ? 1 : 2,
     logLevel: LogLevel.WARN
 };
 
 export interface IVaultIntelligencePlugin {
     app: App;
     settings: VaultIntelligenceSettings;
+    embeddingService: IEmbeddingService;
     saveSettings(): Promise<void>;
+    vectorStore: {
+        reindexVault(): Promise<void>;
+    };
 }

@@ -82,12 +82,33 @@ Finds the right note, even if you use the wrong words.
 
 ---
 
+## 🌐 Network Use
+
+To provide intelligent reasoning and search capabilities, this plugin uses external network services. In compliance with [Obsidian developer policies](https://docs.obsidian.md/Developer+policies), here is a clear explanation of how and why network access is used:
+
+- **Google Gemini API** (`https://generativelanguage.googleapis.com`): Processes your notes for chat, reasoning, and semantic search. It also powers the **Google Search Grounding** and **Computational Solver** (Python execution) features.
+- **Hugging Face** (`https://huggingface.co`): Used to download open-source embedding models (e.g., Nomic, BERT) for **local processing** when you prefer not to send note content to an external API for indexing.
+- **jsDelivr** (`https://cdn.jsdelivr.net`): Downloads the WebAssembly (WASM) runtimes required to execute the embedding models locally within Obsidian.
+- **User-Initiated Web Access**: Use of the **URL Reader** tool (via the Research Agent) will trigger a request to the specific URL you provide to retrieve its content for the AI to analyze.
+
+> [!NOTE]
+> All note content used for indexing or chat is only sent to the service provider (Google) if you use the cloud-based Gemini models. Local models downloaded from Hugging Face run entirely on your device.
+
+---
+
 ## Getting Started
 
-1.  **Get an API Key:** Obtain a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-2.  **Install:** Search for "Vault Intelligence" in Community Plugins (or use [BRAT](https://github.com/TfTHacker/obsidian42-brat) with this repo URL).
-3.  **Configure:** Enter your API key in **Settings > Vault Intelligence**.
-4.  **Restart:** Restart Obsidian to begin background indexing.
+1.  **Install**: Search for "Vault Intelligence" in the Obsidian Community Plugins gallery (or use [BRAT](https://github.com/TfTHacker/obsidian42-brat)).
+2.  **API Key**: Obtain a free API key from [Google AI Studio](https://aistudio.google.com/).
+3.  **Configure**:
+    - Enter your API key in **Settings > Vault Intelligence**.
+    - Choose your **Embedding Provider**: 
+        - Choose `Google Gemini` for multi-lingual support, low local compute requirements (ideal for mobile), and best accuracy and ease of use.
+        - Choose `Local` if you prefer 100% privacy and offline functionality.
+4.  **Activate**: Click the **Vault Intelligence** ribbon icon (looks like a robot) and select **Similar notes** from the menu. This sidebar will show you real-time connections to your current note as you work.
+
+> [!TIP]
+> Check the **[Configuration Guide](docs/configuration.md)** to optimize performance for your device, especially if using the local provider on mobile or older hardware.
 
 ## Configuration & Documentation
 

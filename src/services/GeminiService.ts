@@ -25,7 +25,7 @@ export class GeminiService {
 
         try {
             this.client = new GoogleGenAI({ apiKey: this.settings.googleApiKey });
-            logger.info("GeminiService initialized with @google/genai.");
+            logger.info("GeminiService initialized for Chat/Reasoning with @google/genai.");
         } catch (error) {
             logger.error("Failed to initialize GeminiService:", error);
         }
@@ -47,12 +47,12 @@ export class GeminiService {
     public async generateContent(prompt: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
-            
+
             const response = await this.client.models.generateContent({
                 model: this.settings.chatModel,
                 contents: prompt
             });
-            
+
             return response.text || "";
         });
     }
@@ -66,7 +66,7 @@ export class GeminiService {
             const groundingModel = this.settings.groundingModel;
 
             const response = await this.client.models.generateContent({
-                model: groundingModel, 
+                model: groundingModel,
                 contents: prompt,
                 config: {
                     tools: [{ googleSearch: {} }]
@@ -82,7 +82,7 @@ export class GeminiService {
     public async solveWithCode(query: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
-            
+
             if (!this.settings.enableCodeExecution || !this.settings.codeModel) {
                 return "Code execution is currently disabled in settings.";
             }
@@ -103,18 +103,18 @@ export class GeminiService {
             if (!parts) return "No result generated.";
 
             let resultString = "";
-            
+
             for (const part of parts) {
                 // 1. Standard Text (Reasoning or Answer)
                 if (part.text) {
                     resultString += part.text + "\n";
                 }
-                
+
                 // 2. The Python Code Generated
                 if (part.executableCode) {
                     resultString += `\n[Generated Code]\n\`\`\`python\n${part.executableCode.code}\n\`\`\`\n`;
                 }
-                
+
                 // 3. The Output of the Code
                 if (part.codeExecutionResult) {
                     resultString += `\n[Execution Result]\n${part.codeExecutionResult.output}\n`;
@@ -146,11 +146,11 @@ export class GeminiService {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
             const config: EmbedContentConfig = {};
-            
+
             if (options.outputDimensionality) {
                 config.outputDimensionality = options.outputDimensionality;
             } else {
-                config.outputDimensionality = this.settings.embeddingDimension; 
+                config.outputDimensionality = this.settings.embeddingDimension;
             }
 
             if (options.taskType) config.taskType = options.taskType;
@@ -163,13 +163,13 @@ export class GeminiService {
             });
 
             const embeddings = result.embeddings;
-            
+
             if (!embeddings || embeddings.length === 0) {
                 throw new Error("No embeddings returned.");
             }
 
             const firstEmbedding = embeddings[0];
-            
+
             if (!firstEmbedding || !firstEmbedding.values) {
                 throw new Error("No embedding values found.");
             }
