@@ -100,6 +100,38 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         });
     }
 
+    // --- 2c. Indexing Delay (Relocated for visibility) ---
+    const isLocalProvider = plugin.settings.embeddingProvider === 'local';
+    new Setting(containerEl)
+        .setName('Indexing delay (ms)')
+        .setDesc(isLocalProvider
+            ? 'Background indexing delay. Helps preserve local compute resources by waiting for you to stop typing.'
+            : 'Background indexing delay. Helps protect your API quota and prevents rate limiting by waiting for you to stop typing.')
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.indexingDelayMs))
+            .setValue(String(plugin.settings.indexingDelayMs))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num)) {
+                    plugin.settings.indexingDelayMs = num;
+                    await plugin.saveSettings();
+                }
+            }));
+
+    new Setting(containerEl)
+        .setName('Bulk indexing delay (ms)')
+        .setDesc('Delay between files when scanning the entire vault. Helps manage system load and API rate limits during bulk updates.')
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.queueDelayMs))
+            .setValue(String(plugin.settings.queueDelayMs))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num)) {
+                    plugin.settings.queueDelayMs = num;
+                    await plugin.saveSettings();
+                }
+            }));
+
     // --- 2a. Custom Model Fields (Only if Local + Custom) ---
     const isLocal = plugin.settings.embeddingProvider === 'local';
     const currentModel = plugin.settings.embeddingModel;

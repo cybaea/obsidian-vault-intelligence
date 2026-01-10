@@ -16,6 +16,7 @@ export interface VaultIntelligenceSettings {
     enableCodeExecution: boolean;
     contextWindowTokens: number;
     indexingDelayMs: number;
+    queueDelayMs: number;
     minSimilarityScore: number;
     similarNotesLimit: number;
     vaultSearchResultsLimit: number;
@@ -53,7 +54,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     codeModel: 'gemini-3-flash-preview',
     enableCodeExecution: false,
     contextWindowTokens: 200000,
-    indexingDelayMs: 200,
+    indexingDelayMs: 5000,
+    queueDelayMs: 300,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,
     vaultSearchResultsLimit: 25,

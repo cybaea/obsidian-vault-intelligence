@@ -26,6 +26,7 @@ export class VectorStore {
     private gemini: GeminiService;
     private embeddingService: IEmbeddingService;
     private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private pendingIndexTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
     private activeTimers: Set<ReturnType<typeof setTimeout>> = new Set();
     private settings: VaultIntelligenceSettings;
     private consecutiveErrors = 0;
@@ -61,6 +62,12 @@ export class VectorStore {
             dimensions: this.embeddingService.dimensions,
             files: {}
         };
+
+        this.initDebouncedIndex();
+    }
+
+    private initDebouncedIndex() {
+        // No longer using Obsidian debounce for per-file indexing
     }
 
     public setEmbeddingService(service: IEmbeddingService) {
@@ -69,12 +76,15 @@ export class VectorStore {
 
     public updateSettings(settings: VaultIntelligenceSettings) {
         this.settings = settings;
-        this.baseDelayMs = settings.indexingDelayMs || 200;
+        this.baseDelayMs = settings.queueDelayMs || 300;
         this.minSimilarityScore = settings.minSimilarityScore ?? 0.5;
         this.similarNotesLimit = settings.similarNotesLimit ?? 5;
         if (!this.isBackingOff) {
             this.currentDelayMs = this.baseDelayMs;
         }
+
+        // Re-initialize debounce if delay changed
+        this.initDebouncedIndex();
     }
 
     private getDataPath(filename: string): string {
@@ -371,6 +381,39 @@ export class VectorStore {
         this.enqueueIndex(file);
     }
 
+    /**
+     * Consolidates all indexing requests.
+     * Uses a per-file timer to debounce frequent updates (e.g. typing).
+     */
+    public requestIndex(file: TFile, delayMs?: number) {
+        if (!file || file.extension !== 'md') return;
+
+        // Clear existing timer for this file
+        const existingTimer = this.pendingIndexTimers.get(file.path);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+            this.activeTimers.delete(existingTimer);
+        }
+
+        const waitTime = delayMs ?? this.settings.indexingDelayMs ?? 5000;
+
+        logger.debug(`Requesting index for ${file.path} (delay: ${waitTime}ms)`);
+
+        const timer = setTimeout(() => {
+            this.pendingIndexTimers.delete(file.path);
+            this.activeTimers.delete(timer);
+            this.indexFile(file);
+        }, waitTime);
+
+        this.pendingIndexTimers.set(file.path, timer);
+        this.activeTimers.add(timer);
+    }
+
+    public debouncedIndexFile(file: TFile) {
+        // Compatibility: Route to requestIndex
+        this.requestIndex(file);
+    }
+
     private async indexFileImmediate(file: TFile, priority: EmbeddingPriority = 'low'): Promise<number[][] | null> {
         if (!file || file.extension !== 'md') return null;
 
@@ -614,6 +657,7 @@ export class VectorStore {
         }
         this.activeTimers.forEach(timer => clearTimeout(timer));
         this.activeTimers.clear();
+        this.pendingIndexTimers.clear();
         this.requestQueue = [];
         this.activeRequests = 0;
         this.isBackingOff = true;

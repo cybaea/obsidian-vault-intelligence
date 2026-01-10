@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, TFile, debounce, Menu, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, Menu, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { VectorStore } from "./services/VectorStore";
@@ -15,6 +15,12 @@ export default class VaultIntelligencePlugin extends Plugin {
 	// Store the interface, not the concrete implementation
 	embeddingService: IEmbeddingService;
 	vectorStore: VectorStore;
+
+	private debouncedOnMetadataChange: (file: TFile) => void;
+
+	private initDebouncedHandlers() {
+		// Consistently handled by VectorStore now
+	}
 
 	async onload() {
 		await this.loadSettings();
@@ -43,6 +49,8 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// 3. Inject into VectorStore
 		this.vectorStore = new VectorStore(this, this.geminiService, this.embeddingService, this.settings);
 		await this.vectorStore.loadVectors();
+
+		this.initDebouncedHandlers();
 
 		// ... (Rest of the file remains the same: Event listeners, Ribbon, Commands) ...
 
@@ -114,33 +122,34 @@ export default class VaultIntelligencePlugin extends Plugin {
 							void leaf.view.updateForFile(file);
 						}
 					}
-					this.vectorStore.indexFile(file);
+					// Use requestIndex even for file-open to avoid spamming on rapid switch
+					this.vectorStore.requestIndex(file);
 				}
 			})
 		);
 
-		const onMetadataChange = debounce((file: TFile) => {
+		this.registerEvent(this.app.metadataCache.on('changed', (file) => {
 			if (file instanceof TFile && file.extension === 'md') {
-				logger.debug(`File changed (metadata): ${file.path}`);
-				this.vectorStore.indexFile(file);
+				this.vectorStore.requestIndex(file);
 
+				// Update Similar Notes view if this is the active file
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.path === file.path) {
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
 					for (const leaf of leaves) {
 						if (leaf.view instanceof SimilarNotesView) {
+							// We can either update immediately or wait for indexing.
+							// Usually updateForFile does its own indexing check.
 							void leaf.view.updateForFile(file);
 						}
 					}
 				}
 			}
-		}, 2000, true);
-
-		this.registerEvent(this.app.metadataCache.on('changed', onMetadataChange));
+		}));
 
 		this.registerEvent(this.app.vault.on('create', (file) => {
 			if (file instanceof TFile && file.extension === 'md') {
-				this.vectorStore.indexFile(file);
+				this.vectorStore.requestIndex(file);
 			}
 		}));
 
@@ -207,6 +216,9 @@ export default class VaultIntelligencePlugin extends Plugin {
 		await this.saveData(this.settings);
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
+
+		// Re-initialize handlers to pick up change in indexingDelayMs
+		this.initDebouncedHandlers();
 
 		// Note: We don't hot-swap embedding services yet. 
 		// The settings tab warns the user to restart if they change providers.
