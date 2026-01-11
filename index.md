@@ -16,8 +16,14 @@ hero:
 features:
   - title: Research Agent
     details: Ask questions about your vault and get answers powered by Google Gemini.
-  - title: Adaptive Hybrid Search
-    details: Semantic and keyword search combined for better results.
+    link: /docs/examples
+    linkText: See examples
+  - title: Knowledge Verification
+    details: Instant fact-checking of your private notes against Google Search.
+    link: /docs/examples#knowledge-verification
+    linkText: See examples
   - title: Similar Notes
     details: Discover related information automatically as you write.
+    link: /docs/examples#similar-documents
+    linkText: See in action
 ---
