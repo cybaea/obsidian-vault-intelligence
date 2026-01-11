@@ -114,7 +114,7 @@ _**Answer**: Use the command palette and select "Vault Intelligence: Open simila
 
 Get the most out of Vault Intelligence with these advanced prompts.
 
-## 🧠 Reasoning & Synthesis
+## Reasoning & Synthesis
 
 * "Synthesize my last 5 years of journals. How has my perspective on [Topic] changed?"
 * "Compare the arguments in `@Note A` and `@Note B`. Where do they disagree?"
@@ -122,13 +122,13 @@ Get the most out of Vault Intelligence with these advanced prompts.
 * "Create a summary of all notes in the `@Meetings` folder related to 'Client X'."
 
 
-## 🕵️ Grounding & Fact Checking
+## Grounding & Fact Checking
 
 * "What do I know about [Company X] in my notes? Verify if this information is still current against Google Search."
 * "I wrote that [Event] happened in 2021. Is that factually correct?"
 * "Find the latest stock price for AAPL and update my note @'Tech Portfolio'."
 
-## 🧮 Computational Solver (Python)
+## Computational Solver (Python)
 
 *Requires 'Enable code execution' to be ON.*
 
