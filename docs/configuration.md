@@ -14,7 +14,7 @@ Vault Intelligence is designed to work out-of-the-box, but is highly customizabl
 | :--- | :--- | :--- |
 | **Chat model** | `gemini-3-flash-preview` | The main intelligence engine. <br>• **Flash:** Best for speed and "Agentic" loops (tool use). <br>• **Pro:** Best for deep reasoning or creative writing, but slower. |
 | **Context window budget** | `200,000` | The maximum number of tokens (words/characters) the AI can consider at once. <br>⚠️ **Note:** This budget is also constrained by the inherent limit of your chosen **Chat model**. For example, while `gemini-3-flash-preview` supports up to 1 million tokens, other models may support much less. Setting this budget higher than the model's capacity will lead to errors. <br>• **Lower (e.g., 50k):** Cheaper, faster, less comprehensive. <br>• **Higher:** Reads more notes, but increases response time and costs. |
-| **Enable code execution** | `Off` | Turns on the **Computational Solver**. When enabled, the agent can write and execute Python code to solve math problems or analyze data. |
+| **Enable code execution** | `On` | Turns on the **Computational Solver**. When enabled, the agent can write and execute Python code to solve math problems or analyze data. |
 | **Code model** | `gemini-3-flash-preview` | The specialized model used for generating Python code. Only visible if code execution is enabled. |
 | **Max agent steps** | `5` | Limits how many "thoughts" (loops) the agent can have before giving an answer. Prevents infinite loops. |
 

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom Model Support:** Added "Custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
 - **Local Model Management:** Standardized selection for local embedding models with automatic dimension validation and a new "Force re-download" utility for easier troubleshooting.
 - **Improved Synchronization:** Refined the indexing engine to detect changes in file size and modification time, ensuring search results are always accurate.
+- **Default Code Execution:** Changed the default setting for "Enable code execution" from **Off** to **On**, enabling the Computational Solver (Python execution) by default for all new installations.
 
 ### Developers
 
