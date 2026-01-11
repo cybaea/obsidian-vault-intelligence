@@ -380,7 +380,7 @@ export class VectorStore {
                 return null;
             }
 
-            logger.info(`Indexing: ${file.path}`);
+            logger.info(`[${this.embeddingService.modelName}/${this.embeddingService.dimensions}] Indexing: ${file.path}`);
             const embeddings = await this.embeddingService.embedDocument(textToEmbed, file.basename, priority);
 
             this.upsertVector(file.path, file.stat.mtime, file.stat.size, embeddings);
