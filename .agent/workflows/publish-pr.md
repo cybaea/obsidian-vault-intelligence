@@ -11,25 +11,26 @@ description: Automates the process of creating a PR, waiting for checks, merging
 
 2. Check if a PR already exists. If it does, STOP to prevent accidental merges of existing PRs.
    // turbo
-   `if gh pr view --json url > /dev/null 2>&1; then echo "⚠️ PR already exists for this branch. Stopping workflow for safety. Please manage existing PRs manually."; exit 1; else echo "Creating new PR..." && gh pr create --title "<Title>" --body "<Summary>"; fi`
+   `if gh pr view --json url > /dev/null 2>&1; then echo "⚠️ PR already exists for this branch. Stopping workflow for safety. Please manage existing PRs manually."; exit 1; fi`
 
-   > [!NOTE]
-   > If creating a new PR, you will need to replace `<Title>` and `<Summary>` with a descriptive title and body based on `git log` and `git diff` analysis.
+3. Analyze the changes compared to the default branch
+   `export DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name) && git log $DEFAULT_BRANCH..HEAD --oneline`
+   `export DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name) && git diff $DEFAULT_BRANCH...HEAD --stat`
 
-3. Watch the checks
+4. Create the Pull Request with a descriptive title and body based on the analysis
+   `gh pr create --title "<Title>" --body "<Summary>"`
+
+5. Watch the checks
    // turbo
    `gh pr checks --watch`
 
-4. > [!IMPORTANT]
+6. > [!IMPORTANT]
    > If the checks fail, **STOP**. Analyze the failure using `gh run view`, fix the issues, push updates, and re-run the checks. Only proceed to the next step if checks pass.
 
-5. Merge the Pull Request
+7. Merge the Pull Request
    // turbo
    `gh pr merge --merge --delete-branch`
 
-6. Switch to default branch and pull latest changes
+8. Switch back to the default branch, pull latest changes, and delete the local feature branch
    // turbo
-   `export DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name) && git checkout $DEFAULT_BRANCH && git pull origin $DEFAULT_BRANCH`
-
-7. Delete the local feature branch
-   `git branch -d <branch-name>`
+   `export DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name) && export BRANCH_TO_DELETE=$(git branch --show-current) && git checkout $DEFAULT_BRANCH && git pull origin $DEFAULT_BRANCH && git branch -d $BRANCH_TO_DELETE`
