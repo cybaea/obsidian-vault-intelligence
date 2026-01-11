@@ -16,11 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developers
 
-- **Model Registry:** Centralized all model metadata (IDs, labels, types, and dimensions) into a single `ModelRegistry.ts` source of truth.
-- **Scoring Strategy:** Extracted search ranking heuristics into a dedicated `ScoringStrategy` class to improve maintainability and simplify hybrid search logic.
-- **Constants Architecture:** Consolidated hardware thresholds, search ratios, and timing delays into a unified `src/constants.ts` file.
-- **Lifecycle Management:** Implemented explicit worker termination and improved cleanup during plugin unload.
-- **Code Quality:** Enforced strict typing and resolved persistent linting warnings across the settings and service layers.
+- **Worker Robustness:** Implemented a 4-stage stability fallback (Threads -> 1 Thread -> No SIMD -> Circuit Breaker) to handle environmental WASM/SIMD incompatibilities.
+- **Boot Grace Period:** Added a proactive detector that triggers stable modes immediately if the worker crashes within 10 seconds of startup.
+- **Stable Mode Persistence:** Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
+- **Enhanced Diagnostics:** Improved worker-side global error handlers to capture detailed information from generic `ErrorEvent` objects and logged document titles during indexing.
+- **Model Hygiene:** Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
+- **Code Quality:** Removed all `any` type casts in the local embedding service and strictly enforced ESLint and TypeScript compilation rules.
 
 
 ## [1.5.0] - 2026-01-10
