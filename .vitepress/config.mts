@@ -5,6 +5,16 @@ export default defineConfig({
     title: "Vault Intelligence",
     description: "AI research assistant for your Obsidian vault",
     base: '/obsidian-vault-intelligence/',
+    head: [
+        ['meta', { property: 'og:type', content: 'website' }],
+        ['meta', { property: 'og:title', content: 'Vault Intelligence' }],
+        ['meta', { property: 'og:description', content: 'AI research assistant for your Obsidian vault' }],
+        ['meta', { property: 'og:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
+        ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+        ['meta', { name: 'twitter:title', content: 'Vault Intelligence' }],
+        ['meta', { name: 'twitter:description', content: 'AI research assistant for your Obsidian vault' }],
+        ['meta', { name: 'twitter:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
+    ],
     themeConfig: {
         // https://vitepress.dev/reference/default-theme-config
         nav: [
