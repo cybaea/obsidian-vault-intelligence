@@ -114,6 +114,7 @@ interface EmbedMessage {
     type: 'embed';
     text: string;
     model?: string;
+    quantized?: boolean;
 }
 
 interface PipelineOutput {
@@ -161,6 +162,45 @@ interface FeatureExtractorPipeline {
 // Type for our unified extractor function
 type ChunkedExtractor = (text: string) => Promise<number[][]>;
 
+// --- 5. Global Error Handling ---
+// Catch errors from sub-workers (like ONNX) or unhandled rejections
+self.addEventListener('error', (e: ErrorEvent) => {
+    let detail = 'Internal error';
+    if (e.error) {
+        if (e.error instanceof Error) {
+            detail = `${e.error.name}: ${e.error.message}\n${e.error.stack}`;
+        } else if (typeof e.error === 'object') {
+            // Handle objects that stringify poorly (like events)
+            detail = JSON.stringify(e.error, Object.getOwnPropertyNames(e.error));
+        } else {
+            detail = String(e.error);
+        }
+    }
+    logger.error("[Worker] Global Error:", {
+        message: e.message,
+        filename: e.filename,
+        lineno: e.lineno,
+        colno: e.colno,
+        error: detail
+    });
+});
+
+self.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
+    let detail = 'No reason provided';
+    if (e.reason) {
+        if (e.reason instanceof Error) {
+            detail = `${e.reason.name}: ${e.reason.message}\n${e.reason.stack}`;
+        } else if (typeof e.reason === 'object') {
+            detail = JSON.stringify(e.reason, Object.getOwnPropertyNames(e.reason));
+        } else {
+            detail = String(e.reason);
+        }
+    }
+    logger.error("[Worker] Unhandled Rejection:", {
+        reason: detail
+    });
+});
+
 // --- Helper for Event Loop Yielding ---
 // Forces the worker to "breathe" and allow the browser/host to see it is still alive.
 async function yieldToEventLoop() {
@@ -172,16 +212,18 @@ class PipelineSingleton {
     static task: PipelineType = 'feature-extraction';
     static instance: Promise<ChunkedExtractor> | null = null;
     static currentModel: string = '';
+    static currentQuantized: boolean = true;
 
-    static async getInstance(model: string): Promise<ChunkedExtractor> {
-        if (this.currentModel && this.currentModel !== model) {
-            logger.debug(`[Worker] Model changed from ${this.currentModel} to ${model}. Resetting instance.`);
+    static async getInstance(model: string, quantized: boolean = true): Promise<ChunkedExtractor> {
+        if (this.currentModel && (this.currentModel !== model || this.currentQuantized !== quantized)) {
+            logger.debug(`[Worker] Model/Config changed from ${this.currentModel}(q=${this.currentQuantized}) to ${model}(q=${quantized}). Resetting instance.`);
             this.instance = null;
         }
 
         if (this.instance === null) {
-            logger.info(`[Worker] Initializing new pipeline for model: ${model}`);
+            logger.info(`[Worker] Initializing new pipeline for model: ${model} (quantized: ${quantized})`);
             this.currentModel = model;
+            this.currentQuantized = quantized;
 
             // Define progress callback for model loading
             const progress_callback = (progress: ProgressPayload) => {
@@ -195,26 +237,26 @@ class PipelineSingleton {
                 }
             };
 
-            this.instance = this.createChunkedExtractor(model, progress_callback);
+            this.instance = this.createChunkedExtractor(model, quantized, progress_callback);
         }
 
         return this.instance;
     }
 
-    private static async createChunkedExtractor(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+    private static async createChunkedExtractor(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
         // SPECIAL CASE: Model2Vec
         if (modelName.includes('potion') || modelName.includes('model2vec')) {
-            return this.loadModel2Vec(modelName, progress_callback);
+            return this.loadModel2Vec(modelName, quantized, progress_callback);
         }
 
         // STANDARD CASE: Transformers.js Pipeline
         // 1. Try generic load
         let pipe: FeatureExtractorPipeline;
         try {
-            pipe = await pipeline(this.task, modelName, { progress_callback }) as unknown as FeatureExtractorPipeline;
+            pipe = await pipeline(this.task, modelName, { quantized, progress_callback }) as unknown as FeatureExtractorPipeline;
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            if (msg.includes("404")) {
+            if (quantized && msg.includes("404")) {
                 console.warn(`[Worker] Retrying unquantized for ${modelName}...`);
                 pipe = await pipeline(this.task, modelName, { quantized: false, progress_callback }) as unknown as FeatureExtractorPipeline;
             } else {
@@ -290,16 +332,21 @@ class PipelineSingleton {
         };
     }
 
-    private static async loadModel2Vec(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
-        console.debug(`[Worker] Loading Model2Vec: ${modelName}`);
+    private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+        console.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
         const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
         let model: PreTrainedModel;
 
         try {
-            model = await AutoModel.from_pretrained(modelName, { progress_callback });
-        } catch {
-            console.warn(`[Worker] Retrying unquantized...`);
-            model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+            model = await AutoModel.from_pretrained(modelName, { quantized, progress_callback });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (quantized) {
+                console.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
+                model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+            } else {
+                throw err;
+            }
         }
 
         return async (text: string) => {
@@ -404,10 +451,10 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         if (!isEmbedMessage(data)) return;
 
-        const { id, text, model = 'Xenova/all-MiniLM-L6-v2' } = data;
+        const { id, text, model = 'Xenova/all-MiniLM-L6-v2', quantized = true } = data;
 
         try {
-            const extractor = await PipelineSingleton.getInstance(model);
+            const extractor = await PipelineSingleton.getInstance(model, quantized);
             const vectors = await extractor(text);
 
             logger.debug(`[Worker] Generated ${vectors.length} vectors for ID ${id}`);

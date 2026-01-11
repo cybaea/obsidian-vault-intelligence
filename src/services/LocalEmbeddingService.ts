@@ -1,8 +1,9 @@
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
-import { Plugin, Notice, Platform, requestUrl } from "obsidian";
-import { VaultIntelligenceSettings } from "../settings/types";
+import { Plugin, Notice, requestUrl } from "obsidian";
+import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
 import { logger } from "../utils/logger";
 import { WORKER_CONSTANTS } from "../constants";
+import { ModelRegistry } from "./ModelRegistry";
 
 import EmbeddingWorker from "../workers/embedding.worker";
 
@@ -29,6 +30,15 @@ interface ProgressPayload {
     progress?: number;
 }
 
+interface EmbeddingTask {
+    id: number;
+    text: string;
+    priority: EmbeddingPriority;
+    resolve: (val: number[][]) => void;
+    reject: (err: unknown) => void;
+    title?: string;
+}
+
 interface ConfigureMessage {
     type: 'configure';
     numThreads: number;
@@ -44,9 +54,16 @@ export class LocalEmbeddingService implements IEmbeddingService {
     private lastNotice: Notice | null = null;
     private lastNoticeTime = 0;
 
+    private restartCount = 0;
+    private lastRestartTime = 0;
+    private isCircuitBroken = false;
+    private fallbackThreads: number | null = null;
+    private fallbackSimd: boolean | null = null;
+    private lastInitTime = 0;
+
     private messageId = 0;
     private pendingRequests = new Map<number, { resolve: (val: number[][]) => void, reject: (err: unknown) => void }>();
-    private requestQueue: { id: number, text: string, priority: EmbeddingPriority, resolve: (val: number[][]) => void, reject: (err: unknown) => void }[] = [];
+    private requestQueue: EmbeddingTask[] = [];
     private isWorkerBusy = false;
 
     constructor(plugin: Plugin, settings: VaultIntelligenceSettings) {
@@ -100,6 +117,17 @@ export class LocalEmbeddingService implements IEmbeddingService {
     public async initialize() {
         if (this.worker) return;
 
+        // Reset circuit breaker if it's been more than 5 minutes since last restart
+        if (this.isCircuitBroken && Date.now() - this.lastRestartTime > 300000) {
+            this.isCircuitBroken = false;
+            this.restartCount = 0;
+        }
+
+        if (this.isCircuitBroken) {
+            logger.warn("[LocalEmbedding] Circuit broken. Refusing to start worker.");
+            return;
+        }
+
         await Promise.resolve();
 
         try {
@@ -109,16 +137,100 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
             this.worker.onmessage = (e: MessageEvent) => this._onMessage(e);
             this.worker.onerror = (e: ErrorEvent) => {
-                logger.error("[LocalEmbedding] Worker Error:", e);
-                new Notice("Local worker crashed.");
+                let errorDetails = 'No error object';
+                if (e.error) {
+                    if (e.error instanceof Error) {
+                        errorDetails = e.error.stack || e.error.message;
+                    } else {
+                        errorDetails = String(e.error);
+                    }
+                }
+
+                const errorInfo = {
+                    message: e.message,
+                    filename: e.filename,
+                    lineno: e.lineno,
+                    colno: e.colno,
+                    error: errorDetails
+                };
+
+                logger.error("[LocalEmbedding] Worker Thread Crash:", errorInfo);
+
+                // Circuit Breaker & Fallback Logic
+                const now = Date.now();
+                const isEarlyCrash = (now - this.lastInitTime < 10000); // 10s grace period
+
+                if (now - this.lastRestartTime < 60000) {
+                    this.restartCount++;
+                } else {
+                    this.restartCount = 1;
+                }
+                this.lastRestartTime = now;
+
+                // Escalate fallback faster if it's an early crash (likely boot/WASM/SIMD failure)
+                if (isEarlyCrash) {
+                    logger.warn("[LocalEmbedding] Worker crashed immediately after boot. Escalating stable modes.");
+                }
+
+                // Stage 1: 1 Thread
+                if ((this.restartCount === 2 || (isEarlyCrash && this.restartCount === 1)) && (this.settings.embeddingThreads > 1 || this.fallbackThreads !== 1)) {
+                    logger.warn("[LocalEmbedding] Stability Note: Your system may be incompatible with multi-threaded WASM. Enabling Single-Threaded mode for stability.");
+                    this.fallbackThreads = 1;
+
+                    // Persist this stable mode if it's an early crash (likely environment mismatch)
+                    if (isEarlyCrash && this.settings.embeddingThreads > 1) {
+                        this.settings.embeddingThreads = 1;
+                        void (this.plugin as unknown as IVaultIntelligencePlugin).saveSettings();
+                    }
+                }
+
+                // Stage 2: No SIMD (Safe Mode)
+                if ((this.restartCount === 3 || (isEarlyCrash && this.restartCount >= 2)) && (this.fallbackSimd !== false && this.settings.embeddingSimd !== false)) {
+                    logger.warn("[LocalEmbedding] Stability Note: SIMD instructions failed. Enabling Safe Mode (No SIMD).");
+                    this.fallbackSimd = false;
+
+                    // Persist Safe Mode
+                    this.settings.embeddingSimd = false;
+                    void (this.plugin as unknown as IVaultIntelligencePlugin).saveSettings();
+                }
+
+                if (this.restartCount > 4) {
+                    this.isCircuitBroken = true;
+                    const msg = "Local embedding worker crashed repeatedly. Automatic restart disabled to prevent loop. Please try 'Force Download' in settings or switch models.";
+                    logger.error(`[LocalEmbedding] ${msg}`);
+                    new Notice(msg, 10000);
+                    this.terminate();
+                    return;
+                }
+
+                new Notice(`Local embedding worker crashed (${this.restartCount}/3). Attempting to restart...`);
+
+                // 1. Terminate the zombie worker
+                this.terminate();
+
+                // 2. Reject all pending requests to unblock the queue
+                if (this.pendingRequests.size > 0) {
+                    for (const [id, promise] of this.pendingRequests.entries()) {
+                        promise.reject(`Worker crashed during processing: ${e.message || 'Unknown error'}`);
+                        this.pendingRequests.delete(id);
+                    }
+                }
+
+                // 3. Reset state
+                this.isWorkerBusy = false;
+
+                // 4. Trigger auto-restart
+                void this.initialize();
+
+                // 5. Try to keep processing queue if items remain
+                void this.processQueue();
             };
 
-            // Configure based on Platform
-            const numThreads = this.settings.embeddingThreads;
-            const simd = !Platform.isMobile;
-            // Actually Transformers.js usually handles SIMD detection, but we forced it on.
-            // Let's stick to 1 thread for mobile.
+            // Configure based on Platform & Settings
+            const numThreads = this.fallbackThreads ?? this.settings.embeddingThreads;
+            const simd = this.fallbackSimd ?? this.settings.embeddingSimd;
 
+            this.lastInitTime = Date.now();
             instance.postMessage({
                 type: 'configure',
                 numThreads,
@@ -127,7 +239,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
                 version: WORKER_CONSTANTS.WASM_VERSION
             } as ConfigureMessage);
 
-            logger.info(`Local embedding worker initialized (${numThreads} threads, SIMD: ${simd}).`);
+            logger.info(`Local embedding worker initialized (${numThreads} threads, SIMD: ${simd}${this.fallbackThreads ? ' [THREAD-FALLBACK]' : ''}${this.fallbackSimd === false ? ' [SIMD-FALLBACK]' : ''}).`);
         } catch (e) {
             logger.error("Failed to spawn worker:", e);
             new Notice("Failed to load local worker.");
@@ -139,7 +251,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
         this.worker.postMessage({
             type: 'configure',
             numThreads: this.settings.embeddingThreads,
-            simd: !Platform.isMobile,
+            simd: this.settings.embeddingSimd,
             cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
             version: WORKER_CONSTANTS.WASM_VERSION
         } as ConfigureMessage);
@@ -211,16 +323,21 @@ export class LocalEmbeddingService implements IEmbeddingService {
             reject: task.reject
         });
 
+        const modelDef = ModelRegistry.getModelById(this.settings.embeddingModel);
+        const titleInfo = task.title ? ` [${task.title}]` : '';
+
+        logger.info(`[LocalEmbedding] Generating vector for document${titleInfo} (${task.text.length} chars).`);
         logger.debug(`[LocalEmbedding] Posting to worker: id=${task.id}, model=${this.settings.embeddingModel}, textLength=${task.text.length}`);
         this.worker.postMessage({
             id: task.id,
             type: 'embed',
             text: task.text,
-            model: this.settings.embeddingModel
+            model: this.settings.embeddingModel,
+            quantized: modelDef?.quantized !== false // Default to true unless explicitly false in registry
         });
     }
 
-    private async runTask(text: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
+    private async runTask(text: string, priority: EmbeddingPriority = 'high', title?: string): Promise<number[][]> {
         const startTime = Date.now();
 
         return new Promise<number[][]>((resolve, reject) => {
@@ -236,7 +353,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
                 text,
                 priority,
                 resolve: wrappedResolve,
-                reject
+                reject,
+                title
             });
 
             void this.processQueue();
@@ -257,14 +375,15 @@ export class LocalEmbeddingService implements IEmbeddingService {
         // and ensure the worker yields/responds to heartbeats/IO periodically.
         const CHUNK_SIZE_CHARS = 10000;
         if (content.length <= CHUNK_SIZE_CHARS) {
-            return this.runTask(content, priority);
+            return this.runTask(content, priority, title);
         }
 
         logger.debug(`[LocalEmbedding] Chunking large document (${content.length} chars) into ${Math.ceil(content.length / CHUNK_SIZE_CHARS)} parts.`);
         const allVectors: number[][] = [];
         for (let i = 0; i < content.length; i += CHUNK_SIZE_CHARS) {
             const chunk = content.slice(i, i + CHUNK_SIZE_CHARS);
-            const chunkVectors = await this.runTask(chunk, priority);
+            const chunkTitle = title ? `${title} (Part ${i / CHUNK_SIZE_CHARS + 1})` : undefined;
+            const chunkVectors = await this.runTask(chunk, priority, chunkTitle);
             allVectors.push(...chunkVectors);
 
             // Explicitly yield to main thread event loop between chunks
@@ -296,7 +415,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
             });
 
             if (response.status >= 400) {
-                logger.error(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
+                logger.debug(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
             }
 
             this.worker.postMessage({

@@ -10,6 +10,7 @@ export interface ModelDefinition {
     provider: 'gemini' | 'local';
     description?: string;
     isDefault?: boolean;
+    quantized?: boolean;
 }
 
 export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
@@ -43,7 +44,8 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
         label: 'Small (Potion-8M) - 256d [~15MB]',
         dimensions: 256,
         provider: 'local',
-        isDefault: false
+        isDefault: false,
+        quantized: false
     },
     {
         id: 'Xenova/bge-small-en-v1.5',
