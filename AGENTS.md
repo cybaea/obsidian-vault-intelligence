@@ -15,7 +15,7 @@ Important context is provided in the following files:
 - [CONTRIBUTING.md](CONTRIBUTING.md): Guidelines for contributing to the project.
 - [ROADMAP.md](ROADMAP.md): Planned features and improvements.
 - [docs/maintainability.md](docs/maintainability.md): Architectural best practices, scoring strategies, and mandatory dependency synchronization procedures.
-- [docs/](docs/): Additional documentation, including configuration guides, examples, and troubleshooting tips.
+- [docs/](docs/configuration.md): Additional documentation, including configuration guides, examples, and troubleshooting tips.
 
 ## Using latest technologies
 

@@ -1,6 +1,6 @@
 # Obsidian Vault Intelligence
 
-![](images/vault-intelligence-social.webp)
+![](./images/vault-intelligence-social.webp)
 
 **Transform your Obsidian vault from static storage into an active, intelligent partner.**
 
@@ -56,7 +56,7 @@ A dedicated sidebar for collaborating with your vault.
 
 Prompt: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_
 
-<img src="images/knowledge-and-verification.webp" alt="Research Agent verification example" width="100%">
+<img src="./images/knowledge-and-verification.webp" alt="Research Agent verification example" width="100%">
 
 </details>
 
@@ -76,7 +76,7 @@ Finds the right note, even if you use the wrong words.
 <details>
 <summary>📸 <strong>Click to see the Similar Notes Sidebar</strong></summary>
 
-<img src="images/similar-documents-bard.webp" alt="Similar Notes Sidebar example" width="100%">
+<img src="./images/similar-documents-bard.webp" alt="Similar Notes Sidebar example" width="100%">
 
 </details>
 
@@ -121,7 +121,7 @@ The plugin is designed to work out-of-the-box, but is highly customizable.
 <details>
 <summary>🛠️ <strong>Click to see the Settings Panel</strong></summary>
 
-<img src="images/options.webp" alt="Settings Panel" width="100%">
+<img src="./images/options.webp" alt="Settings Panel" width="100%">
 
 </details>
 
