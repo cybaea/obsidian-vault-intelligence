@@ -29,7 +29,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 		logger.setLevel(this.settings.logLevel);
 
 		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
-		this.geminiService = new GeminiService(this.settings);
+		this.geminiService = new GeminiService(this.app, this.settings);
 
 		// 2. Initialize Embedding Provider based on Settings
 		if (this.settings.embeddingProvider === 'local') {
@@ -173,7 +173,29 @@ export default class VaultIntelligencePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
+		const loadedData = (await this.loadData() || {}) as Partial<VaultIntelligenceSettings> & { googleApiKey?: string };
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+
+		// Migration: Move Google API Key to Secret Storage
+		if (this.app.secretStorage && loadedData.googleApiKey) {
+			const secretName = 'google-gemini-api-key';
+			logger.info(`Migrating Google API Key to secret storage with name: ${secretName}`);
+
+			try {
+				this.app.secretStorage.setSecret(secretName, loadedData.googleApiKey);
+				this.settings.googleApiKeySecretName = secretName;
+
+				// Remove the plain text key from settings
+				const settingsAsRecord = this.settings as unknown as Record<string, unknown>;
+				delete settingsAsRecord.googleApiKey;
+
+				// Save immediately to persist the change in data.json
+				await this.saveData(this.settings);
+				logger.info("Successfully migrated Google API key and updated settings.");
+			} catch (error) {
+				logger.error("Failed to migrate Google API key to secret storage:", error);
+			}
+		}
 
 		// Sanity check: Ensure dimensions match presets if using a local provider
 		if (this.settings.embeddingProvider === 'local') {

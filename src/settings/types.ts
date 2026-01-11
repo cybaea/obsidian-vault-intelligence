@@ -5,7 +5,8 @@ import { IEmbeddingService } from "../services/IEmbeddingService";
 export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
-    googleApiKey: string;
+    googleApiKeySecretName: string;
+    googleApiKey?: string;
     // New: Provider Selector
     embeddingProvider: EmbeddingProvider;
     embeddingModel: string;
@@ -45,7 +46,7 @@ Core Guidelines:
 `.trim();
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
-    googleApiKey: '',
+    googleApiKeySecretName: '',
     // Default to Gemini for now to preserve existing behavior
     embeddingProvider: 'gemini',
     embeddingModel: 'gemini-embedding-001',

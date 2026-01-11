@@ -1,4 +1,5 @@
 import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
+import { App } from "obsidian";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
@@ -7,24 +8,35 @@ export interface EmbedOptions {
     title?: string;
     outputDimensionality?: number;
 }
-
 export class GeminiService {
     private client: GoogleGenAI;
     private settings: VaultIntelligenceSettings;
+    private app: App;
 
-    constructor(settings: VaultIntelligenceSettings) {
+    constructor(app: App, settings: VaultIntelligenceSettings) {
+        this.app = app;
         this.settings = settings;
         this.initialize();
     }
 
     public initialize() {
-        if (!this.settings.googleApiKey) {
-            logger.warn("Google API Key is missing.");
+        let apiKey = (this.app.secretStorage && this.settings.googleApiKeySecretName)
+            ? this.app.secretStorage.getSecret(this.settings.googleApiKeySecretName)
+            : null;
+
+        // Fallback to legacy plain-text key if secret is missing or storage is unavailable
+        if (!apiKey && this.settings.googleApiKey) {
+            apiKey = this.settings.googleApiKey;
+            logger.info("Using legacy plain-text Google API key (fallback).");
+        }
+
+        if (!apiKey) {
+            logger.warn("Google API Key is missing or secret name not configured.");
             return;
         }
 
         try {
-            this.client = new GoogleGenAI({ apiKey: this.settings.googleApiKey });
+            this.client = new GoogleGenAI({ apiKey });
             logger.info("GeminiService initialized for Chat/Reasoning with @google/genai.");
         } catch (error) {
             logger.error("Failed to initialize GeminiService:", error);

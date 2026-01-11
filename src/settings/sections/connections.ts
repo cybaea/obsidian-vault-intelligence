@@ -1,4 +1,4 @@
-import { Setting, TextComponent, App, setIcon } from "obsidian";
+import { Setting, SecretComponent, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin } from "../types";
 
 export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
@@ -6,38 +6,32 @@ export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaul
 
     // --- 1. API Key Setting ---
     const apiKeyDesc = getApiKeyDescription(plugin.app);
-    let apiTextInput: TextComponent;
-
-    new Setting(containerEl)
+    const apiKeySetting = new Setting(containerEl)
         .setName('Google API key')
         .setDesc(apiKeyDesc)
-        .setClass('vault-intelligence-api-setting')
-        .addExtraButton(btn => {
-            btn.setIcon('eye')
-               .setTooltip('Show API key')
-               .onClick(() => {
-                   if (apiTextInput.inputEl.type === 'password') {
-                       apiTextInput.inputEl.type = 'text';
-                       btn.setIcon('eye-off');
-                       btn.setTooltip('Hide API key');
-                   } else {
-                       apiTextInput.inputEl.type = 'password';
-                       btn.setIcon('eye');
-                       btn.setTooltip('Show API key');
-                   }
-               });
-        })
-        .addText(text => {
-            apiTextInput = text;
-            text
-                .setPlaceholder('API key')
-                .setValue(plugin.settings.googleApiKey)
-                .onChange(async (value) => {
-                    plugin.settings.googleApiKey = value;
-                    await plugin.saveSettings();
-                });
-            text.inputEl.type = 'password';
-        });
+        .setClass('vault-intelligence-api-setting');
+
+    const isSecretComponentAvailable = typeof SecretComponent !== 'undefined';
+
+    if (isSecretComponentAvailable) {
+        apiKeySetting.addComponent(el => new SecretComponent(plugin.app, el)
+            .setValue(plugin.settings.googleApiKeySecretName)
+            .onChange(async (name) => {
+                plugin.settings.googleApiKeySecretName = name;
+                await plugin.saveSettings();
+            })
+        );
+    } else {
+        apiKeySetting.setDesc('Secure storage is not supported in this version of Obsidian (requires 1.11.4+). Your API key will be stored in plain text.');
+        apiKeySetting.addText(text => text
+            .setPlaceholder('Enter your Google API key')
+            .setValue(plugin.settings.googleApiKey || '')
+            .onChange(async (value) => {
+                plugin.settings.googleApiKey = value;
+                await plugin.saveSettings();
+            })
+        );
+    }
 
 }
 
@@ -45,14 +39,13 @@ export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaul
  * Helper for API Key Description
  */
 function getApiKeyDescription(app: App): DocumentFragment {
-    const configDir = app.vault.configDir;
     const fragment = document.createDocumentFragment();
-    
+
     fragment.append('Enter your Google Gemini API key.');
 
     fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
         const iconSpan = div.createSpan();
-        setIcon(iconSpan, 'lucide-info'); 
+        setIcon(iconSpan, 'lucide-info');
         div.createSpan({}, (textSpan) => {
             textSpan.append('You can obtain an API key from the ');
             textSpan.createEl('a', {
@@ -63,12 +56,12 @@ function getApiKeyDescription(app: App): DocumentFragment {
         });
     });
 
-    fragment.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
         const iconSpan = div.createSpan();
-        setIcon(iconSpan, 'lucide-alert-triangle');
+        setIcon(iconSpan, 'lucide-shield-check');
         div.createSpan({}, (textSpan) => {
-            textSpan.createEl('strong', { text: 'Note: ' });
-            textSpan.append(`This key is stored in plain text in this plugin's settings within your ${configDir}/ folder.`);
+            textSpan.createEl('strong', { text: 'Security note: ' });
+            textSpan.append(`This key is stored securely in your vault's secret storage. It is not saved in plain text and will not be synced via Obsidian Sync.`);
         });
     });
 
