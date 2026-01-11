@@ -252,7 +252,25 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
     async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
-        return this.runTask(content, priority);
+
+        // Main-thread chunking (10k chars) to prevent massive string transfers 
+        // and ensure the worker yields/responds to heartbeats/IO periodically.
+        const CHUNK_SIZE_CHARS = 10000;
+        if (content.length <= CHUNK_SIZE_CHARS) {
+            return this.runTask(content, priority);
+        }
+
+        logger.debug(`[LocalEmbedding] Chunking large document (${content.length} chars) into ${Math.ceil(content.length / CHUNK_SIZE_CHARS)} parts.`);
+        const allVectors: number[][] = [];
+        for (let i = 0; i < content.length; i += CHUNK_SIZE_CHARS) {
+            const chunk = content.slice(i, i + CHUNK_SIZE_CHARS);
+            const chunkVectors = await this.runTask(chunk, priority);
+            allVectors.push(...chunkVectors);
+
+            // Explicitly yield to main thread event loop between chunks
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        return allVectors;
     }
 
     private async handleWorkerFetch(data: WorkerMessage) {

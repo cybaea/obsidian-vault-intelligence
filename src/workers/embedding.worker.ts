@@ -161,6 +161,12 @@ interface FeatureExtractorPipeline {
 // Type for our unified extractor function
 type ChunkedExtractor = (text: string) => Promise<number[][]>;
 
+// --- Helper for Event Loop Yielding ---
+// Forces the worker to "breathe" and allow the browser/host to see it is still alive.
+async function yieldToEventLoop() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
 // --- Pipeline Singleton ---
 class PipelineSingleton {
     static task: PipelineType = 'feature-extraction';
@@ -236,20 +242,23 @@ class PipelineSingleton {
 
             for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
                 const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
-                const result = await tokenizer(segment, { add_special_tokens: false });
+                try {
+                    const result = await tokenizer(segment, { add_special_tokens: false });
+                    const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
 
-                // result can be { input_ids: ... } or just the ids
-                const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
-
-                // Get data safely from Tensor or array
-                let data: ArrayLike<number | bigint>;
-                if (segmentIds instanceof Tensor) {
-                    data = segmentIds.data as ArrayLike<number | bigint>;
-                } else {
-                    data = segmentIds as ArrayLike<number | bigint>;
+                    let data: ArrayLike<number | bigint>;
+                    if (segmentIds instanceof Tensor) {
+                        data = segmentIds.data as ArrayLike<number | bigint>;
+                    } else {
+                        data = segmentIds as ArrayLike<number | bigint>;
+                    }
+                    input_ids.push(...Array.from(data).map(num => Number(num)));
+                } catch (e) {
+                    logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
+                    throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
                 }
-
-                input_ids.push(...Array.from(data).map(num => Number(num)));
+                // Yield control to let the worker breathe
+                await yieldToEventLoop();
             }
 
             // If empty
@@ -259,17 +268,22 @@ class PipelineSingleton {
             const vectors: number[][] = [];
             for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
                 const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
-                // Decode back to string for pipeline call (cleanest way to ensure pooling works)
-                const chunkText = tokenizer.decode(chunkIds, {
-                    skip_special_tokens: true,
-                    clean_up_tokenization_spaces: true
-                });
+                try {
+                    const chunkText = tokenizer.decode(chunkIds, {
+                        skip_special_tokens: true,
+                        clean_up_tokenization_spaces: true
+                    });
 
-                if (!chunkText.trim()) continue;
+                    if (!chunkText.trim()) continue;
 
-                // pipeline() handles its own tensor management
-                const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
-                vectors.push(Array.from(output.data as ArrayLike<number>));
+                    const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
+                    vectors.push(Array.from(output.data as ArrayLike<number>));
+                } catch (e) {
+                    logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
+                    throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                }
+                // CRITICAL: Yield control after heavy inference call
+                await yieldToEventLoop();
             }
 
             return vectors;
@@ -299,6 +313,7 @@ class PipelineSingleton {
                 const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
                 const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
                 input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
+                await yieldToEventLoop();
             }
 
             // If empty
@@ -321,6 +336,7 @@ class PipelineSingleton {
                 if (!embeddings) throw new Error("Missing embeddings");
 
                 vectors.push(Array.from(embeddings.data as ArrayLike<number>));
+                await yieldToEventLoop();
             }
 
             return vectors;
