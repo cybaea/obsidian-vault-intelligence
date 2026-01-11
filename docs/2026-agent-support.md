@@ -11,7 +11,7 @@ First, we want to change the default embedding models to include:
     - Why it wins: The BGE (BAAI General Embedding) family replaced MiniLM as the efficiency king. It offers significantly better retrieval performance on the MTEB leaderboard. The v1.5 variants are robust and well-supported in Transformers.js.
     - Max context: 512 tokens
     - Approx. word count: 350 - 400 words
-    - Behavior on overflow: Silent Truncation (ignores the rest)
+    - Behaviour on overflow: Silent Truncation (ignores the rest)
 
 3. Advanced: [Xenova/nomic-embed-text-v1.5](https://huggingface.co/Xenova/nomic-embed-text-v1.5) - Matryoshka Representation Learning (MRL) model.
     - Why it wins: his model supports Matryoshka embeddings. This means you can run the model once but purely slice the output vector (e.g., take the first 64 or 128 dimensions instead of the full 768) to save storage and compute during the similarity search phase, without retraining.
