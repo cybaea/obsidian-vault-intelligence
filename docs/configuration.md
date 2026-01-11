@@ -1,6 +1,6 @@
-# Configuration Guide
+# Configuration
 
-Vault Intelligence is designed to work out-of-the-box, but is highly customizable to suit different hardware, budgets, and workflows.
+Vault Intelligence is designed to be powerful out of the box, but you can customize it to suit different hardware, budgets, and workflows.
 
 ## 🔑 Connection
 

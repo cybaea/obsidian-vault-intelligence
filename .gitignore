@@ -27,3 +27,8 @@ data/
 
 # Antigravity
 /*.txt
+
+# VitePress
+.vitepress/dist
+.vitepress/cache
+worker.js
