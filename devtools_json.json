@@ -1,0 +1,41 @@
+[ {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@f01e40329ee6f65add855c1b64b35489320ebbe0/inspector.html?ws=127.0.0.1:9223/devtools/page/FA143940204A082106D3D58BEBD45D00",
+   "id": "FA143940204A082106D3D58BEBD45D00",
+   "title": "DevTools",
+   "type": "page",
+   "url": "devtools://devtools/bundled/devtools_app.html?remoteBase=https://chrome-devtools-frontend.appspot.com/serve_file/@f01e40329ee6f65add855c1b64b35489320ebbe0/&can_dock=true&toolbarColor=rgba(223,223,223,1)&textColor=rgba(0,0,0,1)&experiments=true",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9223/devtools/page/FA143940204A082106D3D58BEBD45D00"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@f01e40329ee6f65add855c1b64b35489320ebbe0/inspector.html?ws=127.0.0.1:9223/devtools/page/F9A57BB955A6E79DCF77D4458C045AB6",
+   "id": "F9A57BB955A6E79DCF77D4458C045AB6",
+   "title": "Monthly Expenses - Allan-Dev - Obsidian v1.10.6",
+   "type": "page",
+   "url": "app://obsidian.md/index.html",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9223/devtools/page/F9A57BB955A6E79DCF77D4458C045AB6"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@f01e40329ee6f65add855c1b64b35489320ebbe0/inspector.html?ws=127.0.0.1:9223/devtools/page/B770C6EA6EA3E8E2AB4EF7ECF018ABF2",
+   "id": "B770C6EA6EA3E8E2AB4EF7ECF018ABF2",
+   "title": "blob:app://obsidian.md/91ce2061-d9ae-48f3-9656-84c4c3580f6b",
+   "type": "worker",
+   "url": "blob:app://obsidian.md/91ce2061-d9ae-48f3-9656-84c4c3580f6b",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9223/devtools/page/B770C6EA6EA3E8E2AB4EF7ECF018ABF2"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@f01e40329ee6f65add855c1b64b35489320ebbe0/inspector.html?ws=127.0.0.1:9223/devtools/page/EB5BED4F51FBC292A94657DFB845F9BD",
+   "id": "EB5BED4F51FBC292A94657DFB845F9BD",
+   "title": "Metadata Cache Worker",
+   "type": "worker",
+   "url": "app://obsidian.md/worker.js",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9223/devtools/page/EB5BED4F51FBC292A94657DFB845F9BD"
+}, {
+   "description": "",
+   "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@f01e40329ee6f65add855c1b64b35489320ebbe0/inspector.html?ws=127.0.0.1:9223/devtools/page/6616CEF38684E51259C2364E90F07F09",
+   "id": "6616CEF38684E51259C2364E90F07F09",
+   "title": "blob:app://obsidian.md/57e25c74-7929-4a66-9009-68cca3f0823a",
+   "type": "worker",
+   "url": "blob:app://obsidian.md/57e25c74-7929-4a66-9009-68cca3f0823a",
+   "webSocketDebuggerUrl": "ws://127.0.0.1:9223/devtools/page/6616CEF38684E51259C2364E90F07F09"
+} ]

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### User features
+
+- **Model Selector Dropdowns:** Replaced manual text fields with intuitive dropdown menus for Chat, Grounding, and Code models, pre-populated with the latest Gemini models.
+- **Custom Model Support:** Added "Custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
+- **Local Model Management:** Standardized selection for local embedding models with automatic dimension validation and a new "Force re-download" utility for easier troubleshooting.
+- **Improved Synchronization:** Refined the indexing engine to detect changes in file size and modification time, ensuring search results are always accurate.
+
+### Developers
+
+- **Worker Robustness:** Implemented a 4-stage stability fallback (Threads -> 1 Thread -> No SIMD -> Circuit Breaker) to handle environmental WASM/SIMD incompatibilities.
+- **Boot Grace Period:** Added a proactive detector that triggers stable modes immediately if the worker crashes within 10 seconds of startup.
+- **Stable Mode Persistence:** Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
+- **Enhanced Diagnostics:** Improved worker-side global error handlers to capture detailed information from generic `ErrorEvent` objects and logged document titles during indexing.
+- **Model Hygiene:** Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
+- **Code Quality:** Removed all `any` type casts in the local embedding service and strictly enforced ESLint and TypeScript compilation rules.
+
+
+## [1.5.0] - 2026-01-10
+
+### 🚀 Added
+
 
 ### User Features
 

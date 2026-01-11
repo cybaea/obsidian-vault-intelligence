@@ -24,6 +24,7 @@ export interface VaultIntelligenceSettings {
     systemInstruction: string;
     geminiRetries: number;
     embeddingThreads: number;
+    embeddingSimd: boolean;
     logLevel: LogLevel;
 }
 
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     systemInstruction: DEFAULT_SYSTEM_PROMPT,
     geminiRetries: 10,
     embeddingThreads: Platform.isMobile ? 1 : 2,
+    embeddingSimd: !Platform.isMobile,
     logLevel: LogLevel.WARN
 };
 

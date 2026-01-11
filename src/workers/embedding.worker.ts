@@ -31,14 +31,8 @@ if (!safeEnv.backends) safeEnv.backends = {};
 if (!safeEnv.backends.onnx) safeEnv.backends.onnx = {};
 if (!safeEnv.backends.onnx.wasm) safeEnv.backends.onnx.wasm = {};
 
-// Explicit CDN Paths
-const CDN_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
-safeEnv.backends.onnx.wasm.wasmPaths = {
-    'ort-wasm.wasm': `${CDN_URL}ort-wasm.wasm`,
-    'ort-wasm-simd.wasm': `${CDN_URL}ort-wasm-simd.wasm`,
-    'ort-wasm-threaded.wasm': `${CDN_URL}ort-wasm-threaded.wasm`,
-    'ort-wasm-simd-threaded.wasm': `${CDN_URL}ort-wasm-simd-threaded.wasm`,
-};
+// Initialized with dummy values, will be set via 'configure' message
+safeEnv.backends.onnx.wasm.wasmPaths = {};
 
 safeEnv.backends.onnx.wasm.numThreads = 1; // Default to safe single thread
 safeEnv.backends.onnx.wasm.simd = true;
@@ -111,6 +105,8 @@ interface ConfigureMessage {
     type: 'configure';
     numThreads: number;
     simd: boolean;
+    cdnUrl?: string; // NEW
+    version?: string; // NEW
 }
 
 interface EmbedMessage {
@@ -118,6 +114,7 @@ interface EmbedMessage {
     type: 'embed';
     text: string;
     model?: string;
+    quantized?: boolean;
 }
 
 interface PipelineOutput {
@@ -165,21 +162,68 @@ interface FeatureExtractorPipeline {
 // Type for our unified extractor function
 type ChunkedExtractor = (text: string) => Promise<number[][]>;
 
+// --- 5. Global Error Handling ---
+// Catch errors from sub-workers (like ONNX) or unhandled rejections
+self.addEventListener('error', (e: ErrorEvent) => {
+    let detail = 'Internal error';
+    if (e.error) {
+        if (e.error instanceof Error) {
+            detail = `${e.error.name}: ${e.error.message}\n${e.error.stack}`;
+        } else if (typeof e.error === 'object') {
+            // Handle objects that stringify poorly (like events)
+            detail = JSON.stringify(e.error, Object.getOwnPropertyNames(e.error));
+        } else {
+            detail = String(e.error);
+        }
+    }
+    logger.error("[Worker] Global Error:", {
+        message: e.message,
+        filename: e.filename,
+        lineno: e.lineno,
+        colno: e.colno,
+        error: detail
+    });
+});
+
+self.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
+    let detail = 'No reason provided';
+    if (e.reason) {
+        if (e.reason instanceof Error) {
+            detail = `${e.reason.name}: ${e.reason.message}\n${e.reason.stack}`;
+        } else if (typeof e.reason === 'object') {
+            detail = JSON.stringify(e.reason, Object.getOwnPropertyNames(e.reason));
+        } else {
+            detail = String(e.reason);
+        }
+    }
+    logger.error("[Worker] Unhandled Rejection:", {
+        reason: detail
+    });
+});
+
+// --- Helper for Event Loop Yielding ---
+// Forces the worker to "breathe" and allow the browser/host to see it is still alive.
+async function yieldToEventLoop() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
 // --- Pipeline Singleton ---
 class PipelineSingleton {
     static task: PipelineType = 'feature-extraction';
     static instance: Promise<ChunkedExtractor> | null = null;
     static currentModel: string = '';
+    static currentQuantized: boolean = true;
 
-    static async getInstance(model: string): Promise<ChunkedExtractor> {
-        if (this.currentModel && this.currentModel !== model) {
-            logger.debug(`[Worker] Model changed from ${this.currentModel} to ${model}. Resetting instance.`);
+    static async getInstance(model: string, quantized: boolean = true): Promise<ChunkedExtractor> {
+        if (this.currentModel && (this.currentModel !== model || this.currentQuantized !== quantized)) {
+            logger.debug(`[Worker] Model/Config changed from ${this.currentModel}(q=${this.currentQuantized}) to ${model}(q=${quantized}). Resetting instance.`);
             this.instance = null;
         }
 
         if (this.instance === null) {
-            logger.info(`[Worker] Initializing new pipeline for model: ${model}`);
+            logger.info(`[Worker] Initializing new pipeline for model: ${model} (quantized: ${quantized})`);
             this.currentModel = model;
+            this.currentQuantized = quantized;
 
             // Define progress callback for model loading
             const progress_callback = (progress: ProgressPayload) => {
@@ -193,26 +237,26 @@ class PipelineSingleton {
                 }
             };
 
-            this.instance = this.createChunkedExtractor(model, progress_callback);
+            this.instance = this.createChunkedExtractor(model, quantized, progress_callback);
         }
 
         return this.instance;
     }
 
-    private static async createChunkedExtractor(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+    private static async createChunkedExtractor(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
         // SPECIAL CASE: Model2Vec
         if (modelName.includes('potion') || modelName.includes('model2vec')) {
-            return this.loadModel2Vec(modelName, progress_callback);
+            return this.loadModel2Vec(modelName, quantized, progress_callback);
         }
 
         // STANDARD CASE: Transformers.js Pipeline
         // 1. Try generic load
         let pipe: FeatureExtractorPipeline;
         try {
-            pipe = await pipeline(this.task, modelName, { progress_callback }) as unknown as FeatureExtractorPipeline;
+            pipe = await pipeline(this.task, modelName, { quantized, progress_callback }) as unknown as FeatureExtractorPipeline;
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            if (msg.includes("404")) {
+            if (quantized && msg.includes("404")) {
                 console.warn(`[Worker] Retrying unquantized for ${modelName}...`);
                 pipe = await pipeline(this.task, modelName, { quantized: false, progress_callback }) as unknown as FeatureExtractorPipeline;
             } else {
@@ -240,20 +284,23 @@ class PipelineSingleton {
 
             for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
                 const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
-                const result = await tokenizer(segment, { add_special_tokens: false });
+                try {
+                    const result = await tokenizer(segment, { add_special_tokens: false });
+                    const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
 
-                // result can be { input_ids: ... } or just the ids
-                const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
-
-                // Get data safely from Tensor or array
-                let data: ArrayLike<number | bigint>;
-                if (segmentIds instanceof Tensor) {
-                    data = segmentIds.data as ArrayLike<number | bigint>;
-                } else {
-                    data = segmentIds as ArrayLike<number | bigint>;
+                    let data: ArrayLike<number | bigint>;
+                    if (segmentIds instanceof Tensor) {
+                        data = segmentIds.data as ArrayLike<number | bigint>;
+                    } else {
+                        data = segmentIds as ArrayLike<number | bigint>;
+                    }
+                    input_ids.push(...Array.from(data).map(num => Number(num)));
+                } catch (e) {
+                    logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
+                    throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
                 }
-
-                input_ids.push(...Array.from(data).map(num => Number(num)));
+                // Yield control to let the worker breathe
+                await yieldToEventLoop();
             }
 
             // If empty
@@ -263,33 +310,43 @@ class PipelineSingleton {
             const vectors: number[][] = [];
             for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
                 const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
-                // Decode back to string for pipeline call (cleanest way to ensure pooling works)
-                const chunkText = tokenizer.decode(chunkIds, {
-                    skip_special_tokens: true,
-                    clean_up_tokenization_spaces: true
-                });
+                try {
+                    const chunkText = tokenizer.decode(chunkIds, {
+                        skip_special_tokens: true,
+                        clean_up_tokenization_spaces: true
+                    });
 
-                if (!chunkText.trim()) continue;
+                    if (!chunkText.trim()) continue;
 
-                // pipeline() handles its own tensor management
-                const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
-                vectors.push(Array.from(output.data as ArrayLike<number>));
+                    const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
+                    vectors.push(Array.from(output.data as ArrayLike<number>));
+                } catch (e) {
+                    logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
+                    throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                }
+                // CRITICAL: Yield control after heavy inference call
+                await yieldToEventLoop();
             }
 
             return vectors;
         };
     }
 
-    private static async loadModel2Vec(modelName: string, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
-        console.debug(`[Worker] Loading Model2Vec: ${modelName}`);
+    private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+        console.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
         const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
         let model: PreTrainedModel;
 
         try {
-            model = await AutoModel.from_pretrained(modelName, { progress_callback });
-        } catch {
-            console.warn(`[Worker] Retrying unquantized...`);
-            model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+            model = await AutoModel.from_pretrained(modelName, { quantized, progress_callback });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (quantized) {
+                console.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
+                model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+            } else {
+                throw err;
+            }
         }
 
         return async (text: string) => {
@@ -303,6 +360,7 @@ class PipelineSingleton {
                 const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
                 const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
                 input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
+                await yieldToEventLoop();
             }
 
             // If empty
@@ -325,6 +383,7 @@ class PipelineSingleton {
                 if (!embeddings) throw new Error("Missing embeddings");
 
                 vectors.push(Array.from(embeddings.data as ArrayLike<number>));
+                await yieldToEventLoop();
             }
 
             return vectors;
@@ -349,6 +408,19 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         if ('type' in data && (data as { type: string }).type === 'configure') {
             const config = data as ConfigureMessage;
+
+            // Set dynamic CDN paths if provided
+            if (config.cdnUrl) {
+                const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : `${config.cdnUrl}/`;
+                safeEnv.backends!.onnx!.wasm!.wasmPaths = {
+                    'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
+                    'ort-wasm-simd.wasm': `${baseUrl}ort-wasm-simd.wasm`,
+                    'ort-wasm-threaded.wasm': `${baseUrl}ort-wasm-threaded.wasm`,
+                    'ort-wasm-simd-threaded.wasm': `${baseUrl}ort-wasm-simd-threaded.wasm`,
+                };
+                logger.info(`[Worker] CDN set to: ${baseUrl}`);
+            }
+
             if (safeEnv.backends!.onnx!.wasm!.numThreads !== config.numThreads || safeEnv.backends!.onnx!.wasm!.simd !== config.simd) {
                 logger.debug(`[Worker] Configuration changed. Resetting pipeline instance.`);
                 PipelineSingleton.instance = null;
@@ -379,10 +451,10 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         if (!isEmbedMessage(data)) return;
 
-        const { id, text, model = 'Xenova/all-MiniLM-L6-v2' } = data;
+        const { id, text, model = 'Xenova/all-MiniLM-L6-v2', quantized = true } = data;
 
         try {
-            const extractor = await PipelineSingleton.getInstance(model);
+            const extractor = await PipelineSingleton.getInstance(model, quantized);
             const vectors = await extractor(text);
 
             logger.debug(`[Worker] Generated ${vectors.length} vectors for ID ${id}`);

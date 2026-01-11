@@ -5,9 +5,8 @@ import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
-
-const CHARS_PER_TOKEN_ESTIMATE = 4; // Standard approximation for English text
-const CONTEXT_SAFETY_MARGIN = 0.8;  // Reserve 20% for output and "Thinking" overhead
+import { SEARCH_CONSTANTS } from "../constants";
+import { ScoringStrategy } from "./ScoringStrategy";
 
 export interface ChatMessage {
     role: "user" | "model" | "system";
@@ -29,10 +28,12 @@ export class AgentService {
     private app: App;
     private settings: VaultIntelligenceSettings;
 
+    private scoringStrategy: ScoringStrategy;
+
     constructor(
-        app: App, 
-        gemini: GeminiService, 
-        vectorStore: VectorStore, 
+        app: App,
+        gemini: GeminiService,
+        vectorStore: VectorStore,
         embeddingService: IEmbeddingService, // Injected here
         settings: VaultIntelligenceSettings
     ) {
@@ -41,6 +42,7 @@ export class AgentService {
         this.vectorStore = vectorStore;
         this.embeddingService = embeddingService;
         this.settings = settings;
+        this.scoringStrategy = new ScoringStrategy();
     }
 
     private getTools(): Tool[] {
@@ -79,12 +81,12 @@ export class AgentService {
         // 3. Google Search (Sub-Agent)
         const googleSearch: FunctionDeclaration = {
             name: "google_search",
-             description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
-             parameters: {
-                 type: Type.OBJECT,
-                 properties: { query: { type: Type.STRING } },
-                 required: ["query"]
-             }
+            description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: { query: { type: Type.STRING } },
+                required: ["query"]
+            }
         };
 
         const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch];
@@ -97,9 +99,9 @@ export class AgentService {
                 parameters: {
                     type: Type.OBJECT,
                     properties: {
-                        task: { 
-                            type: Type.STRING, 
-                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number')." 
+                        task: {
+                            type: Type.STRING,
+                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number')."
                         }
                     },
                     required: ["task"]
@@ -119,12 +121,11 @@ export class AgentService {
     private async assembleContext(results: VaultSearchResult[], query: string): Promise<string> {
         // 1. Calculate Budget based on Settings
         const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-        const totalCharBudget = Math.floor(totalTokens * CHARS_PER_TOKEN_ESTIMATE * CONTEXT_SAFETY_MARGIN);
-        
+        const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
+
         // 2. Define "Starvation Protection" limit
         // No single document should take up more than 25% of the budget if there are other results.
-        // For Gemini 3 (1M tokens), this is still a massive ~1M chars per doc, so it rarely triggers.
-        const singleDocSoftLimit = Math.floor(totalCharBudget * 0.25);
+        const singleDocSoftLimit = Math.floor(totalCharBudget * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
 
         logger.debug(`[Context] Budget: ${totalCharBudget} chars. Soft Cap: ${singleDocSoftLimit} chars.`);
 
@@ -160,12 +161,12 @@ export class AgentService {
                     // Fallback: Use Smart Windowing (clipping)
                     // We take a slice of the document centered on the keyword
                     logger.debug(`[Context] Clipping file ${file.path} (Size: ${content.length}).`);
-                    
+
                     // Calculate how much space we can reasonably give this doc
                     // (Either the remaining budget OR the soft limit, whichever is smaller)
                     const availableSpace = Math.min(singleDocSoftLimit, totalCharBudget - currentUsage);
-                    
-                    if (availableSpace < 500) continue; // Skip if too little space left
+
+                    if (availableSpace < SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) continue; // Skip if too little space left
 
                     if (doc.isKeywordMatch) {
                         // Center window on match
@@ -206,7 +207,7 @@ export class AgentService {
                 // Safety check for query
                 const rawQuery = args.query;
                 const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
-                
+
                 logger.info(`Delegating search to sub-agent for: ${query}`);
                 const searchResult = await this.gemini.searchWithGrounding(query);
                 return { result: searchResult };
@@ -228,26 +229,26 @@ export class AgentService {
             }
 
             logger.info(`[VaultSearch] Starting search for: "${query}"`);
-            
+
             // 1. Vector Search (Semantic)
             const embedding = await this.embeddingService.embedQuery(query);
             const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
-            
-            let vectorResults = this.vectorStore.findSimilar(embedding, limit, 0.35);
+
+            let vectorResults = this.vectorStore.findSimilar(embedding, limit, SEARCH_CONSTANTS.VECTOR_MIN_RELEVANCE);
             logger.info(`[VaultSearch] Vector search returned ${vectorResults.length} candidates.`);
 
             // 2. Keyword Search (Hybrid: Exact + Bag-of-Words)
             const keywordResults: VaultSearchResult[] = [];
-            
-            if (query.length > 2) { 
+
+            if (query.length > 2) {
                 const files = this.app.vault.getMarkdownFiles();
-                
+
                 // FIX: Token Cleaning
                 // 1. Remove quotes
                 // 2. Remove boolean operators (OR, AND) which the Agent likes to use
                 // 3. Filter short words
-                const cleanQuery = query.replace(/["'()]/g, " "); 
+                const cleanQuery = query.replace(/["'()]/g, " ");
                 const tokens = cleanQuery.split(/\s+/)
                     .map(t => t.trim())
                     .filter(t => t.length > 2 && t !== "or" && t !== "and");
@@ -255,18 +256,19 @@ export class AgentService {
                 const isMultiWord = tokens.length > 1;
 
                 let keywordMatchesFound = 0;
-                const MAX_KEYWORD_MATCHES = 100; 
+                const MAX_KEYWORD_MATCHES = 100;
 
                 for (const file of files) {
                     if (keywordMatchesFound >= MAX_KEYWORD_MATCHES) break;
 
                     const titleLower = file.basename.toLowerCase();
-                    
+
                     // A. Title Exact Match
-                    if (titleLower.includes(query)) {
-                        keywordResults.push({ path: file.path, score: 1.2, isKeywordMatch: true, isTitleMatch: true });
+                    const titleScore = this.scoringStrategy.calculateTitleScore(titleLower, query);
+                    if (titleScore !== null) {
+                        keywordResults.push({ path: file.path, score: titleScore, isKeywordMatch: true, isTitleMatch: true });
                         keywordMatchesFound++;
-                        continue; 
+                        continue;
                     }
 
                     // B. Body Scan
@@ -275,50 +277,16 @@ export class AgentService {
                         const contentLower = content.toLowerCase();
 
                         // B1. Exact Phrase Match (Highest Body Score)
-                        if (contentLower.includes(query)) {
-                            keywordResults.push({ path: file.path, score: 0.85, isKeywordMatch: true, isTitleMatch: false });
+                        const bodyExactScore = this.scoringStrategy.calculateExactBodyScore(contentLower, query);
+                        if (bodyExactScore !== null) {
+                            keywordResults.push({ path: file.path, score: bodyExactScore, isKeywordMatch: true, isTitleMatch: false });
                             keywordMatchesFound++;
                             continue;
                         }
 
                         // B2. "Bag of Words" Match (Flexible)
                         if (isMultiWord) {
-                            let hits = 0;
-                            for (const token of tokens) {
-                                // Stemming checks
-                                let match = false;
-                                if (contentLower.includes(token)) {
-                                    match = true;
-                                } else if (token.endsWith('s') && contentLower.includes(token.slice(0, -1))) {
-                                    match = true;
-                                } else if (token.endsWith('ing') && contentLower.includes(token.slice(0, -3))) {
-                                    match = true;
-                                } else if (token.endsWith('ed') && contentLower.includes(token.slice(0, -2))) { // added 'ed' check
-                                    match = true;
-                                }
-                                
-                                if (match) hits++;
-                            }
-
-                            const matchRatio = hits / tokens.length;
-                            let fuzzyScore = 0;
-
-                            // FIX: Adaptive Thresholds
-                            // Scenario 1: Short Query (<4 tokens) -> Strict (Need high overlap)
-                            if (tokens.length < 4) {
-                                if (matchRatio > 0.6) {
-                                    fuzzyScore = 0.4 + (matchRatio * 0.3);
-                                }
-                            } 
-                            // Scenario 2: Long Query (>=4 tokens) -> Loose (Synonym stuffing)
-                            // If we hit at least 2 distinct words, or 30% of the query, it's relevant.
-                            else {
-                                if (hits >= 2 || matchRatio > 0.3) {
-                                    // Score based on raw hit count, capped at 0.75
-                                    // This allows "financial firm bankruptcy" to match "financial firms ... collapsed ... bankruptcy"
-                                    fuzzyScore = Math.min(0.4 + (hits * 0.08), 0.75);
-                                }
-                            }
+                            const fuzzyScore = this.scoringStrategy.calculateFuzzyScore(tokens, contentLower);
 
                             if (fuzzyScore > 0) {
                                 keywordResults.push({ path: file.path, score: fuzzyScore, isKeywordMatch: true, isTitleMatch: false });
@@ -341,12 +309,15 @@ export class AgentService {
             // Add/Merge Keyword Results
             for (const res of keywordResults) {
                 const existing = mergedMap.get(res.path);
-                
+
                 if (existing !== undefined) {
                     logger.debug(`[VaultSearch] Boosting score for: ${res.path} (Vector + Keyword)`);
-                    existing.score += 0.3; 
+                    existing.score = this.scoringStrategy.boostHybridResult(existing.score, {
+                        score: res.score,
+                        isKeywordMatch: !!res.isKeywordMatch,
+                        isTitleMatch: !!res.isTitleMatch
+                    });
                     existing.isKeywordMatch = true;
-                    if (res.isTitleMatch) existing.score += 0.5; 
                 } else {
                     mergedMap.set(res.path, res);
                 }
@@ -354,10 +325,10 @@ export class AgentService {
 
             const finalResults = Array.from(mergedMap.values())
                 .sort((a, b) => b.score - a.score)
-                .slice(0, limit); 
+                .slice(0, limit);
 
             logger.info(`[VaultSearch] Final ranked results: ${finalResults.length} docs.`);
-            
+
             const topMatch = finalResults[0];
             if (topMatch) {
                 logger.info(`[VaultSearch] Top match: ${topMatch.path} (Score: ${topMatch.score.toFixed(2)})`);
@@ -367,16 +338,16 @@ export class AgentService {
 
             // 4. Build Context
             const context = await this.assembleContext(finalResults, query);
-             
-             if (!context) return { result: "No relevant notes found or context budget exceeded." };
-             return { result: context };
+
+            if (!context) return { result: "No relevant notes found or context budget exceeded." };
+            return { result: context };
         }
 
         if (name === "read_url") {
             try {
                 const url = args.url as string;
                 const res = await requestUrl({ url });
-                return { result: res.text.substring(0, 5000) };
+                return { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
                 return { error: `Failed to read URL: ${message}` };
@@ -392,7 +363,7 @@ export class AgentService {
 
                 const task = args.task as string;
                 logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-                
+
                 // Call GeminiService
                 const result = await this.gemini.solveWithCode(task);
                 return { result: result };
@@ -436,29 +407,29 @@ export class AgentService {
 
         const currentDate = new Date().toDateString();
         const rawSystemInstruction = this.settings.systemInstruction || DEFAULT_SETTINGS.systemInstruction;
-        
+
         // Replace {{DATE}} placeholder
         const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
 
         // Pass dynamic systemInstruction to the service
         const chat = await this.gemini.startChat(formattedHistory, this.getTools(), systemInstruction);
-        
+
         try {
             let result = await chat.sendMessage({ message: message });
-            
+
             let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
 
             while (loops < maxLoops) {
-                const calls = result.functionCalls; 
-                
+                const calls = result.functionCalls;
+
                 if (calls && calls.length > 0) {
                     const toolPromises = calls.map(async (call) => {
                         if (!call.name) return null;
-                        
+
                         const args = call.args || {};
                         const functionResponse = await this.executeFunction(call.name, args);
-                        
+
                         return {
                             functionResponse: {
                                 name: call.name,
@@ -472,7 +443,7 @@ export class AgentService {
                     if (completedParts.length > 0) {
                         result = await chat.sendMessage({ message: completedParts });
                     } else {
-                        break; 
+                        break;
                     }
                 } else {
                     break;

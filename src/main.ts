@@ -8,15 +8,15 @@ import { logger } from "./utils/logger";
 import { IEmbeddingService } from "./services/IEmbeddingService";
 import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
 import { LocalEmbeddingService } from "./services/LocalEmbeddingService";
+import {
+	LOCAL_EMBEDDING_MODELS
+} from "./services/ModelRegistry";
 
 export default class VaultIntelligencePlugin extends Plugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiService;
-	// Store the interface, not the concrete implementation
 	embeddingService: IEmbeddingService;
 	vectorStore: VectorStore;
-
-	private debouncedOnMetadataChange: (file: TFile) => void;
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -52,8 +52,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		this.initDebouncedHandlers();
 
-		// ... (Rest of the file remains the same: Event listeners, Ribbon, Commands) ...
-
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(() => {
 			void this.vectorStore.scanVault();
@@ -81,7 +79,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 			menu.showAtMouseEvent(evt);
 		});
 
-		// Register View
+		// Register Views
 		this.registerView(
 			SIMILAR_NOTES_VIEW_TYPE,
 			(leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService, this.embeddingService)
@@ -92,7 +90,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore, this.embeddingService)
 		);
 
-		// Activate View Command
+		// Commands
 		this.addCommand({
 			id: 'open-similar-notes-view',
 			name: 'Open similar notes view',
@@ -122,7 +120,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 							void leaf.view.updateForFile(file);
 						}
 					}
-					// Use requestIndex even for file-open to avoid spamming on rapid switch
 					this.vectorStore.requestIndex(file);
 				}
 			})
@@ -132,14 +129,11 @@ export default class VaultIntelligencePlugin extends Plugin {
 			if (file instanceof TFile && file.extension === 'md') {
 				this.vectorStore.requestIndex(file);
 
-				// Update Similar Notes view if this is the active file
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.path === file.path) {
 					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
 					for (const leaf of leaves) {
 						if (leaf.view instanceof SimilarNotesView) {
-							// We can either update immediately or wait for indexing.
-							// Usually updateForFile does its own indexing check.
 							void leaf.view.updateForFile(file);
 						}
 					}
@@ -155,7 +149,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		this.registerEvent(this.app.vault.on('delete', (file) => {
 			if (file instanceof TFile) {
-				// @ts-ignore
 				this.vectorStore.deleteVector(file.path);
 			}
 		}));
@@ -172,7 +165,6 @@ export default class VaultIntelligencePlugin extends Plugin {
 	onunload() {
 		if (this.vectorStore) this.vectorStore.destroy();
 
-		// Cleanup Local Worker if active
 		if (this.embeddingService instanceof LocalEmbeddingService) {
 			this.embeddingService.terminate();
 		}
@@ -180,32 +172,25 @@ export default class VaultIntelligencePlugin extends Plugin {
 		logger.info("Vault Intelligence Plugin Unloaded");
 	}
 
-	// ... (rest of class: loadSettings, saveSettings, activateView) ...
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
 
 		// Sanity check: Ensure dimensions match presets if using a local provider
-		// This fixes "poisoned" settings where a model change didn't update the dimension
 		if (this.settings.embeddingProvider === 'local') {
-			const { MODELS } = await import("./settings/sections/models");
-			if (this.settings.embeddingModel === MODELS.SMALL && this.settings.embeddingDimension !== 256) {
-				logger.warn(`Fixing stale dimension for Small model: ${this.settings.embeddingDimension} -> 256`);
-				this.settings.embeddingDimension = 256;
-				await this.saveData(this.settings);
-			} else if (this.settings.embeddingModel === MODELS.BALANCED && this.settings.embeddingDimension !== 384) {
-				logger.warn(`Fixing stale dimension for Balanced model: ${this.settings.embeddingDimension} -> 384`);
-				this.settings.embeddingDimension = 384;
-				await this.saveData(this.settings);
-			} else if (this.settings.embeddingModel === MODELS.ADVANCED && this.settings.embeddingDimension !== 768) {
-				logger.warn(`Fixing stale dimension for Advanced model: ${this.settings.embeddingDimension} -> 768`);
-				this.settings.embeddingDimension = 768;
+			const modelId = this.settings.embeddingModel;
+			const modelDef = LOCAL_EMBEDDING_MODELS.find(m => m.id === modelId);
+
+			if (modelDef?.dimensions && this.settings.embeddingDimension !== modelDef.dimensions) {
+				logger.warn(`Fixing stale dimension for ${modelDef.label}: ${this.settings.embeddingDimension} -> ${modelDef.dimensions}`);
+				this.settings.embeddingDimension = modelDef.dimensions;
 				await this.saveData(this.settings);
 			}
 
 			// Migration: v1.5 -> v1 (v1.5 seems to be broken/unavailable in Xenova repo)
-			if (this.settings.embeddingModel === 'Xenova/nomic-embed-text-v1.5') {
-				logger.info(`Migrating model from v1.5 to v1: ${this.settings.embeddingModel} -> ${MODELS.ADVANCED}`);
-				this.settings.embeddingModel = MODELS.ADVANCED;
+			if (modelId === 'Xenova/nomic-embed-text-v1.5') {
+				const nomicV1 = 'Xenova/nomic-embed-text-v1';
+				logger.info(`Migrating model from v1.5 to v1: ${modelId} -> ${nomicV1}`);
+				this.settings.embeddingModel = nomicV1;
 				this.settings.embeddingDimension = 768;
 				await this.saveData(this.settings);
 			}
@@ -217,11 +202,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
 
-		// Re-initialize handlers to pick up change in indexingDelayMs
 		this.initDebouncedHandlers();
-
-		// Note: We don't hot-swap embedding services yet. 
-		// The settings tab warns the user to restart if they change providers.
 
 		if (this.vectorStore) {
 			this.vectorStore.updateSettings(this.settings);

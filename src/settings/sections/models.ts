@@ -1,27 +1,18 @@
 import { Setting, Notice, Plugin, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-// Import the class value (not just type) for instanceof check
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
+import {
+    ModelRegistry,
+    LOCAL_EMBEDDING_MODELS,
+    GEMINI_CHAT_MODELS,
+    GEMINI_GROUNDING_MODELS
+} from "../../services/ModelRegistry";
 
 interface InternalApp extends App {
     setting: {
         openTabById: (id: string) => void;
     };
 }
-
-// Model Defaults
-export const MODELS = {
-    SMALL: 'MinishLab/potion-base-8M',
-    BALANCED: 'Xenova/bge-small-en-v1.5',
-    ADVANCED: 'Xenova/nomic-embed-text-v1'
-};
-
-export const MODEL_LABELS = {
-    SMALL: 'Small (Potion-8M) - 256d [~15MB]',
-    BALANCED: 'Balanced (BGE-Small) - 384d [~30MB]',
-    ADVANCED: 'Advanced (Nomic-Embed) - 768d [~130MB]',
-    CUSTOM: 'Custom (HuggingFace ID)...'
-};
 
 export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Models').setHeading();
@@ -38,20 +29,21 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .addOption('gemini', 'Google Gemini')
             .addOption('local', 'Transformers.js (local)')
             .setValue(plugin.settings.embeddingProvider)
-            .onChange(async (value) => {
-                plugin.settings.embeddingProvider = value as 'gemini' | 'local';
+            .onChange((value) => {
+                void (async () => {
+                    const provider = value as 'gemini' | 'local';
+                    plugin.settings.embeddingProvider = provider;
 
-                if (value === 'local') {
-                    plugin.settings.embeddingModel = 'Xenova/all-MiniLM-L6-v2';
-                    plugin.settings.embeddingDimension = 384;
-                } else {
-                    plugin.settings.embeddingModel = DEFAULT_SETTINGS.embeddingModel;
-                    plugin.settings.embeddingDimension = DEFAULT_SETTINGS.embeddingDimension;
-                }
+                    const defaultModelId = ModelRegistry.getDefaultModel('embedding', provider);
+                    const modelDef = ModelRegistry.getModelById(defaultModelId);
 
-                await plugin.saveSettings();
-                refreshSettings(plugin);
-                new Notice("Provider changed. Please restart the plugin.");
+                    plugin.settings.embeddingModel = defaultModelId;
+                    plugin.settings.embeddingDimension = modelDef?.dimensions ?? 768;
+
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                    new Notice("Provider changed. Please restart the plugin.");
+                })();
             }));
 
     // WARNING BOX for Local Models
@@ -71,31 +63,36 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         embeddingSetting.addText(text => text
             .setPlaceholder(DEFAULT_SETTINGS.embeddingModel)
             .setValue(plugin.settings.embeddingModel)
-            .onChange(async (value) => {
-                plugin.settings.embeddingModel = value;
-                await plugin.saveSettings();
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.embeddingModel = value;
+                    await plugin.saveSettings();
+                })();
             }));
     } else {
         embeddingSetting.addDropdown(dropdown => {
-            dropdown.addOption(MODELS.SMALL, MODEL_LABELS.SMALL);
-            dropdown.addOption(MODELS.BALANCED, MODEL_LABELS.BALANCED);
-            dropdown.addOption(MODELS.ADVANCED, MODEL_LABELS.ADVANCED);
-            dropdown.addOption('custom', MODEL_LABELS.CUSTOM);
+            for (const m of LOCAL_EMBEDDING_MODELS) {
+                dropdown.addOption(m.id, m.label);
+            }
+            dropdown.addOption('custom', 'Custom (HuggingFace ID)...');
 
             const current = plugin.settings.embeddingModel;
-            const isPreset = Object.values(MODELS).includes(current);
+            const isPreset = LOCAL_EMBEDDING_MODELS.some(m => m.id === current);
             dropdown.setValue(isPreset ? current : 'custom');
 
-            dropdown.onChange(async (val) => {
-                if (val !== 'custom') {
-                    plugin.settings.embeddingModel = val;
-                    if (val === MODELS.SMALL) plugin.settings.embeddingDimension = 256;
-                    if (val === MODELS.BALANCED) plugin.settings.embeddingDimension = 384;
-                    if (val === MODELS.ADVANCED) plugin.settings.embeddingDimension = 768;
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        const modelDef = LOCAL_EMBEDDING_MODELS.find(m => m.id === val);
+                        plugin.settings.embeddingModel = val;
+                        if (modelDef?.dimensions) {
+                            plugin.settings.embeddingDimension = modelDef.dimensions;
+                        }
 
-                    await plugin.saveSettings();
-                }
-                refreshSettings(plugin);
+                        await plugin.saveSettings();
+                    }
+                    refreshSettings(plugin);
+                })();
             });
         });
     }
@@ -110,12 +107,14 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.indexingDelayMs))
             .setValue(String(plugin.settings.indexingDelayMs))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num)) {
-                    plugin.settings.indexingDelayMs = num;
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num)) {
+                        plugin.settings.indexingDelayMs = num;
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     new Setting(containerEl)
@@ -124,18 +123,20 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.queueDelayMs))
             .setValue(String(plugin.settings.queueDelayMs))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num)) {
-                    plugin.settings.queueDelayMs = num;
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num)) {
+                        plugin.settings.queueDelayMs = num;
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     // --- 2a. Custom Model Fields (Only if Local + Custom) ---
     const isLocal = plugin.settings.embeddingProvider === 'local';
     const currentModel = plugin.settings.embeddingModel;
-    const isCustom = isLocal && !Object.values(MODELS).includes(currentModel);
+    const isCustom = isLocal && !LOCAL_EMBEDDING_MODELS.some(m => m.id === currentModel);
 
     if (isCustom) {
         new Setting(containerEl)
@@ -143,32 +144,36 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .setDesc('HuggingFace model ID (e.g. "Xenova/paraphrase-multilingual-MiniLM-L12-v2"). Must be ONNX compatible.')
             .addText(text => text
                 .setValue(plugin.settings.embeddingModel)
-                .onChange(async (value) => {
-                    plugin.settings.embeddingModel = value;
-                    await plugin.saveSettings();
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.embeddingModel = value;
+                        await plugin.saveSettings();
+                    })();
                 }))
             .addButton(btn => btn
                 .setButtonText("Validate")
-                .onClick(async () => {
-                    btn.setDisabled(true);
-                    btn.setButtonText("Checking...");
+                .onClick(() => {
+                    void (async () => {
+                        btn.setDisabled(true);
+                        btn.setButtonText("Checking...");
 
-                    const { validateModel } = await import("../../utils/validation");
-                    const result = await validateModel(plugin.settings.embeddingModel);
+                        const { validateModel } = await import("../../utils/validation");
+                        const result = await validateModel(plugin.settings.embeddingModel);
 
-                    if (result.valid) {
-                        new Notice(`Model Valid! ${result.recommendedDims ? `Dims: ${result.recommendedDims}` : ''}`);
-                        if (result.recommendedDims) {
-                            plugin.settings.embeddingDimension = result.recommendedDims;
-                            await plugin.saveSettings();
-                            refreshSettings(plugin);
+                        if (result.valid) {
+                            new Notice(`Model Valid! ${result.recommendedDims ? `Dims: ${result.recommendedDims}` : ''}`);
+                            if (result.recommendedDims) {
+                                plugin.settings.embeddingDimension = result.recommendedDims;
+                                await plugin.saveSettings();
+                                refreshSettings(plugin);
+                            }
+                        } else {
+                            new Notice(`Invalid Model: ${result.reason}`, 5000);
                         }
-                    } else {
-                        new Notice(`Invalid Model: ${result.reason}`, 5000);
-                    }
 
-                    btn.setDisabled(false);
-                    btn.setButtonText("Validate");
+                        btn.setDisabled(false);
+                        btn.setButtonText("Validate");
+                    })();
                 }));
 
         new Setting(containerEl)
@@ -176,12 +181,14 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .setDesc('The output vector size of this model (e.g. 384, 768). Incorrect values will break search.')
             .addText(text => text
                 .setValue(String(plugin.settings.embeddingDimension))
-                .onChange(async (value) => {
-                    const num = parseInt(value);
-                    if (!isNaN(num)) {
-                        plugin.settings.embeddingDimension = num;
-                        await plugin.saveSettings();
-                    }
+                .onChange((value) => {
+                    void (async () => {
+                        const num = parseInt(value);
+                        if (!isNaN(num)) {
+                            plugin.settings.embeddingDimension = num;
+                            await plugin.saveSettings();
+                        }
+                    })();
                 }));
     }
 
@@ -194,21 +201,23 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 .setButtonText('Force re-download')
                 .setIcon('refresh-cw')
                 .setWarning()
-                .onClick(async () => {
-                    const pluginWithService = plugin as unknown as { embeddingService?: unknown };
-                    const service = pluginWithService.embeddingService;
+                .onClick(() => {
+                    void (async () => {
+                        const pluginWithService = plugin as unknown as { embeddingService?: unknown };
+                        const service = pluginWithService.embeddingService;
 
-                    if (service instanceof LocalEmbeddingService) {
-                        btn.setDisabled(true);
-                        btn.setButtonText("Downloading...");
+                        if (service instanceof LocalEmbeddingService) {
+                            btn.setDisabled(true);
+                            btn.setButtonText("Downloading...");
 
-                        await service.forceRedownload();
+                            await service.forceRedownload();
 
-                        btn.setDisabled(false);
-                        btn.setButtonText("Force re-download");
-                    } else {
-                        new Notice("Local embedding service is not active");
-                    }
+                            btn.setDisabled(false);
+                            btn.setButtonText("Force re-download");
+                        } else {
+                            new Notice("Local embedding service is not active");
+                        }
+                    })();
                 }));
     }
 
@@ -218,34 +227,65 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .addButton(btn => btn
             .setButtonText('Re-index vault')
             .setTooltip('Wipes all vector data and starts fresh')
-            .onClick(async () => {
-                if (btn.buttonEl.textContent === 'Re-index vault') {
-                    btn.setButtonText('Confirm re-index?');
-                    btn.setWarning();
-                    setTimeout(() => {
-                        if (btn.buttonEl.textContent === 'Confirm re-index?') {
-                            btn.setButtonText('Re-index vault');
-                            btn.buttonEl.classList.remove('mod-warning');
-                        }
-                    }, 5000);
-                } else {
-                    await plugin.vectorStore.reindexVault();
-                    btn.setButtonText('Re-index vault');
-                    btn.buttonEl.classList.remove('mod-warning');
-                }
+            .onClick(() => {
+                void (async () => {
+                    if (btn.buttonEl.textContent === 'Re-index vault') {
+                        btn.setButtonText('Confirm re-index?');
+                        btn.setWarning();
+                        setTimeout(() => {
+                            if (btn.buttonEl.textContent === 'Confirm re-index?') {
+                                btn.setButtonText('Re-index vault');
+                                btn.buttonEl.classList.remove('mod-warning');
+                            }
+                        }, 5000);
+                    } else {
+                        await plugin.vectorStore.reindexVault();
+                        btn.setButtonText('Re-index vault');
+                        btn.buttonEl.classList.remove('mod-warning');
+                    }
+                })();
             }));
 
     // --- 3. Chat Model ---
+    const chatModelCurrent = plugin.settings.chatModel;
+    const isChatPreset = GEMINI_CHAT_MODELS.some(m => m.id === chatModelCurrent);
+
     new Setting(containerEl)
         .setName('Chat model')
         .setDesc('Main model used for reasoning and answering questions.')
-        .addText(text => text
-            .setPlaceholder(DEFAULT_SETTINGS.chatModel)
-            .setValue(plugin.settings.chatModel)
-            .onChange(async (value) => {
-                plugin.settings.chatModel = value;
-                await plugin.saveSettings();
-            }));
+        .addDropdown(dropdown => {
+            for (const m of GEMINI_CHAT_MODELS) {
+                dropdown.addOption(m.id, m.label);
+            }
+            dropdown.addOption('custom', 'Custom model string...');
+
+            dropdown.setValue(isChatPreset ? chatModelCurrent : 'custom');
+
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        plugin.settings.chatModel = val;
+                        await plugin.saveSettings();
+                    }
+                    refreshSettings(plugin);
+                })();
+            });
+        });
+
+    if (!isChatPreset) {
+        new Setting(containerEl)
+            .setName('Custom chat model')
+            .setDesc('Enter the specific Gemini model ID.')
+            .addText(text => text
+                .setPlaceholder(DEFAULT_SETTINGS.chatModel)
+                .setValue(chatModelCurrent)
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.chatModel = value;
+                        await plugin.saveSettings();
+                    })();
+                }));
+    }
 
     new Setting(containerEl)
         .setName('Context window budget')
@@ -253,25 +293,56 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
             .setValue(String(plugin.settings.contextWindowTokens))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num > 0) {
-                    plugin.settings.contextWindowTokens = num;
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num > 0) {
+                        plugin.settings.contextWindowTokens = num;
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     // 4. Grounding Model
+    const groundingModelCurrent = plugin.settings.groundingModel;
+    const isGroundingPreset = GEMINI_GROUNDING_MODELS.some(m => m.id === groundingModelCurrent);
+
     new Setting(containerEl)
         .setName('Grounding model')
-        .setDesc(`The fast, cost-effective model used specifically for web searches (e.g., \`${DEFAULT_SETTINGS.groundingModel}\`).`)
-        .addText(text => text
-            .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
-            .setValue(plugin.settings.groundingModel)
-            .onChange(async (value) => {
-                plugin.settings.groundingModel = value;
-                await plugin.saveSettings();
-            }));
+        .setDesc(`The fast, cost-effective model used specifically for web searches.`)
+        .addDropdown(dropdown => {
+            for (const m of GEMINI_GROUNDING_MODELS) {
+                dropdown.addOption(m.id, m.label);
+            }
+            dropdown.addOption('custom', 'Custom model string...');
+
+            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
+
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        plugin.settings.groundingModel = val;
+                        await plugin.saveSettings();
+                    }
+                    refreshSettings(plugin);
+                })();
+            });
+        });
+
+    if (!isGroundingPreset) {
+        new Setting(containerEl)
+            .setName('Custom grounding model')
+            .setDesc('Enter the specific Gemini model ID.')
+            .addText(text => text
+                .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
+                .setValue(groundingModelCurrent)
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.groundingModel = value;
+                        await plugin.saveSettings();
+                    })();
+                }));
+    }
 
     // 5. Code Model & Execution Toggle
     new Setting(containerEl)
@@ -279,23 +350,54 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .setDesc('Enable a specialized sub-agent that uses code to solve math problems and complex logic.')
         .addToggle(toggle => toggle
             .setValue(plugin.settings.enableCodeExecution)
-            .onChange(async (value) => {
-                plugin.settings.enableCodeExecution = value;
-                await plugin.saveSettings();
-                refreshSettings(plugin);
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.enableCodeExecution = value;
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
             }));
 
     if (plugin.settings.enableCodeExecution) {
+        const codeModelCurrent = plugin.settings.codeModel;
+        const isCodePreset = GEMINI_CHAT_MODELS.some(m => m.id === codeModelCurrent);
+
         new Setting(containerEl)
             .setName('Code model')
-            .setDesc(`The model used for code execution (e.g., \`${DEFAULT_SETTINGS.codeModel}\`).`)
-            .addText(text => text
-                .setPlaceholder(DEFAULT_SETTINGS.codeModel)
-                .setValue(plugin.settings.codeModel)
-                .onChange(async (value) => {
-                    plugin.settings.codeModel = value;
-                    await plugin.saveSettings();
-                }));
+            .setDesc(`The model used for code execution.`)
+            .addDropdown(dropdown => {
+                for (const m of GEMINI_CHAT_MODELS) {
+                    dropdown.addOption(m.id, m.label);
+                }
+                dropdown.addOption('custom', 'Custom model string...');
+
+                dropdown.setValue(isCodePreset ? codeModelCurrent : 'custom');
+
+                dropdown.onChange((val) => {
+                    void (async () => {
+                        if (val !== 'custom') {
+                            plugin.settings.codeModel = val;
+                            await plugin.saveSettings();
+                        }
+                        refreshSettings(plugin);
+                    })();
+                });
+            });
+
+        if (!isCodePreset) {
+            new Setting(containerEl)
+                .setName('Custom code model')
+                .setDesc('Enter the specific Gemini model ID.')
+                .addText(text => text
+                    .setPlaceholder(DEFAULT_SETTINGS.codeModel)
+                    .setValue(codeModelCurrent)
+                    .onChange((value) => {
+                        void (async () => {
+                            plugin.settings.codeModel = value;
+                            await plugin.saveSettings();
+                        })();
+                    }));
+        }
     }
 }
 
