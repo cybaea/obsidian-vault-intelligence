@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     chatModel: 'gemini-3-flash-preview',
     groundingModel: 'gemini-2.5-flash-lite',
     codeModel: 'gemini-3-flash-preview',
-    enableCodeExecution: false,
+    enableCodeExecution: true,
     contextWindowTokens: 200000,
     indexingDelayMs: 5000,
     queueDelayMs: 300,
