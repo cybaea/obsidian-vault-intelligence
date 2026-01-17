@@ -1,15 +1,14 @@
-import { Plugin, WorkspaceLeaf, Menu, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Menu } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
 import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
 import { logger } from "./utils/logger";
 import { IEmbeddingService } from "./services/IEmbeddingService";
-import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
-import { LocalEmbeddingService } from "./services/LocalEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { GraphService } from "./services/GraphService";
 import { LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
+import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 
 export default class VaultIntelligencePlugin extends Plugin {
 	settings: VaultIntelligenceSettings;
@@ -31,19 +30,13 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
 		this.geminiService = new GeminiService(this.settings);
 
-		// 2. Initialize Embedding Provider based on Settings
+		// 2. Initialize Routing Embedding Provider
+		this.embeddingService = new RoutingEmbeddingService(this, this.geminiService, this.settings);
 		if (this.settings.embeddingProvider === 'local') {
-			logger.info("Using Local Embedding Service");
-			const localService = new LocalEmbeddingService(this, this.settings);
-			// Start the worker early
-			void localService.initialize().catch(err => {
+			logger.info("Initializing Local Embedding Service");
+			void (this.embeddingService as RoutingEmbeddingService).initialize().catch(err => {
 				logger.error("Failed to init local worker", err);
-				new Notice("Local worker failed to start.");
 			});
-			this.embeddingService = localService;
-		} else {
-			logger.info("Using Gemini Embedding Service");
-			this.embeddingService = new GeminiEmbeddingService(this.geminiService, this.settings);
 		}
 
 		// 3. Initialize Graph Infrastructure
@@ -127,7 +120,7 @@ export default class VaultIntelligencePlugin extends Plugin {
 	onunload() {
 		if (this.graphService) this.graphService.shutdown();
 
-		if (this.embeddingService instanceof LocalEmbeddingService) {
+		if (this.embeddingService instanceof RoutingEmbeddingService) {
 			this.embeddingService.terminate();
 		}
 
