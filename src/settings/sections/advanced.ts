@@ -50,8 +50,8 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                     if (num !== plugin.settings.embeddingDimension) {
                         plugin.settings.embeddingDimension = num;
                         await plugin.saveSettings();
-                        new Notice("Embedding dimension changed. Re-indexing vault...");
-                        await plugin.vectorStore.reindexVault();
+                        new Notice("Embedding dimension changed. Re-scanning vault...");
+                        await plugin.graphService.scanAll();
                     }
                 }));
     } else {

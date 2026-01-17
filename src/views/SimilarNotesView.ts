@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
 import VaultIntelligencePlugin from "../main";
-import { VectorStore } from "../services/VectorStore";
+import { GraphService } from "../services/GraphService";
 import { GeminiService } from "../services/GeminiService";
 import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
 import { logger } from "../utils/logger";
@@ -9,7 +9,7 @@ export const SIMILAR_NOTES_VIEW_TYPE = "similar-notes-view";
 
 export class SimilarNotesView extends ItemView {
     plugin: VaultIntelligencePlugin;
-    vectorStore: VectorStore;
+    graphService: GraphService;
     gemini: GeminiService;
     embeddingService: IEmbeddingService; // Add Property
 
@@ -17,13 +17,13 @@ export class SimilarNotesView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        vectorStore: VectorStore,
+        graphService: GraphService,
         gemini: GeminiService,
         embeddingService: IEmbeddingService // Add Argument
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.vectorStore = vectorStore;
+        this.graphService = graphService;
         this.gemini = gemini;
         this.embeddingService = embeddingService;
     }
@@ -46,7 +46,16 @@ export class SimilarNotesView extends ItemView {
         // Nothing to cleanup
     }
 
-    public async updateForFile(file: TFile | null) {
+    private lastUpdateId = 0;
+    private lastPath = "";
+
+    public async updateForFile(file: TFile | null, force = false) {
+        if (!force && file?.path === this.lastPath && this.contentEl.children.length > 2) {
+            return; // Already showing this file and content seems valid
+        }
+        this.lastPath = file?.path || "";
+
+        const updateId = ++this.lastUpdateId;
         const container = this.contentEl;
         container.empty();
 
@@ -59,22 +68,15 @@ export class SimilarNotesView extends ItemView {
         const loadingEl = container.createEl("div", { text: "Finding similar notes..." });
 
         try {
-            // Use getOrIndexFile which handles both cache lookups and prioritized re-indexing
-            const embedding = await this.vectorStore.getOrIndexFile(file);
+            const similar = await this.graphService.getSimilar(file.path, this.plugin.settings.similarNotesLimit);
 
-            if (!embedding) {
-                loadingEl.setText("Failed to generate embedding.");
-                return;
-            }
-
-            const similar = this.vectorStore.findSimilar(
-                embedding,
-                this.plugin.settings.similarNotesLimit,
-                this.plugin.settings.minSimilarityScore,
-                file.path
-            );
+            // Check if a newer update has already started
+            if (updateId !== this.lastUpdateId) return;
 
             loadingEl.remove();
+            // Clear again to ensure no double-render if something else triggered update
+            container.empty();
+            container.createEl("h4", { text: `Similar to: ${file.basename}` });
 
             if (similar.length === 0) {
                 container.createEl("p", { text: "No similar notes found." });
@@ -89,7 +91,7 @@ export class SimilarNotesView extends ItemView {
                 const scorePercent = Math.round(doc.score * 100);
                 item.createSpan({
                     text: `${scorePercent}%`,
-                    cls: "similar-notes-score" // use built-in style or similar
+                    cls: "similar-notes-score"
                 });
 
                 const link = item.createEl("a", {
@@ -106,8 +108,10 @@ export class SimilarNotesView extends ItemView {
             });
 
         } catch (e: unknown) {
-            loadingEl.setText("Error finding similar notes.");
-            logger.error("Error updating similar notes view", e);
+            if (updateId === this.lastUpdateId) {
+                loadingEl.setText("Error finding similar notes.");
+                logger.error("Error updating similar notes view", e);
+            }
         }
     }
 

@@ -73,7 +73,7 @@ export interface IVaultIntelligencePlugin {
     settings: VaultIntelligenceSettings;
     embeddingService: IEmbeddingService;
     saveSettings(): Promise<void>;
-    vectorStore: {
-        reindexVault(): Promise<void>;
+    graphService: {
+        scanAll(forceWipe?: boolean): Promise<void>;
     };
 }

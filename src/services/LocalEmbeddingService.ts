@@ -338,6 +338,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
     }
 
     private async runTask(text: string, priority: EmbeddingPriority = 'high', title?: string): Promise<number[][]> {
+        if (!text || text.trim().length === 0) {
+            logger.debug(`[LocalEmbedding] Skipping empty text for: ${title || 'unknown'}`);
+            return [];
+        }
         const startTime = Date.now();
 
         return new Promise<number[][]>((resolve, reject) => {

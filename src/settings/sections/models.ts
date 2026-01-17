@@ -230,16 +230,16 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             .onClick(() => {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
-                        btn.setButtonText('Confirm re-index?');
+                        btn.setButtonText('Confirm re-scan?');
                         btn.setWarning();
                         setTimeout(() => {
-                            if (btn.buttonEl.textContent === 'Confirm re-index?') {
+                            if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
                                 btn.buttonEl.classList.remove('mod-warning');
                             }
                         }, 5000);
                     } else {
-                        await plugin.vectorStore.reindexVault();
+                        await plugin.graphService.scanAll(true);
                         btn.setButtonText('Re-index vault');
                         btn.buttonEl.classList.remove('mod-warning');
                     }

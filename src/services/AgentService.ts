@@ -1,5 +1,5 @@
 import { IEmbeddingService } from "./IEmbeddingService";
-import { VectorStore } from "../services/VectorStore";
+import { GraphService } from "../services/GraphService";
 import { GeminiService } from "./GeminiService";
 import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
@@ -23,7 +23,7 @@ interface VaultSearchResult {
 
 export class AgentService {
     private gemini: GeminiService;
-    private vectorStore: VectorStore;
+    private graphService: GraphService;
     private embeddingService: IEmbeddingService;
     private app: App;
     private settings: VaultIntelligenceSettings;
@@ -33,13 +33,13 @@ export class AgentService {
     constructor(
         app: App,
         gemini: GeminiService,
-        vectorStore: VectorStore,
+        graphService: GraphService,
         embeddingService: IEmbeddingService, // Injected here
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
         this.gemini = gemini; // Still needed for chat/grounding/code
-        this.vectorStore = vectorStore;
+        this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
         this.scoringStrategy = new ScoringStrategy();
@@ -231,11 +231,10 @@ export class AgentService {
             logger.info(`[VaultSearch] Starting search for: "${query}"`);
 
             // 1. Vector Search (Semantic)
-            const embedding = await this.embeddingService.embedQuery(query);
             const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
             const limit = Math.max(0, Math.trunc(rawLimit));
 
-            let vectorResults = this.vectorStore.findSimilar(embedding, limit, SEARCH_CONSTANTS.VECTOR_MIN_RELEVANCE);
+            let vectorResults = await this.graphService.search(query, limit);
             logger.info(`[VaultSearch] Vector search returned ${vectorResults.length} candidates.`);
 
             // 2. Keyword Search (Hybrid: Exact + Bag-of-Words)

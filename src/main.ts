@@ -1,22 +1,22 @@
-import { Plugin, WorkspaceLeaf, TFile, Menu, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Menu, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
 import { GeminiService } from "./services/GeminiService";
-import { VectorStore } from "./services/VectorStore";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
 import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
 import { logger } from "./utils/logger";
 import { IEmbeddingService } from "./services/IEmbeddingService";
 import { GeminiEmbeddingService } from "./services/GeminiEmbeddingService";
 import { LocalEmbeddingService } from "./services/LocalEmbeddingService";
-import {
-	LOCAL_EMBEDDING_MODELS
-} from "./services/ModelRegistry";
+import { VaultManager } from "./services/VaultManager";
+import { GraphService } from "./services/GraphService";
+import { LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
 
 export default class VaultIntelligencePlugin extends Plugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiService;
 	embeddingService: IEmbeddingService;
-	vectorStore: VectorStore;
+	vaultManager: VaultManager;
+	graphService: GraphService;
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -46,15 +46,14 @@ export default class VaultIntelligencePlugin extends Plugin {
 			this.embeddingService = new GeminiEmbeddingService(this.geminiService, this.settings);
 		}
 
-		// 3. Inject into VectorStore
-		this.vectorStore = new VectorStore(this, this.geminiService, this.embeddingService, this.settings);
-		await this.vectorStore.loadVectors();
-
-		this.initDebouncedHandlers();
+		// 3. Initialize Graph Infrastructure
+		this.vaultManager = new VaultManager(this.app);
+		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.settings);
+		await this.graphService.initialize();
 
 		// Background scan for new/changed files
-		this.app.workspace.onLayoutReady(() => {
-			void this.vectorStore.scanVault();
+		this.app.workspace.onLayoutReady(async () => {
+			await this.graphService.scanAll();
 		});
 
 		// Ribbon Icon
@@ -82,12 +81,12 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// Register Views
 		this.registerView(
 			SIMILAR_NOTES_VIEW_TYPE,
-			(leaf) => new SimilarNotesView(leaf, this, this.vectorStore, this.geminiService, this.embeddingService)
+			(leaf) => new SimilarNotesView(leaf, this, this.graphService, this.geminiService, this.embeddingService)
 		);
 
 		this.registerView(
 			RESEARCH_CHAT_VIEW_TYPE,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.vectorStore, this.embeddingService)
+			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.graphService, this.embeddingService)
 		);
 
 		// Commands
@@ -110,60 +109,23 @@ export default class VaultIntelligencePlugin extends Plugin {
 		// Settings Tab
 		this.addSettingTab(new VaultIntelligenceSettingTab(this.app, this));
 
-		// Event Listeners
+		// Event listeners for UI updates
 		this.registerEvent(
-			this.app.workspace.on('file-open', (file) => {
-				if (file) {
-					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
-					for (const leaf of leaves) {
-						if (leaf.view instanceof SimilarNotesView) {
-							void leaf.view.updateForFile(file);
-						}
+			this.app.workspace.on('active-leaf-change', () => {
+				const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
+				leaves.forEach(leaf => {
+					if (leaf.view instanceof SimilarNotesView) {
+						void leaf.view.updateView();
 					}
-					this.vectorStore.requestIndex(file);
-				}
+				});
 			})
 		);
-
-		this.registerEvent(this.app.metadataCache.on('changed', (file) => {
-			if (file instanceof TFile && file.extension === 'md') {
-				this.vectorStore.requestIndex(file);
-
-				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile && activeFile.path === file.path) {
-					const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
-					for (const leaf of leaves) {
-						if (leaf.view instanceof SimilarNotesView) {
-							void leaf.view.updateForFile(file);
-						}
-					}
-				}
-			}
-		}));
-
-		this.registerEvent(this.app.vault.on('create', (file) => {
-			if (file instanceof TFile && file.extension === 'md') {
-				this.vectorStore.requestIndex(file);
-			}
-		}));
-
-		this.registerEvent(this.app.vault.on('delete', (file) => {
-			if (file instanceof TFile) {
-				this.vectorStore.deleteVector(file.path);
-			}
-		}));
-
-		this.registerEvent(this.app.vault.on('rename', async (file, oldPath) => {
-			if (file instanceof TFile && file.extension === 'md') {
-				await this.vectorStore.renameVector(oldPath, file.path);
-			}
-		}));
 
 		logger.info("Vault Intelligence Plugin Loaded");
 	}
 
 	onunload() {
-		if (this.vectorStore) this.vectorStore.destroy();
+		if (this.graphService) this.graphService.shutdown();
 
 		if (this.embeddingService instanceof LocalEmbeddingService) {
 			this.embeddingService.terminate();
@@ -204,31 +166,8 @@ export default class VaultIntelligencePlugin extends Plugin {
 
 		this.initDebouncedHandlers();
 
-		if (this.vectorStore) {
-			this.vectorStore.updateSettings(this.settings);
-
-			// Handle Provider Swap
-			const currentProvider = this.settings.embeddingProvider;
-			const isLocalActive = this.embeddingService instanceof LocalEmbeddingService;
-			const isGeminiActive = this.embeddingService instanceof GeminiEmbeddingService;
-
-			if (currentProvider === 'local' && !isLocalActive) {
-				logger.info("Swapping to Local Embedding Service");
-				const localService = new LocalEmbeddingService(this, this.settings);
-				void localService.initialize().catch(err => logger.error("Failed to init local worker", err));
-				this.embeddingService = localService;
-				this.vectorStore.setEmbeddingService(localService);
-			} else if (currentProvider === 'gemini' && !isGeminiActive) {
-				logger.info("Swapping to Gemini Embedding Service");
-				if (isLocalActive) {
-					(this.embeddingService as LocalEmbeddingService).terminate();
-				}
-				const geminiService = new GeminiEmbeddingService(this.geminiService, this.settings);
-				this.embeddingService = geminiService;
-				this.vectorStore.setEmbeddingService(geminiService);
-			}
-
-			void this.vectorStore.scanVault();
+		if (this.graphService) {
+			void this.graphService.updateConfig(this.settings);
 		}
 	}
 

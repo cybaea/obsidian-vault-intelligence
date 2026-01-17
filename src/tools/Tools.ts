@@ -1,5 +1,5 @@
 import { GeminiService } from "../services/GeminiService";
-import { VectorStore } from "../services/VectorStore";
+import { GraphService } from "../services/GraphService";
 import { requestUrl } from "obsidian";
 
 export interface Tool {
@@ -11,11 +11,11 @@ export interface Tool {
 export class VaultSearchTool implements Tool {
     name = "vault_search";
     description = "Search the user's personal vault for information. Args: { query: string }";
-    vectorStore: VectorStore;
+    graphService: GraphService;
     gemini: GeminiService;
 
-    constructor(vectorStore: VectorStore, gemini: GeminiService) {
-        this.vectorStore = vectorStore;
+    constructor(graphService: GraphService, gemini: GeminiService) {
+        this.graphService = graphService;
         this.gemini = gemini;
     }
 
@@ -23,9 +23,7 @@ export class VaultSearchTool implements Tool {
         const query = args.query as string | undefined;
         if (!query) return "Error: No query provided.";
 
-        // Embed query
-        const embedding = await this.gemini.embedText(query);
-        const results = this.vectorStore.findSimilar(embedding, 3); // Top 3
+        const results = await this.graphService.search(query, 3); // Top 3
 
         if (results.length === 0) return "No relevant documents found in vault.";
 
