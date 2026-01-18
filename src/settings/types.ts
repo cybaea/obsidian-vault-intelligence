@@ -26,6 +26,10 @@ export interface VaultIntelligenceSettings {
     embeddingThreads: number;
     embeddingSimd: boolean;
     logLevel: LogLevel;
+    ontologyPath: string;
+    gardenerPlansPath: string;
+    plansRetentionDays: number;
+    excludedFolders: string[];
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -65,7 +69,11 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     geminiRetries: 10,
     embeddingThreads: Platform.isMobile ? 1 : 2,
     embeddingSimd: !Platform.isMobile,
-    logLevel: LogLevel.WARN
+    logLevel: LogLevel.WARN,
+    ontologyPath: 'Ontology',
+    gardenerPlansPath: 'Gardener/Plans',
+    plansRetentionDays: 7,
+    excludedFolders: ['Ontology', 'Gardener/Plans']
 };
 
 export interface IVaultIntelligencePlugin {

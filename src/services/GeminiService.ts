@@ -57,6 +57,29 @@ export class GeminiService {
         });
     }
 
+    /**
+     * Generates content with a structured JSON output based on a provided schema.
+     * @param prompt - The prompt text.
+     * @param schema - The JSON schema for the response.
+     * @returns The JSON string response.
+     */
+    public async generateStructuredContent(prompt: string, schema: Record<string, unknown>): Promise<string> {
+        return this.retryOperation(async () => {
+            if (!this.client) throw new Error("GenAI client not initialized.");
+
+            const response = await this.client.models.generateContent({
+                model: this.settings.chatModel,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            });
+
+            return response.text || "";
+        });
+    }
+
     // --- Search Sub-Agent ---
     /**
      * Performs a web search using Google Search Grounding.
@@ -200,12 +223,15 @@ export class GeminiService {
             try {
                 return await operation();
             } catch (error: unknown) {
-                const isRateLimit = error instanceof Error &&
-                    (error.message.includes("429") || (error as { status?: number }).status === 429);
+                const isTransientError = error instanceof Error && (
+                    error.message.includes("429") ||
+                    (error as { status?: number }).status === 429 ||
+                    error.message.includes("Failed to fetch")
+                );
 
-                if (isRateLimit) {
+                if (isTransientError) {
                     const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-                    logger.warn(`Rate limited (429). Retrying in ${delay}ms...`);
+                    logger.warn(`Transient error (${error instanceof Error ? error.message : "unknown"}). Retrying in ${Math.round(delay)}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
                     throw error;

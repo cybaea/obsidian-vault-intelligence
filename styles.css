@@ -115,7 +115,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vault-intelligence-system-instruction-setting {
     display: block !important;
     /* Use standard Obsidian spacing variables */
-    padding-bottom: var(--size-4-4) !important; 
+    padding-bottom: var(--size-4-4) !important;
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
@@ -134,12 +134,12 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vault-intelligence-system-instruction-setting textarea {
     width: 100%;
     max-width: 100%;
-    
+
     /* Native Obsidian variables for fonts */
     font-family: var(--font-monospace);
     font-size: var(--font-ui-small);
     line-height: var(--line-height-normal);
-    
+
     /* Ensure it matches the theme's input styling */
     background-color: var(--background-modifier-form-field);
     border: 1px solid var(--background-modifier-border);
@@ -158,13 +158,14 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     align-items: start;
     gap: var(--size-4-2);
     margin-top: var(--size-4-2);
-    
+
     /* Theming: Transparent background + dashed border */
     background-color: transparent;
-    border: var(--border-width) dashed var(--background-modifier-border); /* Replaced 1px */
+    border: var(--border-width) dashed var(--background-modifier-border);
+    /* Replaced 1px */
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-    
+
     /* Typography */
     font-size: var(--font-ui-smaller) !important;
     color: var(--text-muted);
@@ -176,13 +177,14 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     align-items: start;
     gap: var(--size-4-2);
     margin-top: var(--size-4-2);
-    
+
     /* Warning Visuals */
     background-color: transparent;
-    border: var(--border-width) solid var(--text-warning); /* Replaced 1px */
+    border: var(--border-width) solid var(--text-warning);
+    /* Replaced 1px */
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-    
+
     /* Typography */
     font-size: var(--font-ui-smaller) !important;
     color: var(--text-muted);
@@ -191,10 +193,10 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vault-intelligence-settings-info .lucide-info,
 .vault-intelligence-settings-warning .lucide-alert-triangle {
     flex-shrink: 0;
-    
-    width: 1.1em;   
-    height: 1.1em;  
-    margin-top: 0.15em; 
+
+    width: 1.1em;
+    height: 1.1em;
+    margin-top: 0.15em;
 }
 
 .vault-intelligence-settings-info .lucide-info {
@@ -210,7 +212,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vault-intelligence-settings-warning a {
     font-size: inherit;
     text-decoration: underline;
-    text-underline-offset: 0.15em; 
+    text-underline-offset: 0.15em;
 }
 
 .vault-intelligence-settings-info a {
@@ -224,5 +226,283 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 /* Layout Fix: Align Input Box */
 .vault-intelligence-api-setting .setting-item-control {
     align-self: flex-start;
-    margin-top: var(--size-4-2); 
+    margin-top: var(--size-4-2);
+}
+
+/* --- Gardener Plan UI --- */
+.gardener-plan-ui {
+    padding: 1.25rem;
+    background: var(--background-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--background-modifier-border);
+    margin: 1.5rem 0;
+    font-family: var(--font-interface);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.gardener-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 0.5rem;
+}
+
+.gardener-title-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gardener-icon {
+    color: var(--text-accent);
+    display: flex;
+    align-items: center;
+}
+
+.gardener-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.gardener-summary {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.gardener-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.gardener-action-card {
+    background: var(--background-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-left: 5px solid var(--text-accent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gardener-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.action-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-normal);
+}
+
+.action-type-icon {
+    color: var(--text-accent);
+    opacity: 0.8;
+}
+
+.action-file-path {
+    font-family: var(--font-monospace);
+    font-size: 0.85rem;
+    background: var(--background-secondary);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+}
+
+.action-changes {
+    margin-bottom: 0.75rem;
+}
+
+.change-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    padding: 0.2rem 0;
+}
+
+.change-field {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.change-arrow {
+    color: var(--text-faint);
+}
+
+.change-value {
+    color: var(--text-success);
+    font-weight: 600;
+    background: rgba(var(--mono-rgb-100), 0.05);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+}
+
+.change-value.invalid-tag {
+    color: var(--text-error);
+    background: rgba(var(--color-red-rgb), 0.1);
+}
+
+.tag-warning {
+    color: var(--text-error);
+    display: flex;
+    align-items: center;
+}
+
+.action-rationale {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--background-modifier-border-focus);
+    line-height: 1.4;
+}
+
+.gardener-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+.gardener-footer button {
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+}
+
+.gardener-error {
+    color: var(--text-error);
+    background: rgba(var(--color-red-rgb), 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--text-error);
+}
+
+.action-checkbox-container {
+    display: flex;
+    align-items: center;
+}
+
+.action-checkbox {
+    margin-right: 0.75rem;
+    cursor: pointer;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--text-accent);
+}
+
+.change-values-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.change-value.invalid-topic {
+    color: var(--text-error);
+    background: rgba(var(--color-red-rgb), 0.1);
+}
+
+/* --- Progress Bar & Interactive Links --- */
+
+.gardener-loading-container {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gardener-progress-bar {
+    width: 100%;
+    max-width: 300px;
+    height: 6px;
+    background: var(--background-secondary-alt);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.gardener-progress-bar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    background: var(--text-accent);
+    border-radius: 3px;
+    animation: gardener-progress-slide 1.5s infinite ease-in-out;
+}
+
+@keyframes gardener-progress-slide {
+    0% {
+        left: -40%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.gardener-loading-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.interactive-link {
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.interactive-link:hover {
+    color: var(--text-accent-hover);
+    text-decoration: underline;
+}
+
+.action-file-path.interactive-link {
+    color: var(--text-accent);
+}
+
+.change-value-wrapper {
+    display: inline-flex;
+    align-items: center;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin: 2px;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.change-value-wrapper.is-excluded {
+    opacity: 0.5;
+    filter: grayscale(1);
+    text-decoration: line-through;
+}
+
+.remove-value-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.1s ease;
+}
+
+.remove-value-icon:hover {
+    color: var(--text-error);
+}
+
+.remove-value-icon svg {
+    width: 12px;
+    height: 12px;
 }
