@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **High-Recall Similarity Search:** Significantly improved the "Similar Notes" recall by bypassing Orama's default 80% similarity threshold. You can now see notes with lower similarity scores (down to 1% or whatever your settings specify).
+- **Seamless Provider Switching:** Fixed a bug where switching between Local and Gemini embedding providers would cause "Unauthorized access" errors. The plugin now dynamically routes requests to the correct engine instantly.
 - **Model Selector Dropdowns:** Replaced manual text fields with intuitive dropdown menus for Chat, Grounding, and Code models, pre-populated with the latest Gemini models.
 - **Custom Model Support:** Added "Custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
 - **Local Model Management:** Standardized selection for local embedding models with automatic dimension validation and a new "Force re-download" utility for easier troubleshooting.
@@ -17,12 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developers
 
-- **Worker Robustness:** Implemented a 4-stage stability fallback (Threads -> 1 Thread -> No SIMD -> Circuit Breaker) to handle environmental WASM/SIMD incompatibilities.
+- **Dynamic Routing Service:** Implemented `RoutingEmbeddingService` to handle multi-provider delegation, decoupling the graph indexing logic from specific embedding implementations.
+- **Index Safety & Model Tracking:** Enhanced index persistence to track specific embedding model IDs. The plugin now automatically triggers a full re-index if the model is changed, even if dimensions are the same, preventing data corruption.
+- **Strict Type Safety:** Fully refactored the background worker to eliminate all `any` casts and `eslint-disable` comments, using Orama's native `RawData` types for robust state handling.
+- **Worker Robustness:** Implemented a 4-stage stability fallback (Threads -> 1 Thread -> No SIMD -> Circuit Breaker) and improved lifecycle management with `fullReset` capabilities.
 - **Boot Grace Period:** Added a proactive detector that triggers stable modes immediately if the worker crashes within 10 seconds of startup.
-- **Stable Mode Persistence:** Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
-- **Enhanced Diagnostics:** Improved worker-side global error handlers to capture detailed information from generic `ErrorEvent` objects and logged document titles during indexing.
+- **Enhanced Diagnostics:** Improved worker-side logging for "empty file" scenarios and Orama state migration to help diagnose indexing coverage.
 - **Model Hygiene:** Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
-- **Code Quality:** Removed all `any` type casts in the local embedding service and strictly enforced ESLint and TypeScript compilation rules.
+- **Stable Mode Persistence:** Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
 
 
 ## [1.5.0] - 2026-01-10
