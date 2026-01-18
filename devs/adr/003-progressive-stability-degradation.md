@@ -29,3 +29,4 @@ We implemented a **Circuit Breaker with Progressive Degradation** in `LocalEmbed
 *   **Performance Hit**: Fallback modes (No SIMD, 1 Thread) are *significantly* slower (10x-20x). Users in this state might perceive the plugin as "broken" rather than "safe".
 *   **Debug Difficulty**: It is hard to know from a bug report if a user is running effectively (SIMD enabled) or in fallback mode without explicit logs.
 *   **Code Complexity**: The state machine for managing retries and configuration overrides is complex and prone to edge cases.
+*   **GPU Support**: The version of Transformers.js we use doesn't support GPU acceleration. We should upgrade to a more recent version.
