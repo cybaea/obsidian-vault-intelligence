@@ -1,5 +1,5 @@
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
-import { Plugin, Notice, requestUrl } from "obsidian";
+import { Notice, requestUrl } from "obsidian";
 import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
 import { logger } from "../utils/logger";
 import { WORKER_CONSTANTS } from "../constants";
@@ -48,7 +48,7 @@ interface ConfigureMessage {
 }
 
 export class LocalEmbeddingService implements IEmbeddingService {
-    private plugin: Plugin;
+    private plugin: IVaultIntelligencePlugin;
     private settings: VaultIntelligenceSettings;
     private worker: Worker | null = null;
     private lastNotice: Notice | null = null;
@@ -66,7 +66,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
     private requestQueue: EmbeddingTask[] = [];
     private isWorkerBusy = false;
 
-    constructor(plugin: Plugin, settings: VaultIntelligenceSettings) {
+    constructor(plugin: IVaultIntelligencePlugin, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
         this.settings = settings;
     }
@@ -117,8 +117,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
     public async initialize() {
         if (this.worker) return;
 
-        // Reset circuit breaker if it's been more than 5 minutes since last restart
-        if (this.isCircuitBroken && Date.now() - this.lastRestartTime > 300000) {
+        // Reset circuit breaker if it's been more than reset window since last crash
+        if (this.isCircuitBroken && Date.now() - this.lastRestartTime > WORKER_CONSTANTS.CIRCUIT_BREAKER_RESET_MS) {
             this.isCircuitBroken = false;
             this.restartCount = 0;
         }
@@ -158,9 +158,9 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
                 // Circuit Breaker & Fallback Logic
                 const now = Date.now();
-                const isEarlyCrash = (now - this.lastInitTime < 10000); // 10s grace period
+                const isEarlyCrash = (now - this.lastInitTime < WORKER_CONSTANTS.BOOT_CRASH_THRESHOLD_MS);
 
-                if (now - this.lastRestartTime < 60000) {
+                if (now - this.lastRestartTime < WORKER_CONSTANTS.CRASH_LOOP_WINDOW_MS) {
                     this.restartCount++;
                 } else {
                     this.restartCount = 1;
@@ -180,7 +180,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
                     // Persist this stable mode if it's an early crash (likely environment mismatch)
                     if (isEarlyCrash && this.settings.embeddingThreads > 1) {
                         this.settings.embeddingThreads = 1;
-                        void (this.plugin as unknown as IVaultIntelligencePlugin).saveSettings();
+                        void this.plugin.saveSettings();
                     }
                 }
 
@@ -191,10 +191,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
                     // Persist Safe Mode
                     this.settings.embeddingSimd = false;
-                    void (this.plugin as unknown as IVaultIntelligencePlugin).saveSettings();
+                    void this.plugin.saveSettings();
                 }
 
-                if (this.restartCount > 4) {
+                if (this.restartCount > WORKER_CONSTANTS.MAX_CRASH_RETRY) {
                     this.isCircuitBroken = true;
                     const msg = "Local embedding worker crashed repeatedly. Automatic restart disabled to prevent loop. Please try 'Force Download' in settings or switch models.";
                     logger.error(`[LocalEmbedding] ${msg}`);
@@ -375,9 +375,9 @@ export class LocalEmbeddingService implements IEmbeddingService {
     async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
 
-        // Main-thread chunking (10k chars) to prevent massive string transfers 
+        // Main-thread chunking to prevent massive string transfers 
         // and ensure the worker yields/responds to heartbeats/IO periodically.
-        const CHUNK_SIZE_CHARS = 10000;
+        const CHUNK_SIZE_CHARS = WORKER_CONSTANTS.MAX_CHARS_PER_TOKENIZATION_BLOCK;
         if (content.length <= CHUNK_SIZE_CHARS) {
             return this.runTask(content, priority, title);
         }

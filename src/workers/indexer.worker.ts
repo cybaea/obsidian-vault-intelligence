@@ -1,12 +1,12 @@
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
-import { create, search, type AnyOrama, type RawData } from '@orama/orama';
+import { search, type AnyOrama, type RawData } from '@orama/orama';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
+import { WORKER_INDEXER_CONSTANTS } from '../constants';
 
 let graph: Graph;
 let orama: AnyOrama;
 let config: WorkerConfig;
-let fetchProxy: ((url: string, options: unknown) => Promise<unknown>) | null = null;
 let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
 
 interface OramaDocument {
@@ -36,19 +36,10 @@ const IndexerWorker: WorkerAPI = {
     async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: unknown) {
         config = conf;
         graph = new Graph();
-        if (typeof fetcher === 'function') fetchProxy = fetcher as (url: string, options: unknown) => Promise<unknown>;
         if (typeof embedder === 'function') embedderProxy = embedder as (text: string, title: string) => Promise<number[]>;
 
         // Initialize Orama with vector support
-        const oramaInstance = create({
-            schema: {
-                path: 'enum',
-                title: 'string',
-                content: 'string',
-                embedding: `vector[${conf.embeddingDimension}]`
-            }
-        });
-        orama = oramaInstance;
+        await recreateOrama();
         await Promise.resolve();
 
         workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions and ${conf.embeddingModel}`);
@@ -143,7 +134,7 @@ const IndexerWorker: WorkerAPI = {
                 id: path,
                 path,
                 title,
-                content: content.slice(0, 500),
+                content: content.slice(0, WORKER_INDEXER_CONSTANTS.CONTENT_PREVIEW_LENGTH),
                 embedding
             });
 
@@ -182,7 +173,7 @@ const IndexerWorker: WorkerAPI = {
         return Promise.resolve();
     },
 
-    async search(query: string, limit: number = 5): Promise<GraphSearchResult[]> {
+    async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const results = await search(orama, {
             mode: 'vector',
             vector: {
@@ -200,7 +191,7 @@ const IndexerWorker: WorkerAPI = {
         }));
     },
 
-    async getSimilar(path: string, limit: number = 5): Promise<GraphSearchResult[]> {
+    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         if (!orama) return [];
 
         workerLogger.debug(`Similarity request for: ${path}`);
@@ -236,8 +227,7 @@ const IndexerWorker: WorkerAPI = {
         workerLogger.debug(`Similarity vector size for ${path}: ${embedding.length}`);
 
         // 2. Search for similar vectors, excluding the current path
-        // Increase limit significantly to 500 to ensure we find low-score matches if they exist
-        const searchLimit = 500;
+        const searchLimit = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP;
 
         const results = await search(orama, {
             mode: 'vector',
@@ -245,7 +235,7 @@ const IndexerWorker: WorkerAPI = {
                 value: embedding,
                 property: 'embedding'
             },
-            similarity: 0.001, // Small positive threshold to bypass default 0.8
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             where: {
                 path: { nin: [path] }
             },
@@ -425,29 +415,11 @@ function parseWikilinks(text: string): string[] {
 }
 
 async function generateEmbedding(text: string, title: string): Promise<number[]> {
-    if (embedderProxy) {
-        return await embedderProxy(text, title);
+    if (!embedderProxy) {
+        throw new Error("Embedding proxy not initialized. The indexer worker requires a valid embedding proxy to generate vectors.");
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.embeddingModel}:embedContent?key=${config.googleApiKey}`;
-    const options = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            content: { parts: [{ text }] },
-            taskType: 'RETRIEVAL_DOCUMENT',
-            title: title
-        })
-    };
-
-    let data: { embedding: { values: number[] } };
-    if (fetchProxy) {
-        data = await fetchProxy(url, options) as { embedding: { values: number[] } };
-    } else {
-        throw new Error("Fetch proxy not initialized");
-    }
-
-    return data.embedding.values;
+    return await embedderProxy(text, title);
 }
 
 Comlink.expose(IndexerWorker);

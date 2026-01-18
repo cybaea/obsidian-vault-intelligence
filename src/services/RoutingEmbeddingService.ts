@@ -1,8 +1,7 @@
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 import { GeminiEmbeddingService } from "./GeminiEmbeddingService";
-import { VaultIntelligenceSettings } from "../settings/types";
-import { Plugin } from "obsidian";
+import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
 import { GeminiService } from "./GeminiService";
 import { logger } from "../utils/logger";
 
@@ -11,7 +10,7 @@ export class RoutingEmbeddingService implements IEmbeddingService {
     private geminiService: GeminiEmbeddingService;
     private settings: VaultIntelligenceSettings;
 
-    constructor(plugin: Plugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
+    constructor(plugin: IVaultIntelligencePlugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
         this.settings = settings;
         this.localService = new LocalEmbeddingService(plugin, settings);
         this.geminiService = new GeminiEmbeddingService(gemini, settings);

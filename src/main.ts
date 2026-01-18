@@ -1,5 +1,5 @@
 import { Plugin, WorkspaceLeaf, Menu } from 'obsidian';
-import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
 import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
@@ -10,7 +10,7 @@ import { GraphService } from "./services/GraphService";
 import { LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 
-export default class VaultIntelligencePlugin extends Plugin {
+export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiService;
 	embeddingService: IEmbeddingService;
