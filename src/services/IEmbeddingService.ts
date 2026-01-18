@@ -28,7 +28,8 @@ export interface IEmbeddingService {
     embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]>;
 
     /**
-     * Optional: Update configuration on the fly (e.g. thread count).
+     * Update configuration on the fly (e.g. thread count).
+     * This allows the service to adapt to changed settings without a full restart.
      */
     updateConfiguration?(): void;
 }

@@ -34,6 +34,10 @@ export class GraphService {
         this.settings = settings;
     }
 
+    /**
+     * Initializes the Graph Service and spawns the Indexer Worker.
+     * This method is idempotent and will return immediately if already initialized.
+     */
     public async initialize() {
         if (this.isInitialized) return;
 
@@ -153,11 +157,23 @@ export class GraphService {
         }
     }
 
+    /**
+     * Semantically searches the vault using vector embeddings.
+     * @param query - The search query string.
+     * @param limit - Max number of results (default determined by worker).
+     * @returns A promise resolving to an array of search results.
+     */
     public async search(query: string, limit?: number) {
         if (!this.api) return [];
         return await this.api.search(query, limit);
     }
 
+    /**
+     * Finds files similar to the given file path.
+     * @param path - The path of the source file to find connections for.
+     * @param limit - Max number of results.
+     * @returns A promise resolving to an array of similar files.
+     */
     public async getSimilar(path: string, limit?: number) {
         if (!this.api) return [];
 
@@ -173,6 +189,10 @@ export class GraphService {
         return await this.api.getSimilar(path, limit);
     }
 
+    /**
+     * Scans all markdown files in the vault and queues them for indexing.
+     * @param forceWipe - If true, clears the existing graph and Orama index before scanning.
+     */
     public async scanAll(forceWipe = false) {
         if (!this.api) return;
 
@@ -201,6 +221,10 @@ export class GraphService {
         new Notice("GraphService: initial scan complete");
     }
 
+    /**
+     * Updates the worker configuration with new settings.
+     * @param settings - The new plugin settings.
+     */
     public async updateConfig(settings: VaultIntelligenceSettings) {
         this.settings = settings;
         if (this.api) {
@@ -215,6 +239,9 @@ export class GraphService {
         }
     }
 
+    /**
+     * Terminates the worker and cleans up resources.
+     */
     public shutdown() {
         if (this.worker) {
             this.worker.terminate();

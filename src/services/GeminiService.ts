@@ -58,6 +58,11 @@ export class GeminiService {
     }
 
     // --- Search Sub-Agent ---
+    /**
+     * Performs a web search using Google Search Grounding.
+     * @param query - The search query.
+     * @returns A synthesis of search results including facts and dates.
+     */
     public async searchWithGrounding(query: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -79,6 +84,11 @@ export class GeminiService {
 
     // --- Code Execution Sub-Agent ---
 
+    /**
+     * Solves a problem using the Code Execution tool (Python).
+     * @param query - The problem statement or logic task.
+     * @returns The text response, including code blocks and execution results.
+     */
     public async solveWithCode(query: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -125,6 +135,13 @@ export class GeminiService {
         });
     }
 
+    /**
+     * Starts a standard chat session with history and tools.
+     * @param history - The conversation history.
+     * @param tools - Optional list of tools to enable for this session.
+     * @param systemInstruction - System prompt.
+     * @returns A GenAI ChatSession object.
+     */
     public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "") {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
