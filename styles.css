@@ -506,3 +506,8 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     width: 12px;
     height: 12px;
 }
+
+.vault-intelligence-gardener-system-instruction-textarea {
+    min-height: 200px;
+    width: 100%;
+}

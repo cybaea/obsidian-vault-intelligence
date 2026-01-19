@@ -1,5 +1,12 @@
-import { Setting, Notice } from "obsidian";
-import { IVaultIntelligencePlugin } from "../types";
+import { Setting, Notice, Plugin, App } from "obsidian";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { GEMINI_CHAT_MODELS } from "../../services/ModelRegistry";
+
+interface InternalApp extends App {
+    setting: {
+        openTabById: (id: string) => void;
+    };
+}
 
 /**
  * Renders the Ontology settings section.
@@ -121,4 +128,74 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                 plugin.settings.excludedFolders = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
                 await plugin.saveSettings();
             }));
+
+    // --- Gardener Model & Persona ---
+    new Setting(containerEl).setName('Gardener model and persona').setHeading();
+
+    const gardenerModelCurrent = plugin.settings.gardenerModel;
+    const isGardenerPreset = GEMINI_CHAT_MODELS.some(m => m.id === gardenerModelCurrent);
+
+    new Setting(containerEl)
+        .setName('Gardener model')
+        .setDesc('The model used specifically for ontology refinement and hygiene (tidy vault).')
+        .addDropdown(dropdown => {
+            for (const m of GEMINI_CHAT_MODELS) {
+                dropdown.addOption(m.id, m.label);
+            }
+            dropdown.addOption('custom', 'Custom model string...');
+
+            dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
+
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        plugin.settings.gardenerModel = val;
+                        await plugin.saveSettings();
+                    }
+                    refreshSettings(plugin);
+                })();
+            });
+        });
+
+    if (!isGardenerPreset) {
+        new Setting(containerEl)
+            .setName('Custom model ID')
+            .setDesc('Enter the specific Gemini model ID.')
+            .addText(text => text
+                .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
+                .setValue(gardenerModelCurrent)
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.gardenerModel = value;
+                        await plugin.saveSettings();
+                    })();
+                }));
+    }
+
+    new Setting(containerEl)
+        .setName('Gardener system instruction')
+        .setDesc('The base persona and rules for the Gardener. Use {{ONTOLOGY_FOLDERS}} and {{NOTE_COUNT}} as placeholders.')
+        .addTextArea(text => {
+            text.setPlaceholder('Enter system instructions...')
+                .setValue(plugin.settings.gardenerSystemInstruction)
+                .onChange(async (value) => {
+                    plugin.settings.gardenerSystemInstruction = value;
+                    await plugin.saveSettings();
+                });
+            text.inputEl.addClass('vault-intelligence-gardener-system-instruction-textarea');
+        })
+        .addButton(btn => btn
+            .setButtonText("Reset to default")
+            .setTooltip("Restore the original gardener rules")
+            .onClick(async () => {
+                plugin.settings.gardenerSystemInstruction = DEFAULT_SETTINGS.gardenerSystemInstruction;
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            }));
+}
+
+function refreshSettings(plugin: IVaultIntelligencePlugin) {
+    const app = plugin.app as InternalApp;
+    const manifestId = (plugin as unknown as Plugin).manifest.id;
+    app.setting.openTabById(manifestId);
 }

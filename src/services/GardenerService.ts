@@ -163,48 +163,20 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
             logger.info(`Gardener: analyzing ${context.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
 
-            // 2. Build prompt
-            let customInstructions = "";
+            // 2b. Prepare System Instruction
+            let systemInstruction = this.settings.gardenerSystemInstruction;
+
+            // Replace placeholders
+            systemInstruction = systemInstruction.replace("{{ONTOLOGY_FOLDERS}}", ontologyFolders);
+            systemInstruction = systemInstruction.replace("{{NOTE_COUNT}}", String(notes.length));
+
+            // Merge with Instructions.md if exists
             if (ontologyContext.instructions) {
-                customInstructions = `
-### CUSTOM USER INSTRUCTIONS:
-${ontologyContext.instructions}
-                `.trim();
+                systemInstruction += `\n\n### ADDITIONAL USER INSTRUCTIONS:\n${ontologyContext.instructions}`;
             }
 
+            // 3. Generate structured plan
             const prompt = `
-You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improvements for the vault's fluid ontology (represented by the 'topics' frontmatter field).
-
-${customInstructions}
-
-## YOUR ROLE:
-1.  **LINKING**: Identify notes missing relevant topics and suggest adding Markdown links to existing files in the 'VALID TOPICS' list below.
-2.  **PROPOSING**: If you identify a recurring theme or concept that doesn't have a topic file yet, suggest a NEW topic as a Markdown link.
-    - NEW topics should be placed in one of the following folders if they fit, or you can suggest a path:
-${ontologyFolders}
-
-## THOROUGHNESS:
-- You have been provided with **${context.length}** notes in the 'NOTES' list below.
-- You MUST evaluate **EVERY SINGLE NOTE** individually. 
-- Do not limit yourself to a small sample; if multiple notes (or even all of them) require improvements, include them all in your 'actions' array.
-- A comprehensive plan is better than a brief one. Your context window is large enough to handle many suggestions.
-
-## CONSTRAINTS:
-- Suggestions for 'topics' MUST be standard Markdown links: [Name](/Path/to/file.md).
-- DO NOT use double brackets [[ ]] anywhere in the links.
-- Use the EXACT vault-absolute paths provided in the 'VALID TOPICS' list below. These paths MUST start with the ontology root folder (e.g., /Ontology/...).
-- **NEW TOPICS**: If you suggest a topic that is NOT in the 'VALID TOPICS' list:
-    - You MUST provide a clear, concise definition for it.
-    - For entities (people, organizations, places) or complex technical concepts, include at least one authoritative reference within the definition.
-    - **REFERENCES**: References MUST be formatted as clickable Markdown links (e.g., [Source Name](https://...)) whenever possible. If no URL is available, provide the specific source name.
-    - If suggesting multiple similar new topics (e.g. "Risk Management" vs "Enterprise Risk Management"), ensure their definitions clearly distinguish them and explain why they are separate.
-    - **CRITICAL**: Check if your proposed concept is already covered by an existing topic or one of its **aliases** in the 'VALID TOPICS' list. If a semantic match exists (even if the name is slightly different), USE THE EXISTING TOPIC LINK instead of proposing a new one.
-- ALWAYS provide the full updated array for 'topics'.
-- DO NOT suggest changes to 'tags', 'aliases', or any other frontmatter fields. Your scope is strictly limited to the 'topics' field.
-- DO NOT link to "Index" files (e.g., Concepts/Concepts.md is an index, use files *inside* it).
-- DO NOT suggest removing topics unless they are clearly incorrect or typos.
-- Return ONLY valid JSON.
-
 VALID TOPICS:
 (Note: Multiple names may point to the same file path; these are aliases for the same concept.)
 ${validTopicsList}
@@ -215,7 +187,6 @@ NOTES:
 ${JSON.stringify(context, null, 2)}
 `.trim();
 
-            // 3. Generate structured plan
             const jsonPlan = await this.gemini.generateStructuredContent(prompt, {
                 type: "object",
                 properties: {
@@ -263,6 +234,9 @@ ${JSON.stringify(context, null, 2)}
                     }
                 },
                 required: ["date", "summary", "actions"]
+            }, {
+                model: this.settings.gardenerModel,
+                systemInstruction: systemInstruction
             });
 
             const parsedPlan = GardenerPlanSchema.parse(JSON.parse(jsonPlan));

@@ -63,16 +63,23 @@ export class GeminiService {
      * @param schema - The JSON schema for the response.
      * @returns The JSON string response.
      */
-    public async generateStructuredContent(prompt: string, schema: Record<string, unknown>): Promise<string> {
+    public async generateStructuredContent(
+        prompt: string,
+        schema: Record<string, unknown>,
+        options: { model?: string; systemInstruction?: string } = {}
+    ): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
+            const modelId = options.model || this.settings.chatModel;
+
             const response = await this.client.models.generateContent({
-                model: this.settings.chatModel,
+                model: modelId,
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",
-                    responseSchema: schema
+                    responseSchema: schema,
+                    systemInstruction: options.systemInstruction
                 }
             });
 
