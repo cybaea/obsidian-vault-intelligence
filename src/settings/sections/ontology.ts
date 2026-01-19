@@ -175,6 +175,15 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
     new Setting(containerEl)
         .setName('Gardener system instruction')
         .setDesc('The base persona and rules for the Gardener. Use {{ONTOLOGY_FOLDERS}} and {{NOTE_COUNT}} as placeholders.')
+        .setClass('vault-intelligence-system-instruction-setting')
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip("Restore the original gardener rules")
+            .onClick(async () => {
+                plugin.settings.gardenerSystemInstruction = DEFAULT_SETTINGS.gardenerSystemInstruction;
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            }))
         .addTextArea(text => {
             text.setPlaceholder('Enter system instructions...')
                 .setValue(plugin.settings.gardenerSystemInstruction)
@@ -182,16 +191,8 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                     plugin.settings.gardenerSystemInstruction = value;
                     await plugin.saveSettings();
                 });
-            text.inputEl.addClass('vault-intelligence-gardener-system-instruction-textarea');
-        })
-        .addButton(btn => btn
-            .setButtonText("Reset to default")
-            .setTooltip("Restore the original gardener rules")
-            .onClick(async () => {
-                plugin.settings.gardenerSystemInstruction = DEFAULT_SETTINGS.gardenerSystemInstruction;
-                await plugin.saveSettings();
-                refreshSettings(plugin);
-            }));
+            text.inputEl.rows = 10;
+        });
 }
 
 function refreshSettings(plugin: IVaultIntelligencePlugin) {
