@@ -5,6 +5,7 @@ import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { GardenerStateService } from "./GardenerStateService";
+import { SEARCH_CONSTANTS } from "../constants";
 
 /**
  * Zod Schema for a single refactoring action.
@@ -114,12 +115,45 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 .filter(f => !excludedPaths.some(excluded => f.path.startsWith(excluded)))
                 .sort((a, b) => b.stat.mtime - a.stat.mtime);
 
+            const validTopics = await this.ontology.getValidTopics();
+            const validTopicsList = validTopics.map(t => `- [${t.name}](/${t.path})`).join("\n");
+            const ontologyContext = await this.ontology.getOntologyContext();
+            const ontologyFolders = Object.entries(ontologyContext.folders)
+                .map(([name, desc]) => `- **${name}**: ${desc}`)
+                .join("\n");
+
+            // 2. Token Estimation & Budgeting
+            const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+            const contextBudget = this.settings.gardenerContextBudget;
+
+            // Estimate base prompt overhead
+            const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 2000) / charsPerToken;
+            let currentTokenEstimate = basePromptEstimate;
             const notes: TFile[] = [];
+
             for (const file of allFiles) {
-                if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays)) {
-                    notes.push(file);
-                }
+                // Check note limit first
                 if (notes.length >= this.settings.gardenerNoteLimit) break;
+
+                // Only consider files the state says we should
+                if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays, this.settings.gardenerRecheckHours)) {
+                    // Estimate this file's contribution
+                    const fileContent = await this.app.vault.cachedRead(file);
+                    const fileEstimate = fileContent.length / charsPerToken;
+
+                    if (currentTokenEstimate + fileEstimate > contextBudget) {
+                        if (notes.length === 0) {
+                            // If even the first file is too big, skip it but maybe log it?
+                            logger.warn(`Gardener: Note ${file.path} is too large for the context budget. Skipping.`);
+                            continue;
+                        }
+                        logger.info(`Gardener: Reached context budget (${Math.round(currentTokenEstimate)} tokens). Stopping at ${notes.length} notes.`);
+                        break;
+                    }
+
+                    notes.push(file);
+                    currentTokenEstimate += fileEstimate;
+                }
             }
 
             const context = notes.map(f => ({
@@ -127,10 +161,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 topics: (this.app.metadataCache.getFileCache(f)?.frontmatter?.["topics"] as string[]) || []
             }));
 
-            logger.info(`Gardener: analyzing ${context.length} notes (limit set to ${this.settings.gardenerNoteLimit}).`);
-
-            const validTopics = await this.ontology.getValidTopics();
-            const ontologyContext = await this.ontology.getOntologyContext();
+            logger.info(`Gardener: analyzing ${context.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
 
             // 2. Build prompt
             let customInstructions = "";
@@ -140,10 +171,6 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 ${ontologyContext.instructions}
                 `.trim();
             }
-
-            const ontologyFolders = Object.entries(ontologyContext.folders)
-                .map(([name, desc]) => `- **${name}**: ${desc}`)
-                .join("\n");
 
             const prompt = `
 You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improvements for the vault's fluid ontology (represented by the 'topics' frontmatter field).
@@ -168,7 +195,8 @@ ${ontologyFolders}
 - Use the EXACT vault-absolute paths provided in the 'VALID TOPICS' list below. These paths MUST start with the ontology root folder (e.g., /Ontology/...).
 - **NEW TOPICS**: If you suggest a topic that is NOT in the 'VALID TOPICS' list:
     - You MUST provide a clear, concise definition for it.
-    - For entities (people, organizations, places) or complex technical concepts, include at least one authoritative reference (e.g., a URL or specific source name) within the definition.
+    - For entities (people, organizations, places) or complex technical concepts, include at least one authoritative reference within the definition.
+    - **REFERENCES**: References MUST be formatted as clickable Markdown links (e.g., [Source Name](https://...)) whenever possible. If no URL is available, provide the specific source name.
     - If suggesting multiple similar new topics (e.g. "Risk Management" vs "Enterprise Risk Management"), ensure their definitions clearly distinguish them and explain why they are separate.
     - **CRITICAL**: Check if your proposed concept is already covered by an existing topic or one of its **aliases** in the 'VALID TOPICS' list. If a semantic match exists (even if the name is slightly different), USE THE EXISTING TOPIC LINK instead of proposing a new one.
 - ALWAYS provide the full updated array for 'topics'.
@@ -179,7 +207,7 @@ ${ontologyFolders}
 
 VALID TOPICS:
 (Note: Multiple names may point to the same file path; these are aliases for the same concept.)
-${validTopics.map(t => `- [${t.name}](/${t.path})`).join("\n")}
+${validTopicsList}
 
 Analyze the following notes and suggest improvements.
 
@@ -237,11 +265,6 @@ ${JSON.stringify(context, null, 2)}
                 required: ["date", "summary", "actions"]
             });
 
-            // Record check for all files in this analysis (to establish baseline)
-            for (const note of notes) {
-                await this.state.recordCheck(note.path);
-            }
-
             const parsedPlan = GardenerPlanSchema.parse(JSON.parse(jsonPlan));
 
             // Post-process links to ensure URL encoding if AI missed it
@@ -279,6 +302,11 @@ ${JSON.stringify(parsedPlan, null, 2)}
 
             await this.app.vault.modify(planFile, content);
             logger.info(`Gardener Plan updated: ${planFile.path}`);
+
+            // Record check for all files in this analysis (only after success)
+            for (const note of notes) {
+                await this.state.recordCheck(note.path);
+            }
 
         } catch (error) {
             const errorObj = {

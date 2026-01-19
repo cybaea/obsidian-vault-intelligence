@@ -67,26 +67,33 @@ export class GardenerStateService {
      * Logic: 
      * 1. If never checked, process.
      * 2. If file mtime > state.lastChecked, process (it changed).
-     * 3. If file was skipped by user, only process if skipRetentionDays has passed.
+     * 3. If file was recently skipped by user (within skipRetentionDays), skip.
+     * 4. If recheckHours > 0 and time since lastChecked > recheckHours, process (cooldown expired).
      */
-    public shouldProcess(file: TFile, skipRetentionDays: number): boolean {
+    public shouldProcess(file: TFile, skipRetentionDays: number, recheckHours: number): boolean {
         const fileState = this.state.files[file.path];
         if (!fileState) return true;
 
         const now = Date.now();
         const skipRetentionMs = skipRetentionDays * 24 * 60 * 60 * 1000;
+        const recheckMs = recheckHours * 60 * 60 * 1000;
 
-        // Recently skipped?
+        // 1. Recently skipped by user?
         if (fileState.lastSkipped > 0 && (now - fileState.lastSkipped < skipRetentionMs)) {
             return false;
         }
 
-        // Changed since last check?
+        // 2. Changed since last check?
         if (file.stat.mtime > fileState.lastChecked) {
             return true;
         }
 
-        // Default: skip (already checked and hasn't changed)
+        // 3. Has the cooldown expired?
+        if (recheckHours > 0 && (now - fileState.lastChecked > recheckMs)) {
+            return true;
+        }
+
+        // Default: skip (already checked, hasn't changed, and cooldown hasn't expired)
         return false;
     }
 

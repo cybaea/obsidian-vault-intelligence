@@ -64,6 +64,22 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
             }));
 
     new Setting(containerEl)
+        .setName("Gardener context budget (tokens)")
+        .setDesc('Maximum total tokens estimated for analysis. The gardener will prioritize recently modified notes until this budget or the analysis limit is reached.')
+        .addText(text => text
+            .setPlaceholder('50000')
+            .setValue(String(plugin.settings.gardenerContextBudget))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num > 0) {
+                    plugin.settings.gardenerContextBudget = Math.floor(num);
+                    await plugin.saveSettings();
+                } else {
+                    new Notice("Please enter a valid positive number for the context budget.");
+                }
+            }));
+
+    new Setting(containerEl)
         .setName("Skip retention (days)")
         .setDesc('How many days to remember that you skipped/rejected a file before investigating it again.')
         .addText(text => text
@@ -76,6 +92,22 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                     await plugin.saveSettings();
                 } else {
                     new Notice("Please enter a valid positive number for skip retention.");
+                }
+            }));
+
+    new Setting(containerEl)
+        .setName("Re-check cooldown (hours)")
+        .setDesc('How long to wait before re-examining a file that has no changes. Set to 0 to always re-examine.')
+        .addText(text => text
+            .setPlaceholder('24')
+            .setValue(String(plugin.settings.gardenerRecheckHours))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.gardenerRecheckHours = Math.floor(num);
+                    await plugin.saveSettings();
+                } else {
+                    new Notice("Please enter a valid positive number for the re-check cooldown.");
                 }
             }));
 

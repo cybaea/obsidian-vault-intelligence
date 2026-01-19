@@ -30,6 +30,8 @@ export interface VaultIntelligenceSettings {
     gardenerPlansPath: string;
     plansRetentionDays: number;
     gardenerNoteLimit: number;
+    gardenerContextBudget: number;
+    gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
     excludedFolders: string[];
 }
@@ -75,7 +77,9 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     ontologyPath: 'Ontology',
     gardenerPlansPath: 'Gardener/Plans',
     plansRetentionDays: 7,
-    gardenerNoteLimit: 50,
+    gardenerNoteLimit: 10,
+    gardenerContextBudget: 100000,
+    gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
     excludedFolders: ['Ontology', 'Gardener/Plans']
 };
