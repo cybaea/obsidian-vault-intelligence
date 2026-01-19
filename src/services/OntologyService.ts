@@ -42,6 +42,13 @@ export class OntologyService {
             await this.ensureFolderAndFile(normalizePath(`${basePath}/Entities`), 'Entities.md', ONTOLOGY_TEMPLATES.ENTITIES);
             await this.ensureFolderAndFile(normalizePath(`${basePath}/MOCs`), 'MOCs.md', ONTOLOGY_TEMPLATES.MOCS);
 
+            // Create default Instructions.md in root
+            const instructionsPath = normalizePath(`${basePath}/Instructions.md`);
+            if (!(this.app.vault.getAbstractFileByPath(instructionsPath) instanceof TFile)) {
+                await this.app.vault.create(instructionsPath, ONTOLOGY_TEMPLATES.INSTRUCTIONS);
+                logger.info(`Created default instructions: ${instructionsPath}`);
+            }
+
         } catch (error) {
             logger.error(`Failed to ensure ontology structure at ${basePath}`, error);
         }
@@ -79,15 +86,44 @@ export class OntologyService {
         const scan = (folder: TFolder) => {
             for (const child of folder.children) {
                 if (child instanceof TFile && child.extension === "md") {
-                    // Exclude Index Files: file name matches parent folder name (e.g. folder/folder.md)
+                    const cache = this.app.metadataCache.getFileCache(child);
+                    const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+
+                    // 1. Check for Ignore/Exclude Flags
+                    const gardener = fm?.["gardener"];
+                    if (gardener === "ignore" || gardener === "exclude") continue;
+                    if (typeof gardener === "object" && gardener !== null) {
+                        const gObj = gardener as Record<string, unknown>;
+                        if (gObj["ignore"] === true || gObj["exclude"] === true) {
+                            continue;
+                        }
+                    }
+
+                    // 2. Exclude Index Files
                     const parentFolderName = folder.name;
                     if (child.basename.toLowerCase() === parentFolderName.toLowerCase()) {
                         continue;
                     }
+
+                    // 3. Add primary name
                     topics.push({
                         name: child.basename,
                         path: child.path
                     });
+
+                    // 4. Add aliases
+                    const aliases = fm?.["aliases"];
+                    if (aliases) {
+                        const aliasList = Array.isArray(aliases) ? aliases : [aliases];
+                        for (const alias of aliasList) {
+                            if (typeof alias === "string" && alias.trim()) {
+                                topics.push({
+                                    name: alias.trim(),
+                                    path: child.path
+                                });
+                            }
+                        }
+                    }
                 } else if (child instanceof TFolder) {
                     scan(child);
                 }

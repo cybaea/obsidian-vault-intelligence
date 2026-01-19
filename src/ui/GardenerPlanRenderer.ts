@@ -2,6 +2,7 @@ import { MarkdownRenderChild, ButtonComponent, setIcon, TFile, TFolder, Notice, 
 import { GardenerPlan } from "../services/GardenerService";
 import { MetadataManager } from "../services/MetadataManager";
 import { OntologyService } from "../services/OntologyService";
+import { GardenerStateService } from "../services/GardenerStateService";
 import { logger } from "../utils/logger";
 
 /**
@@ -13,6 +14,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
     private plan: GardenerPlan;
     private metadataManager: MetadataManager;
     private ontology: OntologyService;
+    private state: GardenerStateService;
     private selectedActions: Set<number> = new Set();
 
     constructor(
@@ -20,13 +22,15 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
         containerEl: HTMLElement,
         plan: GardenerPlan,
         metadataManager: MetadataManager,
-        ontology: OntologyService
+        ontology: OntologyService,
+        state: GardenerStateService
     ) {
         super(containerEl);
         this.app = app;
         this.plan = plan;
         this.metadataManager = metadataManager;
         this.ontology = ontology;
+        this.state = state;
 
         // Default all to selected
         this.plan.actions.forEach((_, i) => this.selectedActions.add(i));
@@ -274,6 +278,8 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         }
                     });
                     successCount++;
+                    // Record successful update in state
+                    await this.state.recordUpdate(action.filePath);
                 } catch (e) {
                     logger.error(`Failed to apply action to ${action.filePath}`, e);
                     failCount++;
@@ -281,6 +287,16 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             } else {
                 failCount++;
                 logger.warn(`File not found for action: ${action.filePath}`);
+            }
+        }
+
+        // Record skips for any action NOT selected (closing the feedback loop)
+        for (let i = 0; i < this.plan.actions.length; i++) {
+            if (!this.selectedActions.has(i)) {
+                const action = this.plan.actions[i];
+                if (action) {
+                    await this.state.recordSkip(action.filePath);
+                }
             }
         }
 

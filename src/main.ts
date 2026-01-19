@@ -12,6 +12,7 @@ import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { MetadataManager } from "./services/MetadataManager";
 import { OntologyService } from "./services/OntologyService";
 import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
+import { GardenerStateService } from "./services/GardenerStateService";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
@@ -23,6 +24,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	metadataManager: MetadataManager;
 	ontologyService: OntologyService;
 	gardenerService: GardenerService;
+	gardenerStateService: GardenerStateService;
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -54,8 +56,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 4. Initialize Gardener Infrastructure (Stage 2)
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
-		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings);
+		this.gardenerStateService = new GardenerStateService(this.app);
+		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
 		await this.ontologyService.initialize();
+		await this.gardenerStateService.loadState();
 
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(async () => {
@@ -149,7 +153,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				const plan = GardenerPlanSchema.safeParse(rawPlan);
 
 				if (plan.success) {
-					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService);
+					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService, this.gardenerStateService);
 					ctx.addChild(renderer);
 				} else {
 					el.createEl("pre", { text: `Invalid Gardener Plan schema: ${plan.error.message}`, cls: "gardener-error" });

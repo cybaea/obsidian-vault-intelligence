@@ -4,13 +4,14 @@ import { OntologyService } from "./OntologyService";
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings/types";
+import { GardenerStateService } from "./GardenerStateService";
 
 /**
  * Zod Schema for a single refactoring action.
  */
 export const RefactoringActionSchema = z.object({
     filePath: z.string(),
-    action: z.enum(["update_topics", "update_tags", "update_metadata", "rename_file"]),
+    action: z.enum(["update_topics"]),
     description: z.string(),
     changes: z.object({
         field: z.string(),
@@ -42,12 +43,14 @@ export class GardenerService {
     private gemini: GeminiService;
     private ontology: OntologyService;
     private settings: VaultIntelligenceSettings;
+    private state: GardenerStateService;
 
-    constructor(app: App, gemini: GeminiService, ontology: OntologyService, settings: VaultIntelligenceSettings) {
+    constructor(app: App, gemini: GeminiService, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
         this.app = app;
         this.gemini = gemini;
         this.ontology = ontology;
         this.settings = settings;
+        this.state = state;
     }
 
     /**
@@ -107,16 +110,24 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 normalizePath(this.settings.gardenerPlansPath)
             ];
 
-            const notes = this.app.vault.getMarkdownFiles()
+            const allFiles = this.app.vault.getMarkdownFiles()
                 .filter(f => !excludedPaths.some(excluded => f.path.startsWith(excluded)))
-                .sort((a, b) => b.stat.mtime - a.stat.mtime)
-                .slice(0, 50);
+                .sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+            const notes: TFile[] = [];
+            for (const file of allFiles) {
+                if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays)) {
+                    notes.push(file);
+                }
+                if (notes.length >= this.settings.gardenerNoteLimit) break;
+            }
 
             const context = notes.map(f => ({
                 path: f.path,
-                topics: (this.app.metadataCache.getFileCache(f)?.frontmatter?.["topics"] as string[]) || [],
-                tags: (this.app.metadataCache.getFileCache(f)?.frontmatter?.["tags"] as string[]) || []
+                topics: (this.app.metadataCache.getFileCache(f)?.frontmatter?.["topics"] as string[]) || []
             }));
+
+            logger.info(`Gardener: analyzing ${context.length} notes (limit set to ${this.settings.gardenerNoteLimit}).`);
 
             const validTopics = await this.ontology.getValidTopics();
             const ontologyContext = await this.ontology.getOntologyContext();
@@ -145,6 +156,12 @@ ${customInstructions}
     - NEW topics should be placed in one of the following folders if they fit, or you can suggest a path:
 ${ontologyFolders}
 
+## THOROUGHNESS:
+- You have been provided with **${context.length}** notes in the 'NOTES' list below.
+- You MUST evaluate **EVERY SINGLE NOTE** individually. 
+- Do not limit yourself to a small sample; if multiple notes (or even all of them) require improvements, include them all in your 'actions' array.
+- A comprehensive plan is better than a brief one. Your context window is large enough to handle many suggestions.
+
 ## CONSTRAINTS:
 - Suggestions for 'topics' MUST be standard Markdown links: [Name](/Path/to/file.md).
 - DO NOT use double brackets [[ ]] anywhere in the links.
@@ -153,12 +170,15 @@ ${ontologyFolders}
     - You MUST provide a clear, concise definition for it.
     - For entities (people, organizations, places) or complex technical concepts, include at least one authoritative reference (e.g., a URL or specific source name) within the definition.
     - If suggesting multiple similar new topics (e.g. "Risk Management" vs "Enterprise Risk Management"), ensure their definitions clearly distinguish them and explain why they are separate.
-- ALWAYS provide the full updated array for 'topics' or 'tags'.
+    - **CRITICAL**: Check if your proposed concept is already covered by an existing topic or one of its **aliases** in the 'VALID TOPICS' list. If a semantic match exists (even if the name is slightly different), USE THE EXISTING TOPIC LINK instead of proposing a new one.
+- ALWAYS provide the full updated array for 'topics'.
+- DO NOT suggest changes to 'tags', 'aliases', or any other frontmatter fields. Your scope is strictly limited to the 'topics' field.
 - DO NOT link to "Index" files (e.g., Concepts/Concepts.md is an index, use files *inside* it).
-- DO NOT suggest removing tags that look like plugin-specific markers (e.g. #excalidraw).
+- DO NOT suggest removing topics unless they are clearly incorrect or typos.
 - Return ONLY valid JSON.
 
 VALID TOPICS:
+(Note: Multiple names may point to the same file path; these are aliases for the same concept.)
 ${validTopics.map(t => `- [${t.name}](/${t.path})`).join("\n")}
 
 Analyze the following notes and suggest improvements.
@@ -179,7 +199,7 @@ ${JSON.stringify(context, null, 2)}
                             type: "object",
                             properties: {
                                 filePath: { type: "string" },
-                                action: { type: "string", enum: ["update_topics", "update_tags", "update_metadata", "rename_file"] },
+                                action: { type: "string", enum: ["update_topics"] },
                                 description: { type: "string" },
                                 changes: {
                                     type: "array",
@@ -207,16 +227,20 @@ ${JSON.stringify(context, null, 2)}
                         items: {
                             type: "object",
                             properties: {
-                                topicLink: { type: "string", description: "The full Markdown link [Name](/Path)." },
-                                definition: { type: "string", description: "A clear definition of the topic." }
+                                topicLink: { type: "string" },
+                                definition: { type: "string" }
                             },
                             required: ["topicLink", "definition"]
-                        },
-                        description: "Definitions for any NEW topics suggested that weren't in the VALID TOPICS list."
+                        }
                     }
                 },
                 required: ["date", "summary", "actions"]
             });
+
+            // Record check for all files in this analysis (to establish baseline)
+            for (const note of notes) {
+                await this.state.recordCheck(note.path);
+            }
 
             const parsedPlan = GardenerPlanSchema.parse(JSON.parse(jsonPlan));
 

@@ -48,6 +48,38 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
             }));
 
     new Setting(containerEl)
+        .setName("Gardener analysis limit")
+        .setDesc('Maximum number of recent notes to scan for hygiene improvements.')
+        .addText(text => text
+            .setPlaceholder('50')
+            .setValue(String(plugin.settings.gardenerNoteLimit))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.gardenerNoteLimit = Math.floor(num);
+                    await plugin.saveSettings();
+                } else {
+                    new Notice("Please enter a valid positive number for the analysis limit.");
+                }
+            }));
+
+    new Setting(containerEl)
+        .setName("Skip retention (days)")
+        .setDesc('How many days to remember that you skipped/rejected a file before investigating it again.')
+        .addText(text => text
+            .setPlaceholder('7')
+            .setValue(String(plugin.settings.gardenerSkipRetentionDays))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.gardenerSkipRetentionDays = Math.floor(num);
+                    await plugin.saveSettings();
+                } else {
+                    new Notice("Please enter a valid positive number for skip retention.");
+                }
+            }));
+
+    new Setting(containerEl)
         .setName('Excluded folders')
         .setDesc('Comma-separated list of folders the gardener should ignore.')
         .addTextArea(text => text
