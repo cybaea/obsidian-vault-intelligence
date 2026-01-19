@@ -126,3 +126,20 @@ export const UI_CONSTANTS = {
     /** Duration for model validation notices (ms) */
     VALIDATION_NOTICE_MS: 5000
 };
+
+export const AGENT_CONSTANTS = {
+    TOOLS: {
+        VAULT_SEARCH: "vault_search",
+        URL_READER: "read_url",
+        GOOGLE_SEARCH: "google_search",
+        CALCULATOR: "computational_solver"
+    }
+};
+
+export const GARDENER_CONSTANTS = {
+    PLAN_PREFIX: "Gardener Plan",
+    PLAN_DATE_FORMAT: "YYYY-MM-DD HH-mm", // Conceptual format, implementation uses manual string building
+    ACTIONS: {
+        UPDATE_TOPICS: "update_topics"
+    }
+};

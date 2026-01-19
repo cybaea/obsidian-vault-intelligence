@@ -5,14 +5,14 @@ import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { logger } from "../utils/logger";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { GardenerStateService } from "./GardenerStateService";
-import { SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS, GARDENER_CONSTANTS } from "../constants";
 
 /**
  * Zod Schema for a single refactoring action.
  */
 export const RefactoringActionSchema = z.object({
     filePath: z.string(),
-    action: z.enum(["update_topics"]),
+    action: z.enum([GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS]),
     description: z.string(),
     changes: z.object({
         field: z.string(),
@@ -67,7 +67,7 @@ export class GardenerService {
         // 1. Create Placeholder File
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-        const fileName = `Gardener Plan ${dateStr}.md`;
+        const fileName = `${GARDENER_CONSTANTS.PLAN_PREFIX} ${dateStr}.md`;
         const plansPath = normalizePath(this.settings.gardenerPlansPath);
 
         // Ensure plans folder exists
@@ -78,7 +78,7 @@ export class GardenerService {
         const fullPath = plansPath ? `${plansPath}/${fileName}` : fileName;
 
         const placeholderContent = `
-# Gardener Plan - ${dateStr}
+# ${GARDENER_CONSTANTS.PLAN_PREFIX} - ${dateStr}
 
 Thinking... Gardening takes time. Please wait while I analyze your vault.
 
@@ -198,7 +198,7 @@ ${JSON.stringify(context, null, 2)}
                             type: "object",
                             properties: {
                                 filePath: { type: "string" },
-                                action: { type: "string", enum: ["update_topics"] },
+                                action: { type: "string", enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS] },
                                 description: { type: "string" },
                                 changes: {
                                     type: "array",
@@ -265,7 +265,7 @@ ${JSON.stringify(context, null, 2)}
 
             // 4. Update the Plan Note
             const content = `
-# Gardener Plan - ${parsedPlan.date}
+# ${GARDENER_CONSTANTS.PLAN_PREFIX} - ${parsedPlan.date}
 
 ${parsedPlan.summary}
 
@@ -291,7 +291,7 @@ ${JSON.stringify(parsedPlan, null, 2)}
             };
 
             const errorContent = `
-# Gardener Plan - Failed
+# ${GARDENER_CONSTANTS.PLAN_PREFIX} - Failed
 
 I encountered an error during analysis.
 
@@ -320,7 +320,7 @@ ${JSON.stringify(errorObj, null, 2)}
         const threshold = now - (retentionDays * 24 * 60 * 60 * 1000);
 
         for (const child of folder.children) {
-            if (child instanceof TFile && child.name.startsWith("Gardener Plan")) {
+            if (child instanceof TFile && child.name.startsWith(GARDENER_CONSTANTS.PLAN_PREFIX)) {
                 if (child.stat.ctime < threshold) {
                     await this.app.fileManager.trashFile(child);
                     logger.info(`Purged old gardener plan (to trash): ${child.path}`);

@@ -115,7 +115,7 @@ export class GraphService {
         });
     }
 
-    private saveTimeout: any = undefined; // eslint-disable-line @typescript-eslint/no-explicit-any -- timeout type varies between browser and node
+    private saveTimeout: ReturnType<typeof setTimeout> | number | undefined = undefined;
     private requestSave() {
         if (this.saveTimeout) return;
 

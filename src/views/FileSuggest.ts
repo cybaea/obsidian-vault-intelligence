@@ -4,8 +4,7 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
     inputEl: HTMLTextAreaElement;
 
     constructor(app: App, inputEl: HTMLTextAreaElement) {
-        // @ts-ignore - AbstractInputSuggest constructor sometimes has restrictive types in different Obsidian versions
-        super(app, inputEl);
+        super(app, inputEl as unknown as HTMLInputElement);
         this.inputEl = inputEl;
     }
 
