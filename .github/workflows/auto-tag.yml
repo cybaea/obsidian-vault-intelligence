@@ -1,0 +1,38 @@
+name: Auto Tag on Merge
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json' # Only run if package.json changed
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to push the tag
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version change and tag
+        run: |
+          # Get version from package.json
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          # Check if tag already exists
+          if git rev-parse "refs/tags/$PACKAGE_VERSION" >/dev/null 2>&1; then
+            echo "Tag $PACKAGE_VERSION already exists. Skipping."
+            exit 0
+          fi
+
+          echo "New version detected: $PACKAGE_VERSION"
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create and push tag
+          git tag "$PACKAGE_VERSION"
+          git push origin "$PACKAGE_VERSION"

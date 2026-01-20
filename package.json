@@ -16,7 +16,8 @@
 		"docs:build": "vitepress build",
 		"docs:preview": "vitepress preview",
 		"test": "vitest run",
-		"test:ui": "vitest --ui"
+		"test:ui": "vitest --ui",
+		"release:prep": "node scripts/release-prep.mjs"
 	},
 	"keywords": [
 		"obsidian",
