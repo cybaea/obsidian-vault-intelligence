@@ -57,7 +57,42 @@ export class GeminiService {
         });
     }
 
+    /**
+     * Generates content with a structured JSON output based on a provided schema.
+     * @param prompt - The prompt text.
+     * @param schema - The JSON schema for the response.
+     * @returns The JSON string response.
+     */
+    public async generateStructuredContent(
+        prompt: string,
+        schema: Record<string, unknown>,
+        options: { model?: string; systemInstruction?: string } = {}
+    ): Promise<string> {
+        return this.retryOperation(async () => {
+            if (!this.client) throw new Error("GenAI client not initialized.");
+
+            const modelId = options.model || this.settings.chatModel;
+
+            const response = await this.client.models.generateContent({
+                model: modelId,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                    systemInstruction: options.systemInstruction
+                }
+            });
+
+            return response.text || "";
+        });
+    }
+
     // --- Search Sub-Agent ---
+    /**
+     * Performs a web search using Google Search Grounding.
+     * @param query - The search query.
+     * @returns A synthesis of search results including facts and dates.
+     */
     public async searchWithGrounding(query: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -79,6 +114,11 @@ export class GeminiService {
 
     // --- Code Execution Sub-Agent ---
 
+    /**
+     * Solves a problem using the Code Execution tool (Python).
+     * @param query - The problem statement or logic task.
+     * @returns The text response, including code blocks and execution results.
+     */
     public async solveWithCode(query: string): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -125,6 +165,13 @@ export class GeminiService {
         });
     }
 
+    /**
+     * Starts a standard chat session with history and tools.
+     * @param history - The conversation history.
+     * @param tools - Optional list of tools to enable for this session.
+     * @param systemInstruction - System prompt.
+     * @returns A GenAI ChatSession object.
+     */
     public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "") {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -183,12 +230,15 @@ export class GeminiService {
             try {
                 return await operation();
             } catch (error: unknown) {
-                const isRateLimit = error instanceof Error &&
-                    (error.message.includes("429") || (error as { status?: number }).status === 429);
+                const isTransientError = error instanceof Error && (
+                    error.message.includes("429") ||
+                    (error as { status?: number }).status === 429 ||
+                    error.message.includes("Failed to fetch")
+                );
 
-                if (isRateLimit) {
+                if (isTransientError) {
                     const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-                    logger.warn(`Rate limited (429). Retrying in ${delay}ms...`);
+                    logger.warn(`Transient error (${error instanceof Error ? error.message : "unknown"}). Retrying in ${Math.round(delay)}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
                     throw error;

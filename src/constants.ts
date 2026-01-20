@@ -84,7 +84,39 @@ export const WORKER_CONSTANTS = {
     MAX_TOKENS: 512,
 
     /** Size of character blocks to process to avoid WASM heap exhaustion */
-    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000
+    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000,
+
+    /** Circuit Breaker: Reset after 5 minutes of no crashes */
+    CIRCUIT_BREAKER_RESET_MS: 300000,
+
+    /** Circuit Breaker: Window to detect crash loops (1 min) */
+    CRASH_LOOP_WINDOW_MS: 60000,
+
+    /** Stability: Threshold for "early crash" immediately after boot (10s) */
+    BOOT_CRASH_THRESHOLD_MS: 10000,
+
+    /** Circuit Breaker: Max crashes before giving up */
+    MAX_CRASH_RETRY: 4
+};
+
+export const WORKER_INDEXER_CONSTANTS = {
+    /** Default delay between index updates (ms) */
+    DEFAULT_INDEXING_DELAY: 2000,
+
+    /** Default minimum similarity for results (0.5 = 50%) */
+    DEFAULT_MIN_SIMILARITY: 0.5,
+
+    /** Strict similarity threshold for Orama (bypass default 0.8) */
+    SIMILARITY_THRESHOLD_STRICT: 0.001,
+
+    /** Default limit for simple keyword searches */
+    SEARCH_LIMIT_DEFAULT: 5,
+
+    /** Deep search limit for vector candidates before scoring */
+    SEARCH_LIMIT_DEEP: 500,
+
+    /** Length of content snippet to store in Orama for previews */
+    CONTENT_PREVIEW_LENGTH: 500
 };
 
 export const UI_CONSTANTS = {
@@ -93,4 +125,21 @@ export const UI_CONSTANTS = {
 
     /** Duration for model validation notices (ms) */
     VALIDATION_NOTICE_MS: 5000
+};
+
+export const AGENT_CONSTANTS = {
+    TOOLS: {
+        VAULT_SEARCH: "vault_search",
+        URL_READER: "read_url",
+        GOOGLE_SEARCH: "google_search",
+        CALCULATOR: "computational_solver"
+    }
+};
+
+export const GARDENER_CONSTANTS = {
+    PLAN_PREFIX: "Gardener Plan",
+    PLAN_DATE_FORMAT: "YYYY-MM-DD HH-mm", // Conceptual format, implementation uses manual string building
+    ACTIONS: {
+        UPDATE_TOPICS: "update_topics"
+    }
 };

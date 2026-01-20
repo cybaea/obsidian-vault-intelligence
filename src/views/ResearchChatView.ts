@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
-import { VectorStore } from "../services/VectorStore";
+import { GraphService } from "../services/GraphService";
 import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
@@ -11,7 +11,7 @@ export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
     gemini: GeminiService;
-    vectorStore: VectorStore;
+    graphService: GraphService;
     embeddingService: IEmbeddingService; // Add property
     agent: AgentService;
     private messages: ChatMessage[] = [];
@@ -24,20 +24,20 @@ export class ResearchChatView extends ItemView {
 
     // Update Constructor
     constructor(
-        leaf: WorkspaceLeaf, 
-        plugin: VaultIntelligencePlugin, 
-        gemini: GeminiService, 
-        vectorStore: VectorStore,
+        leaf: WorkspaceLeaf,
+        plugin: VaultIntelligencePlugin,
+        gemini: GeminiService,
+        graphService: GraphService,
         embeddingService: IEmbeddingService // Add argument
     ) {
         super(leaf);
         this.plugin = plugin;
         this.gemini = gemini;
-        this.vectorStore = vectorStore;
+        this.graphService = graphService;
         this.embeddingService = embeddingService;
-        
+
         // Pass embeddingService to Agent
-        this.agent = new AgentService(plugin.app, gemini, vectorStore, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, gemini, graphService, embeddingService, plugin.settings);
     }
 
     getViewType() {
@@ -45,7 +45,7 @@ export class ResearchChatView extends ItemView {
     }
 
     getDisplayText() {
-        return "Research agent";
+        return "Researcher";
     }
 
     async onClose() {
@@ -60,7 +60,7 @@ export class ResearchChatView extends ItemView {
         container.addClass("research-chat-view");
 
         const header = container.createDiv({ cls: "chat-header" });
-        header.createEl("h4", { text: "Research chat", cls: "chat-title" });
+        header.createEl("h4", { text: "Researcher: chat with vault", cls: "chat-title" });
 
         new ButtonComponent(header)
             .setIcon("trash")

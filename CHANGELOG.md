@@ -9,20 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
-- **Model Selector Dropdowns:** Replaced manual text fields with intuitive dropdown menus for Chat, Grounding, and Code models, pre-populated with the latest Gemini models.
-- **Custom Model Support:** Added "Custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
-- **Local Model Management:** Standardized selection for local embedding models with automatic dimension validation and a new "Force re-download" utility for easier troubleshooting.
-- **Improved Synchronization:** Refined the indexing engine to detect changes in file size and modification time, ensuring search results are always accurate.
-- **Default Code Execution:** Changed the default setting for "Enable code execution" from **Off** to **On**, enabling the Computational Solver (Python execution) by default for all new installations.
+- **Unified agentic terminology**: Standardised all major features under a role-based naming convention: **Researcher** for chat and reasoning, **Gardener** for vault hygiene and ontology management, and **Explorer** for similarity search and graph discovery.
+- **Gardener agent for vault hygiene**: Introduced a proactive agent that analyses note metadata and suggests improvements based on a shared ontology. It operates on a "plan-review-apply" model to ensure user oversight and safety.
+- **Centralized ontology management**: Established a formal directory structure (`Concepts`, `Entities`, `MOCs`) and an `Instructions.md` file to guide AI classification, ensuring consistent naming and tagging across the vault.
+- **Interactive hygiene plans**: Refactored the Gardener's output into an interactive markdown interface. Users can now review, select, and apply specific metadata changes directly from the plan note.
+- **Background indexing**: All vector indexing and graph relationship analysis has been offloaded to a dedicated web worker, ensuring the main thread remains responsive even during large vault operations.
+- **High-recall similarity search**: Significantly improved the "similar notes" recall by bypassing Orama's default 80% similarity threshold. You can now see notes with lower similarity scores (down to 1% or whatever your settings specify).
+- **Seamless provider switching**: Fixed a bug where switching between local and Gemini embedding providers would cause "unauthorized access" errors. The plugin now dynamically routes requests to the correct engine instantly.
+- **Model selector dropdowns**: Replaced manual text fields with intuitive dropdown menus for chat, grounding, and code models, pre-populated with the latest Gemini models.
+- **Custom model support**: Added "custom" options for all model categories, providing full control for power users to use specialized or experimental model IDs.
+- **Local model management**: Standardized selection for local embedding models with automatic dimension validation and a new "force re-download" utility for easier troubleshooting.
+- **Improved synchronization**: Refined the indexing engine to detect changes in file size and modification time, ensuring search results are always accurate.
+- **Default code execution**: Changed the default setting for "enable code execution" from **off** to **on**, enabling the computational solver (Python execution) by default for all new installations.
 
 ### Developers
 
-- **Worker Robustness:** Implemented a 4-stage stability fallback (Threads -> 1 Thread -> No SIMD -> Circuit Breaker) to handle environmental WASM/SIMD incompatibilities.
-- **Boot Grace Period:** Added a proactive detector that triggers stable modes immediately if the worker crashes within 10 seconds of startup.
-- **Stable Mode Persistence:** Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
-- **Enhanced Diagnostics:** Improved worker-side global error handlers to capture detailed information from generic `ErrorEvent` objects and logged document titles during indexing.
-- **Model Hygiene:** Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
-- **Code Quality:** Removed all `any` type casts in the local embedding service and strictly enforced ESLint and TypeScript compilation rules.
+- **Agent service refactoring**: Decomposed the monolithic `AgentService` into specialized `SearchOrchestrator` and `ContextAssembler` components to improve maintainability and allow for independent unit testing.
+- **Safe metadata management**: Implemented a `MetadataManager` service to centralize frontmatter updates, using atomic file operations to prevent race conditions during automated vault maintenance.
+- **Shadow graph infrastructure**: Integrated `graphology` within the indexer worker to track note relationships and wikilinks alongside vector embeddings.
+- **Async indexer worker**: Implemented a Comlink-powered background indexer that manages an Orama vector store and a relationship graph concurrently.
+- **Dynamic routing service**: Implemented `RoutingEmbeddingService` to handle multi-provider delegation, decoupling the graph indexing logic from specific embedding implementations.
+- **Index safety and model tracking**: Enhanced index persistence to track specific embedding model IDs. The plugin now automatically triggers a full re-index if the model is changed, even if dimensions are the same, preventing data corruption.
+- **Strict type safety**: Fully refactored the background worker to eliminate all `any` casts and `eslint-disable` comments, using Orama's native `RawData` types for robust state handling.
+- **Worker robustness**: Implemented a 4-stage stability fallback (Threads -> 1 thread -> No SIMD -> Circuit Breaker) and improved lifecycle management with `fullReset` capabilities.
+- **Boot grace period**: Added a proactive detector that triggers stable modes immediately if the worker crashes within 10 seconds of startup.
+- **Enhanced diagnostics**: Improved worker-side logging for "empty file" scenarios and Orama state migration to help diagnose indexing coverage.
+- **Model hygiene**: Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
+- **Stable mode persistence**: Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
 
 
 ## [1.5.0] - 2026-01-10

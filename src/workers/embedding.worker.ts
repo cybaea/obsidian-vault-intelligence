@@ -257,7 +257,7 @@ class PipelineSingleton {
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (quantized && msg.includes("404")) {
-                console.warn(`[Worker] Retrying unquantized for ${modelName}...`);
+                logger.warn(`[Worker] Retrying unquantized for ${modelName}...`);
                 pipe = await pipeline(this.task, modelName, { quantized: false, progress_callback }) as unknown as FeatureExtractorPipeline;
             } else {
                 throw err;
@@ -333,7 +333,7 @@ class PipelineSingleton {
     }
 
     private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
-        console.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
+        logger.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
         const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
         let model: PreTrainedModel;
 
@@ -342,7 +342,7 @@ class PipelineSingleton {
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (quantized) {
-                console.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
+                logger.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
                 model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
             } else {
                 throw err;

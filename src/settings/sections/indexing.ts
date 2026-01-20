@@ -5,8 +5,6 @@ import { DEFAULT_SETTINGS } from "../types";
 export function renderIndexingSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Indexing and search').setHeading();
 
-    new Setting(containerEl).setName('Indexing and search').setHeading();
-
     new Setting(containerEl)
         .setName('Minimum similarity score')
         .setDesc('Only notes with a similarity score above this threshold will be shown.')
