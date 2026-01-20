@@ -1,4 +1,4 @@
-# Automated Release Workflow
+# Automated release workflow
 
 This project uses a "Zero Memory" release workflow, automating version bumps, changelog generation (future), tagging, and GitHub Release creation.
 
@@ -9,9 +9,9 @@ The process involves two key parts:
 1.  **Local Preparation**: You run one command to prep, test, and push the release branch.
 2.  **GitHub Automation**: Merging the PR triggers an auto-tagger, which recursively triggers the release build.
 
-## Step-by-Step Guide
+## Step-by-step guide
 
-### 1. Preparation (Local)
+### 1. Preparation (local)
 
 When you are ready to prepare a release (e.g., merging features into `main`), run:
 
@@ -30,7 +30,7 @@ npm run release:prep <patch|minor|major>
 4.  **Branch Creation**: Creates a branch named `release/x.y.z`.
 5.  **Commit & Push**: Commits the version bump and pushes to GitHub.
 
-### 2. Review and Merge (GitHub)
+### 2. Review and merge (GitHub)
 
 The script provides a link to open a Pull Request.
 
@@ -57,7 +57,7 @@ Once merged:
 
 The script will abort if you have uncommitted changes. Please commit or stash them before running the release prep.
 
-### The Release Action didn't run
+### The release action didn't run
 
 If the tag was created but the Release Action didn't start:
 - Check `auto-tag.yml` logs. Did it use the default `GITHUB_TOKEN`? Pushes by the default token do **not** trigger downstream workflows.

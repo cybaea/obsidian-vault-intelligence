@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing to this Obsidian plugin. This project relies on modern tooling (Node.js 22+, Vitest, ESLint Flat Config) and follows an "Agentic AI" architecture.
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
@@ -19,7 +19,7 @@ npm ci
 
 ## Development
 
-### Running Locally
+### Running locally
 
 To start the development build in watch mode:
 
@@ -28,7 +28,7 @@ npm run dev
 ```
 *This uses `esbuild` to compile changes instantly.*
 
-### Hot Reload (Recommended)
+### Hot reload (recommended)
 
 To test your changes in Obsidian:
 
@@ -36,7 +36,7 @@ To test your changes in Obsidian:
 2.  Symlink this repository into your vault's `.obsidian/plugins/` directory.
 3.  Add an empty `.hotreload` file to the root of this repo.
 
-## Linting and Testing
+## Linting and testing
 
 We maintain high code quality standards. Please run these before pushing:
 
@@ -61,7 +61,7 @@ npm test
 npm run test:ui
 ```
 
-## Project Structure
+## Project structure
 
 - **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
 - **`devs/`**: Developer documentation and guides.
@@ -69,7 +69,7 @@ npm run test:ui
     - **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
 - **`manifest.json`**: Plugin metadata.
 
-## Release Process
+## Release process
 
 We use a "Zero Memory" automated workflow. **Do not manually tag releases.**
 
@@ -80,16 +80,16 @@ npm run release:prep <patch|minor|major>
 
 See [devs/RELEASE_WORKFLOW.md](devs/RELEASE_WORKFLOW.md) for the complete guide.
 
-## Agentic Architecture
+## Agentic architecture
 
 This plugin uses sophisticated agent patterns. If you are modifying the agents (Gardener, Researcher, etc.), please refer to:
 - `AGENTS.md` (Root)
 - `devs/ARCHITECTURE.md`
 
-## Security & Privacy
+## Security and privacy
 
-- **Local First**: The plugin must function offline.
+- **Local first**: The plugin must function offline.
 - **Consent**: No network calls without explicit user action.
-- ** Secrets**: Securely handle API keys; warn users about where they are stored.
+- **Secrets**: Securely handle API keys; warn users about where they are stored.
 
 Thank you for helping us build specific, intelligent tools for Obsidian!

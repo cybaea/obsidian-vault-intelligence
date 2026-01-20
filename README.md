@@ -42,17 +42,17 @@ Managing a growing vault is hard. Notes get lost, facts get outdated, and connec
 
 ## Key features
 
-### 🤖 Researcher
+### Researcher
 
 Your intelligent partner for discovery, reasoning, and data analysis.
 
 - **Deep context**: Uses a "Greedy Packing" engine to read **full documents** (up to 200k tokens), understanding the nuance of long reports rather than just snippets.
-- **Computational solver**: A specialized sub-agent that writes and executes Python code. Perfect for analysing personal data, such as *"Read my @Expenses note and forecast next month's spend based on the Q4 trend"* or *"Plot my weight loss progress from my @Journal entries."*
+- **Computational solver**: A specialised sub-agent that writes and executes Python code. Perfect for analysing personal data, such as _"Read my @Expenses note and forecast next month's spend based on the Q4 trend"_ or _"Plot my weight loss progress from my @Journal entries."_
 - **Live grounding**: Verifies claims against real-time Google Search data.
 - **Smart context**: Use `@` to mention specific files (e.g., `@meeting-notes`) or folders to focus the AI's attention.
 
 <details>
-<summary>📸 <strong>Click to see the Researcher in action</strong></summary>
+<summary>Click to see the Researcher in action</summary>
 
 Prompt: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_
 
@@ -60,22 +60,22 @@ Prompt: _What do I know about RAG and is my information comprehensive, factually
 
 </details>
 
-### 🌿 Gardener
+### Gardener
 
 A proactive agent dedicated to maintaining your vault's structure and consistency.
 
-- **Organize vault concepts**: Analyses your notes to suggest improvements and refine your [ontology](docs/gardener.md).
+- **Organise vault concepts**: Analyses your notes to suggest improvements and refine your [ontology](docs/gardener.md).
 - **Proactive hygiene**: Identifies missing topics and link opportunities across your entire knowledge base.
 - **Safety first**: Operates on a "plan-review-apply" model. You always review a temporary Markdown plan before any changes are made to your notes.
 
 <details>
-<summary>📸 <strong>Click to see the Gardener in action</strong></summary>
+<summary>Click to see the Gardener in action</summary>
 
 <img src="./public/images/gardener-plan-example.png" alt="Gardener hygiene plan example" width="100%">
 
 </details>
 
-### 🔍 Adaptive hybrid search
+### Adaptive hybrid search
 
 Finds the right note, even if you use the wrong words.
 
@@ -83,13 +83,13 @@ Finds the right note, even if you use the wrong words.
 - **Fuzzy keyword matching**: Boosts exact phrase matches for precision.
 - **Automatic indexing**: Your vault is re-indexed in the background as you work.
 
-### 🖇️ Explorer
+### Explorer
 
-- **Active discovery**: Shows a dynamic list of notes related to your *current* open file.
+- **Active discovery**: Shows a dynamic list of notes related to your _current_ open file.
 - **Confidence scores**: Clearly indicates how relevant each connection is.
 
 <details>
-<summary>📸 <strong>Click to see the Explorer sidebar</strong></summary>
+<summary>Click to see the Explorer sidebar</summary>
 
 <img src="./public/images/similar-documents-bard.webp" alt="Explorer sidebar example" width="100%">
 
@@ -137,7 +137,7 @@ The plugin is designed to work out-of-the-box, but is highly customizable.
 * **[Troubleshooting](docs/troubleshooting.md)**: Fixes for "429 Too Many Requests" and other common issues.
 
 <details>
-<summary>🛠️ <strong>Click to see the Settings Panel</strong></summary>
+<summary>Click to see the Settings Panel</summary>
 
 <img src="./public/images/options.webp" alt="Settings Panel" width="100%">
 

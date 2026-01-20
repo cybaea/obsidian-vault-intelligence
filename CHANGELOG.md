@@ -46,21 +46,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2026-01-10
 
-### 🚀 Added
+### User features
 
+#### Sovereign intelligence (local + offline)
 
-### User Features
+- **Zero data leakage:** You can now switch the embedding provider to `Local` in settings. This downloads an open-source model (like _Nomic-Embed_ or _Potion-8M_) to your device, allowing you to index and search your vault without data ever leaving your machine.
+- **Cost savings:** "Similar Notes" and search now work completely free, without consuming your Gemini API quota.
 
-#### 🛡️ Sovereign Intelligence (Local + Offline)
+#### Efficiency
 
-- **Zero Data Leakage:** You can now switch the Embedding Provider to `Local` in settings. This downloads an open-source model (like *Nomic-Embed* or *Potion-8M*) to your device, allowing you to index and search your vault without data ever leaving your machine.
-- **Cost Savings:** "Similar Notes" and search now work completely free, without consuming your Gemini API quota.
+- **Smart indexing:** The plugin now intelligently waits 5 seconds after you stop typing before active re-indexing. This prevents "spamming" the Gemini API with partial edits, significantly reducing your token usage and billing costs.
 
-#### ⚡ Efficiency
-
-- **Smart Indexing:** The plugin now intelligently waits 5 seconds after you stop typing before active re-indexing. This prevents "spamming" the Gemini API with partial edits, significantly reducing your token usage and billing costs.
-
-### 🛠 Developers
+### Developers
 
 - **Transformers.js Integration:** Implemented a dedicated Web Worker using `@xenova/transformers` to run ONNX models inside the plugin environment.
 - **Fetch Proxy:** Created a message-passing proxy to route worker network requests through the main process, bypassing strict CORS/CSP policies and sanitizing headers to prevent 401 errors from Hugging Face.
@@ -72,19 +69,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-01-03
 
-### 🚀 Added
+### Added
 
-- **Computational Solver:** The agent can now write and execute Python code to analyze data from your vault (e.g., *"Read @Monthly Expenses and forecast next month's spend"*).
+- **Computational solver:** The agent can now write and execute Python code to analyse data from your vault (e.g., _"Read @Monthly Expenses and forecast next month's spend"_).
 - **Settings:** New **Enable code execution** toggle for the Computational Solver above(Default: Off) and corresponding **Code model** selector in the Models tab.
 - **Settings:** New **Context window budget** setting (Default: 200,000 tokens). This allows users to control how much "memory" the agent uses per request, balancing deep context against API rate limits.
 
-### ⚡ Changed
+### Changed
 
-- **Context Engine:** Replaced the static 50,000-character limit per note with a "Greedy Packing" strategy. The agent now reads entire documents whenever the token budget allows, **significantly improving** its ability to understand long reports and avoiding arbitrary cut-offs.
+- **Context engine:** Replaced the static 50,000-character limit per note with a "Greedy Packing" strategy. The agent now reads entire documents whenever the token budget allows, **significantly improving** its ability to understand long reports and avoiding arbitrary cut-offs.
 
-### 🛠 Developers
+### Developers
 
-- **Dynamic Tools:** Updated `AgentService` to dynamically construct the `tools` array at runtime. This resolves an issue where conditional tools (like the solver) were defined but not correctly passed to the model if disabled.
+- **Dynamic tools:** Updated `AgentService` to dynamically construct the `tools` array at runtime. This resolves an issue where conditional tools (like the solver) were defined but not correctly passed to the model if disabled.
 - **Response Parsing:** Refactored `GeminiService` to manually parse multi-part responses (`text`, `executableCode`, `codeExecutionResult`), resolving SDK warnings about mixed content types.
 - **Context Limits:** Removed hardcoded `MAX_TOTAL_CONTEXT` constants. Context limits are now calculated dynamically based on the user's `contextWindowTokens` setting.
 - **System Prompt:** Updated the default system prompt to include specific instructions on when and how to utilize the `computational_solver` tool.
