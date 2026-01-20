@@ -19,7 +19,6 @@ export default tseslint.config(
 						'manifest.json'
 					]
 				},
-				// @ts-expect-error -- Node 20.11+ feature, might not be in types yet
 				tsconfigRootDir: import.meta.dirname,
 			},
 		},

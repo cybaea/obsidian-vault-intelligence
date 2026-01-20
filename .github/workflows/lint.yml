@@ -1,4 +1,4 @@
-name: Node.js build
+name: 'CI: Lint & Build'
 
 on:
     push:
