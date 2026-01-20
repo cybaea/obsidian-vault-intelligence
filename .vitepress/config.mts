@@ -35,6 +35,7 @@ export default defineConfig({
                 text: 'User Guides',
                 items: [
                     { text: 'Configuration', link: '/docs/configuration' },
+                    { text: 'Gardener', link: '/docs/gardener' },
                     { text: 'Examples', link: '/docs/examples' },
                     { text: 'Troubleshooting', link: '/docs/troubleshooting' },
                     { text: 'Web Worker Embedding', link: '/docs/web-worker-embedding' },
@@ -44,6 +45,7 @@ export default defineConfig({
                 text: 'Development',
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
+                    { text: 'Architecture', link: '/devs/ARCHITECTURE' },
                     { text: 'Agent Support 2026', link: '/docs/2026-agent-support' },
                     { text: 'Maintainability', link: '/docs/maintainability' },
                     { text: 'Internal Agents Guide', link: '/AGENTS' },
