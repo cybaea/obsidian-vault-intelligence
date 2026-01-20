@@ -1,4 +1,33 @@
 import { defineConfig } from 'vitepress'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function getSidebarItems(dir: string, prefix: string) {
+    const fullPath = path.resolve(__dirname, '..', dir)
+    if (!fs.existsSync(fullPath)) return []
+
+    return fs.readdirSync(fullPath)
+        .filter(file => file.endsWith('.md') && file.toLowerCase() !== 'index.md')
+        .map(file => {
+            const fileName = file.replace(/\.md$/, '')
+            const content = fs.readFileSync(path.join(fullPath, file), 'utf-8')
+            const match = content.match(/^#\s+(.*)/)
+            let text = match ? match[1].trim() : fileName.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
+            // Custom overrides for cleaner presentation
+            if (fileName === '2026-agent-support') text = 'Agent Support 2026'
+            if (fileName === 'ARCHITECTURE') text = 'Architecture'
+
+            return {
+                text,
+                link: `/${prefix}/${fileName}`
+            }
+        })
+        .sort((a, b) => a.text.localeCompare(b.text))
+}
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -33,23 +62,14 @@ export default defineConfig({
             },
             {
                 text: 'User Guides',
-                items: [
-                    { text: 'Configuration', link: '/docs/configuration' },
-                    { text: 'Gardener', link: '/docs/gardener' },
-                    { text: 'Examples', link: '/docs/examples' },
-                    { text: 'Troubleshooting', link: '/docs/troubleshooting' },
-                    { text: 'Web Worker Embedding', link: '/docs/web-worker-embedding' },
-                ]
+                items: getSidebarItems('docs', 'docs')
             },
             {
                 text: 'Development',
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
-                    { text: 'Architecture', link: '/devs/ARCHITECTURE' },
-                    { text: 'Agent Support 2026', link: '/docs/2026-agent-support' },
-                    { text: 'Maintainability', link: '/docs/maintainability' },
                     { text: 'Internal Agents Guide', link: '/AGENTS' },
-                    { text: 'Obsidian API Thematic', link: '/devs/obsidian-api-thematic' },
+                    ...getSidebarItems('devs', 'devs')
                 ]
             }
         ],
