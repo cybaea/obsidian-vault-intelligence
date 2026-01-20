@@ -28,7 +28,9 @@
 	},
 	"include": [
 		"src/**/*.ts",
+		"tests/**/*.ts",
 		"declarations.d.ts",
-		"eslint.config.mts"
+		"eslint.config.mts",
+		"vitest.config.mts"
 	]
 }
