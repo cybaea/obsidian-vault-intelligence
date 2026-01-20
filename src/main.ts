@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Menu } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Menu, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
@@ -9,6 +9,11 @@ import { VaultManager } from "./services/VaultManager";
 import { GraphService } from "./services/GraphService";
 import { LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
+import { MetadataManager } from "./services/MetadataManager";
+import { OntologyService } from "./services/OntologyService";
+import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
+import { GardenerStateService } from "./services/GardenerStateService";
+import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
@@ -16,6 +21,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	embeddingService: IEmbeddingService;
 	vaultManager: VaultManager;
 	graphService: GraphService;
+	metadataManager: MetadataManager;
+	ontologyService: OntologyService;
+	gardenerService: GardenerService;
+	gardenerStateService: GardenerStateService;
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -43,6 +52,14 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.vaultManager = new VaultManager(this.app);
 		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.settings);
 		await this.graphService.initialize();
+
+		// 4. Initialize Gardener Infrastructure (Stage 2)
+		this.metadataManager = new MetadataManager(this.app);
+		this.ontologyService = new OntologyService(this.app, this.settings);
+		this.gardenerStateService = new GardenerStateService(this.app);
+		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
+		await this.ontologyService.initialize();
+		await this.gardenerStateService.loadState();
 
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(async () => {
@@ -96,6 +113,55 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			name: 'Open research chat',
 			callback: () => {
 				void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
+			}
+		});
+
+		this.addCommand({
+			id: 'gardener-tidy-vault',
+			name: 'Gardener: tidy vault',
+			callback: async () => {
+				try {
+					const planFile = await this.gardenerService.tidyVault();
+					if (planFile) {
+						const leaf = this.app.workspace.getLeaf('tab');
+						await leaf.openFile(planFile);
+					}
+				} catch (error: unknown) {
+					const message = error instanceof Error ? error.message : String(error);
+					new Notice(`Gardener failed: ${message}`);
+				}
+			}
+		});
+
+		this.addCommand({
+			id: 'gardener-purge-plans',
+			name: 'Gardener: purge old plans',
+			callback: async () => {
+				try {
+					await this.gardenerService.purgeOldPlans();
+					new Notice("Gardener: old plans purged.");
+				} catch (error: unknown) {
+					new Notice(`Purge failed: ${error instanceof Error ? error.message : String(error)}`);
+				}
+			}
+		});
+
+		// Markdown Post Processors
+		this.registerMarkdownCodeBlockProcessor("gardener-plan", (source, el, ctx) => {
+			try {
+				const rawPlan = JSON.parse(source) as unknown;
+				const plan = GardenerPlanSchema.safeParse(rawPlan);
+
+				if (plan.success) {
+					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService, this.gardenerStateService);
+					ctx.addChild(renderer);
+				} else {
+					el.createEl("pre", { text: `Invalid Gardener Plan schema: ${plan.error.message}`, cls: "gardener-error" });
+				}
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
+				logger.error("Failed to render Gardener Plan", message);
+				el.createEl("pre", { text: `Error parsing Gardener Plan: ${message}`, cls: "gardener-error" });
 			}
 		});
 
