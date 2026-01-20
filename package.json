@@ -18,7 +18,20 @@
 		"test": "vitest run",
 		"test:ui": "vitest --ui"
 	},
-	"keywords": [],
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"ai",
+		"google-gemini-ai",
+		"agentic-workflow",
+		"semantic-search",
+		"knowledge-management",
+		"rag",
+		"ontology",
+		"pkm",
+		"knowledge-graph",
+		"local-first"
+	],
 	"license": "MIT",
 	"devDependencies": {
 		"@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
