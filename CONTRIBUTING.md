@@ -1,98 +1,95 @@
 # Contributing
 
-Thanks for your interest in contributing to this Obsidian plugin. This document outlines the process for development, testing, linting, and releasing updates.
+Thanks for your interest in contributing to this Obsidian plugin. This project relies on modern tooling (Node.js 22+, Vitest, ESLint Flat Config) and follows an "Agentic AI" architecture.
 
-## Getting started
+## Getting Started
 
-- **Prerequisites:** Node.js (Active LTS or v18+), npm.
-- **Install dependencies:**
+### Prerequisites
 
-    ```bash
-    npm install
-    ```
+- **Node.js**: v22.x or higher (Verified in `.github/workflows/release.yml`)
+- **npm**: v10+
+
+### Installation
+
+Use `npm ci` to install dependencies deterministically.
+
+```bash
+npm ci
+```
 
 ## Development
 
-- **Run the dev/watch build:**
-  This will compile your code automatically whenever you save a file.
+### Running Locally
 
-    ```bash
-    npm run dev
-    ```
+To start the development build in watch mode:
 
-- **Build for production:**
-  Run this before opening a PR to ensure the build is clean.
+```bash
+npm run dev
+```
+*This uses `esbuild` to compile changes instantly.*
 
-    ```bash
-    npm run lint
-    npm run build
-    ```
+### Hot Reload (Recommended)
 
-- **Code Structure:** Keep `main.ts` minimal; put feature code in `src/` modules.
+To test your changes in Obsidian:
 
-## Linting and formatting
+1.  Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in a test vault.
+2.  Symlink this repository into your vault's `.obsidian/plugins/` directory.
+3.  Add an empty `.hotreload` file to the root of this repo.
 
-- We use ESLint as configured in the repo. To run linting locally:
+## Linting and Testing
 
-    ```bash
-    npm run lint
-    ```
-- Please ensure your code is formatted (e.g. no mixed tabs/spaces) before committing to keep diffs clean.
+We maintain high code quality standards. Please run these before pushing:
 
-## Testing in Obsidian
+### Linting
 
-To test your changes, you need to run the plugin inside an actual Obsidian vault.
+We use **ESLint** with a flat config (`eslint.config.mts`).
 
-**Option A: The "Hot Reload" Method (Recommended)**
+```bash
+npm run lint
+```
+*Fixes can often be applied automatically with `--fix`.*
 
-1. Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in your test vault.
-2. Place a file named `.hotreload` in your plugin's root directory (or just symlink your repo folder into the vault's `.obsidian/plugins/` folder).
-3. Obsidian will automatically reload your plugin whenever you save a change.
+### Testing
 
-**Option B: Manual Install**
+We use **Vitest** for unit and UI testing.
 
-1. Copy `main.js`, `manifest.json`, and `styles.css` into your test vault:
-   `path/to/vault/.obsidian/plugins/obsidian-vault-intelligence/`
-2. Reload Obsidian (Cmd/Ctrl + R) to see changes.
+```bash
+# Run all tests
+npm test
 
-## Commit & PR guidelines
+# Run tests with UI
+npm run test:ui
+```
 
-- **Branches:** Create a feature branch per change (e.g., `feature/add-api-setting`).
-- **Commits:** Keep commits small and focused. Use clear, imperative messages (e.g., "Fix API key storage bug," not "fixed it").
-- **Pull Requests:** Open a PR against the `main` branch. Describe the change, motivation, and manual test steps.
-- **Visuals:** Include screenshots or GIFs for any UI changes.
+## Project Structure
 
-## Release & versioning
+- **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
+- **`devs/`**: Developer documentation and guides.
+    - **`devs/adr/`**: **Architecture Decision Records**. Please review these to understand key design choices.
+    - **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
+- **`manifest.json`**: Plugin metadata.
 
-When preparing a release:
+## Release Process
 
-1. **Update Version Numbers:**
-   - Update `version` in `manifest.json`.
-   - Update `package.json` (via `npm version x.y.z --no-git-tag-version`).
-   - Update `versions.json` (add the new version key mapped to the minimum Obsidian version required).
-2. **Tagging:**
-   - Create a git tag matching the version number exactly (e.g., `1.0.1`, prefer no leading `v` for simplicity with Obsidian tools).
-3. **GitHub Release:**
-   - Push the tag to GitHub.
-   - Create a Release from that tag.
-   - **Important:** You must manually attach the compiled `main.js`, `manifest.json`, and `styles.css` as binary assets to the release.
-4. **Clean Repo:** Do not commit built artifacts (like `main.js`) to the git repository itself; they only belong in the Release assets.
+We use a "Zero Memory" automated workflow. **Do not manually tag releases.**
 
-## Manifest and packaging rules
+To prepare a release:
+```bash
+npm run release:prep <patch|minor|major>
+```
 
-- Ensure `manifest.json` contains valid `id`, `name`, `version`, `minAppVersion`, `description`.
-- Keep `minAppVersion` accurate—only bump it if you use a new Obsidian API feature that breaks older versions.
+See [devs/RELEASE_WORKFLOW.md](devs/RELEASE_WORKFLOW.md) for the complete guide.
 
-## Security & privacy
+## Agentic Architecture
 
-- **Default to Local:** The plugin should work offline by default.
-- **Network Calls:** Only add network calls (like API requests) with clear user opt-in and documentation.
-- **Data Safety:** Never transmit vault content without explicit consent. Protect secrets (like API keys) by masking inputs and warning users about storage risks.
+This plugin uses sophisticated agent patterns. If you are modifying the agents (Gardener, Researcher, etc.), please refer to:
+- `AGENTS.md` (Root)
+- `devs/ARCHITECTURE.md`
 
-## Development Notes
+## Security & Privacy
 
-1. **TypeScript:** Pinned to `~5.8.3`. Do not update to v5.9+ until `eslint-plugin-obsidianmd` adds support for it.
+- **Local First**: The plugin must function offline.
+- **Consent**: No network calls without explicit user action.
+- ** Secrets**: Securely handle API keys; warn users about where they are stored.
 
-Other notes, conventions, and detailed developer guidance can be found in `AGENTS.md` at the project root.
-
-Thank you for contributing — your improvements make the plugin better for everyone.
+Thank you for helping us build specific, intelligent tools for Obsidian!
