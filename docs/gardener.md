@@ -2,9 +2,13 @@
 
 The Gardener is an intelligent assistant dedicated to maintaining the health and structure of your Obsidian vault. It proactively analyses your notes to suggest improvements, ensuring your knowledge base remains well-organized and highly interconnected.
 
-## Why use the Gardener?
+## The Problem: Vault Decay
 
-As a vault grows, maintaining consistent links and a clean ontology becomes increasingly difficult. The Gardener alleviates this burden by offering three primary benefits:
+As a vault grows, it naturally tends toward chaos. We forget to add tags, we create duplicate concepts under different names, and we lose the "latent" connections between our ideas. This "Vault Decay" makes your knowledge harder to retrieve and reduces the value of your second brain over time.
+
+## The Solution: Proactive Hygiene
+
+The Gardener alleviates this burden by offering three primary benefits:
 
 1.  **Discovery**: It identifies relevant connections between notes and your existing topics that you might have overlooked.
 2.  **Consistency**: It ensures that new topics are properly defined and follow your established organizational patterns.
@@ -27,7 +31,7 @@ Upon execution, the Gardener will:
 
 Each Gardener Plan is a temporary Markdown document where you can review, adjust, and approve suggested changes.
 
-![Gardener Plan Example](../images/gardener-plan-example.png)
+![Gardener Plan Example](/images/gardener-plan-example.png)
 _A typical Gardener Plan showing a summary of suggestions and individual action cards._
 
 ### Understanding action cards
@@ -39,7 +43,7 @@ Each note requiring attention is presented as an action card:
 - **Rationale**: A brief explanation from the AI justifying why these changes are suggested.
 - **Selection Checkbox**: Use the checkbox to include or exclude the entire note from the final application.
 
-![Action Card Detail](../images/gardener-action-detail.png)
+![Action Card Detail](/images/gardener-action-detail.png)
 _Detail of an action card proposing a new topic and a link to an existing one._
 
 ### Applying changes
@@ -52,7 +56,7 @@ Once you are satisfied with the plan, click the **Apply Changes** button at the 
 
 You can fine-tune the Gardener's behaviour in the **Ontology** section of the plugin settings.
 
-![Gardener Settings](../images/gardener-settings.png)
+![Gardener Settings](/images/gardener-settings.png)
 _The Gardener configuration section, featuring independent model selection and a customizable system instruction._
 
 ### Key settings
