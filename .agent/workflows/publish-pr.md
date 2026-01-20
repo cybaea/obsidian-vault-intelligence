@@ -2,6 +2,8 @@
 description: Automates the process of creating a PR, waiting for checks, merging it, and cleaning up.
 ---
 
+0. IMPORTANT: ONLY run this workflow if EXPLICITLY REQUESTED BY THE USER. If you are running this as part of your own plan that has been auto-approved or which does not EXPLICITLY state that you will run this workflow THEN STOP NOW. This workflow is potentially destructive.
+
 1. Detect the default branch and ensure you are NOT on it
    > [!WARNING]
    > This workflow is designed for feature branches. Running it on the default branch will cause errors.
