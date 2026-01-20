@@ -33,7 +33,7 @@ export class SimilarNotesView extends ItemView {
     }
 
     getDisplayText() {
-        return "Similar notes";
+        return "Explorer";
     }
 
     async onOpen() {

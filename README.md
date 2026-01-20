@@ -83,15 +83,15 @@ Finds the right note, even if you use the wrong words.
 - **Fuzzy keyword matching**: Boosts exact phrase matches for precision.
 - **Automatic indexing**: Your vault is re-indexed in the background as you work.
 
-### 🖇️ Similar notes view
+### 🖇️ Explorer
 
 - **Active discovery**: Shows a dynamic list of notes related to your *current* open file.
 - **Confidence scores**: Clearly indicates how relevant each connection is.
 
 <details>
-<summary>📸 <strong>Click to see the Similar notes sidebar</strong></summary>
+<summary>📸 <strong>Click to see the Explorer sidebar</strong></summary>
 
-<img src="./images/similar-documents-bard.webp" alt="Similar notes sidebar example" width="100%">
+<img src="./images/similar-documents-bard.webp" alt="Explorer sidebar example" width="100%">
 
 </details>
 
@@ -122,7 +122,7 @@ To provide intelligent reasoning and search capabilities, this plugin uses exter
         - Choose `Local` if you prefer 100% privacy and offline functionality.
 4.  **Activate**: Click the **Vault Intelligence** ribbon icon (looks like a robot) to access your agentic team:
     - Select **Researcher: chat with vault** to start a conversation with your notes.
-    - Select **Similar notes** to see real-time connections in a sidebar as you work.
+    - Select **Explorer: view similar notes** to see real-time connections in a sidebar as you work.
     - Use the command palette (`Ctrl/Cmd + P`) and search for **Gardener: organize vault concepts** to maintain your vault's structure.
 
 > [!TIP]

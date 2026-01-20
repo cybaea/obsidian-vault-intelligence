@@ -116,11 +116,11 @@ The Gardener compares your new notes against your established [ontology](gardene
 
 More examples are available in the [Gardener](gardener.md) documentation.
 
-# Similar documents
+# Explorer
 
 **Scenario**: I want to find similar documents to a given note.
 
-_**Answer**: Use the command palette and select **Open similar notes view** while viewing a note._
+_**Answer**: Use the command palette and select **Explorer: view similar notes** while viewing a note._
 
 ![Similar notes view showing notes similar to "bard"](/images/similar-documents.webp)
 

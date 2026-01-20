@@ -79,7 +79,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle('Similar notes')
+					.setTitle('Explorer: view similar notes')
 					.setIcon('files')
 					.onClick(() => {
 						void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
@@ -102,7 +102,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Commands
 		this.addCommand({
 			id: 'open-similar-notes-view',
-			name: 'Open similar notes view',
+			name: 'Explorer: view similar notes',
 			callback: () => {
 				void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
 			}
