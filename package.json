@@ -41,5 +41,8 @@
 		"comlink": "^4.4.2",
 		"graphology": "^0.26.0",
 		"zod": "^4.3.5"
+	},
+	"overrides": {
+		"esbuild": "0.25.5"
 	}
 }
