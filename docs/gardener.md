@@ -12,9 +12,9 @@ As a vault grows, maintaining consistent links and a clean ontology becomes incr
 
 ---
 
-## Getting started: Tidy Vault
+## Getting started: organize vault concepts
 
-To begin using the Gardener, trigger the **Gardener: Tidy Vault** command from the Obsidian Command Palette (`Ctrl/Cmd + P`).
+To begin using the Gardener, trigger the **Gardener: organize vault concepts** command from the Obsidian Command Palette (`Ctrl/Cmd + P`).
 
 Upon execution, the Gardener will:
 1.  Scan your most recently modified notes (up to your configured limit).

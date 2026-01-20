@@ -71,7 +71,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			const menu = new Menu();
 			menu.addItem((item) =>
 				item
-					.setTitle('Research chat')
+					.setTitle('Researcher: chat with vault')
 					.setIcon('message-square')
 					.onClick(() => {
 						void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
@@ -110,7 +110,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		this.addCommand({
 			id: 'open-research-chat-view',
-			name: 'Open research chat',
+			name: 'Researcher: chat with vault',
 			callback: () => {
 				void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
 			}
@@ -118,7 +118,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		this.addCommand({
 			id: 'gardener-tidy-vault',
-			name: 'Gardener: tidy vault',
+			name: 'Gardener: organize vault concepts',
 			callback: async () => {
 				try {
 					const planFile = await this.gardenerService.tidyVault();

@@ -45,7 +45,7 @@ export class ResearchChatView extends ItemView {
     }
 
     getDisplayText() {
-        return "Research agent";
+        return "Researcher";
     }
 
     async onClose() {
@@ -60,7 +60,7 @@ export class ResearchChatView extends ItemView {
         container.addClass("research-chat-view");
 
         const header = container.createDiv({ cls: "chat-header" });
-        header.createEl("h4", { text: "Research chat", cls: "chat-title" });
+        header.createEl("h4", { text: "Researcher: chat with vault", cls: "chat-title" });
 
         new ButtonComponent(header)
             .setIcon("trash")
