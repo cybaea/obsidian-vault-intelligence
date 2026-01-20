@@ -8,6 +8,7 @@ on:
       - '.vitepress/**'
       - 'docs/**'
       - 'devs/**'
+      - 'public/**'
       - 'index.md'
       - 'README.md'
       - 'CONTRIBUTING.md'

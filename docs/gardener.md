@@ -31,7 +31,7 @@ Upon execution, the Gardener will:
 
 Each Gardener Plan is a temporary Markdown document where you can review, adjust, and approve suggested changes.
 
-![Gardener Plan Example](../images/gardener-plan-example.png)
+![Gardener Plan Example](/images/gardener-plan-example.png)
 _A typical Gardener Plan showing a summary of suggestions and individual action cards._
 
 ### Understanding action cards
@@ -43,7 +43,7 @@ Each note requiring attention is presented as an action card:
 - **Rationale**: A brief explanation from the AI justifying why these changes are suggested.
 - **Selection Checkbox**: Use the checkbox to include or exclude the entire note from the final application.
 
-![Action Card Detail](../images/gardener-action-detail.png)
+![Action Card Detail](/images/gardener-action-detail.png)
 _Detail of an action card proposing a new topic and a link to an existing one._
 
 ### Applying changes
@@ -56,7 +56,7 @@ Once you are satisfied with the plan, click the **Apply Changes** button at the 
 
 You can fine-tune the Gardener's behaviour in the **Ontology** section of the plugin settings.
 
-![Gardener Settings](../images/gardener-settings.png)
+![Gardener Settings](/images/gardener-settings.png)
 _The Gardener configuration section, featuring independent model selection and a customizable system instruction._
 
 ### Key settings

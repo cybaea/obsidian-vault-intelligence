@@ -106,7 +106,7 @@ _**Answer**: Use the command palette and select **Gardener: organize vault conce
 
 The Gardener will scan your recent notes and propose a hygiene plan. You can review the suggestions, select the ones you like, and apply them automatically.
 
-![Gardener hygiene plan showing suggestions for categories and topics](../images/gardener-plan-example.png)
+![Gardener hygiene plan showing suggestions for categories and topics](/images/gardener-plan-example.png)
 
 ### Consistency check
 
