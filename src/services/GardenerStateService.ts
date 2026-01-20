@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App, Plugin, TFile } from "obsidian";
 import { logger } from "../utils/logger";
 
 export interface FileState {
@@ -14,15 +14,18 @@ export interface GardenerState {
 
 /**
  * Service to manage the persistent state of Gardener analysis.
- * Stores data in 'data/gardener-state.json' within the vault.
+ * Stores data in the plugin's data folder within the vault.
  */
 export class GardenerStateService {
     private app: App;
-    private statePath = "data/gardener-state.json";
+    private plugin: Plugin;
+    private statePath: string;
     private state: GardenerState = { files: {} };
 
-    constructor(app: App) {
+    constructor(app: App, plugin: Plugin) {
         this.app = app;
+        this.plugin = plugin;
+        this.statePath = `${this.plugin.manifest.dir}/data/gardener-state.json`;
     }
 
     /**

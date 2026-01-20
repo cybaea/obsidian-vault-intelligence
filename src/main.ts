@@ -56,7 +56,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 4. Initialize Gardener Infrastructure (Stage 2)
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
-		this.gardenerStateService = new GardenerStateService(this.app);
+		this.gardenerStateService = new GardenerStateService(this.app, this);
 		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
 		await this.ontologyService.initialize();
 		await this.gardenerStateService.loadState();
