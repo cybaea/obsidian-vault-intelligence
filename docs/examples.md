@@ -1,6 +1,6 @@
 # Examples
 
-## Knowledge retrieval
+## Researcher: Knowledge retrieval & synthesis
 
 **Scenario**: I need a summary of what I know about a specific topic but can't remember where I wrote it down.
 
@@ -26,7 +26,7 @@ The Researcher used its adaptive hybrid search to find notes that were relevant 
 
 ![Prompt: "What do I know about a company that went bust because of software?" showing results for Knight Capital, UK Post Office, and others](/images/knowledge-retrieval.webp)
 
-## Knowledge verification
+## Researcher: Knowledge verification (Grounding)
 
 **Scenario**: I am implementing Retrieval-Augmented Generation (RAG) and want to check if my understanding is up to date.
 
@@ -42,7 +42,7 @@ This is useful, even if the agent sounds like an over-excited puppy altogether t
 
 But the agents do not (yet) understand what I have read versus what I have just stashed in my vault for later reading.
 
-## Computational solver
+## Solver: Markdown data science
 
 **Scenario**: I track my monthly expenses in a Markdown table within Obsidian and want to forecast next month's spend based on the Q4 trend.
 
@@ -116,7 +116,7 @@ The Gardener compares your new notes against your established [ontology](gardene
 
 More examples are available in the [Gardener](gardener.md) documentation.
 
-# Explorer
+# Explorer: Semantic discovery
 
 **Scenario**: I want to find similar documents to a given note.
 

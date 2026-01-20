@@ -2,9 +2,13 @@
 
 The Gardener is an intelligent assistant dedicated to maintaining the health and structure of your Obsidian vault. It proactively analyses your notes to suggest improvements, ensuring your knowledge base remains well-organized and highly interconnected.
 
-## Why use the Gardener?
+## The Problem: Vault Decay
 
-As a vault grows, maintaining consistent links and a clean ontology becomes increasingly difficult. The Gardener alleviates this burden by offering three primary benefits:
+As a vault grows, it naturally tends toward chaos. We forget to add tags, we create duplicate concepts under different names, and we lose the "latent" connections between our ideas. This "Vault Decay" makes your knowledge harder to retrieve and reduces the value of your second brain over time.
+
+## The Solution: Proactive Hygiene
+
+The Gardener alleviates this burden by offering three primary benefits:
 
 1.  **Discovery**: It identifies relevant connections between notes and your existing topics that you might have overlooked.
 2.  **Consistency**: It ensures that new topics are properly defined and follow your established organizational patterns.
