@@ -6,7 +6,7 @@
 
 _**Query**: "What do I know about Knight Capital?"_
 
-![Prompt: "What do I know about Knight Capital?" showing retrieved notes and summary](/images/knowledge-retrieval-simple.webp)
+![Prompt: "What do I know about Knight Capital?" showing retrieved notes and summary](../public/images/knowledge-retrieval-simple.webp)
 
 Ah, yes, [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) found my note on Knight Capital's 2012 trading disaster and provided a concise summary.
 
@@ -24,7 +24,7 @@ The Researcher used its adaptive hybrid search to find notes that were relevant 
 
 > On 1 August 2012, the financial firm Knight Capital lost $440 million in 45 minutes and was driven to bankruptcy. The cause was not one faulty algorithm. It was the unintended, destructive interaction between a _new_ trading system and a piece of _old_, supposedly defunct code. The components, safe in isolation, created a devastating feedback loop when combined. As the US Securities and Exchange Commission (SEC) later confirmed, this was a failure of systems interacting in an unforeseen way, running "without any substantial human intervention"
 
-![Prompt: "What do I know about a company that went bust because of software?" showing results for Knight Capital, UK Post Office, and others](/images/knowledge-retrieval.webp)
+![Prompt: "What do I know about a company that went bust because of software?" showing results for Knight Capital, UK Post Office, and others](../public/images/knowledge-retrieval.webp)
 
 ## Researcher: Knowledge verification (Grounding)
 
@@ -34,7 +34,7 @@ _**Query**: "What do I know about RAG and is my information comprehensive, factu
 
 [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) not only retrieved my notes on RAG but also cross-verified the facts against a live Google Search.
 
-![Prompt: "What do I know about RAG and is my information comprehensive, factually correct, and up to date?" showing retrieval and verification results](/images/knowledge-and-verification.webp)
+![Prompt: "What do I know about RAG and is my information comprehensive, factually correct, and up to date?" showing retrieval and verification results](../public/images/knowledge-and-verification.webp)
 
 This is useful, even if the agent sounds like an over-excited puppy altogether too happy to please. It doesn't find everything but it is a helpful start for additional research.
 
@@ -48,7 +48,7 @@ But the agents do not (yet) understand what I have read versus what I have just 
 
 _**Query**: Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._
 
-![Prompt: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ Output shows awareness of Thanksgiving and flags possible missing rent data.](/images/computational-solver.webp)
+![Prompt: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ Output shows awareness of Thanksgiving and flags possible missing rent data.](../public/images/computational-solver.webp)
 
 [Vault Intelligence](https://github.com/cybaea/obsidian-vault-intelligence) extracted the table from my note, wrote Python code to analyse it, executed the code, and interpreted the results in context. It clearly showed awareness of Thanksgiving and the Christmas holidays and it flags possible missing entries for rent. 
 
@@ -60,7 +60,7 @@ You can also ask the agent to plot your data.
 
 _**Query**: plot my total monthly expenses with a trendline to include January._
 
-![Prompt: _plot my total monthly expenses with a trendline to include January._ showing a plot of monthly expenses with a trendline](/images/computational-solver-plot.webp)
+![Prompt: _plot my total monthly expenses with a trendline to include January._ showing a plot of monthly expenses with a trendline](../public/images/computational-solver-plot.webp)
 
 
 
@@ -72,7 +72,7 @@ You can use the `@` symbol to mention specific notes or folders to focus the age
 
 _**Query**: Briefly summarise @bard_.
 
-![Prompt: _Briefly summarise @bard_ showing summary of bard class features](/images/document-context.webp)
+![Prompt: _Briefly summarise @bard_ showing summary of bard class features](../public/images/document-context.webp)
 
 > Based on the note compendium/classes/bard.md, the Bard is a versatile support class that uses music and speech to manipulate the "Words of Creation." They excel as spellcasters, skill experts, and force multipliers for their allies. ...
 
@@ -86,7 +86,7 @@ You can mention multiple documents.
 
 _**Query**: Briefly compare @bard with @bard-college-of-lore ._
 
-![Prompt: _Briefly compare @bard with @bard-college-of-lore_ showing comparison of bard class and college of lore subclass](/images/multiple-documents.webp)
+![Prompt: _Briefly compare @bard with @bard-college-of-lore_ showing comparison of bard class and college of lore subclass](../public/images/multiple-documents.webp)
 
 ## Folder context
 
@@ -96,7 +96,7 @@ You can mention entire folders using the `@` symbol to an index note for the fol
 
 _**Query**: Briefly summarise all @classes_.
 
-![Prompt: _Briefly summarise all @classes_ showing summaries of various D&D classes](/images/folder-context.webp)
+![Prompt: _Briefly summarise all @classes_ showing summaries of various D&D classes](../public/images/folder-context.webp)
 
 # Vault hygiene (Gardener)
 
@@ -106,7 +106,7 @@ _**Answer**: Use the command palette and select **Gardener: organize vault conce
 
 The Gardener will scan your recent notes and propose a hygiene plan. You can review the suggestions, select the ones you like, and apply them automatically.
 
-![Gardener hygiene plan showing suggestions for categories and topics](/images/gardener-plan-example.png)
+![Gardener hygiene plan showing suggestions for categories and topics](../public/images/gardener-plan-example.png)
 
 ### Consistency check
 
@@ -122,7 +122,7 @@ More examples are available in the [Gardener](gardener.md) documentation.
 
 _**Answer**: Use the command palette and select **Explorer: view similar notes** while viewing a note._
 
-![Similar notes view showing notes similar to "bard"](/images/similar-documents.webp)
+![Similar notes view showing notes similar to "bard"](../public/images/similar-documents.webp)
 
 
 ---

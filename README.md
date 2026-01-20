@@ -1,6 +1,6 @@
 # Obsidian Vault Intelligence
 
-![](/images/vault-intelligence-social.webp)
+![](./public/images/vault-intelligence-social.webp)
 
 **Transform your Obsidian vault from static storage into an active, intelligent partner.**
 
@@ -56,7 +56,7 @@ Your intelligent partner for discovery, reasoning, and data analysis.
 
 Prompt: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_
 
-<img src="/images/knowledge-and-verification.webp" alt="Researcher verification example" width="100%">
+<img src="./public/images/knowledge-and-verification.webp" alt="Researcher verification example" width="100%">
 
 </details>
 
@@ -71,7 +71,7 @@ A proactive agent dedicated to maintaining your vault's structure and consistenc
 <details>
 <summary>📸 <strong>Click to see the Gardener in action</strong></summary>
 
-<img src="/images/gardener-plan-example.png" alt="Gardener hygiene plan example" width="100%">
+<img src="./public/images/gardener-plan-example.png" alt="Gardener hygiene plan example" width="100%">
 
 </details>
 
@@ -91,7 +91,7 @@ Finds the right note, even if you use the wrong words.
 <details>
 <summary>📸 <strong>Click to see the Explorer sidebar</strong></summary>
 
-<img src="/images/similar-documents-bard.webp" alt="Explorer sidebar example" width="100%">
+<img src="./public/images/similar-documents-bard.webp" alt="Explorer sidebar example" width="100%">
 
 </details>
 
@@ -139,7 +139,7 @@ The plugin is designed to work out-of-the-box, but is highly customizable.
 <details>
 <summary>🛠️ <strong>Click to see the Settings Panel</strong></summary>
 
-<img src="/images/options.webp" alt="Settings Panel" width="100%">
+<img src="./public/images/options.webp" alt="Settings Panel" width="100%">
 
 </details>
 
