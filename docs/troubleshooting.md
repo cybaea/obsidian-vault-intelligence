@@ -2,7 +2,7 @@
 
 Common issues and fixes for Vault Intelligence.
 
-## API & Connection Issues
+## API & connection issues
 
 ### "429 Too Many Requests"
 
@@ -13,12 +13,13 @@ This means you are hitting Google's rate limit (Tokens Per Minute or Requests Pe
 * **Fix 2:** Lower your **Context window budget** to `100,000` tokens.
 
 ### "Model not found"
+
 * **Cause:** You might be trying to use a newer model (like `gemini-3-flash-preview`) that hasn't rolled out to your API key's region yet, or you have a typo in the model name.
 * **Fix:** Check the [Gemini Models list](https://ai.google.dev/models) and ensure the model name in **Settings** exactly matches a valid model ID.
 
 ---
 
-## Search & Quality Issues
+## Search & quality issues
 
 ### "The agent says it can't find information, but I know I have a note on it."
 

@@ -58,7 +58,7 @@ The some assumptions made (eg Thanksgiving) are probably appropriate for spendin
 
 You can also ask the agent to plot your data.
 
-_**Query**: plot my total monthly expenses with a trendline to include January._
+_**Query**: Plot my total monthly expenses with a trendline to include January._
 
 ![Prompt: _plot my total monthly expenses with a trendline to include January._ showing a plot of monthly expenses with a trendline](../public/images/computational-solver-plot.webp)
 
@@ -102,7 +102,7 @@ _**Query**: Briefly summarise all @classes_.
 
 **Scenario**: My vault is growing, and I'm losing track of connections and consistent tagging.
 
-_**Answer**: Use the command palette and select **Gardener: organize vault concepts**._
+_**Answer**: Use the command palette and select **Gardener: organise vault concepts**._
 
 The Gardener will scan your recent notes and propose a hygiene plan. You can review the suggestions, select the ones you like, and apply them automatically.
 
@@ -160,7 +160,7 @@ The true power of the solver is **analysing your own data**. The agent can extra
 
 **Why this works:** The agent writes code to parse your table into a dataframe, runs the statistical functions (which an LLM cannot guess accurately), and interprets the result in context.
 
-### More Examples
+### More examples
 
 * **Quantified Self:** "Extract my weight logs from all notes in the `@Journals/2025` folder. Plot a trend line and calculate the average weekly rate of change."
 * **Project Management:** "Look at `@Project Beta`. Sum the total estimated hours. If I work 6 hours a day with a 15% buffer for delays, what is the realistic completion date?"

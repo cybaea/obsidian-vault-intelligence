@@ -20,3 +20,20 @@ trigger: always_on
 
     This is the first line of this subsection.
     ```
+- Keep a blank line before the first and after the last list item:
+    ```markdown
+    This is an important list:
+    
+    1.  Some item.
+    2.  Another item.
+        - Sub-item
+
+    This is the first line after the last list item.
+    
+    -   Here is another list
+    -   It is not very long.
+    
+    This is the first line after the last list item in the second list.
+    ```
+
+

@@ -65,11 +65,11 @@ _The Gardener configuration section, featuring independent model selection and a
 - **Gardener system instruction**: Define the core persona and rules for the agent. You can use placeholders like `{{ONTOLOGY_FOLDERS}}` to inject your vault structure into the prompt.
 - **Gardener analysis limit**: Control how many recent notes are scanned per run.
 
-### Customizing with Instructions.md
+### Customising with Instructions.md
 
 For even more granular control, you can create a file named `Instructions.md` within your ontology root folder. The Gardener will automatically read this file and append its contents to its system instructions. This is ideal for defining vault-specific rules, such as:
 
-> "Always categorize people in the `/Entities/People` subfolder."
+> "Always categorise people in the `/Entities/People` subfolder."
 > "Prefer broader topics over highly specific ones for technical concepts."
 
 ---

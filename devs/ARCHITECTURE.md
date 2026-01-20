@@ -67,10 +67,10 @@ The system follows a **Service-Oriented Architecture (SOA)** adapted for a monol
 
 ### Brain vs. Body
 
-* **The body (Views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the View.
-* **The brain (Services)**: All heavy lifting happens in Services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
+* **The body (views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the view.
+* **The brain (services)**: All heavy lifting happens in services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
 
-### Dependency Injection
+### Dependency injection
 Manual Dependency Injection is used in `main.ts`. Services are instantiated in a specific order and passed via constructor injection to dependent services.
 
 ```typescript
@@ -107,12 +107,12 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >    ```
 > 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
 
-### 3.2. System Mechanics & Orchestration
+### 3.2. System mechanics & orchestration
 
-*   **Pipeline Registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
-*   **Extension Points**: Currently closed. New pipelines require modifying `GraphService`.
+*   **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
+*   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
 
-*   **The Event Bus**:
+*   **The event bus**:
     The plugin relies on Obsidian's global `app.metadataCache` and `app.vault` events.
     *   `UI Events`: Handled by Views.
     *   `System Events`: Handled by `VaultManager`.
@@ -223,27 +223,27 @@ export interface IOntologyService {
 
 ---
 
-## 6. External Integrations
+### 6. External integrations
 
-### LLM Provider Abstraction
+### LLM provider abstraction
 Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`), but abstraction covers the Embeddings layer.
 *   **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
 
-### Failover & Retry Logic
+### Failover & retry logic
 *   **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
-*   **Local Worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (Threads -> 1, SIMD -> Off).
+*   **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (Threads -> 1, SIMD -> Off).
 
 ---
 
-## 7. Developer Onboarding Guide
+## 7. Developer onboarding guide
 
-### Build Pipeline
+### Build pipeline
 *   **Tool**: `esbuild`.
 *   **Config**: `esbuild.config.mjs`.
-*   **Worker Bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
+*   **Worker bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
 
-### Testing Strategy
-*   **Unit Tests**: Not fully established.
-*   **Manual Testing**:
+### Testing strategy
+*   **Unit tests**: Not fully established.
+*   **Manual testing**:
     *   Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
     *   Use `npm run dev` to watch for changes and hot-reload.
