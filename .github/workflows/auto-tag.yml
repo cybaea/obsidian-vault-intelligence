@@ -1,38 +1,44 @@
 name: Auto Tag on Merge
+
 on:
   push:
     branches:
       - main
     paths:
-      - 'package.json' # Only run if package.json changed
+      - 'package.json' # Only runs when the version file changes
 
 jobs:
   tag:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed to push the tag
+      contents: write # Needed to check contents
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # VITAL: Use the PAT so the subsequent push triggers the release workflow.
+          # If you use GITHUB_TOKEN, the release workflow will NOT run.
+          token: ${{ secrets.PAT }}
+          fetch-depth: 0 # Required to see existing tags
 
-      - name: Check for version change and tag
+      - name: Check version and push tag
         run: |
-          # Get version from package.json
+          # 1. Extract version from package.json
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           
-          # Check if tag already exists
+          # 2. Check if this tag already exists to prevent errors
           if git rev-parse "refs/tags/$PACKAGE_VERSION" >/dev/null 2>&1; then
-            echo "Tag $PACKAGE_VERSION already exists. Skipping."
+            echo "✅ Tag $PACKAGE_VERSION already exists. Skipping."
             exit 0
           fi
 
-          echo "New version detected: $PACKAGE_VERSION"
+          echo "🆕 New version detected: $PACKAGE_VERSION"
           
-          # Configure git
+          # 3. Configure Git User (required for the tag commit)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Create and push tag
+          # 4. Create and Push the Tag
+          # Because we checked out with the PAT, this push is authenticated as 'You'
           git tag "$PACKAGE_VERSION"
           git push origin "$PACKAGE_VERSION"
