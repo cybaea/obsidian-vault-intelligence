@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+### Developer features
+
+## [2.1.0] - 2026-01-22
+
+### User features
+
 - **Folder suggestion in settings**: Introduced an autocomplete folder selector for "Ontology path", "Gardener plans path", and "Excluded folders", making it easier to configure the plugin without manual typing.
 - **Improved excluded folders management**: Redesigned the "Excluded folders" setting into a dynamic list view. You can now easily search for folders to ignore and remove them with a single click.
 - **System instruction reset**: Added a "Reset" button to the advanced settings to easily restore the default agent behaviour and persona.
