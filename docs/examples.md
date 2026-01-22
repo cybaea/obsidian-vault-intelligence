@@ -90,13 +90,24 @@ _**Query**: Briefly compare @bard with @bard-college-of-lore ._
 
 ## Folder context
 
-You can mention entire folders using the `@` symbol to an index note for the folder.
+You can mention entire folders using the `@` symbol. This recursively includes all Markdown files within that directory as context for the agent.
 
-**Scenario**: I want to summarise all notes in a folder.
+> [!TIP]
+> Vault Intelligence uses **semantic similarity** to rank notes within a folder against your query. If the folder contains more files than can fit in the context window, the most relevant notes are prioritized automatically.
 
-_**Query**: Briefly summarise all @classes_.
+**Scenario**: I want to summarise all notes in a specific folder without creating an index note.
+
+_**Query**: Briefly summarise all @classes ._
 
 ![Prompt: _Briefly summarise all @classes_ showing summaries of various D&D classes](../public/images/folder-context.webp)
+
+## Multilingual support
+
+The `@` mention system fully supports Unicode characters, allowing you to easily reference notes and folders in any language.
+
+**Scenario**: I want to reference a note with a Korean or Japanese title.
+
+_**Query**: What is the main point of @"가을의 기록" ?_
 
 # Vault hygiene (Gardener)
 

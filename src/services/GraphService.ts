@@ -169,6 +169,18 @@ export class GraphService {
     }
 
     /**
+     * Semantically searches the vault within specific file paths.
+     * @param query - The search query string.
+     * @param paths - Array of file paths to restrict search to.
+     * @param limit - Max number of results.
+     * @returns A promise resolving to an array of search results.
+     */
+    public async searchInPaths(query: string, paths: string[], limit?: number) {
+        if (!this.api) return [];
+        return await this.api.searchInPaths(query, paths, limit);
+    }
+
+    /**
      * Finds files similar to the given file path.
      * @param path - The path of the source file to find connections for.
      * @param limit - Max number of results.

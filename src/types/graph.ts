@@ -58,6 +58,7 @@ export interface WorkerAPI {
     deleteFile(path: string): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
     saveIndex(): Promise<string>; // Returns serialized graph/index
     loadIndex(data: string): Promise<void>;

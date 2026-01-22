@@ -39,3 +39,6 @@ nc -zv 127.0.0.1 $PORT
 7. **Monitor Logs**: specifically look for `[VaultIntelligence]` prefixed logs.
    - **Success**: "Vault Intelligence loaded", "Index loaded", "Worker initialized".
    - **Failure**: Any red text or stack traces associated with the plugin ID.
+
+> [!WARNING]
+> DO NOT use `pkill` or similar commands to restart Obsidian, as this may also terminate the agent process. If you need to restart, ask the user or close the Obsidian window manually.

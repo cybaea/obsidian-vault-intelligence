@@ -1,6 +1,6 @@
-import { AbstractInputSuggest, App, TFile } from "obsidian";
+import { AbstractInputSuggest, App, TFile, TFolder, TAbstractFile } from "obsidian";
 
-export class FileSuggest extends AbstractInputSuggest<TFile> {
+export class FileSuggest extends AbstractInputSuggest<TAbstractFile> {
     inputEl: HTMLTextAreaElement;
 
     constructor(app: App, inputEl: HTMLTextAreaElement) {
@@ -8,7 +8,7 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         this.inputEl = inputEl;
     }
 
-    getSuggestions(query: string): TFile[] {
+    getSuggestions(query: string): TAbstractFile[] {
         const cursorPosition = this.inputEl.selectionStart;
         const textBeforeCursor = this.inputEl.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf("@");
@@ -17,32 +17,46 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
 
         const suggestQuery = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
 
-        // Clean query from punctuation as requested
-        const cleanQuery = suggestQuery.replace(/[^\w\s]/g, "").trim();
+        // Only keep valid characters for matching, but allow multilingual characters
+        // We trim leading whitespace but keep trailing if it exists for the match
+        const cleanQuery = suggestQuery.trimStart();
 
-        const files = this.app.vault.getMarkdownFiles();
-        return files
-            .filter(file => {
-                const name = file.basename.toLowerCase();
-                // Case-insensitive and basic fuzzy match
-                return name.includes(cleanQuery) || name.replace(/[^\w\s]/g, "").includes(cleanQuery);
-            })
-            .slice(0, 10); // Limit to 10 suggestions
+        const abstractFiles = this.app.vault.getAllLoadedFiles();
+        const results: TAbstractFile[] = [];
+
+        for (const file of abstractFiles) {
+            if (file instanceof TFile || file instanceof TFolder) {
+                // Skip root folder
+                if (file.path === "/") continue;
+
+                const name = file instanceof TFile ? file.basename.toLowerCase() : file.name.toLowerCase();
+                const path = file.path.toLowerCase();
+
+                if (name.includes(cleanQuery) || path.includes(cleanQuery)) {
+                    results.push(file);
+                }
+            }
+            if (results.length >= 20) break;
+        }
+
+        return results;
     }
 
-    renderSuggestion(file: TFile, el: HTMLElement): void {
-        el.setText(file.basename);
+    renderSuggestion(file: TAbstractFile, el: HTMLElement): void {
+        const icon = file instanceof TFolder ? "📁 " : "📄 ";
+        el.setText(icon + (file instanceof TFile ? file.basename : file.path));
     }
 
-    selectSuggestion(file: TFile): void {
+    selectSuggestion(file: TAbstractFile): void {
         const cursorPosition = this.inputEl.selectionStart;
         const textBeforeCursor = this.inputEl.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf("@");
 
         const textAfterCursor = this.inputEl.value.substring(cursorPosition);
 
-        // Wrap in quotes if it contains spaces
-        const replacement = file.basename.includes(" ") ? `"${file.basename}"` : file.basename;
+        const name = file instanceof TFile ? file.basename : file.path;
+        // Wrap in quotes if it contains spaces or special characters
+        const replacement = (name.includes(" ") || /[^\w\s]/.test(name)) ? `"${name}"` : name;
 
         const newValue = textBeforeCursor.substring(0, lastAtIndex + 1) + replacement + " " + textAfterCursor;
         this.inputEl.value = newValue;

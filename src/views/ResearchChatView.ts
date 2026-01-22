@@ -1,10 +1,12 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
 import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
+
+import { SEARCH_CONSTANTS } from "../constants";
 
 export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
 
@@ -144,14 +146,72 @@ export class ResearchChatView extends ItemView {
 
         // Parse @-sign references
         const files: TFile[] = [];
-        const fileRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        // Updated regex to be more lenient with characters and handle quoted strings better
+        const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
         let match;
-        while ((match = fileRegex.exec(text)) !== null) {
-            const fileName = match[1] || match[2];
-            if (fileName) {
-                const file = this.app.metadataCache.getFirstLinkpathDest(fileName, "");
-                if (file instanceof TFile) {
-                    files.push(file);
+        while ((match = mentionRegex.exec(text)) !== null) {
+            const pathOrName = match[1] || match[2];
+            if (pathOrName) {
+                // First try direct path
+                let abstractFile = this.app.vault.getAbstractFileByPath(pathOrName);
+
+                // If not found, try resolving as a link (for files)
+                if (!abstractFile) {
+                    abstractFile = this.app.metadataCache.getFirstLinkpathDest(pathOrName, "");
+                }
+
+                if (abstractFile instanceof TFile) {
+                    files.push(abstractFile);
+                } else if (abstractFile instanceof TFolder) {
+                    // Expand folder into files recursively
+                    const folderPath = abstractFile.path;
+                    const folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
+                        f.path.startsWith(folderPath + "/") || f.path === folderPath
+                    );
+
+                    // Try similarity search within the folder first
+                    const folderPaths = folderFiles.map(f => f.path);
+                    const similarityResults = await this.graphService.searchInPaths(text, folderPaths, 100);
+
+                    let sortedFiles: TFile[];
+                    if (similarityResults.length > 0) {
+                        const resultPathMap = new Map(similarityResults.map((r, i) => [r.path, i]));
+                        const matchedFiles = folderFiles.filter(f => resultPathMap.has(f.path));
+                        matchedFiles.sort((a, b) => (resultPathMap.get(a.path) ?? 0) - (resultPathMap.get(b.path) ?? 0));
+
+                        // Include unmatched files (not indexed yet) by recency at the end
+                        const unmatchedFiles = folderFiles.filter(f => !resultPathMap.has(f.path));
+                        unmatchedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+                        sortedFiles = [...matchedFiles, ...unmatchedFiles];
+                    } else {
+                        // Fallback to recency if no similarity results (e.g. index not ready)
+                        sortedFiles = [...folderFiles];
+                        sortedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+                    }
+
+                    // Calculate budget
+                    // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
+                    const totalTokens = this.plugin.settings.contextWindowTokens || 200000;
+                    const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
+
+                    let currentSize = 0;
+                    const filesToInclude: TFile[] = [];
+
+                    for (const file of sortedFiles) {
+                        const size = file.stat.size;
+                        if (currentSize + size > charBudget) break;
+
+                        filesToInclude.push(file);
+                        currentSize += size;
+                    }
+
+                    if (filesToInclude.length < folderFiles.length) {
+                        const method = similarityResults.length > 0 ? "similarity-ranked" : "most recent";
+                        new Notice(`Context limit reached for folder "${abstractFile.name}". Included ${filesToInclude.length} ${method} files.`);
+                    }
+
+                    files.push(...filesToInclude);
                 }
             }
         }
