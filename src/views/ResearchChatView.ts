@@ -6,6 +6,8 @@ import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Int
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
 
+import { SEARCH_CONSTANTS } from "../constants";
+
 export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
 
 export class ResearchChatView extends ItemView {
@@ -163,24 +165,40 @@ export class ResearchChatView extends ItemView {
                 } else if (abstractFile instanceof TFolder) {
                     // Expand folder into files recursively
                     const folderPath = abstractFile.path;
-                    let folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
+                    const folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
                         f.path.startsWith(folderPath + "/") || f.path === folderPath
                     );
 
-                    // Sort by recency to prioritize fresh context
-                    folderFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+                    // Try similarity search within the folder first
+                    const folderPaths = folderFiles.map(f => f.path);
+                    const similarityResults = await this.graphService.searchInPaths(text, folderPaths, 100);
+
+                    let sortedFiles: TFile[];
+                    if (similarityResults.length > 0) {
+                        const resultPathMap = new Map(similarityResults.map((r, i) => [r.path, i]));
+                        const matchedFiles = folderFiles.filter(f => resultPathMap.has(f.path));
+                        matchedFiles.sort((a, b) => (resultPathMap.get(a.path) ?? 0) - (resultPathMap.get(b.path) ?? 0));
+
+                        // Include unmatched files (not indexed yet) by recency at the end
+                        const unmatchedFiles = folderFiles.filter(f => !resultPathMap.has(f.path));
+                        unmatchedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+                        sortedFiles = [...matchedFiles, ...unmatchedFiles];
+                    } else {
+                        // Fallback to recency if no similarity results (e.g. index not ready)
+                        sortedFiles = [...folderFiles];
+                        sortedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+                    }
 
                     // Calculate budget
                     // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
-                    // Estimate 4 chars per token
                     const totalTokens = this.plugin.settings.contextWindowTokens || 200000;
-                    const charBudget = (totalTokens * 4) * 0.5;
+                    const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
 
                     let currentSize = 0;
                     const filesToInclude: TFile[] = [];
 
-                    for (const file of folderFiles) {
-                        // Use checking of file size for estimation
+                    for (const file of sortedFiles) {
                         const size = file.stat.size;
                         if (currentSize + size > charBudget) break;
 
@@ -189,7 +207,8 @@ export class ResearchChatView extends ItemView {
                     }
 
                     if (filesToInclude.length < folderFiles.length) {
-                        new Notice(`Context limit reached for folder "${abstractFile.name}". Included ${filesToInclude.length} most recent files.`);
+                        const method = similarityResults.length > 0 ? "similarity-ranked" : "most recent";
+                        new Notice(`Context limit reached for folder "${abstractFile.name}". Included ${filesToInclude.length} ${method} files.`);
                     }
 
                     files.push(...filesToInclude);

@@ -191,6 +191,27 @@ const IndexerWorker: WorkerAPI = {
         }));
     },
 
+    async searchInPaths(query: string, paths: string[], limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        const results = await search(orama, {
+            mode: 'vector',
+            vector: {
+                value: await generateEmbedding(query, 'Query'),
+                property: 'embedding'
+            },
+            where: {
+                path: { in: paths }
+            },
+            limit
+        });
+
+        return results.hits.map(hit => ({
+            path: hit.document.path as string,
+            score: hit.score,
+            title: hit.document.title as string,
+            excerpt: hit.document.content as string
+        }));
+    },
+
     async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         if (!orama) return [];
 
