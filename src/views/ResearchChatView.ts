@@ -163,16 +163,36 @@ export class ResearchChatView extends ItemView {
                 } else if (abstractFile instanceof TFolder) {
                     // Expand folder into files recursively
                     const folderPath = abstractFile.path;
-                    const folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
+                    let folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
                         f.path.startsWith(folderPath + "/") || f.path === folderPath
                     );
 
-                    if (folderFiles.length > 100) {
-                        new Notice(`Folder "${abstractFile.name}" has too many files (${folderFiles.length}). Only the first 100 will be used as context.`);
-                        files.push(...folderFiles.slice(0, 100));
-                    } else {
-                        files.push(...folderFiles);
+                    // Sort by recency to prioritize fresh context
+                    folderFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+                    // Calculate budget
+                    // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
+                    // Estimate 4 chars per token
+                    const totalTokens = this.plugin.settings.contextWindowTokens || 200000;
+                    const charBudget = (totalTokens * 4) * 0.5;
+
+                    let currentSize = 0;
+                    const filesToInclude: TFile[] = [];
+
+                    for (const file of folderFiles) {
+                        // Use checking of file size for estimation
+                        const size = file.stat.size;
+                        if (currentSize + size > charBudget) break;
+
+                        filesToInclude.push(file);
+                        currentSize += size;
                     }
+
+                    if (filesToInclude.length < folderFiles.length) {
+                        new Notice(`Context limit reached for folder "${abstractFile.name}". Included ${filesToInclude.length} most recent files.`);
+                    }
+
+                    files.push(...filesToInclude);
                 }
             }
         }

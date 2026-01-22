@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer features
 
 - **Robust Context Resolution**: Updated `ResearchChatView` to use `getAbstractFileByPath` for reliable file and folder resolution.
-- **Context Safety**: Added a recursive folder expansion limit of 100 files with user notification to preserve prompt context window.
+- **Context Safety**: Implemented explicit context budgeting for recursive folder expansions. The agent now prioritizes recent files and respects the user's `contextWindowTokens` setting preventing overflow.
 
 ## [2.1.0] - 2026-01-22
 
