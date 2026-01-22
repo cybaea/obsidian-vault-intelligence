@@ -12,13 +12,14 @@ Now you can. The agents understand what you *mean*, not just what you type.
 
 Examples:
 
-- **[Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _What do I know about Knight Capital?_ (Personal vault).
-- **[Knowledge verification](docs/examples.md#knowledge-verification)**: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_ (Personal vault and Google Search).
-- **[Computational solver](docs/examples.md#computational-solver)**: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ (Personal vault with Python code execution). You can even plot the data.
-- **[Document context](docs/examples.md#document-context)**: _Briefly summarise @bard._ (Single document; D&D 5e vault).
-- **[Multiple documents](docs/examples.md#multiple-documents)**: _Briefly compare @bard with @bard-college-of-lore _. (Multiple documents; D&D 5e vault).
-- **[Folder context](docs/examples.md#folder-context)**: _Briefly summarise all @classes _. (Multiple documents in a folder; D&D 5e vault).
-- **[Similar documents](docs/examples.md#similar-documents)**: Shows related notes for the current document in a sidebar (D&D 5e vault).
+- **Researcher: [Knowledge retrieval](docs/examples.md#knowledge-retrieval)**: _What do I know about Knight Capital?_ (Personal vault).
+- **Researcher: [Knowledge verification](docs/examples.md#knowledge-verification)**: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_ (Personal vault and Google Search).
+- **Researcher: [Computational solver](docs/examples.md#computational-solver)**: _Read @"Monthly Expenses" . Group the data by month to find the total Q4 spend and forecast my January total based on the trend._ (Personal vault with Python code execution). You can even plot the data.
+- **Researcher: [Document context](docs/examples.md#document-context)**: _Briefly summarise @bard._ (Single document; D&D 5e vault).
+- **Researcher: [Multiple documents](docs/examples.md#multiple-documents)**: _Briefly compare @bard with @bard-college-of-lore _. (Multiple documents; D&D 5e vault).
+- **Researcher: [Folder context](docs/examples.md#folder-context)**: _Briefly summarise all @classes _. (Multiple documents in a folder; D&D 5e vault).
+- **Gardener: [Vault hygiene](docs/examples.md#vault-hygiene-gardener)**: Organize my vault concepts to maintain structure and consistency. (Analyses recent notes and suggests a hygiene plan or your ontology).
+- **Explorer: [Similar documents](docs/examples.md#similar-documents)**: Shows related notes for the current document in a sidebar (D&D 5e vault).
 
 
 ---
@@ -64,7 +65,7 @@ Prompt: _What do I know about RAG and is my information comprehensive, factually
 
 A proactive agent dedicated to maintaining your vault's structure and consistency.
 
-- **Organise vault concepts**: Analyses your notes to suggest improvements and refine your [ontology](docs/gardener.md).
+- **Organize vault concepts**: Analyzes your notes to suggest improvements and refine your [ontology](docs/gardener.md).
 - **Proactive hygiene**: Identifies missing topics and link opportunities across your entire knowledge base.
 - **Safety first**: Operates on a "plan-review-apply" model. You always review a temporary Markdown plan before any changes are made to your notes.
 
