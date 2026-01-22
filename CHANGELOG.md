@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Multilingual @ Mentions**: Full support for Unicode characters (Korean, Japanese, e.g. Korean `가`) in the `@` mention suggestion box (Resolves #60).
 - **Improved @ Search**: The suggestion box now remains open during selection even when typing spaces or punctuation, allowing easier multi-word file matching.
-- **Recursive Directory Context**: Mentioning a folder with `@` now recursively includes all Markdown files within that directory as context for the agent (Resolves #48).
+- **Recursive Directory Context**: Mentioning a folder with `@` now recursively includes all Markdown files within that directory, ranked by semantic similarity to your query (Resolves #48).
+- **Similarity-Based Context Selection**: The Researcher now performs an automated semantic search within mentioned folders to prioritize the most relevant notes for the context window.
 
 ### Developer features
 
 - **Robust Context Resolution**: Updated `ResearchChatView` to use `getAbstractFileByPath` for reliable file and folder resolution.
-- **Context Safety**: Implemented explicit context budgeting for recursive folder expansions. The agent now prioritizes recent files and respects the user's `contextWindowTokens` setting preventing overflow.
+- **Context Safety**: Implemented explicit context budgeting for recursive folder expansions. The agent now prioritizes relevant files using similarity-based ranking and respects the user's `contextWindowTokens` setting.
+- **Constant Centralization**: Refactored context budget calculations to use centralized `SEARCH_CONSTANTS` for better maintainability.
 
 ## [2.1.0] - 2026-01-22
 

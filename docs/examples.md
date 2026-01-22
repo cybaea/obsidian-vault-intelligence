@@ -92,6 +92,9 @@ _**Query**: Briefly compare @bard with @bard-college-of-lore ._
 
 You can mention entire folders using the `@` symbol. This recursively includes all Markdown files within that directory as context for the agent.
 
+> [!TIP]
+> Vault Intelligence uses **semantic similarity** to rank notes within a folder against your query. If the folder contains more files than can fit in the context window, the most relevant notes are prioritized automatically.
+
 **Scenario**: I want to summarise all notes in a specific folder without creating an index note.
 
 _**Query**: Briefly summarise all @classes ._
