@@ -81,7 +81,7 @@ export class ResearchChatView extends ItemView {
 
         this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
-        this.inputComponent.setPlaceholder("Ask your vault...");
+        this.inputComponent.setPlaceholder("Ask your vault... (use @ to link notes)");
 
         // Submit on Enter (Shift+Enter for newline)
         this.inputComponent.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {

@@ -197,12 +197,23 @@ export class AgentService {
     }
 
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
-        // Auto-inject active file if none provided
+        // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
-            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (activeView && activeView.file) {
-                logger.info(`[Agent] Auto-injecting active file into context: ${activeView.file.path}`);
-                contextFiles.push(activeView.file);
+            this.app.workspace.iterateRootLeaves((leaf) => {
+                const view = leaf.view;
+                if (view instanceof MarkdownView) {
+                    const file = view.file;
+                    if (file) {
+                        // Check if already added to avoid duplicates from split views of same file
+                        if (!contextFiles.some(f => f.path === file.path)) {
+                            contextFiles.push(file);
+                        }
+                    }
+                }
+            });
+
+            if (contextFiles.length > 0) {
+                logger.info(`[Agent] Auto-injected ${contextFiles.length} visible files into context.`);
             }
         }
 

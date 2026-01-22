@@ -51,7 +51,10 @@ Core Guidelines:
    - Use 'google_search' for live news, dates, and external fact-checking.
    - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
-4. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
+4. **Context & Syntax**:
+   - The user may reference specific notes using the '@' symbol (e.g., "@Note Name").
+   - If the user asks "what is this?", they are referring to the currently open notes.
+5. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
 `.trim();
 
 const DEFAULT_GARDENER_SYSTEM_PROMPT = `
