@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Folder suggestion in settings**: Introduced an autocomplete folder selector for "Ontology path", "Gardener plans path", and "Excluded folders", making it easier to configure the plugin without manual typing.
+- **Improved excluded folders management**: Redesigned the "Excluded folders" setting into a dynamic list view. You can now easily search for folders to ignore and remove them with a single click.
+- **System instruction reset**: Added a "Reset" button to the advanced settings to easily restore the default agent behaviour and persona.
+
 ### Developer features
+
+- **Reusable folder suggest component**: Implemented `FolderSuggest` (extending `AbstractInputSuggest`) for consistent folder selection across the plugin UI.
+- **Settings refresh utility**: Added a helper to programmatically refresh the Obsidian settings tab, ensuring the UI stays in sync after automated updates.
 
 ## [2.0.1] - 2026-01-20
 
