@@ -68,6 +68,9 @@ _**Query**: Plot my total monthly expenses with a trendline to include January._
 
 You can use the `@` symbol to mention specific notes or folders to focus the agent's attention. The example here uses the [D&D 5e example vault](https://github.com/Obsidian-TTRPG-Community/dnd5e-markdown).
 
+> [!TIP]
+> **Implicit context**: If you don't mention any files with `@`, the Researcher automatically includes all **visible Markdown notes** in its context. This means you can just open a note and ask "What is this about?" without any extra typing.
+
 **Scenario**: I want to summarise or otherwise process a single document. Instead of hunting through the vault, I can focus the Researcher's attention on a specific file.
 
 _**Query**: Briefly summarise @bard_.

@@ -12,7 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multilingual @ Mentions**: Full support for Unicode characters (Korean, Japanese, e.g. Korean `가`) in the `@` mention suggestion box (Resolves #60).
 - **Improved @ Search**: The suggestion box now remains open during selection even when typing spaces or punctuation, allowing easier multi-word file matching.
 - **Recursive Directory Context**: Mentioning a folder with `@` now recursively includes all Markdown files within that directory, ranked by semantic similarity to your query (Resolves #48).
-- **Similarity-Based Context Selection**: The Researcher now performs an automated semantic search within mentioned folders to prioritize the most relevant notes for the context window.
+- **Context-Aware Chat**: The Researcher now automatically includes all visible Markdown files as context when asking questions like "What's this about?". You can now chat with your open notes without needing explicit `@` mentions.
+- **Prioritized @ Suggestions**: The suggestion box now ranks currently visible files at the top of the list, ensuring your active workspace is always easy to reference.
+- **Native Suggestion UI**: Restored "lovely" native Obsidian icons and improved the suggestion layout for a more premium, integrated feel.
+- **Helpful Chat Guidance**: Added a helpful hint to the chat input and updated system instructions to guide users on using `@` mentions and implicit context.
 
 ### Developer features
 
