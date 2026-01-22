@@ -13,7 +13,7 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | **Embedding provider** | `gemini` | **Google Gemini:** Requires API key. Offloads work to Google. <br>**Local (Transformers.js):** Runs on your CPU. Private and offline. |
-| **Embedding model** | `gemini-embedding-001` | **Gemini:** `gemini-embedding-004` (latest) or `001`. <br>**Local Presets:** <br>• **Small (Potion-8M):** 256 dimensions. Extremely fast, ~15MB. <br>• **Balanced (BGE-Small):** 384 dimensions. Good all-rounder, ~30MB. <br>• **Advanced (Nomic-Embed):** 768 dimensions. Best quality, ~130MB. <br>• **Custom:** Allows you to specify any ONNX-compatible HuggingFace ID. |
+| **Embedding model** | `gemini-embedding-001` | **Gemini:** `gemini-embedding-001` (latest). <br>**Local Presets:** <br>• **Small (Potion-8M):** 256 dimensions. Extremely fast, ~15MB. <br>• **Balanced (BGE-Small):** 384 dimensions. Good all-rounder, ~30MB. <br>• **Advanced (Nomic-Embed):** 768 dimensions. Best quality, ~130MB. <br>• **Custom:** Allows you to specify any ONNX-compatible HuggingFace ID. |
 | **Indexing delay (ms)** | `5000ms` | The debounce delay for user edits. The plugin waits this long after your last keystroke before re-indexing the current note. High values prevent "spamming" your API quota or CPU while typing. |
 | **Bulk indexing delay (ms)** | `300ms` | The delay between individual files during bulk operations (like a full vault scan). Keeps the system responsive and respects API rate limits during large updates. |
 | **Chat model** | `gemini-3-flash-preview` | The main intelligence engine. <br>• **Flash:** Best for speed and agentic loops (tool use). <br>• **Pro:** Best for deep reasoning or creative writing, but slower. |
@@ -64,7 +64,7 @@ Choosing the right embedding provider involves balancing privacy, performance, a
 ### Google Gemini (Cloud)
 
 **Ideal for:** Users with reliable internet who want the highest possible retrieval quality.
-- **Pros:** State-of-the-art accuracy (`gemini-embedding-004`), zero local CPU/RAM overhead for embeddings, handles large documents gracefully.
+- **Pros:** State-of-the-art accuracy (`gemini-embedding-001`), zero local CPU/RAM overhead for embeddings, handles large documents gracefully.
 - **Cons:** Requires an API key, subject to remote rate limits, notes are processed by Google (though not used for training per their AI Studio terms).
 
 ### Transformers.js (Local)
@@ -75,7 +75,7 @@ Choosing the right embedding provider involves balancing privacy, performance, a
 
 | Model Preset | Quality | Speed | Local RAM | Recommendation |
 | :--- | :--- | :--- | :--- | :--- |
-| **Gemini 004** | 5/5 | Fast | 0MB | Best for deep research. |
+| **Gemini 001** | 5/5 | Fast | 0MB | Best for deep research. |
 | **Nomic-Embed** | 4/5 | Medium | ~150MB | Best local quality. |
 | **BGE-Small** | 3/5 | Fast | ~40MB | For general use. |
 | **Potion-8M** | 2/5 | Fastest | ~15MB | Best for mobile/older PCs. |
