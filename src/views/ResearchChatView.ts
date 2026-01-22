@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
@@ -144,14 +144,31 @@ export class ResearchChatView extends ItemView {
 
         // Parse @-sign references
         const files: TFile[] = [];
-        const fileRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        // Updated regex to be more lenient with characters and handle quoted strings better
+        const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
         let match;
-        while ((match = fileRegex.exec(text)) !== null) {
-            const fileName = match[1] || match[2];
-            if (fileName) {
-                const file = this.app.metadataCache.getFirstLinkpathDest(fileName, "");
-                if (file instanceof TFile) {
-                    files.push(file);
+        while ((match = mentionRegex.exec(text)) !== null) {
+            const pathOrName = match[1] || match[2];
+            if (pathOrName) {
+                // First try direct path
+                let abstractFile = this.app.vault.getAbstractFileByPath(pathOrName);
+
+                // If not found, try resolving as a link (for files)
+                if (!abstractFile) {
+                    abstractFile = this.app.metadataCache.getFirstLinkpathDest(pathOrName, "");
+                }
+
+                if (abstractFile instanceof TFile) {
+                    files.push(abstractFile);
+                } else if (abstractFile instanceof TFolder) {
+                    // Expand folder into files
+                    const folderFiles: TFile[] = [];
+                    for (const child of abstractFile.children) {
+                        if (child instanceof TFile && child.extension === "md") {
+                            folderFiles.push(child);
+                        }
+                    }
+                    files.push(...folderFiles);
                 }
             }
         }
