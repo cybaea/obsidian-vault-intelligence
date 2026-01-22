@@ -52,7 +52,7 @@ Your intelligent partner for discovery, reasoning, and data analysis.
 - **Smart context**: Use `@` to mention specific files (e.g., `@meeting-notes`) or folders to focus the AI's attention.
 
 <details>
-<summary>Click to see the Researcher in action</summary>
+<summary>🔽🔽🔽 <strong>Click to see the Researcher in action</strong> 🔽🔽🔽</summary>
 
 Prompt: _What do I know about RAG and is my information comprehensive, factually correct, and up to date?_
 
@@ -69,7 +69,7 @@ A proactive agent dedicated to maintaining your vault's structure and consistenc
 - **Safety first**: Operates on a "plan-review-apply" model. You always review a temporary Markdown plan before any changes are made to your notes.
 
 <details>
-<summary>Click to see the Gardener in action</summary>
+<summary>🔽🔽🔽 <strong>Click to see the Gardener in action</strong> 🔽🔽🔽</summary>
 
 <img src="./public/images/gardener-plan-example.png" alt="Gardener hygiene plan example" width="100%">
 
@@ -89,7 +89,7 @@ Finds the right note, even if you use the wrong words.
 - **Confidence scores**: Clearly indicates how relevant each connection is.
 
 <details>
-<summary>Click to see the Explorer sidebar</summary>
+<summary>🔽🔽🔽 <strong>Click to see the Explorer sidebar</strong> 🔽🔽🔽</summary>
 
 <img src="./public/images/similar-documents-bard.webp" alt="Explorer sidebar example" width="100%">
 
@@ -137,7 +137,7 @@ The plugin is designed to work out-of-the-box, but is highly customizable.
 * **[Troubleshooting](docs/troubleshooting.md)**: Fixes for "429 Too Many Requests" and other common issues.
 
 <details>
-<summary>Click to see the Settings Panel</summary>
+<summary>🔽🔽🔽 <strong>Click to see the Settings Panel</strong> 🔽🔽🔽</summary>
 
 <img src="./public/images/options.webp" alt="Settings Panel" width="100%">
 
