@@ -161,14 +161,18 @@ export class ResearchChatView extends ItemView {
                 if (abstractFile instanceof TFile) {
                     files.push(abstractFile);
                 } else if (abstractFile instanceof TFolder) {
-                    // Expand folder into files
-                    const folderFiles: TFile[] = [];
-                    for (const child of abstractFile.children) {
-                        if (child instanceof TFile && child.extension === "md") {
-                            folderFiles.push(child);
-                        }
+                    // Expand folder into files recursively
+                    const folderPath = abstractFile.path;
+                    const folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
+                        f.path.startsWith(folderPath + "/") || f.path === folderPath
+                    );
+
+                    if (folderFiles.length > 100) {
+                        new Notice(`Folder "${abstractFile.name}" has too many files (${folderFiles.length}). Only the first 100 will be used as context.`);
+                        files.push(...folderFiles.slice(0, 100));
+                    } else {
+                        files.push(...folderFiles);
                     }
-                    files.push(...folderFiles);
                 }
             }
         }
