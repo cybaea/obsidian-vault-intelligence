@@ -1,6 +1,12 @@
-import { Setting, Notice } from "obsidian";
+import { Setting, Notice, App, Plugin } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { LogLevel } from "../../utils/logger";
+
+interface InternalApp extends App {
+    setting: {
+        openTabById: (id: string) => void;
+    };
+}
 
 export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Advanced').setHeading();
@@ -9,6 +15,14 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
         .setName('System instruction')
         .setDesc('Defines the behavior and persona of the agent. Use {{DATE}} to insert the current date.')
         .setClass('vault-intelligence-system-instruction-setting') // Critical for the CSS fix
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip("Restore the original system instruction")
+            .onClick(async () => {
+                plugin.settings.systemInstruction = DEFAULT_SETTINGS.systemInstruction;
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            }))
         .addTextArea(text => {
             text
                 .setPlaceholder(DEFAULT_SETTINGS.systemInstruction)
@@ -101,4 +115,10 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                 plugin.settings.logLevel = parseInt(value) as LogLevel;
                 await plugin.saveSettings();
             }));
+}
+
+function refreshSettings(plugin: IVaultIntelligencePlugin) {
+    const app = plugin.app as InternalApp;
+    const manifestId = (plugin as unknown as Plugin).manifest.id;
+    app.setting.openTabById(manifestId);
 }
