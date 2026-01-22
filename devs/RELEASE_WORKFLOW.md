@@ -26,6 +26,7 @@ npm run release:prep <patch|minor|major>
 3.  **Version Bump**:
     - Runs `npm run lint` and `npm run build` (via `preversion`).
     - Updates `package.json`, `manifest.json`, and `versions.json` (via `version` scripts).
+    - **Updates `CHANGELOG.md`**: Moves the `[Unreleased]` section to `[x.y.z]` and creates a new empty `[Unreleased]` section.
     - **Does NOT** create a git tag locally (uses `--no-git-tag-version`).
 4.  **Branch Creation**: Creates a branch named `release/x.y.z`.
 5.  **Commit & Push**: Commits the version bump and pushes to GitHub.
@@ -35,7 +36,7 @@ npm run release:prep <patch|minor|major>
 The script provides a link to open a Pull Request.
 
 1.  Open the PR.
-2.  Review the changes (ensure version numbers is correct in all files).
+2.  Review the changes (ensure version numbers is correct in all files, and `CHANGELOG.md` is updated).
 3.  **Merge** the PR into `main`.
 
 ### 3. Automation (CI/CD)
