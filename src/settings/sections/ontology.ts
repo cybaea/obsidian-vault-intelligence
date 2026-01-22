@@ -1,6 +1,7 @@
-import { Setting, Notice, Plugin, App } from "obsidian";
+import { Setting, Notice, Plugin, App, TextComponent } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { GEMINI_CHAT_MODELS } from "../../services/ModelRegistry";
+import { FolderSuggest } from "../../views/FolderSuggest";
 
 interface InternalApp extends App {
     setting: {
@@ -19,24 +20,28 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
     new Setting(containerEl)
         .setName('Ontology path')
         .setDesc('Specify the folder where your ontology (concepts, entities, MOCs) is stored.')
-        .addText(text => text
-            .setPlaceholder('Ontology')
-            .setValue(plugin.settings.ontologyPath)
-            .onChange(async (value) => {
-                plugin.settings.ontologyPath = value;
-                await plugin.saveSettings();
-            }));
+        .addText(text => {
+            text.setPlaceholder('Ontology')
+                .setValue(plugin.settings.ontologyPath)
+                .onChange(async (value) => {
+                    plugin.settings.ontologyPath = value;
+                    await plugin.saveSettings();
+                });
+            new FolderSuggest(plugin.app, text.inputEl);
+        });
 
     new Setting(containerEl)
         .setName('Gardener plans path')
         .setDesc('Specify the folder where the gardener should save its plans.')
-        .addText(text => text
-            .setPlaceholder('Gardener plans')
-            .setValue(plugin.settings.gardenerPlansPath)
-            .onChange(async (value) => {
-                plugin.settings.gardenerPlansPath = value;
-                await plugin.saveSettings();
-            }));
+        .addText(text => {
+            text.setPlaceholder('Gardener plans')
+                .setValue(plugin.settings.gardenerPlansPath)
+                .onChange(async (value) => {
+                    plugin.settings.gardenerPlansPath = value;
+                    await plugin.saveSettings();
+                });
+            new FolderSuggest(plugin.app, text.inputEl);
+        });
 
     new Setting(containerEl)
         .setName("Plans retention (days)")
@@ -120,13 +125,66 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
 
     new Setting(containerEl)
         .setName('Excluded folders')
-        .setDesc('Comma-separated list of folders the gardener should ignore.')
-        .addTextArea(text => text
-            .setPlaceholder('Templates, archive, ontology')
-            .setValue(plugin.settings.excludedFolders.join(', '))
-            .onChange(async (value) => {
-                plugin.settings.excludedFolders = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                await plugin.saveSettings();
+        .setDesc('Folders the gardener should ignore.')
+        .setHeading();
+
+    const excludedFoldersEl = containerEl.createDiv();
+
+    const renderExcludedFolders = () => {
+        excludedFoldersEl.empty();
+        if (plugin.settings.excludedFolders.length === 0) {
+            excludedFoldersEl.createEl('i', { text: 'No folders excluded.' });
+        }
+
+        plugin.settings.excludedFolders.forEach((folder, index) => {
+            new Setting(excludedFoldersEl)
+                .setName(folder)
+                .addExtraButton(btn => btn
+                    .setIcon('trash')
+                    .setTooltip('Remove folder')
+                    .onClick(async () => {
+                        plugin.settings.excludedFolders.splice(index, 1);
+                        await plugin.saveSettings();
+                        renderExcludedFolders();
+                    }));
+        });
+    };
+
+    renderExcludedFolders();
+
+    let addFolderText: TextComponent;
+    new Setting(containerEl)
+        .setName('Add excluded folder')
+        .setDesc('Search for a folder to add to the exclusion list.')
+        .addText(text => {
+            addFolderText = text;
+            text.setPlaceholder('Search folder...')
+            new FolderSuggest(plugin.app, text.inputEl);
+            text.inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    void (async () => {
+                        const value = text.getValue().trim();
+                        if (value && !plugin.settings.excludedFolders.includes(value)) {
+                            plugin.settings.excludedFolders.push(value);
+                            await plugin.saveSettings();
+                            text.setValue('');
+                            renderExcludedFolders();
+                        }
+                    })();
+                }
+            });
+        })
+        .addExtraButton(btn => btn
+            .setIcon('plus-with-circle')
+            .setTooltip('Add folder')
+            .onClick(async () => {
+                const value = addFolderText.getValue().trim();
+                if (value && !plugin.settings.excludedFolders.includes(value)) {
+                    plugin.settings.excludedFolders.push(value);
+                    await plugin.saveSettings();
+                    addFolderText.setValue('');
+                    renderExcludedFolders();
+                }
             }));
 
     // --- Gardener Model & Persona ---
