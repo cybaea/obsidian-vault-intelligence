@@ -506,3 +506,45 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     width: 12px;
     height: 12px;
 }
+
+/* File Suggest Styles */
+.vault-intelligence-suggestion {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+}
+
+.vault-intelligence-suggestion .suggestion-icon {
+    flex: 0 0 16px;
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.vault-intelligence-suggestion .suggestion-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.vault-intelligence-suggestion .suggestion-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vault-intelligence-suggestion .suggestion-title {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vault-intelligence-suggestion .suggestion-note {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
