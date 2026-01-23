@@ -13,6 +13,7 @@ export interface ChatMessage {
     role: "user" | "model" | "system";
     text: string;
     thought?: string;
+    contextFiles?: string[];
 }
 
 /**
@@ -128,7 +129,7 @@ export class AgentService {
      * @param args - The arguments provided by the LLM.
      * @returns A promise resolving to the tool's output.
      */
-    private async executeFunction(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>): Promise<Record<string, unknown>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
         if (name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH) {
@@ -169,9 +170,13 @@ export class AgentService {
             const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
             const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            const context = await this.contextAssembler.assemble(results, query, totalCharBudget);
+            const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, totalCharBudget);
 
             if (!context) return { result: "No relevant notes found or context budget exceeded." };
+
+            // Track files used
+            resultFiles.forEach(f => usedFiles.add(f));
+
             return { result: context };
         }
 
@@ -216,7 +221,7 @@ export class AgentService {
      * @param contextFiles - Optional list of files to inject into context (e.g. active file).
      * @returns The final response from the agent.
      */
-    public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
+    public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<{ text: string; files: string[] }> {
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
@@ -236,6 +241,10 @@ export class AgentService {
                 logger.info(`[Agent] Auto-injected ${contextFiles.length} visible files into context.`);
             }
         }
+
+        // Initialize used files tracker with explicit context files
+        const usedFiles = new Set<string>();
+        contextFiles.forEach(f => usedFiles.add(f.path));
 
         const formattedHistory = history.map(h => ({
             role: h.role as "user" | "model",
@@ -278,7 +287,7 @@ export class AgentService {
                         if (!call.name) return null;
 
                         const args = call.args || {};
-                        const functionResponse = await this.executeFunction(call.name, args);
+                        const functionResponse = await this.executeFunction(call.name, args, usedFiles);
 
                         return {
                             functionResponse: {
@@ -303,14 +312,17 @@ export class AgentService {
 
             if (result.functionCalls && result.functionCalls.length > 0) {
                 logger.warn("Agent hit max steps limit with pending tool calls.");
-                return "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting.";
+                return {
+                    text: "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting.",
+                    files: Array.from(usedFiles)
+                };
             }
 
-            return result.text || "";
+            return { text: result.text || "", files: Array.from(usedFiles) };
 
         } catch (e: unknown) {
             logger.error("Error in chat loop", e);
-            return "Sorry, I encountered an error processing your request.";
+            return { text: "Sorry, I encountered an error processing your request.", files: [] };
         }
     }
 }
