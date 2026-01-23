@@ -337,6 +337,14 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
+                        // Scale the budget proportionally to the new model's capacity
+                        const oldModelId = plugin.settings.chatModel;
+                        plugin.settings.contextWindowTokens = ModelRegistry.calculateAdjustedBudget(
+                            plugin.settings.contextWindowTokens,
+                            oldModelId,
+                            val
+                        );
+
                         plugin.settings.chatModel = val;
                         await plugin.saveSettings();
                     }
@@ -360,21 +368,30 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 }));
     }
 
+    const chatModelLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
     new Setting(containerEl)
         .setName('Context window budget')
-        .setDesc("Max tokens the AI can consider. This is also limited by your chosen chat model's capacity.")
-        .addText(text => text
-            .setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
-            .setValue(String(plugin.settings.contextWindowTokens))
-            .onChange((value) => {
-                void (async () => {
-                    const num = parseInt(value);
-                    if (!isNaN(num) && num > 0) {
-                        plugin.settings.contextWindowTokens = num;
-                        await plugin.saveSettings();
-                    }
-                })();
-            }));
+        .setDesc(`Max tokens the AI can consider. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`)
+        .addText(text => {
+            text.setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
+                .setValue(String(plugin.settings.contextWindowTokens))
+                .onChange((value) => {
+                    void (async () => {
+                        let num = parseInt(value);
+                        if (!isNaN(num) && num > 0) {
+                            if (num > chatModelLimit) {
+                                num = chatModelLimit;
+                                text.setValue(String(num));
+                            }
+                            plugin.settings.contextWindowTokens = num;
+                            await plugin.saveSettings();
+                        }
+                    })();
+                });
+            text.inputEl.type = 'number';
+            text.inputEl.max = String(chatModelLimit);
+            text.inputEl.min = '1024';
+        });
 
     // 4. Grounding Model
     const groundingModelCurrent = plugin.settings.groundingModel;

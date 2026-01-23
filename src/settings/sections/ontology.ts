@@ -90,21 +90,30 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                 }
             }));
 
+    const gardenerModelLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
     new Setting(containerEl)
         .setName("Gardener context budget (tokens)")
-        .setDesc('Maximum total tokens estimated for analysis. The gardener will prioritize recently modified notes until this budget or the analysis limit is reached.')
-        .addText(text => text
-            .setPlaceholder('50000')
-            .setValue(String(plugin.settings.gardenerContextBudget))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num > 0) {
-                    plugin.settings.gardenerContextBudget = Math.floor(num);
-                    await plugin.saveSettings();
-                } else {
-                    new Notice("Please enter a valid positive number for the context budget.");
-                }
-            }));
+        .setDesc(`Maximum total tokens estimated for analysis. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`)
+        .addText(text => {
+            text.setPlaceholder('50000')
+                .setValue(String(plugin.settings.gardenerContextBudget))
+                .onChange((value) => {
+                    void (async () => {
+                        let num = parseInt(value);
+                        if (!isNaN(num) && num > 0) {
+                            if (num > gardenerModelLimit) {
+                                num = gardenerModelLimit;
+                                text.setValue(String(num));
+                            }
+                            plugin.settings.gardenerContextBudget = Math.floor(num);
+                            await plugin.saveSettings();
+                        }
+                    })();
+                });
+            text.inputEl.type = 'number';
+            text.inputEl.max = String(gardenerModelLimit);
+            text.inputEl.min = '1024';
+        });
 
     new Setting(containerEl)
         .setName("Skip retention (days)")
@@ -236,6 +245,14 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
+                        // Scale the budget proportionally to the new model's capacity
+                        const oldModelId = plugin.settings.gardenerModel;
+                        plugin.settings.gardenerContextBudget = ModelRegistry.calculateAdjustedBudget(
+                            plugin.settings.gardenerContextBudget,
+                            oldModelId,
+                            val
+                        );
+
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }

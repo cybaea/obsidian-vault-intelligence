@@ -48,13 +48,15 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
         label: 'Gemini 3 Flash (Default)',
         provider: 'gemini',
         isDefault: true,
-        description: 'Fast, efficient, and great for most tasks.'
+        description: 'Fast, efficient, and great for most tasks.',
+        inputTokenLimit: 1048576
     },
     {
         id: 'gemini-3-pro-preview',
         label: 'Gemini 3 Pro',
         provider: 'gemini',
-        description: 'Maximum intelligence for complex reasoning.'
+        description: 'Maximum intelligence for complex reasoning.',
+        inputTokenLimit: 1048576
     }
 ];
 
@@ -63,7 +65,8 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
         id: 'gemini-2.5-flash-lite',
         label: 'Gemini 2.5 Flash Lite (Default)',
         provider: 'gemini',
-        isDefault: true
+        isDefault: true,
+        inputTokenLimit: 1048576
     }
 ];
 
@@ -278,6 +281,34 @@ export class ModelRegistry {
 
     static getRawResponse(): GeminiApiResponse | null {
         return this.rawApiResponse;
+    }
+
+    /**
+     * Calculates a new budget proportional to the model's total capacity.
+     * Prevents context budgets from being nonsensical when switching between
+     * models with drastically different limits (e.g. 1M vs 32k).
+     */
+    static calculateAdjustedBudget(currentBudget: number, oldModelId: string, newModelId: string): number {
+        const oldModel = this.getModelById(oldModelId);
+        const newModel = this.getModelById(newModelId);
+
+        // If either is custom or unknown, we don't have hard data to scale with.
+        if (!oldModel?.inputTokenLimit || !newModel?.inputTokenLimit) {
+            return currentBudget;
+        }
+
+        // Safety: ensure currentBudget is within sane bounds before ratio calculation
+        // to prevent extreme floating point precision issues.
+        const safeCurrent = Math.min(currentBudget, oldModel.inputTokenLimit);
+
+        const ratio = safeCurrent / oldModel.inputTokenLimit;
+        const adjusted = Math.floor(ratio * newModel.inputTokenLimit);
+
+        // Safety: Cap at model max, but keep a reasonable floor (1k tokens)
+        const result = Math.min(newModel.inputTokenLimit, Math.max(1024, adjusted));
+
+        // Final sanity check for JavaScript's MAX_SAFE_INTEGER
+        return Number.isSafeInteger(result) ? result : newModel.inputTokenLimit;
     }
 }
 

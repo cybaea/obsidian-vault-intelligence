@@ -41,7 +41,11 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// 1b. Fetch available models asynchronously
 		if (this.settings.googleApiKey) {
-			void ModelRegistry.fetchModels(this.app, this.settings.googleApiKey, this.settings.modelCacheDurationDays);
+			void (async () => {
+				await ModelRegistry.fetchModels(this.app, this.settings.googleApiKey, this.settings.modelCacheDurationDays);
+				// Re-sanitize after fetch completes in case dynamic limits are different
+				await this.sanitizeBudgets();
+			})();
 		}
 
 		// 2. Initialize Routing Embedding Provider
@@ -200,6 +204,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
+		await this.sanitizeBudgets();
 
 		// Sanity check: Ensure dimensions match presets if using a local provider
 		if (this.settings.embeddingProvider === 'local') {
@@ -252,5 +257,52 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		}
 
 		if (leaf) void workspace.revealLeaf(leaf);
+	}
+
+	/**
+	 * Ensures context budgets are within safe safe integer bounds and capped at model limits.
+	 * Corrects "silly" values that might be present in data.json.
+	 */
+	async sanitizeBudgets() {
+		let changed = false;
+
+		const sanitize = (val: number, modelId: string, defaultVal: number): number => {
+			const limit = ModelRegistry.getModelById(modelId)?.inputTokenLimit ?? 1048576;
+
+			// 1. Initial sanity: must be a safe integer
+			let cleaned = Number.isSafeInteger(val) ? val : defaultVal;
+
+			// 2. Cap at model limit
+			if (cleaned > limit) {
+				cleaned = limit;
+				changed = true;
+			}
+
+			// 3. Floor for usability
+			if (cleaned < 1024) {
+				cleaned = 1024;
+				changed = true;
+			}
+
+			if (cleaned !== val) changed = true;
+			return cleaned;
+		};
+
+		this.settings.contextWindowTokens = sanitize(
+			this.settings.contextWindowTokens,
+			this.settings.chatModel,
+			DEFAULT_SETTINGS.contextWindowTokens
+		);
+
+		this.settings.gardenerContextBudget = sanitize(
+			this.settings.gardenerContextBudget,
+			this.settings.gardenerModel,
+			DEFAULT_SETTINGS.gardenerContextBudget
+		);
+
+		if (changed) {
+			logger.info("Sanitized context budgets to safe bounds");
+			await this.saveData(this.settings);
+		}
 	}
 }
