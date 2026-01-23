@@ -4,31 +4,9 @@ import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings
 import { logger } from "../utils/logger";
 import { WORKER_CONSTANTS } from "../constants";
 import { ModelRegistry } from "./ModelRegistry";
+import { WorkerMessage, ProgressPayload, ConfigureMessage } from "../types/worker.types";
 
 import EmbeddingWorker from "../workers/embedding.worker";
-
-interface WorkerMessage {
-    id: number;
-    status: 'success' | 'error';
-    output?: number[][];
-    error?: string;
-    type?: string;
-    // For fetch proxy
-    url?: string;
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string | ArrayBuffer;
-    requestId?: number;
-    // For progress reporting
-    file?: string;
-    progress?: number;
-}
-
-interface ProgressPayload {
-    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
-    file?: string;
-    progress?: number;
-}
 
 interface EmbeddingTask {
     id: number;
@@ -37,14 +15,6 @@ interface EmbeddingTask {
     resolve: (val: number[][]) => void;
     reject: (err: unknown) => void;
     title?: string;
-}
-
-interface ConfigureMessage {
-    type: 'configure';
-    numThreads: number;
-    simd: boolean;
-    cdnUrl: string;
-    version: string;
 }
 
 export class LocalEmbeddingService implements IEmbeddingService {

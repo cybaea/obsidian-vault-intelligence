@@ -107,7 +107,40 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >    ```
 > 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
 
-### 3.2. System mechanics & orchestration
+### 3.2. Search & Answer Loop (Data Flow)
+
+> #### The "RAG" Cycle
+>
+> 1.  **Intent**: User asks a question in the chat.
+> 2.  **Mechanics**:
+>     ```mermaid
+>     sequenceDiagram
+>         participant U as User
+>         participant V as ChatView
+>         participant A as AgentService
+>         participant S as SearchOrchestrator
+>         participant I as IndexerWorker
+>         participant C as ContextAssembler
+>         participant G as GeminiService
+>
+>         U->>V: Types question
+>         V->>A: chat(history, msg)
+>         A->>G: startChat()
+>         G-->>A: Request Tool: "VaultSearch"
+>         A->>S: search(query)
+>         S->>I: search(query_vector)
+>         I-->>S: Results (GraphNode[])
+>         S-->>A: Results
+>         A->>C: assemble(results)
+>         C-->>A: Context String
+>         A->>G: sendMessage(context)
+>         G-->>A: Final Answer
+>         A-->>V: Display Answer
+>         V-->>U: Read Answer
+>     ```
+>
+
+### 3.3. System mechanics & orchestration
 
 *   **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
 *   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
@@ -116,13 +149,6 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
     The plugin relies on Obsidian's global `app.metadataCache` and `app.vault` events.
     *   `UI Events`: Handled by Views.
     *   `System Events`: Handled by `VaultManager`.
-
-### 3.3. Abstract data models
-
-* **Unit of work**: The `GraphNodeData` interface wraps file metadata and relationship state.
-* **Persistence patterns**:
-    * **Repository pattern**: `GraphService` acts as the repository.
-    * **Storage**: The state is serialized to JSON (`data/graph-state.json`) in the vault.
 
 ### 3.4. The "Gardening" cycle (vault hygiene)
 
@@ -149,6 +175,40 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 ---
 
 ## 4. Control flow and interfaces
+
+### 4.1. Core Service Relationships
+
+```mermaid
+classDiagram
+    class AgentService {
+        +chat(history, msg)
+        -executeFunction(tool)
+    }
+    class SearchOrchestrator {
+        +search(query)
+    }
+    class ContextAssembler {
+        +assemble(results)
+    }
+    class GraphService {
+        +initialize()
+        +search()
+    }
+    class IndexerWorker {
+        +search(vector)
+        +updateFile()
+    }
+    class GeminiService {
+        +startChat()
+        +generateContent()
+    }
+
+    AgentService --> SearchOrchestrator : delegates search
+    AgentService --> ContextAssembler : delegates RAG
+    AgentService --> GeminiService : calls generic LLM
+    SearchOrchestrator --> GraphService : uses index
+    GraphService ..> IndexerWorker : via Comlink
+```
 
 ### Service interface documentation
 

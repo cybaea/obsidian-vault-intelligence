@@ -33,10 +33,10 @@ const workerLogger = {
 };
 
 const IndexerWorker: WorkerAPI = {
-    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: unknown) {
+    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>) {
         config = conf;
         graph = new Graph();
-        if (typeof embedder === 'function') embedderProxy = embedder as (text: string, title: string) => Promise<number[]>;
+        if (typeof embedder === 'function') embedderProxy = embedder;
 
         // Initialize Orama with vector support
         await recreateOrama();
