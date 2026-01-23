@@ -1,23 +1,15 @@
 import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
 import { logger } from '../utils/logger';
+import {
+    TransformersEnv,
+    ConfigureMessage,
+    EmbedMessage,
+    WorkerSuccessResponse,
+    WorkerErrorResponse,
+    ProgressPayload
+} from '../types/worker.types';
 
 // --- 1. Strong Typing for Environment ---
-interface TransformersEnv {
-    allowLocalModels: boolean;
-    useBrowserCache: boolean;
-    useFS: boolean;
-    backends?: {
-        onnx?: {
-            wasm?: {
-                numThreads?: number;
-                simd?: boolean;
-                wasmPaths?: string | Record<string, string>;
-                proxy?: boolean;
-            }
-        }
-    }
-}
-
 // Cast env for safe configuration
 const safeEnv = env as unknown as TransformersEnv;
 
@@ -101,47 +93,8 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
 };
 
 // --- Types ---
-interface ConfigureMessage {
-    type: 'configure';
-    numThreads: number;
-    simd: boolean;
-    cdnUrl?: string; // NEW
-    version?: string; // NEW
-}
-
-interface EmbedMessage {
-    id: number;
-    type: 'embed';
-    text: string;
-    model?: string;
-    quantized?: boolean;
-}
-
 interface PipelineOutput {
     data: Float32Array | Int32Array | BigInt64Array;
-}
-
-interface WorkerSuccessResponse {
-    id: number;
-    status: 'success';
-    output: number[][]; // Changed to Array of Vectors
-}
-
-interface WorkerErrorResponse {
-    id: number;
-    status: 'error';
-    error: string;
-}
-
-// Define types for progress reporting
-interface ProgressPayload {
-    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
-    file?: string;
-    progress?: number;
-    loaded?: number;
-    total?: number;
-    name?: string;
-    task?: string;
 }
 
 type TokenIds = number[] | BigInt64Array | Tensor;
@@ -270,15 +223,10 @@ class PipelineSingleton {
 
         return async (text: string) => {
             const tokenizer = pipe.tokenizer;
-            // 512 is standard, but some models vary. Safe default is 512.
             const MAX_TOKENS = 512;
-            // CLS + SEP = 2 tokens overhead usually
             const CHUNK_SIZE = MAX_TOKENS - 2;
 
             // --- Memory Safety: Character-level pre-segmentation ---
-            // Tokenizing very large documents (>100k chars) at once causes the WASM heap to exhaust
-            // during the tokenizer's internal string processing and array allocation.
-            // We split into blocks that roughly translate to ~2,000-3,000 tokens (well within WASM limits).
             const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
             const input_ids: number[] = [];
 
@@ -299,14 +247,11 @@ class PipelineSingleton {
                     logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
                     throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
                 }
-                // Yield control to let the worker breathe
                 await yieldToEventLoop();
             }
 
-            // If empty
             if (input_ids.length === 0) return [];
 
-            // Chunking Loop (Token level)
             const vectors: number[][] = [];
             for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
                 const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
@@ -324,7 +269,6 @@ class PipelineSingleton {
                     logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
                     throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
                 }
-                // CRITICAL: Yield control after heavy inference call
                 await yieldToEventLoop();
             }
 
@@ -333,6 +277,7 @@ class PipelineSingleton {
     }
 
     private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
+        // ... (Model2Vec logic same as before, elided for brevity if unchanged logic, but keeping full for safety)
         logger.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
         const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
         let model: PreTrainedModel;
@@ -351,8 +296,6 @@ class PipelineSingleton {
 
         return async (text: string) => {
             const MAX_TOKENS = 512;
-
-            // --- Memory Safety: Character-level pre-segmentation ---
             const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
             const input_ids: number[] = [];
 
@@ -363,13 +306,11 @@ class PipelineSingleton {
                 await yieldToEventLoop();
             }
 
-            // If empty
             if (input_ids.length === 0) return [];
 
             const vectors: number[][] = [];
-            const idsArray = input_ids; // number[]
+            const idsArray = input_ids;
 
-            // Chunk loop
             for (let i = 0; i < idsArray.length; i += MAX_TOKENS) {
                 const chunkIds = idsArray.slice(i, i + MAX_TOKENS);
 
@@ -432,6 +373,7 @@ ctx.addEventListener('message', (event: MessageEvent) => {
         }
 
         if ('type' in data && (data as { type: string }).type === 'fetch_response') {
+            // ... Fetch handling code ... 
             const response = data as unknown as { requestId: number, status: number, headers: Record<string, string>, body: ArrayBuffer, error?: string };
             const pending = pendingFetches.get(response.requestId);
             if (pending) {

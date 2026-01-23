@@ -15,7 +15,10 @@ export interface ChatMessage {
     thought?: string;
 }
 
-
+/**
+ * Service responsible for orchestrating the AI agent activities.
+ * It manages tool execution, chat history, and context assembly.
+ */
 export class AgentService {
     private gemini: GeminiService;
     private graphService: GraphService;
@@ -44,6 +47,11 @@ export class AgentService {
         this.contextAssembler = new ContextAssembler(app);
     }
 
+    /**
+     * Constructs the list of tools available to the agent.
+     * Includes vault search, URL reading, Google search, and optionally code execution.
+     * @returns Array of Tool definitions compatible with Google GenAI.
+     */
     private getTools(): Tool[] {
         // 1. Vault Search
         const vaultSearch: FunctionDeclaration = {
@@ -114,7 +122,12 @@ export class AgentService {
         }];
     }
 
-
+    /**
+     * Executes a tool called by the LLM.
+     * @param name - The name of the tool to execute.
+     * @param args - The arguments provided by the LLM.
+     * @returns A promise resolving to the tool's output.
+     */
     private async executeFunction(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
@@ -196,6 +209,13 @@ export class AgentService {
         return { error: "Tool not found." };
     }
 
+    /**
+     * Conducts a chat session with the agent, handling tool calling loops.
+     * @param history - The chat history.
+     * @param message - The user's latest message.
+     * @param contextFiles - Optional list of files to inject into context (e.g. active file).
+     * @returns The final response from the agent.
+     */
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<string> {
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {

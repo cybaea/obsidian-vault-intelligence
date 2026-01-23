@@ -8,7 +8,7 @@ import { WorkerAPI, WorkerConfig } from "../types/graph";
 
 import { IEmbeddingService } from "./IEmbeddingService";
 
-// @ts-ignore
+// @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
 const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
 
