@@ -18,7 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Improved Model Sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (e.g., Gemini 3.0 and 2.5 families).
 - **Refined Model Lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
 - **Grounding Optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
-- **Model List Debugging**: Added a "Log items" utility in settings to print the raw Gemini API response to the console for easier troubleshooting.
+- **Model List Debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
+- **Dynamic Budget Scaling**: Context budgets now automatically adjust when switching models to maintain a consistent capacity ratio.
+- **Proportional Reset Buttons**: Added "Reset to default ratio" buttons to context budgets, restoring them to sensible baselines (20% for chat, 10% for gardener) based on the current model's limit.
+- **Persistent Debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
+- **UI Layout Optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
+
 
 ### Developer features
 
@@ -27,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
 - **Standardised Logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
 - **Concurrency Protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
+- **Settings Sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
+- **UI Architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
+- **Constant Centralization**: Moved budget ratios and safety margins to `src/constants.ts` for consistent scaling logic across the plugin.
+
 
 ## [2.2.0] - 2026-01-22
 
