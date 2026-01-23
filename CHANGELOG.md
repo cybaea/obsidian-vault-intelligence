@@ -11,8 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
 - **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
+- **Dynamic Model Fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
+- **Smart Model Caching**: Added configurable caching for the Gemini model list to ensure a snappy settings experience while keeping the list fresh.
+- **Instant Connection**: Providing a valid Gemini API key now immediately triggers a model fetch and enables model dropdowns without needing a plugin restart.
+- **Model Tooltips**: Added hover tooltips to all model dropdowns showing the raw Gemini model ID for advanced users.
+- **Improved Model Sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (e.g., Gemini 3.0 and 2.5 families).
+- **Refined Model Lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
+- **Grounding Optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
+- **Model List Debugging**: Added a "Log items" utility in settings to print the raw Gemini API response to the console for easier troubleshooting.
 
 ### Developer features
+
+- **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
+- **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
+- **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
+- **Standardised Logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
+- **Concurrency Protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
 
 ## [2.2.0] - 2026-01-22
 

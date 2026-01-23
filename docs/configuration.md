@@ -21,6 +21,9 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | **Grounding model** | `gemini-2.5-flash-lite` | The fast, cost-effective model used specifically for web searches and information verification. |
 | **Enable code execution** | `On` | Turns on the **Computational Solver**. When enabled, the agent can write and execute Python code to solve math problems or analyse data. |
 | **Code model** | `gemini-3-flash-preview` | The specialised model used for generating Python code. Only visible if code execution is enabled. |
+| **Model list cache duration (days)** | `7` | How many days to keep the local copy of available Gemini models before refreshing. Set to 0 to always fetch. |
+| **Refresh model list** | `None` | A manual trigger to force a fresh fetch of available models from the Gemini API. Useful when testing new or experimental models. |
+| **Debug model list** | `None` | A developer utility to log the raw JSON response from the Gemini API to the console (`Ctrl+Shift+I`). |
 
 ## Indexing & Search
 
