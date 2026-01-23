@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon } from "obsidian";
 import VaultIntelligencePlugin from "../main";
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
@@ -218,7 +218,7 @@ export class ResearchChatView extends ItemView {
 
         try {
             const response = await this.agent.chat(this.messages, text, files);
-            this.addMessage("model", response);
+            this.addMessage("model", response.text, undefined, response.files);
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             new Notice(`Error: ${message}`);
@@ -226,8 +226,8 @@ export class ResearchChatView extends ItemView {
         }
     }
 
-    private addMessage(role: "user" | "model" | "system", text: string, thought?: string) {
-        this.messages.push({ role, text, thought });
+    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[]) {
+        this.messages.push({ role, text, thought, contextFiles });
         void this.renderMessages();
     }
 
@@ -302,6 +302,45 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv();
             if (msg.role === "model") {
                 await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+
+                if (msg.contextFiles && msg.contextFiles.length > 0) {
+                    const details = msgDiv.createEl("details", { cls: "context-details" });
+                    details.createEl("summary", { text: `Used ${msg.contextFiles.length} context documents` });
+
+                    const list = details.createDiv({ cls: "context-file-list" });
+
+                    for (const filePath of msg.contextFiles) {
+                        const fileItem = list.createDiv({ cls: "context-file-item" });
+
+                        // Icon
+                        const iconSpan = fileItem.createSpan({ cls: "context-file-icon" });
+                        setIcon(iconSpan, "file-text");
+
+                        // Name
+                        fileItem.createSpan({ cls: "context-file-name", text: filePath });
+
+                        // Click to open
+                        fileItem.addEventListener("click", () => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            if (file instanceof TFile) {
+                                void this.plugin.app.workspace.getLeaf().openFile(file);
+                            } else {
+                                new Notice(`File not found: ${filePath}`);
+                            }
+                        });
+
+                        // Drag to link
+                        fileItem.setAttribute("draggable", "true");
+                        fileItem.addEventListener("dragstart", (e) => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            if (file instanceof TFile && e.dataTransfer) {
+                                e.dataTransfer.setData("text/plain", `[[${file.name}]]`);
+                                e.dataTransfer.setData("obsidian/app-link", `obsidian://open?vault=${encodeURIComponent(this.plugin.app.vault.getName())}&file=${encodeURIComponent(file.path)}`);
+                                e.dataTransfer.effectAllowed = "copyLink";
+                            }
+                        });
+                    }
+                }
             } else {
                 contentDiv.setText(msg.text);
             }

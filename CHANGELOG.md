@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
+- **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
+
 ### Developer features
 
 ## [2.2.0] - 2026-01-22

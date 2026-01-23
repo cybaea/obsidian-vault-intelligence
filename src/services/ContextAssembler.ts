@@ -13,7 +13,7 @@ export class ContextAssembler {
     /**
      * Dynamically assembles context from search results based on the provided token budget.
      */
-    public async assemble(results: VaultSearchResult[], query: string, budgetChars: number): Promise<string> {
+    public async assemble(results: VaultSearchResult[], query: string, budgetChars: number): Promise<{ context: string; usedFiles: string[] }> {
         // Define "Starvation Protection" limit
         // No single document should take up more than 25% of the budget if there are other results.
         const singleDocSoftLimit = Math.floor(budgetChars * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
@@ -87,6 +87,6 @@ export class ContextAssembler {
             }
         }
 
-        return constructedContext;
+        return { context: constructedContext, usedFiles: Array.from(new Set(results.slice(0, includedCount).map(r => r.path))) };
     }
 }

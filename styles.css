@@ -548,3 +548,61 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Context Files List in Chat */
+.context-details {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.context-details summary {
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+}
+
+.context-details summary:hover {
+    color: var(--text-normal);
+}
+
+.context-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 12px;
+    margin-top: 4px;
+    border-left: 2px solid var(--background-modifier-border);
+}
+
+.context-file-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.context-file-item:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.context-file-icon {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.context-file-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.context-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
