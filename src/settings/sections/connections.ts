@@ -1,5 +1,18 @@
-import { Setting, TextComponent, App, setIcon } from "obsidian";
+import { Setting, TextComponent, App, setIcon, Notice } from "obsidian";
 import { IVaultIntelligencePlugin } from "../types";
+import { ModelRegistry } from "../../services/ModelRegistry";
+
+interface InternalApp extends App {
+    setting: {
+        openTabById: (id: string) => void;
+    };
+}
+
+interface InternalPlugin {
+    manifest: {
+        id: string;
+    };
+}
 
 export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Connection').setHeading();
@@ -14,27 +27,45 @@ export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaul
         .setClass('vault-intelligence-api-setting')
         .addExtraButton(btn => {
             btn.setIcon('eye')
-               .setTooltip('Show API key')
-               .onClick(() => {
-                   if (apiTextInput.inputEl.type === 'password') {
-                       apiTextInput.inputEl.type = 'text';
-                       btn.setIcon('eye-off');
-                       btn.setTooltip('Hide API key');
-                   } else {
-                       apiTextInput.inputEl.type = 'password';
-                       btn.setIcon('eye');
-                       btn.setTooltip('Show API key');
-                   }
-               });
+                .setTooltip('Show API key')
+                .onClick(() => {
+                    if (apiTextInput.inputEl.type === 'password') {
+                        apiTextInput.inputEl.type = 'text';
+                        btn.setIcon('eye-off');
+                        btn.setTooltip('Hide API key');
+                    } else {
+                        apiTextInput.inputEl.type = 'password';
+                        btn.setIcon('eye');
+                        btn.setTooltip('Show API key');
+                    }
+                });
         })
         .addText(text => {
             apiTextInput = text;
             text
                 .setPlaceholder('API key')
                 .setValue(plugin.settings.googleApiKey)
+                .setValue(plugin.settings.googleApiKey)
                 .onChange(async (value) => {
                     plugin.settings.googleApiKey = value;
                     await plugin.saveSettings();
+
+                    if (value.startsWith('AIza')) {
+                        try {
+                            // Fetch models (bypass cache for immediate feedback)
+                            await ModelRegistry.fetchModels(plugin.app, value, 0);
+                            new Notice("API key valid. Models loaded.");
+
+                            // Refresh current view to enable dropdowns
+                            const manifestId = (plugin as unknown as InternalPlugin).manifest.id;
+                            (plugin.app as unknown as InternalApp).setting.openTabById(manifestId);
+                        } catch {
+                            // Don't show notice for every character typed, only if it looks like a full key
+                            if (value.length > 30) {
+                                new Notice("Failed to load models with this key.");
+                            }
+                        }
+                    }
                 });
             text.inputEl.type = 'password';
         });
@@ -47,12 +78,12 @@ export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaul
 function getApiKeyDescription(app: App): DocumentFragment {
     const configDir = app.vault.configDir;
     const fragment = document.createDocumentFragment();
-    
+
     fragment.append('Enter your Google Gemini API key.');
 
     fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
         const iconSpan = div.createSpan();
-        setIcon(iconSpan, 'lucide-info'); 
+        setIcon(iconSpan, 'lucide-info');
         div.createSpan({}, (textSpan) => {
             textSpan.append('You can obtain an API key from the ');
             textSpan.createEl('a', {

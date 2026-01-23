@@ -7,7 +7,7 @@ import { logger } from "./utils/logger";
 import { IEmbeddingService } from "./services/IEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { GraphService } from "./services/GraphService";
-import { LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
+import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { MetadataManager } from "./services/MetadataManager";
 import { OntologyService } from "./services/OntologyService";
@@ -38,6 +38,11 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
 		this.geminiService = new GeminiService(this.settings);
+
+		// 1b. Fetch available models asynchronously
+		if (this.settings.googleApiKey) {
+			void ModelRegistry.fetchModels(this.app, this.settings.googleApiKey, this.settings.modelCacheDurationDays);
+		}
 
 		// 2. Initialize Routing Embedding Provider
 		this.embeddingService = new RoutingEmbeddingService(this, this.geminiService, this.settings);

@@ -20,7 +20,13 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
     // Fetch models if apiKey is present
     if (plugin.settings.googleApiKey) {
         void (async () => {
+            const beforeCount = ModelRegistry.getChatModels().length;
             await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, plugin.settings.modelCacheDurationDays);
+            const afterCount = ModelRegistry.getChatModels().length;
+
+            if (beforeCount !== afterCount) {
+                refreshSettings(plugin);
+            }
         })();
     }
 
@@ -216,6 +222,13 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
             for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
+
+            // Add tooltips to each option
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            }
+
             dropdown.addOption('custom', 'Custom model string...');
 
             dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');

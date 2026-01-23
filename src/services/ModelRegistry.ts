@@ -1,4 +1,5 @@
-import { App } from "obsidian";
+import { App, requestUrl } from "obsidian";
+import { logger } from "../utils/logger";
 
 interface InternalApp {
     loadLocalStorage?(key: string): string | null;
@@ -103,11 +104,13 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
 
 export class ModelRegistry {
     private static dynamicModels: ModelDefinition[] = [];
+    private static rawApiResponse: GeminiApiResponse | null = null;
     private static lastFetchTime: number = 0;
+    private static isFetching: boolean = false;
     private static CACHE_KEY = 'vault-intelligence-model-cache';
 
     static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = 7): Promise<void> {
-        if (!apiKey) return;
+        if (!apiKey || this.isFetching) return;
 
         // 1. Check Memory Cache
         const now = Date.now();
@@ -119,35 +122,44 @@ export class ModelRegistry {
 
         // 2. Check LocalStorage Cache
         if (cacheDurationDays > 0) {
-            const storage = (app as unknown as InternalApp); // Access internal storage methods
+            const storage = (app as unknown as InternalApp);
             const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
             if (typeof cached === 'string') {
                 try {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
                     if (now - parsed.timestamp < cacheDurationMs) {
+                        logger.debug("Loaded models from cache", parsed.models.length);
                         this.dynamicModels = parsed.models;
                         this.lastFetchTime = parsed.timestamp;
                         return;
                     }
                 } catch (e) {
-                    console.error("Failed to parse model cache", e);
+                    logger.error("Failed to parse model cache", e);
                 }
             }
         }
 
         // 3. Fetch from API
+        logger.debug("Fetching models from Gemini API...");
+        this.isFetching = true;
         try {
-            const { requestUrl } = await import("obsidian");
             const response = await requestUrl({
                 url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
                 method: 'GET'
             });
 
             if (response.status !== 200) {
+                logger.error(`API error ${response.status}`, response.text);
                 throw new Error(`Failed to fetch models: ${response.status}`);
             }
 
             const data = response.json as GeminiApiResponse;
+            if (!data || !data.models) {
+                logger.error("Invalid API response structure", data);
+                throw new Error("Invalid API response");
+            }
+
+            this.rawApiResponse = data;
             const fetchedModels: ModelDefinition[] = data.models.map((m: GeminiModel) => ({
                 id: m.name.replace('models/', ''),
                 label: m.displayName,
@@ -158,6 +170,7 @@ export class ModelRegistry {
                 supportedMethods: m.supportedGenerationMethods || []
             }));
 
+            logger.debug(`Successfully fetched ${fetchedModels.length} models`);
             this.dynamicModels = this.sortModels(fetchedModels);
             this.lastFetchTime = Date.now();
 
@@ -169,7 +182,7 @@ export class ModelRegistry {
                 (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
             }
         } catch (error) {
-            console.error("Error fetching Gemini models:", error);
+            logger.error("Error fetching Gemini models", error);
             // Fallback to hardcoded if fetch fails and no cache
             if (this.dynamicModels.length === 0) {
                 this.dynamicModels = [
@@ -178,6 +191,8 @@ export class ModelRegistry {
                     ...GEMINI_EMBEDDING_MODELS
                 ];
             }
+        } finally {
+            this.isFetching = false;
         }
     }
 
@@ -212,7 +227,10 @@ export class ModelRegistry {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
             m.provider === 'gemini' &&
-            (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id))
+            (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
+            // Exclude noisy/experimental variants from the main dropdowns
+            !m.id.toLowerCase().includes('nano') &&
+            !m.id.toLowerCase().includes('experimental')
         );
     }
 
@@ -227,10 +245,13 @@ export class ModelRegistry {
 
     static getGroundingModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_GROUNDING_MODELS;
-        // Grounding models are usually flash/lite models that support tools
+        // Grounding models are strictly restricted to flash/lite models.
+        // These are optimized for tool-use and search grounding where speed/cost is primary.
         return models.filter(m =>
             m.provider === 'gemini' &&
-            (m.id.includes('flash') || m.id.includes('lite'))
+            (m.id.includes('flash') || m.id.includes('lite')) &&
+            !m.id.toLowerCase().includes('experimental') &&
+            !m.id.toLowerCase().includes('nano')
         );
     }
 
@@ -253,6 +274,10 @@ export class ModelRegistry {
             ...LOCAL_EMBEDDING_MODELS,
             ...GEMINI_EMBEDDING_MODELS
         ].find(m => m.id === id);
+    }
+
+    static getRawResponse(): GeminiApiResponse | null {
+        return this.rawApiResponse;
     }
 }
 

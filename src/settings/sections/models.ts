@@ -1,5 +1,6 @@
 import { Setting, Notice, Plugin, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { logger } from "../../utils/logger";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import {
     ModelRegistry,
@@ -22,9 +23,14 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     // Fetch models if apiKey is present
     if (plugin.settings.googleApiKey) {
         void (async () => {
+            const beforeCount = ModelRegistry.getChatModels().length + ModelRegistry.getEmbeddingModels('gemini').length;
             await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, plugin.settings.modelCacheDurationDays);
-            // We don't necessarily need to refresh here if the models are already in cache,
-            // but for the first load with key it helps.
+            const afterCount = ModelRegistry.getChatModels().length + ModelRegistry.getEmbeddingModels('gemini').length;
+
+            // If we went from 0 (or hardcoded) to fetched, refresh the UI
+            if (beforeCount !== afterCount) {
+                refreshSettings(plugin);
+            }
         })();
     }
 
@@ -76,6 +82,13 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 for (const m of geminiEmbeddingModels) {
                     dropdown.addOption(m.id, m.label);
                 }
+
+                // Add tooltips to each option
+                for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                    const opt = dropdown.selectEl.options.item(i);
+                    if (opt && opt.value !== 'custom') opt.title = opt.value;
+                }
+
                 dropdown.addOption('custom', 'Custom model ID...');
 
                 const current = plugin.settings.embeddingModel;
@@ -310,6 +323,13 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
+
+            // Add tooltips to each option
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            }
+
             dropdown.addOption('custom', 'Custom model string...');
 
             dropdown.setValue(isChatPreset ? chatModelCurrent : 'custom');
@@ -374,6 +394,13 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
             for (const m of groundingModels) {
                 dropdown.addOption(m.id, m.label);
             }
+
+            // Add tooltips to each option
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            }
+
             dropdown.addOption('custom', 'Custom model string...');
 
             dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
@@ -436,6 +463,13 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 for (const m of chatModels) {
                     dropdown.addOption(m.id, m.label);
                 }
+
+                // Add tooltips to each option
+                for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                    const opt = dropdown.selectEl.options.item(i);
+                    if (opt && opt.value !== 'custom') opt.title = opt.value;
+                }
+
                 dropdown.addOption('custom', 'Custom model string...');
 
                 dropdown.setValue(isCodePreset ? codeModelCurrent : 'custom');
@@ -503,6 +537,22 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 btn.setDisabled(false);
                 btn.setButtonText("Refresh models");
                 refreshSettings(plugin);
+            }));
+
+    new Setting(containerEl)
+        .setName('Debug model list')
+        .setDesc('Log the full response from the last Gemini model fetch to the developer console.')
+        .addButton(btn => btn
+            .setButtonText("Log items")
+            .setIcon('terminal')
+            .onClick(() => {
+                const raw = ModelRegistry.getRawResponse();
+                if (raw) {
+                    logger.info("Gemini Models response:", raw);
+                    new Notice("JSON logged to console (Ctrl+Shift+I)");
+                } else {
+                    new Notice("No model data available. Please refresh first.");
+                }
             }));
 }
 
