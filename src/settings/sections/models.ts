@@ -3,9 +3,7 @@ import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import {
     ModelRegistry,
-    LOCAL_EMBEDDING_MODELS,
-    GEMINI_CHAT_MODELS,
-    GEMINI_GROUNDING_MODELS
+    LOCAL_EMBEDDING_MODELS
 } from "../../services/ModelRegistry";
 
 interface InternalApp extends App {
@@ -20,6 +18,17 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.setText('Specify the models to use for different tasks.');
     });
+
+    // Fetch models if apiKey is present
+    if (plugin.settings.googleApiKey) {
+        void (async () => {
+            await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, plugin.settings.modelCacheDurationDays);
+            // We don't necessarily need to refresh here if the models are already in cache,
+            // but for the first load with key it helps.
+        })();
+    }
+
+    const hasApiKey = !!plugin.settings.googleApiKey;
 
     // --- 1. Embedding Provider ---
     new Setting(containerEl)
@@ -59,16 +68,53 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
         .setDesc(`The model used to generate vector embeddings.`);
 
     if (plugin.settings.embeddingProvider === 'gemini') {
+        const geminiEmbeddingModels = ModelRegistry.getEmbeddingModels('gemini');
         embeddingSetting.setDesc(`Gemini model ID (Dimensions: ${plugin.settings.embeddingDimension}).`);
-        embeddingSetting.addText(text => text
-            .setPlaceholder(DEFAULT_SETTINGS.embeddingModel)
-            .setValue(plugin.settings.embeddingModel)
-            .onChange((value) => {
-                void (async () => {
-                    plugin.settings.embeddingModel = value;
-                    await plugin.saveSettings();
-                })();
-            }));
+
+        if (hasApiKey) {
+            embeddingSetting.addDropdown(dropdown => {
+                for (const m of geminiEmbeddingModels) {
+                    dropdown.addOption(m.id, m.label);
+                }
+                dropdown.addOption('custom', 'Custom model ID...');
+
+                const current = plugin.settings.embeddingModel;
+                const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+                dropdown.setValue(isPreset ? current : 'custom');
+
+                dropdown.onChange((val) => {
+                    void (async () => {
+                        if (val !== 'custom') {
+                            const modelDef = ModelRegistry.getModelById(val);
+                            plugin.settings.embeddingModel = val;
+                            if (modelDef?.dimensions) {
+                                plugin.settings.embeddingDimension = modelDef.dimensions;
+                            }
+                            await plugin.saveSettings();
+                        }
+                        refreshSettings(plugin);
+                    })();
+                });
+            });
+
+            const current = plugin.settings.embeddingModel;
+            const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+            if (!isPreset) {
+                new Setting(containerEl)
+                    .setName('Custom embedding model')
+                    .setDesc('Enter the specific Gemini model ID.')
+                    .addText(text => text
+                        .setValue(current)
+                        .onChange(async (val) => {
+                            plugin.settings.embeddingModel = val;
+                            await plugin.saveSettings();
+                        }));
+            }
+        } else {
+            embeddingSetting.addText(text => text
+                .setPlaceholder('Enter Gemini API key to enable selection')
+                .setDisabled(true));
+        }
     } else {
         embeddingSetting.addDropdown(dropdown => {
             for (const m of LOCAL_EMBEDDING_MODELS) {
@@ -248,13 +294,20 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
 
     // --- 3. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
-    const isChatPreset = GEMINI_CHAT_MODELS.some(m => m.id === chatModelCurrent);
+    const chatModels = ModelRegistry.getChatModels();
+    const isChatPreset = chatModels.some(m => m.id === chatModelCurrent);
 
     new Setting(containerEl)
         .setName('Chat model')
         .setDesc('Main model used for reasoning and answering questions.')
         .addDropdown(dropdown => {
-            for (const m of GEMINI_CHAT_MODELS) {
+            if (!hasApiKey) {
+                dropdown.addOption('none', 'Enter API key to enable...');
+                dropdown.setDisabled(true);
+                return;
+            }
+
+            for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
             dropdown.addOption('custom', 'Custom model string...');
@@ -305,13 +358,20 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
 
     // 4. Grounding Model
     const groundingModelCurrent = plugin.settings.groundingModel;
-    const isGroundingPreset = GEMINI_GROUNDING_MODELS.some(m => m.id === groundingModelCurrent);
+    const groundingModels = ModelRegistry.getGroundingModels();
+    const isGroundingPreset = groundingModels.some(m => m.id === groundingModelCurrent);
 
     new Setting(containerEl)
         .setName('Grounding model')
         .setDesc(`The fast, cost-effective model used specifically for web searches.`)
         .addDropdown(dropdown => {
-            for (const m of GEMINI_GROUNDING_MODELS) {
+            if (!hasApiKey) {
+                dropdown.addOption('none', 'Enter API key to enable...');
+                dropdown.setDisabled(true);
+                return;
+            }
+
+            for (const m of groundingModels) {
                 dropdown.addOption(m.id, m.label);
             }
             dropdown.addOption('custom', 'Custom model string...');
@@ -360,13 +420,20 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
 
     if (plugin.settings.enableCodeExecution) {
         const codeModelCurrent = plugin.settings.codeModel;
-        const isCodePreset = GEMINI_CHAT_MODELS.some(m => m.id === codeModelCurrent);
+        const chatModels = ModelRegistry.getChatModels();
+        const isCodePreset = chatModels.some(m => m.id === codeModelCurrent);
 
         new Setting(containerEl)
             .setName('Code model')
             .setDesc(`The model used for code execution.`)
             .addDropdown(dropdown => {
-                for (const m of GEMINI_CHAT_MODELS) {
+                if (!hasApiKey) {
+                    dropdown.addOption('none', 'Enter API key to enable...');
+                    dropdown.setDisabled(true);
+                    return;
+                }
+
+                for (const m of chatModels) {
                     dropdown.addOption(m.id, m.label);
                 }
                 dropdown.addOption('custom', 'Custom model string...');
@@ -399,6 +466,44 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                     }));
         }
     }
+
+    // --- 6. Model List Management ---
+    new Setting(containerEl).setName('Model list management').setHeading();
+
+    new Setting(containerEl)
+        .setName('Model list cache duration (days)')
+        .setDesc('How many days to keep the list of available Gemini models before refreshing. Set to 0 to always fetch.')
+        .addText(text => text
+            .setPlaceholder('7')
+            .setValue(String(plugin.settings.modelCacheDurationDays))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.modelCacheDurationDays = num;
+                    await plugin.saveSettings();
+                }
+            }));
+
+    new Setting(containerEl)
+        .setName('Refresh model list')
+        .setDesc('Force a fresh fetch of available models from the Gemini API.')
+        .addButton(btn => btn
+            .setButtonText("Refresh models")
+            .setIcon('refresh-cw')
+            .setDisabled(!hasApiKey)
+            .onClick(async () => {
+                btn.setDisabled(true);
+                btn.setButtonText("Refreshing...");
+                try {
+                    await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, 0); // bypass cache
+                    new Notice("Model list refreshed");
+                } catch {
+                    new Notice("Failed to refresh models");
+                }
+                btn.setDisabled(false);
+                btn.setButtonText("Refresh models");
+                refreshSettings(plugin);
+            }));
 }
 
 function refreshSettings(plugin: IVaultIntelligencePlugin) {

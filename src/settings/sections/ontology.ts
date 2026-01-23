@@ -1,6 +1,6 @@
 import { Setting, Notice, Plugin, App, TextComponent } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { GEMINI_CHAT_MODELS } from "../../services/ModelRegistry";
+import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
 
 interface InternalApp extends App {
@@ -16,6 +16,15 @@ interface InternalApp extends App {
  */
 export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
     new Setting(containerEl).setName('Ontology').setHeading();
+
+    // Fetch models if apiKey is present
+    if (plugin.settings.googleApiKey) {
+        void (async () => {
+            await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, plugin.settings.modelCacheDurationDays);
+        })();
+    }
+
+    const hasApiKey = !!plugin.settings.googleApiKey;
 
     new Setting(containerEl)
         .setName('Ontology path')
@@ -191,13 +200,20 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
     new Setting(containerEl).setName('Gardener model and persona').setHeading();
 
     const gardenerModelCurrent = plugin.settings.gardenerModel;
-    const isGardenerPreset = GEMINI_CHAT_MODELS.some(m => m.id === gardenerModelCurrent);
+    const chatModels = ModelRegistry.getChatModels();
+    const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
 
     new Setting(containerEl)
         .setName('Gardener model')
         .setDesc('The model used specifically for ontology refinement and hygiene (tidy vault).')
         .addDropdown(dropdown => {
-            for (const m of GEMINI_CHAT_MODELS) {
+            if (!hasApiKey) {
+                dropdown.addOption('none', 'Enter API key to enable...');
+                dropdown.setDisabled(true);
+                return;
+            }
+
+            for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
             dropdown.addOption('custom', 'Custom model string...');

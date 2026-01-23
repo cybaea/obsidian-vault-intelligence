@@ -36,6 +36,7 @@ export interface VaultIntelligenceSettings {
     gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
     excludedFolders: string[];
+    modelCacheDurationDays: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -120,7 +121,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerContextBudget: 100000,
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
-    excludedFolders: ['Ontology', 'Gardener/Plans']
+    excludedFolders: ['Ontology', 'Gardener/Plans'],
+    modelCacheDurationDays: 7
 };
 
 export interface IVaultIntelligencePlugin {
