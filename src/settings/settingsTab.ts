@@ -5,6 +5,7 @@ import { renderModelSettings } from "./sections/models";
 import { renderIndexingSettings } from "./sections/indexing";
 import { renderAdvancedSettings } from "./sections/advanced";
 import { renderOntologySettings } from "./sections/ontology";
+import { renderDeveloperSettings } from "./sections/developer";
 
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
     plugin: IVaultIntelligencePlugin;
@@ -25,5 +26,6 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         renderIndexingSettings(containerEl, this.plugin);
         renderOntologySettings(containerEl, this.plugin);
         renderAdvancedSettings(containerEl, this.plugin);
+        renderDeveloperSettings(containerEl, this.plugin);
     }
 }

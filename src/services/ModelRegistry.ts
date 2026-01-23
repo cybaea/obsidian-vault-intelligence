@@ -27,6 +27,7 @@ export interface ModelDefinition {
 export interface ModelCache {
     timestamp: number;
     models: ModelDefinition[];
+    rawResponse?: GeminiApiResponse;
 }
 
 interface GeminiModel {
@@ -134,6 +135,7 @@ export class ModelRegistry {
                         logger.debug("Loaded models from cache", parsed.models.length);
                         this.dynamicModels = parsed.models;
                         this.lastFetchTime = parsed.timestamp;
+                        this.rawApiResponse = parsed.rawResponse || null;
                         return;
                     }
                 } catch (e) {
@@ -180,7 +182,8 @@ export class ModelRegistry {
             if (cacheDurationDays > 0) {
                 const cacheData: ModelCache = {
                     timestamp: this.lastFetchTime,
-                    models: this.dynamicModels
+                    models: this.dynamicModels,
+                    rawResponse: this.rawApiResponse || undefined
                 };
                 (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
             }

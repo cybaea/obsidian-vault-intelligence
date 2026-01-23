@@ -30,7 +30,6 @@ export class Logger {
 
     public info(message: string, ...args: unknown[]) {
         if (this.level <= LogLevel.INFO) {
-            // info is not allowed in Obsidian so change to warn - reference https://discord.com/channels/686053708261228577/840286264964022302/1455955627527508133
             console.warn(`[VaultIntelligence:INFO] ${message}`, ...args);
         }
     }

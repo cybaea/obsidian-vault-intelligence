@@ -1,11 +1,11 @@
 import { Setting, Notice, Plugin, App, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { logger } from "../../utils/logger";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import {
     ModelRegistry,
     LOCAL_EMBEDDING_MODELS
 } from "../../services/ModelRegistry";
+import { UI_CONSTANTS } from "../../constants";
 
 interface InternalApp extends App {
     setting: {
@@ -372,6 +372,15 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
     new Setting(containerEl)
         .setName('Context window budget')
         .setDesc(`Max tokens the AI can consider. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`)
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO * 100}% of model limit)`)
+            .onClick(async () => {
+                const refreshedLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
+                plugin.settings.contextWindowTokens = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO);
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            }))
         .addText(text => {
             text.setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
                 .setValue(String(plugin.settings.contextWindowTokens))
@@ -556,21 +565,6 @@ export function renderModelSettings(containerEl: HTMLElement, plugin: IVaultInte
                 refreshSettings(plugin);
             }));
 
-    new Setting(containerEl)
-        .setName('Debug model list')
-        .setDesc('Log the full response from the last Gemini model fetch to the developer console.')
-        .addButton(btn => btn
-            .setButtonText("Log items")
-            .setIcon('terminal')
-            .onClick(() => {
-                const raw = ModelRegistry.getRawResponse();
-                if (raw) {
-                    logger.info("Gemini Models response:", raw);
-                    new Notice("JSON logged to console (Ctrl+Shift+I)");
-                } else {
-                    new Notice("No model data available. Please refresh first.");
-                }
-            }));
 }
 
 function refreshSettings(plugin: IVaultIntelligencePlugin) {

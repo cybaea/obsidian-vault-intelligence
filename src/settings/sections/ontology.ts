@@ -2,6 +2,7 @@ import { Setting, Notice, Plugin, App, TextComponent } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
+import { UI_CONSTANTS } from "../../constants";
 
 interface InternalApp extends App {
     setting: {
@@ -90,10 +91,84 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                 }
             }));
 
+    // --- Gardener Model & Persona ---
+    new Setting(containerEl).setName('Gardener model and persona').setHeading();
+
+    const gardenerModelCurrent = plugin.settings.gardenerModel;
+    const chatModels = ModelRegistry.getChatModels();
+    const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
+
+    new Setting(containerEl)
+        .setName('Gardener model')
+        .setDesc('The model used specifically for ontology refinement and hygiene (tidy vault).')
+        .addDropdown(dropdown => {
+            if (!hasApiKey) {
+                dropdown.addOption('none', 'Enter API key to enable...');
+                dropdown.setDisabled(true);
+                return;
+            }
+
+            for (const m of chatModels) {
+                dropdown.addOption(m.id, m.label);
+            }
+
+            // Add tooltips to each option
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            }
+
+            dropdown.addOption('custom', 'Custom model string...');
+
+            dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
+
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        // Scale the budget proportionally to the new model's capacity
+                        const oldModelId = plugin.settings.gardenerModel;
+                        plugin.settings.gardenerContextBudget = ModelRegistry.calculateAdjustedBudget(
+                            plugin.settings.gardenerContextBudget,
+                            oldModelId,
+                            val
+                        );
+
+                        plugin.settings.gardenerModel = val;
+                        await plugin.saveSettings();
+                    }
+                    refreshSettings(plugin);
+                })();
+            });
+        });
+
+    if (!isGardenerPreset) {
+        new Setting(containerEl)
+            .setName('Custom model ID')
+            .setDesc('Enter the specific Gemini model ID.')
+            .addText(text => text
+                .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
+                .setValue(gardenerModelCurrent)
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.gardenerModel = value;
+                        await plugin.saveSettings();
+                    })();
+                }));
+    }
+
     const gardenerModelLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
     new Setting(containerEl)
         .setName("Gardener context budget (tokens)")
         .setDesc(`Maximum total tokens estimated for analysis. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`)
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
+            .onClick(async () => {
+                const refreshedLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
+                plugin.settings.gardenerContextBudget = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO);
+                await plugin.saveSettings();
+                refreshSettings(plugin);
+            }))
         .addText(text => {
             text.setPlaceholder('50000')
                 .setValue(String(plugin.settings.gardenerContextBudget))
@@ -210,71 +285,6 @@ export function renderOntologySettings(containerEl: HTMLElement, plugin: IVaultI
                     renderExcludedFolders();
                 }
             }));
-
-    // --- Gardener Model & Persona ---
-    new Setting(containerEl).setName('Gardener model and persona').setHeading();
-
-    const gardenerModelCurrent = plugin.settings.gardenerModel;
-    const chatModels = ModelRegistry.getChatModels();
-    const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
-
-    new Setting(containerEl)
-        .setName('Gardener model')
-        .setDesc('The model used specifically for ontology refinement and hygiene (tidy vault).')
-        .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
-                dropdown.setDisabled(true);
-                return;
-            }
-
-            for (const m of chatModels) {
-                dropdown.addOption(m.id, m.label);
-            }
-
-            // Add tooltips to each option
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
-            }
-
-            dropdown.addOption('custom', 'Custom model string...');
-
-            dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
-
-            dropdown.onChange((val) => {
-                void (async () => {
-                    if (val !== 'custom') {
-                        // Scale the budget proportionally to the new model's capacity
-                        const oldModelId = plugin.settings.gardenerModel;
-                        plugin.settings.gardenerContextBudget = ModelRegistry.calculateAdjustedBudget(
-                            plugin.settings.gardenerContextBudget,
-                            oldModelId,
-                            val
-                        );
-
-                        plugin.settings.gardenerModel = val;
-                        await plugin.saveSettings();
-                    }
-                    refreshSettings(plugin);
-                })();
-            });
-        });
-
-    if (!isGardenerPreset) {
-        new Setting(containerEl)
-            .setName('Custom model ID')
-            .setDesc('Enter the specific Gemini model ID.')
-            .addText(text => text
-                .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
-                .setValue(gardenerModelCurrent)
-                .onChange((value) => {
-                    void (async () => {
-                        plugin.settings.gardenerModel = value;
-                        await plugin.saveSettings();
-                    })();
-                }));
-    }
 
     new Setting(containerEl)
         .setName('Gardener system instruction')
