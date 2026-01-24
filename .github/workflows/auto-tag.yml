@@ -14,7 +14,7 @@ jobs:
       contents: write # Needed to check contents
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # VITAL: Use the PAT so the subsequent push triggers the release workflow.
           # If you use GITHUB_TOKEN, the release workflow will NOT run.
