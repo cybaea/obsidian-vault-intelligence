@@ -8,6 +8,7 @@ import {
     WorkerErrorResponse,
     ProgressPayload
 } from '../types/worker.types';
+import { isPublicUrl } from '../utils/url';
 
 // --- 1. Strong Typing for Environment ---
 // Cast env for safe configuration
@@ -67,8 +68,7 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         // --- Header Sanitization ---
         // Aggressively strip Authorization headers for HuggingFace and Public CDNs 
         // as they cause 401s if malformed or present on public models.
-        const isPublicUrl = url.includes('huggingface.co') || url.includes('jsdelivr.net');
-        if (isPublicUrl) {
+        if (isPublicUrl(url)) {
             delete headers['authorization'];
             delete headers['Authorization'];
         } else {
