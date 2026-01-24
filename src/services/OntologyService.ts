@@ -42,10 +42,7 @@ export class OntologyService {
 
             // 3. Create default Instructions.md in root
             const instructionsPath = normalizePath(`${basePath}/Instructions.md`);
-            if (!(this.app.vault.getAbstractFileByPath(instructionsPath) instanceof TFile)) {
-                await this.app.vault.create(instructionsPath, ONTOLOGY_TEMPLATES.INSTRUCTIONS);
-                logger.info(`Created default instructions: ${instructionsPath}`);
-            }
+            await this.ensureFile(instructionsPath, ONTOLOGY_TEMPLATES.INSTRUCTIONS, "default instructions");
 
         } catch (error) {
             logger.error(`Failed to ensure ontology structure at ${basePath}`, error);
@@ -59,9 +56,33 @@ export class OntologyService {
         await this.ensureFolder(folderPath);
 
         const filePath = normalizePath(`${folderPath}/${fileName}`);
-        if (!(this.app.vault.getAbstractFileByPath(filePath) instanceof TFile)) {
-            await this.app.vault.create(filePath, template);
-            logger.info(`Created template file: ${filePath}`);
+        await this.ensureFile(filePath, template, "template file");
+    }
+
+    /**
+     * Robust file creation that handles "Already exists" errors gracefully.
+     */
+    private async ensureFile(path: string, content: string, label: string = "file"): Promise<void> {
+        const normalizedPath = normalizePath(path);
+        const file = this.app.vault.getAbstractFileByPath(normalizedPath);
+
+        if (file instanceof TFile) return;
+
+        if (file instanceof TFolder) {
+            logger.warn(`Cannot create ${label} ${normalizedPath} because a folder already exists at this path.`);
+            return;
+        }
+
+        try {
+            await this.app.vault.create(normalizedPath, content);
+            logger.info(`Created ${label}: ${normalizedPath}`);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg.toLowerCase().includes('already exists')) {
+                logger.debug(`${label} ${normalizedPath} already exists (checked during creation).`);
+            } else {
+                throw new Error(`Failed to create ${label} ${normalizedPath}: ${msg}`);
+            }
         }
     }
 

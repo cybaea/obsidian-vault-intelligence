@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer features
 
 - **Lazy Loading Implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
-- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
+- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
 - **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
 - **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
 - **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
