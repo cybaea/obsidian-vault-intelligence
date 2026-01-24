@@ -64,6 +64,7 @@
 		"zod": "^4.3.5"
 	},
 	"overrides": {
-		"esbuild": "0.25.5"
+		"esbuild": "0.25.5",
+		"lodash-es": "4.17.23"
 	}
 }
