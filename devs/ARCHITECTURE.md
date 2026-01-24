@@ -139,6 +139,29 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >         V-->>U: Read Answer
 >     ```
 >
+> 2.  **Mechanics (Detailed Control Flow)**:
+>     The `AgentService` uses a loop to handle multiple tool calls (if necessary) before providing a final answer.
+>     ```mermaid
+>     flowchart TD
+>         Start[User Prompt] --> Agent[AgentService: chat]
+>         Agent --> LLM[GeminiService: sendMessage]
+>         LLM --> Check{Tool Call?}
+>         Check -- Yes --> Exec[Execute Tool]
+>         Exec --> LLM
+>         Check -- No --> Final[Return Final Answer]
+>         
+>         subgraph "Tools Available"
+>             T1[Vault Search]
+>             T2[Google Search]
+>             T3[Read URL]
+>             T4[Code Execution]
+>         end
+>         Exec -.-> T1
+>         Exec -.-> T2
+>         Exec -.-> T3
+>         Exec -.-> T4
+>     ```
+>
 
 ### 3.3. Model fetching and budget scaling (metadata flow)
 
@@ -161,7 +184,9 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >         S->>R: calculateAdjustedBudget(oldId, newId)
 >         R-->>S: New scaled budget value
 >     ```
->
+> 2.  **Model Selection Logic**:
+>     Models are ranked based on their capabilities (Flash vs Pro) and version (Gemini 3 > 2 > 1.5). Preview and experimental models receive a slight penalty in ranking to prefer stable releases for the main user interface.
+
 
 ### 3.4. System mechanics and orchestration
 

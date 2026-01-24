@@ -6,9 +6,7 @@ import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Int
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
 
-import { SEARCH_CONSTANTS } from "../constants";
-
-export const RESEARCH_CHAT_VIEW_TYPE = "research-chat-view";
+import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
@@ -43,7 +41,7 @@ export class ResearchChatView extends ItemView {
     }
 
     getViewType() {
-        return RESEARCH_CHAT_VIEW_TYPE;
+        return VIEW_TYPES.RESEARCH_CHAT;
     }
 
     getDisplayText() {

@@ -215,15 +215,18 @@ export class ModelRegistry {
             const getScore = (m: ModelDefinition) => {
                 const id = m.id.toLowerCase();
                 let score = 0;
-                if (id.includes('gemini-3')) score += 4000;
-                else if (id.includes('gemini-2.5')) score += 3000;
-                else if (id.includes('gemini-2')) score += 2500;
-                else if (id.includes('gemini-1.5')) score += 2000;
+                if (id.includes('gemini-3')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_3;
+                else if (id.includes('gemini-2.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2_5;
+                else if (id.includes('gemini-2')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2;
+                else if (id.includes('gemini-1.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_5;
                 else if (id.includes('gemini-1.0')) score += 1000;
 
                 if (id.includes('pro')) score += 500;
                 else if (id.includes('flash')) score += 300;
                 else if (id.includes('lite')) score += 100;
+
+                if (id.includes('preview')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PREVIEW_PENALTY;
+                if (id.includes('experimental')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EXPERIMENTAL_PENALTY;
 
                 if (!id.includes('preview') && !id.includes('experimental')) {
                     score += MODEL_REGISTRY_CONSTANTS.PRODUCTION_BOOST;
@@ -301,8 +304,8 @@ export class ModelRegistry {
 
     /**
      * Retrieves a model definition by its unique ID.
-     * @param id - The model ID.
-     * @returns The model definition or undefined if not found.
+     * @param id - The model ID string (e.g., 'gemini-1.5-flash').
+     * @returns The model definition or undefined if not found in any registry.
      */
     public static getModelById(id: string): ModelDefinition | undefined {
         const dynamic = this.dynamicModels.find(m => m.id === id);

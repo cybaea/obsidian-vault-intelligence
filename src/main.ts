@@ -1,8 +1,8 @@
 import { Plugin, WorkspaceLeaf, Menu, Notice } from 'obsidian';
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GeminiService } from "./services/GeminiService";
-import { SimilarNotesView, SIMILAR_NOTES_VIEW_TYPE } from "./views/SimilarNotesView";
-import { ResearchChatView, RESEARCH_CHAT_VIEW_TYPE } from "./views/ResearchChatView";
+import { SimilarNotesView } from "./views/SimilarNotesView";
+import { ResearchChatView } from "./views/ResearchChatView";
 import { logger } from "./utils/logger";
 import { IEmbeddingService } from "./services/IEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
@@ -14,6 +14,7 @@ import { OntologyService } from "./services/OntologyService";
 import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
 import { GardenerStateService } from "./services/GardenerStateService";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
+import { VIEW_TYPES, SANITIZATION_CONSTANTS } from "./constants";
 
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
@@ -83,7 +84,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					.setTitle('Researcher: chat with vault')
 					.setIcon('message-square')
 					.onClick(() => {
-						void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
+						void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
 					})
 			);
 			menu.addItem((item) =>
@@ -91,7 +92,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					.setTitle('Explorer: view similar notes')
 					.setIcon('files')
 					.onClick(() => {
-						void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
+						void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
 					})
 			);
 			menu.showAtMouseEvent(evt);
@@ -99,12 +100,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// Register Views
 		this.registerView(
-			SIMILAR_NOTES_VIEW_TYPE,
+			VIEW_TYPES.SIMILAR_NOTES,
 			(leaf) => new SimilarNotesView(leaf, this, this.graphService, this.geminiService, this.embeddingService)
 		);
 
 		this.registerView(
-			RESEARCH_CHAT_VIEW_TYPE,
+			VIEW_TYPES.RESEARCH_CHAT,
 			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.graphService, this.embeddingService)
 		);
 
@@ -113,7 +114,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			id: 'open-similar-notes-view',
 			name: 'Explorer: view similar notes',
 			callback: () => {
-				void this.activateView(SIMILAR_NOTES_VIEW_TYPE);
+				void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
 			}
 		});
 
@@ -121,7 +122,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			id: 'open-research-chat-view',
 			name: 'Researcher: chat with vault',
 			callback: () => {
-				void this.activateView(RESEARCH_CHAT_VIEW_TYPE);
+				void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
 			}
 		});
 
@@ -180,7 +181,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Event listeners for UI updates
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => {
-				const leaves = this.app.workspace.getLeavesOfType(SIMILAR_NOTES_VIEW_TYPE);
+				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
 				leaves.forEach(leaf => {
 					if (leaf.view instanceof SimilarNotesView) {
 						void leaf.view.updateView();
@@ -222,7 +223,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				const nomicV1 = 'Xenova/nomic-embed-text-v1';
 				logger.info(`Migrating model from v1.5 to v1: ${modelId} -> ${nomicV1}`);
 				this.settings.embeddingModel = nomicV1;
-				this.settings.embeddingDimension = 768;
+				this.settings.embeddingDimension = SANITIZATION_CONSTANTS.DEFAULT_EMBEDDING_DIMENSION;
 				await this.saveData(this.settings);
 			}
 		}
@@ -279,8 +280,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			}
 
 			// 3. Floor for usability
-			if (cleaned < 1024) {
-				cleaned = 1024;
+			if (cleaned < SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT) {
+				cleaned = SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT;
 				changed = true;
 			}
 

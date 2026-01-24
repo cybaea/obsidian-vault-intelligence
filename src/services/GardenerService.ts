@@ -39,6 +39,10 @@ export type GardenerPlan = z.infer<typeof GardenerPlanSchema>;
 /**
  * Service to orchestrate the vault "Tidying" process.
  */
+/**
+ * Service that orchestrates vault "gardening" activities.
+ * Analyzes note structure and proposes metadata improvements based on the ontology.
+ */
 export class GardenerService {
     private app: App;
     private gemini: GeminiService;
@@ -57,6 +61,10 @@ export class GardenerService {
     /**
      * Runs the Gardener analysis and generates a plan note.
      * Uses a "Placeholder-to-Update" flow: creates the file immediately, opens it, then updates in background.
+     */
+    /**
+     * Scans the vault for potential improvements and generates a "gardening plan".
+     * @returns The TFile of the generated plan or null if no actions needed.
      */
     public async tidyVault(): Promise<TFile | null> {
         logger.info("Starting Gardener: Tidy Vault");

@@ -1,11 +1,10 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
 import VaultIntelligencePlugin from "../main";
+import { logger } from "../utils/logger";
 import { GraphService } from "../services/GraphService";
 import { GeminiService } from "../services/GeminiService";
-import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
-import { logger } from "../utils/logger";
-
-export const SIMILAR_NOTES_VIEW_TYPE = "similar-notes-view";
+import { IEmbeddingService } from "../services/IEmbeddingService";
+import { VIEW_TYPES } from "../constants";
 
 export class SimilarNotesView extends ItemView {
     plugin: VaultIntelligencePlugin;
@@ -29,7 +28,7 @@ export class SimilarNotesView extends ItemView {
     }
 
     getViewType() {
-        return SIMILAR_NOTES_VIEW_TYPE;
+        return VIEW_TYPES.SIMILAR_NOTES;
     }
 
     getDisplayText() {

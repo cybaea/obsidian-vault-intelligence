@@ -53,7 +53,10 @@ export const SEARCH_CONSTANTS = {
     FUZZY_LONG_QUERY_THRESHOLD: 4,
 
     /** Scoring: Minimum hits required in a long query to consider relevant */
-    FUZZY_MIN_HITS_FOR_LONG_QUERY: 2
+    FUZZY_MIN_HITS_FOR_LONG_QUERY: 2,
+
+    /** Max number of keyword matches to find before stopping */
+    MAX_KEYWORD_MATCHES: 100
 };
 
 export const EMBEDDING_CONSTANTS = {
@@ -136,7 +139,15 @@ export const UI_CONSTANTS = {
     DEFAULT_CHAT_CONTEXT_RATIO: 0.2,
 
     /** Default ratio of model capacity to use for Gardener context budget (0.1 = 10%) */
-    DEFAULT_GARDENER_CONTEXT_RATIO: 0.1
+    DEFAULT_GARDENER_CONTEXT_RATIO: 0.1,
+
+    /** Minimum tokens to bother with for tokenization blocks */
+    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000
+};
+
+export const VIEW_TYPES = {
+    RESEARCH_CHAT: "research-chat-view",
+    SIMILAR_NOTES: "similar-notes-view"
 };
 
 export const AGENT_CONSTANTS = {
@@ -164,5 +175,23 @@ export const MODEL_REGISTRY_CONSTANTS = {
     CONTEXT_ADJUSTMENT_FLOOR: 1024,
 
     /** Default cache duration for fetched models (days) */
-    DEFAULT_CACHE_DURATION_DAYS: 7
+    DEFAULT_CACHE_DURATION_DAYS: 7,
+
+    /** Weighted scores for model sorting */
+    SCORES: {
+        GEMINI_3: 4000,
+        GEMINI_2_5: 3000,
+        GEMINI_2: 2500,
+        GEMINI_1_5: 2000,
+        EXPERIMENTAL_PENALTY: -50,
+        PREVIEW_PENALTY: -20
+    }
+};
+
+export const SANITIZATION_CONSTANTS = {
+    /** Minimum context tokens floor */
+    MIN_TOKEN_LIMIT: 1024,
+
+    /** Default embedding dimension */
+    DEFAULT_EMBEDDING_DIMENSION: 768
 };
