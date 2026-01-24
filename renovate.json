@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended", 
+    ":maintainLockFilesWeekly",
+    ":semanticCommits",
+    "group:allNonMajor"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["eslint", "prettier", "@typescript-eslint"],
+      "groupName": "linting"
+    }
+  ]
+}
