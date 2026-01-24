@@ -44,10 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concurrency Protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
 - **Settings Sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
 - **UI Architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
-- **Constant Centralization**: Refactored context budget ratios and search scoring heuristics to use centralized constants in `src/constants.ts`.
-- **Architectural Documentation**: Comprehensive update to `devs/ARCHITECTURE.md` with detailed Mermaid.js data flows, control flows, and service interface definitions.
-- **Worker Robustness**: Replaced unsafe non-null assertions in the embedding worker with defensive null checks to prevent runtime exceptions during model configuration.
-- **Service Documentation**: Added comprehensive Inline JSDoc and strict access modifiers to core services like `ModelRegistry` to improve code clarity and maintainability.
+- **Constant Centralisation**: Refactored view types, sanitisation limits, and model ranking scores into `src/constants.ts` to improve maintainability and eliminate magic numbers.
+- **Architectural Documentation**: Enhanced `devs/ARCHITECTURE.md` with detailed Mermaid.js diagrams for Agent control flows and Model selection logic.
+- **Service Safety**: Replaced unsafe non-null assertions in `LocalEmbeddingService` with defensive checks to ensure stable task dequeuing.
+- **Service Documentation**: Improved JSDoc coverage for core services including `OntologyService`, `GardenerService`, and `SearchOrchestrator` to improve maintainability.
 - **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (eg when updating worker configurations).
 
 
