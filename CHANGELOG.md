@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
 - **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
 - **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
 - **Dynamic Model Fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
@@ -49,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Recursive Directory Context**: Mentioning a folder with `@` now recursively includes all Markdown files within that directory, ranked by semantic similarity to your query (Resolves #48).
 - **Context-Aware Chat**: The Researcher now automatically includes all visible Markdown files as context when asking questions like "What's this about?". You can now chat with your open notes without needing explicit `@` mentions.
 - **Prioritized @ Suggestions**: The suggestion box now ranks currently visible files at the top of the list, ensuring your active workspace is always easy to reference.
-- **Native Suggestion UI**: Restored "lovely" native Obsidian icons and improved the suggestion layout for a more premium, integrated feel.
+- **Native Suggestion UI**: Restored native Obsidian icons and improved the suggestion layout for a more premium, integrated feel.
 - **Helpful Chat Guidance**: Added a helpful hint to the chat input and updated system instructions to guide users on using `@` mentions and implicit context.
 
 ### Developer features

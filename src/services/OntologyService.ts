@@ -29,20 +29,18 @@ export class OntologyService {
      */
     public async ensureOntologyStructure(): Promise<void> {
         const basePath = normalizePath(this.settings.ontologyPath);
+        if (!basePath || basePath === "." || basePath === "/") return;
 
         try {
-            // Create base folder
-            if (!(this.app.vault.getAbstractFileByPath(basePath) instanceof TFolder)) {
-                await this.app.vault.createFolder(basePath);
-                logger.info(`Created base ontology folder: ${basePath}`);
-            }
+            // 1. Ensure base folder
+            await this.ensureFolder(basePath);
 
-            // Create subfolders and templates
+            // 2. Ensure subfolders and templates
             await this.ensureFolderAndFile(normalizePath(`${basePath}/Concepts`), 'Concepts.md', ONTOLOGY_TEMPLATES.CONCEPTS);
             await this.ensureFolderAndFile(normalizePath(`${basePath}/Entities`), 'Entities.md', ONTOLOGY_TEMPLATES.ENTITIES);
             await this.ensureFolderAndFile(normalizePath(`${basePath}/MOCs`), 'MOCs.md', ONTOLOGY_TEMPLATES.MOCS);
 
-            // Create default Instructions.md in root
+            // 3. Create default Instructions.md in root
             const instructionsPath = normalizePath(`${basePath}/Instructions.md`);
             if (!(this.app.vault.getAbstractFileByPath(instructionsPath) instanceof TFile)) {
                 await this.app.vault.create(instructionsPath, ONTOLOGY_TEMPLATES.INSTRUCTIONS);
@@ -58,15 +56,39 @@ export class OntologyService {
      * Helper to ensure a subfolder and its main index file exist.
      */
     private async ensureFolderAndFile(folderPath: string, fileName: string, template: string): Promise<void> {
-        if (!(this.app.vault.getAbstractFileByPath(folderPath) instanceof TFolder)) {
-            await this.app.vault.createFolder(folderPath);
-            logger.info(`Created folder: ${folderPath}`);
-        }
+        await this.ensureFolder(folderPath);
 
         const filePath = normalizePath(`${folderPath}/${fileName}`);
         if (!(this.app.vault.getAbstractFileByPath(filePath) instanceof TFile)) {
             await this.app.vault.create(filePath, template);
             logger.info(`Created template file: ${filePath}`);
+        }
+    }
+
+    /**
+     * Robust folder creation that handles "Already exists" errors gracefully.
+     */
+    private async ensureFolder(path: string): Promise<void> {
+        const normalizedPath = normalizePath(path);
+        const folder = this.app.vault.getAbstractFileByPath(normalizedPath);
+
+        if (folder instanceof TFolder) return;
+
+        if (folder instanceof TFile) {
+            logger.warn(`Cannot create folder ${normalizedPath} because a file already exists at this path.`);
+            return;
+        }
+
+        try {
+            await this.app.vault.createFolder(normalizedPath);
+            logger.info(`Created folder: ${normalizedPath}`);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg.toLowerCase().includes('already exists')) {
+                logger.debug(`Folder ${normalizedPath} already exists (checked during creation).`);
+            } else {
+                throw new Error(`Failed to create folder ${normalizedPath}: ${msg}`);
+            }
         }
     }
 
