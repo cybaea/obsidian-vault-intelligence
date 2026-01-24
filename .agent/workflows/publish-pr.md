@@ -1,5 +1,5 @@
 ---
-description: description: Automates creating, verifying, and merging a PR into the default branch.
+description: Automates creating, verifying, and merging a PR into the default branch.
 ---
 
 0. SAFETY GUARDRAIL
