@@ -8,7 +8,7 @@ description: Carefully review, research, and verify a Renovate dependency pull r
    > Ensure your workspace is clean before running this workflow.
 
    // turbo
-   `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && export PR_NUMBER=<PR_NUMBER> && export PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName) && git fetch origin $PR_BRANCH && git checkout $PR_BRANCH && git pull origin $PR_BRANCH`
+   `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout <PR_NUMBER> && git pull origin $(git branch --show-current)`
 
 2. Rebase on main to ensure compatibility
    > [!WARNING]
@@ -34,12 +34,18 @@ description: Carefully review, research, and verify a Renovate dependency pull r
    `npm ci && npm run build && npm test && npm run lint`
 
 7. Report Findings
-   - **Do NOT create artifacts** (like implementation_plan.md).
-   - Summarize your research and verification results directly in the chat.
+   - **Do NOT create artifacts** in the repository.
+   - Summarize your research and verification results explicitly in the chat.
    - Post the summary as a comment on the PR using `gh pr comment`.
+   > [!IMPORTANT]
+   > Do NOT use shell variables for the PR number (e.g., $PR_NUMBER) as they do not persist between steps. Use the explicit number provided by the user (e.g., `101`).
+   > To avoid shell quoting errors, write the summary to a temporary file first using the `write_to_file` tool (NOT echo), then use `--body-file`.
 
-   `gh pr comment <PR_NUMBER> --body "## Review Summary\n\n- **Research**: <SUMMARY>\n- **Verification**: <VERIFICATION_RESULTS>"`
+   1. Call `write_to_file` to create `pr_summary.txt` with your detailed finding. 
+      - Include a section: "**Manual Verification**: Please manually load the plugin in Obsidian to check for UI regressions, as automated tests cannot cover this."
+   // turbo
+   2. `gh pr comment <PR_NUMBER> --body-file pr_summary.txt && rm pr_summary.txt`
 
 8. Cleanup (Optional)
    - If the review is successful and you are NOT merging immediately, switch back to main.
-   - `git checkout main && git branch -D $PR_BRANCH`
+   - `git checkout main && git branch -D -`
