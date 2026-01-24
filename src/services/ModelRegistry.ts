@@ -1,5 +1,6 @@
 import { App, requestUrl } from "obsidian";
 import { logger } from "../utils/logger";
+import { MODEL_REGISTRY_CONSTANTS } from "../constants";
 
 interface InternalApp {
     loadLocalStorage?(key: string): string | null;
@@ -113,7 +114,13 @@ export class ModelRegistry {
     private static isFetching: boolean = false;
     private static CACHE_KEY = 'vault-intelligence-model-cache';
 
-    static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = 7): Promise<void> {
+    /**
+     * Fetches the list of available Gemini models from the API and caches them.
+     * @param app - The Obsidian App instance.
+     * @param apiKey - The Google Gemini API key.
+     * @param cacheDurationDays - How many days to cache the results for.
+     */
+    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS): Promise<void> {
         if (!apiKey || this.isFetching) return;
 
         // 1. Check Memory Cache
@@ -217,7 +224,9 @@ export class ModelRegistry {
                 else if (id.includes('flash')) score += 300;
                 else if (id.includes('lite')) score += 100;
 
-                if (!id.includes('preview') && !id.includes('experimental')) score += 50;
+                if (!id.includes('preview') && !id.includes('experimental')) {
+                    score += MODEL_REGISTRY_CONSTANTS.PRODUCTION_BOOST;
+                }
 
                 // Prioritize embedding if it's an embedding request? No, this is general sort.
                 if (id.includes('embedding')) score += 10;
@@ -229,7 +238,11 @@ export class ModelRegistry {
         });
     }
 
-    static getChatModels(): ModelDefinition[] {
+    /**
+     * Returns a list of models suitable for general chat.
+     * @returns Array of chat-capable model definitions.
+     */
+    public static getChatModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
             m.provider === 'gemini' &&
@@ -240,7 +253,12 @@ export class ModelRegistry {
         );
     }
 
-    static getEmbeddingModels(provider: 'gemini' | 'local' = 'gemini'): ModelDefinition[] {
+    /**
+     * Returns a list of models suitable for embedding.
+     * @param provider - Filter by provider ('gemini' or 'local').
+     * @returns Array of embedding model definitions.
+     */
+    public static getEmbeddingModels(provider: 'gemini' | 'local' = 'gemini'): ModelDefinition[] {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
@@ -249,7 +267,11 @@ export class ModelRegistry {
         );
     }
 
-    static getGroundingModels(): ModelDefinition[] {
+    /**
+     * Returns a list of models suitable for grounding (search).
+     * @returns Array of grounding-capable model definitions.
+     */
+    public static getGroundingModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_GROUNDING_MODELS;
         // Grounding models are strictly restricted to flash/lite models.
         // These are optimized for tool-use and search grounding where speed/cost is primary.
@@ -261,7 +283,13 @@ export class ModelRegistry {
         );
     }
 
-    static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' = 'gemini'): string {
+    /**
+     * Gets the default model ID for a specific task.
+     * @param type - The task type.
+     * @param provider - The provider.
+     * @returns The default model ID string.
+     */
+    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' = 'gemini'): string {
         let models: ModelDefinition[] = [];
         if (type === 'chat') models = this.getChatModels();
         else if (type === 'grounding') models = this.getGroundingModels();
@@ -270,7 +298,12 @@ export class ModelRegistry {
         return models.find(m => m.isDefault)?.id || models[0]?.id || '';
     }
 
-    static getModelById(id: string): ModelDefinition | undefined {
+    /**
+     * Retrieves a model definition by its unique ID.
+     * @param id - The model ID.
+     * @returns The model definition or undefined if not found.
+     */
+    public static getModelById(id: string): ModelDefinition | undefined {
         const dynamic = this.dynamicModels.find(m => m.id === id);
         if (dynamic) return dynamic;
 
@@ -282,7 +315,11 @@ export class ModelRegistry {
         ].find(m => m.id === id);
     }
 
-    static getRawResponse(): GeminiApiResponse | null {
+    /**
+     * Returns the raw API response for debugging purposes.
+     * @returns The GeminiApiResponse object or null.
+     */
+    public static getRawResponse(): GeminiApiResponse | null {
         return this.rawApiResponse;
     }
 
@@ -290,8 +327,12 @@ export class ModelRegistry {
      * Calculates a new budget proportional to the model's total capacity.
      * Prevents context budgets from being nonsensical when switching between
      * models with drastically different limits (e.g. 1M vs 32k).
+     * @param currentBudget - The current budget value.
+     * @param oldModelId - The ID of the previous model.
+     * @param newModelId - The ID of the new model.
+     * @returns The newly adjusted budget.
      */
-    static calculateAdjustedBudget(currentBudget: number, oldModelId: string, newModelId: string): number {
+    public static calculateAdjustedBudget(currentBudget: number, oldModelId: string, newModelId: string): number {
         const oldModel = this.getModelById(oldModelId);
         const newModel = this.getModelById(newModelId);
 
@@ -307,8 +348,8 @@ export class ModelRegistry {
         const ratio = safeCurrent / oldModel.inputTokenLimit;
         const adjusted = Math.floor(ratio * newModel.inputTokenLimit);
 
-        // Safety: Cap at model max, but keep a reasonable floor (1k tokens)
-        const result = Math.min(newModel.inputTokenLimit, Math.max(1024, adjusted));
+        // Safety: Cap at model max, but keep a reasonable floor
+        const result = Math.min(newModel.inputTokenLimit, Math.max(MODEL_REGISTRY_CONSTANTS.CONTEXT_ADJUSTMENT_FLOOR, adjusted));
 
         // Final sanity check for JavaScript's MAX_SAFE_INTEGER
         return Number.isSafeInteger(result) ? result : newModel.inputTokenLimit;

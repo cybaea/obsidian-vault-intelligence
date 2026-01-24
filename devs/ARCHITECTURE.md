@@ -140,7 +140,30 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >     ```
 >
 
-### 3.3. System mechanics & orchestration
+### 3.3. Model fetching and budget scaling (metadata flow)
+
+> #### Dynamic model reconfiguration
+>
+> 1.  **Intent**: Synchronize available Gemini models and ensure context budgets are scaled proportionally to model limits.
+> 2.  **Mechanics**:
+>     ```mermaid
+>     sequenceDiagram
+>         participant S as SettingsView
+>         participant R as ModelRegistry
+>         participant G as GeminiAPI
+>         participant L as LocalStorage
+>
+>         S->>R: fetchModels(apiKey)
+>         R->>G: GET /v1beta/models
+>         G-->>R: List of models + limits
+>         R->>L: Save to cache
+>         R-->>S: Update UI dropdowns
+>         S->>R: calculateAdjustedBudget(oldId, newId)
+>         R-->>S: New scaled budget value
+>     ```
+>
+
+### 3.4. System mechanics and orchestration
 
 *   **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
 *   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
@@ -257,6 +280,26 @@ export interface IOntologyService {
     getValidTopics(): Promise<{ name: string, path: string }[]>;
     getOntologyContext(): Promise<{ folders: Record<string, string>, instructions?: string }>;
     validateTopic(topicPath: string): boolean;
+}
+```
+
+#### `IModelRegistry` (Static Interface)
+
+Registers and sorts available AI models.
+
+```typescript
+export interface ModelDefinition {
+    id: string;
+    label: string;
+    provider: 'gemini' | 'local';
+    inputTokenLimit?: number;
+    outputTokenLimit?: number;
+}
+
+export class ModelRegistry {
+    public static fetchModels(app: App, apiKey: string): Promise<void>;
+    public static getChatModels(): ModelDefinition[];
+    public static calculateAdjustedBudget(current: number, oldId: string, newId: string): number;
 }
 ```
 
