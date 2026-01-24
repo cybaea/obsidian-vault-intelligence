@@ -3,6 +3,7 @@ import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { WORKER_INDEXER_CONSTANTS } from '../constants';
+import { maskObject } from '../utils/masking';
 
 let graph: Graph;
 let orama: AnyOrama;
@@ -381,7 +382,7 @@ const IndexerWorker: WorkerAPI = {
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
 
         config = { ...config, ...newConfig };
-        workerLogger.debug(`Worker config updated: ${JSON.stringify(newConfig)}`);
+        workerLogger.debug(`Worker config updated: ${JSON.stringify(maskObject(newConfig))}`);
 
         if (dimensionChanged || modelChanged) {
             workerLogger.info(`Critical config change (Model: ${modelChanged}, Dims: ${dimensionChanged}). Recreating Orama index.`);

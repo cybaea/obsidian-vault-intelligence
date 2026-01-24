@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Documentation**: Comprehensive update to `devs/ARCHITECTURE.md` with detailed Mermaid.js data flows, control flows, and service interface definitions.
 - **Worker Robustness**: Replaced unsafe non-null assertions in the embedding worker with defensive null checks to prevent runtime exceptions during model configuration.
 - **Service Documentation**: Added comprehensive Inline JSDoc and strict access modifiers to core services like `ModelRegistry` to improve code clarity and maintainability.
+- **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (e.g. when updating worker configurations).
 
 
 ## [2.2.0] - 2026-01-22

@@ -1,5 +1,6 @@
 ---
-trigger: always_on
+trigger: glob
+globs: src/**/*.ts
 ---
 
 # Typescript rules
