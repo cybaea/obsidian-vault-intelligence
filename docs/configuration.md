@@ -17,10 +17,13 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | **Indexing delay (ms)** | `5000ms` | The debounce delay for user edits. The plugin waits this long after your last keystroke before re-indexing the current note. High values prevent "spamming" your API quota or CPU while typing. |
 | **Bulk indexing delay (ms)** | `300ms` | The delay between individual files during bulk operations (like a full vault scan). Keeps the system responsive and respects API rate limits during large updates. |
 | **Chat model** | `gemini-3-flash-preview` | The main intelligence engine. <br>• **Flash:** Best for speed and agentic loops (tool use). <br>• **Pro:** Best for deep reasoning or creative writing, but slower. |
-| **Context window budget** | `200,000` | The maximum number of tokens (words/characters) the AI can consider at once. <br>**Note:** This budget is also constrained by the inherent limit of your chosen **Chat model**. For example, while `gemini-3-flash-preview` supports up to 1 million tokens, other models may support much less. Setting this budget higher than the model's capacity will lead to errors. <br>• **Lower (e.g., 50k):** Cheaper, faster, less comprehensive. <br>• **Higher:** Reads more notes, but increases response time and costs. |
+| **Context window budget** | `200,000` | The maximum number of tokens (words/characters) the AI can consider at once. <br>• **Scaling:** Automatically scales proportionally when you switch models to maintain your preferred ratio. <br>• **Reset:** Use the **Reset** icon (↺) to restore to the default 20% of model capacity. <br>• **Note:** This budget is strictly capped by the current model's limit (e.g., ~1M for Gemini 3 Flash). |
 | **Grounding model** | `gemini-2.5-flash-lite` | The fast, cost-effective model used specifically for web searches and information verification. |
 | **Enable code execution** | `On` | Turns on the **Computational Solver**. When enabled, the agent can write and execute Python code to solve math problems or analyse data. |
-| **Code model** | `gemini-3-flash-preview` | The specialised model used for generating Python code. Only visible if code execution is enabled. |
+| **Code model** | `gemini-3-flash-preview` | The specialised model used for generating Python code. |
+| **Model list cache duration (days)** | `7` | How many days to keep the local copy of available Gemini models before refreshing. |
+| **Refresh model list** | `None` | A manual trigger to force a fresh fetch of available models. |
+
 
 ## Indexing & Search
 
@@ -37,13 +40,11 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | **Ontology path** | `Ontology` | The folder where your ontology (concepts, entities, MOCs) is stored. |
 | **Gardener plans path** | `Gardener/Plans` | The folder where the gardener should save its proposed plans. |
 | **Plans retention (days)** | `7` | How many days to keep gardener plans before purging them. |
-| **Gardener analysis limit** | `10` | Maximum number of recent notes to scan for hygiene improvements. |
-| **Gardener context budget (tokens)** | `100,000` | Maximum total tokens estimated for analysis. The gardener will prioritise recently modified notes until this budget or the analysis limit is reached. |
-| **Skip retention (days)** | `7` | How many days to remember that you skipped/rejected a file before investigating it again. |
-| **Re-check cooldown (hours)** | `24` | How long to wait before re-examining a file that has no changes. Set to 0 to always re-examine. |
-| **Excluded folders** | `Ontology, Gardener/Plans` | List of folders the gardener should ignore. Can be managed in the settings UI with folder selection. |
+| **Excluded folders** | `Ontology, Gardener/Plans` | List of folders the gardener should ignore. |
 | **Gardener model** | `gemini-3-flash-preview` | The model used specifically for ontology refinement and hygiene (tidy vault). |
+| **Gardener context budget (tokens)** | `100,000` | Maximum total tokens estimated for analysis. <br>• **Scaling:** Scales proportionally when you change the model. <br>• **Reset:** Use the **Reset** icon (↺) to restore to the default 10% of model capacity. |
 | **Gardener system instruction** | *Default Rules* | The base persona and rules for the Gardener. |
+
 
 ## Advanced
 
@@ -53,7 +54,14 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | **Max agent steps** | `5` | Limits how many "thoughts" (loops) the agent can have before giving an answer. Prevents infinite loops. |
 | **Local embedding threads** | `1` (Mobile) / `2` (Desktop) | Only relevant for the **Local** provider. Number of CPU threads used for calculations. Higher is faster but uses more memory/battery. |
 | **Gemini retries** | `10` | Automatic retries for spotty connections. |
+
+## Developer
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
 | **Log level** | `Warn` | Developer console verbosity. Set to `Debug` to see detailed "Chain of Thought". |
+| **Debug model list** | `None` | Log the full response from the last Gemini fetch to the console (`Ctrl+Shift+I`). Automatically refreshes if the list is empty. |
+
 
 ---
 

@@ -124,7 +124,13 @@ export const UI_CONSTANTS = {
     NOTICE_DURATION_MS: 5000,
 
     /** Duration for model validation notices (ms) */
-    VALIDATION_NOTICE_MS: 5000
+    VALIDATION_NOTICE_MS: 5000,
+
+    /** Default ratio of model capacity to use for Chat context budget (0.2 = 20%) */
+    DEFAULT_CHAT_CONTEXT_RATIO: 0.2,
+
+    /** Default ratio of model capacity to use for Gardener context budget (0.1 = 10%) */
+    DEFAULT_GARDENER_CONTEXT_RATIO: 0.1
 };
 
 export const AGENT_CONSTANTS = {

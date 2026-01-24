@@ -1,6 +1,5 @@
 import { Setting, Notice, App, Plugin } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { LogLevel } from "../../utils/logger";
 
 interface InternalApp extends App {
     setting: {
@@ -100,20 +99,6 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
                     plugin.settings.geminiRetries = num;
                     await plugin.saveSettings();
                 }
-            }));
-
-    new Setting(containerEl)
-        .setName('Log level')
-        .setDesc('Level of detail for logs in the developer console.')
-        .addDropdown(dropdown => dropdown
-            .addOption(String(LogLevel.DEBUG), 'Debug')
-            .addOption(String(LogLevel.INFO), 'Info')
-            .addOption(String(LogLevel.WARN), 'Warn')
-            .addOption(String(LogLevel.ERROR), 'Error')
-            .setValue(String(plugin.settings.logLevel))
-            .onChange(async (value) => {
-                plugin.settings.logLevel = parseInt(value) as LogLevel;
-                await plugin.saveSettings();
             }));
 }
 
