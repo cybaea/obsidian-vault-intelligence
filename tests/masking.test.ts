@@ -4,7 +4,7 @@ import { maskSecret, maskObject } from '../src/utils/masking';
 describe('Masking Utility', () => {
     describe('maskSecret', () => {
         it('should mask a long API key', () => {
-            expect(maskSecret('AIzaSyDqZ5Kg2o3xcZ4Q9heo2caeK3gY7Q9Zuwk')).toBe('AIza...Zuwk');
+            expect(maskSecret('DUMMY_KEY_FOR_TESTING_PURPOSES_ONLY')).toBe('DUMM...ONLY');
         });
 
         it('should return "****" for short secrets', () => {
@@ -22,12 +22,12 @@ describe('Masking Utility', () => {
     describe('maskObject', () => {
         it('should mask specified sensitive keys in an object', () => {
             const input = {
-                googleApiKey: 'AIzaSyDqZ5Kg2o3xcZ4Q9heo2caeK3gY7Q9Zuwk',
+                googleApiKey: 'DUMMY_KEY_FOR_TESTING_PURPOSES_ONLY',
                 embeddingModel: 'gemini-embedding-001',
                 other: 'value'
             };
             const expected = {
-                googleApiKey: 'AIza...Zuwk',
+                googleApiKey: 'DUMM...ONLY',
                 embeddingModel: 'gemini-embedding-001',
                 other: 'value'
             };
@@ -37,13 +37,13 @@ describe('Masking Utility', () => {
         it('should mask nested sensitive keys', () => {
             const input: Record<string, unknown> = {
                 config: {
-                    googleApiKey: 'AIzaSyDqZ5Kg2o3xcZ4Q9heo2caeK3gY7Q9Zuwk'
+                    googleApiKey: 'DUMMY_KEY_FOR_TESTING_PURPOSES_ONLY'
                 },
                 level: 1
             };
             const expected = {
                 config: {
-                    googleApiKey: 'AIza...Zuwk'
+                    googleApiKey: 'DUMM...ONLY'
                 },
                 level: 1
             };
