@@ -34,7 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concurrency Protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
 - **Settings Sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
 - **UI Architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
-- **Constant Centralization**: Moved budget ratios and safety margins to `src/constants.ts` for consistent scaling logic across the plugin.
+- **Constant Centralization**: Refactored context budget ratios and search scoring heuristics to use centralized constants in `src/constants.ts`.
+- **Architectural Documentation**: Comprehensive update to `devs/ARCHITECTURE.md` with detailed Mermaid.js data flows, control flows, and service interface definitions.
+- **Worker Robustness**: Replaced unsafe non-null assertions in the embedding worker with defensive null checks to prevent runtime exceptions during model configuration.
+- **Service Documentation**: Added comprehensive Inline JSDoc and strict access modifiers to core services like `ModelRegistry` to improve code clarity and maintainability.
 
 
 ## [2.2.0] - 2026-01-22

@@ -47,7 +47,13 @@ export const SEARCH_CONSTANTS = {
     HYBRID_BOOST_SCORE: 0.3,
 
     /** Search: Extra boost if keyword match is specifically in title */
-    HYBRID_TITLE_BOOST: 0.5
+    HYBRID_TITLE_BOOST: 0.5,
+
+    /** Scoring: Threshold for query length to be considered "long" (tokens) */
+    FUZZY_LONG_QUERY_THRESHOLD: 4,
+
+    /** Scoring: Minimum hits required in a long query to consider relevant */
+    FUZZY_MIN_HITS_FOR_LONG_QUERY: 2
 };
 
 export const EMBEDDING_CONSTANTS = {
@@ -148,4 +154,15 @@ export const GARDENER_CONSTANTS = {
     ACTIONS: {
         UPDATE_TOPICS: "update_topics"
     }
+};
+
+export const MODEL_REGISTRY_CONSTANTS = {
+    /** Score boost for standard (non-preview/non-experimental) models */
+    PRODUCTION_BOOST: 50,
+
+    /** Minimum context floor in tokens after budget adjustment */
+    CONTEXT_ADJUSTMENT_FLOOR: 1024,
+
+    /** Default cache duration for fetched models (days) */
+    DEFAULT_CACHE_DURATION_DAYS: 7
 };

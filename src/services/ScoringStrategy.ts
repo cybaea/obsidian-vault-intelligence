@@ -57,15 +57,17 @@ export class ScoringStrategy {
         const matchRatio = hits / tokens.length;
         let fuzzyScore = 0;
 
-        // Scenario 1: Short Query (< 4 tokens) -> Strict (Need high overlap)
-        if (tokens.length < 4) {
+        // Scenario 1: Short Query (< FUZZY_LONG_QUERY_THRESHOLD tokens) -> Strict (Need high overlap)
+        if (tokens.length < SEARCH_CONSTANTS.FUZZY_LONG_QUERY_THRESHOLD) {
             if (matchRatio > SEARCH_CONSTANTS.FUZZY_SHORT_THRESHOLD) {
-                fuzzyScore = SEARCH_CONSTANTS.FUZZY_SHORT_BASE_SCORE + (matchRatio * 0.3); // 0.3 factor is kept as-is for now
+                // Heuristic: boost short query by a constant factor for high match ratios
+                const SHORT_QUERY_BOOST_FACTOR = 0.3;
+                fuzzyScore = SEARCH_CONSTANTS.FUZZY_SHORT_BASE_SCORE + (matchRatio * SHORT_QUERY_BOOST_FACTOR);
             }
         }
-        // Scenario 2: Long Query (>= 4 tokens) -> Loose (Synonym stuffing)
+        // Scenario 2: Long Query (>= FUZZY_LONG_QUERY_THRESHOLD tokens) -> Loose (Synonym stuffing)
         else {
-            if (hits >= 2 || matchRatio > SEARCH_CONSTANTS.FUZZY_LONG_THRESHOLD) {
+            if (hits >= SEARCH_CONSTANTS.FUZZY_MIN_HITS_FOR_LONG_QUERY || matchRatio > SEARCH_CONSTANTS.FUZZY_LONG_THRESHOLD) {
                 // Score based on raw hit count
                 fuzzyScore = Math.min(
                     SEARCH_CONSTANTS.FUZZY_SHORT_BASE_SCORE + (hits * SEARCH_CONSTANTS.FUZZY_LONG_HIT_MULTIPLIER),

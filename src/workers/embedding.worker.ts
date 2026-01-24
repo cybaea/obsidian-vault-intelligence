@@ -351,9 +351,9 @@ ctx.addEventListener('message', (event: MessageEvent) => {
             const config = data as ConfigureMessage;
 
             // Set dynamic CDN paths if provided
-            if (config.cdnUrl) {
+            if (config.cdnUrl && safeEnv.backends?.onnx?.wasm) {
                 const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : `${config.cdnUrl}/`;
-                safeEnv.backends!.onnx!.wasm!.wasmPaths = {
+                safeEnv.backends.onnx.wasm.wasmPaths = {
                     'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
                     'ort-wasm-simd.wasm': `${baseUrl}ort-wasm-simd.wasm`,
                     'ort-wasm-threaded.wasm': `${baseUrl}ort-wasm-threaded.wasm`,
@@ -362,13 +362,17 @@ ctx.addEventListener('message', (event: MessageEvent) => {
                 logger.info(`[Worker] CDN set to: ${baseUrl}`);
             }
 
-            if (safeEnv.backends!.onnx!.wasm!.numThreads !== config.numThreads || safeEnv.backends!.onnx!.wasm!.simd !== config.simd) {
+            const wasm = safeEnv.backends?.onnx?.wasm;
+            if (wasm && (wasm.numThreads !== config.numThreads || wasm.simd !== config.simd)) {
                 logger.debug(`[Worker] Configuration changed. Resetting pipeline instance.`);
                 PipelineSingleton.instance = null;
             }
-            safeEnv.backends!.onnx!.wasm!.numThreads = config.numThreads;
-            safeEnv.backends!.onnx!.wasm!.simd = config.simd;
-            logger.debug(`[Worker] Configured: threads=${config.numThreads}, simd=${config.simd}`);
+
+            if (wasm) {
+                wasm.numThreads = config.numThreads;
+                wasm.simd = config.simd;
+                logger.debug(`[Worker] Configured: threads=${config.numThreads}, simd=${config.simd}`);
+            }
             return;
         }
 
