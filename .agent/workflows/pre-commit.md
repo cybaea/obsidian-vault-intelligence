@@ -18,6 +18,13 @@ npm run build
 ```
 *Goal: Build completes successfully with no errors.*
 
+4. **Automated tests**: Ensure tests run
+// turbo
+```bash
+npm run test
+```
+*Goal: Tests run with all Tests passed.*
+
 3. **Runtime Safety**: Check for console errors in a running Obsidian instance (Vault: **Allan-Dev**).
    - Use the `/debug-obsidian` workflow if Obsidian is not running.
    - **Critical**: Verify the correct vault ('Allan-Dev') is active before checking logs.
