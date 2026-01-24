@@ -138,6 +138,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Settings restructure**:
+  - Settings restructured into logical functional groups (Researcher, Explorer, Gardener).
+  - Models selection moved directly into relevant agent sections.
+  - "Researcher" section now includes chat model, system instructions, and grounding settings.
+  - "Explorer" section consolidates embedding provider, model, and similarity settings.
+  - "Gardener" section (formerly Ontology) now groups hygiene and maintenance settings.
+  - "Advanced" section focused on system performance and technical tuning.
+  - Re-index vault and Refresh model list buttons moved to more contextual locations.
 - **Context engine:** Replaced the static 50,000-character limit per note with a "Greedy Packing" strategy. The agent now reads entire documents whenever the token budget allows, **significantly improving** its ability to understand long reports and avoiding arbitrary cut-offs.
 
 ### Developers

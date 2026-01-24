@@ -1,11 +1,10 @@
 import { App, PluginSettingTab, Plugin } from "obsidian";
 import { IVaultIntelligencePlugin } from "./types";
 import { renderConnectionSettings } from "./sections/connections";
-import { renderModelSettings } from "./sections/models";
-import { renderIndexingSettings } from "./sections/indexing";
+import { renderResearcherSettings } from "./sections/researcher";
+import { renderExplorerSettings } from "./sections/explorer";
+import { renderGardenerSettings } from "./sections/gardener";
 import { renderAdvancedSettings } from "./sections/advanced";
-import { renderOntologySettings } from "./sections/ontology";
-import { renderDeveloperSettings } from "./sections/developer";
 
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
     plugin: IVaultIntelligencePlugin;
@@ -22,10 +21,9 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         renderConnectionSettings(containerEl, this.plugin);
-        renderModelSettings(containerEl, this.plugin);
-        renderIndexingSettings(containerEl, this.plugin);
-        renderOntologySettings(containerEl, this.plugin);
+        renderResearcherSettings(containerEl, this.plugin);
+        renderExplorerSettings(containerEl, this.plugin);
+        renderGardenerSettings(containerEl, this.plugin);
         renderAdvancedSettings(containerEl, this.plugin);
-        renderDeveloperSettings(containerEl, this.plugin);
     }
 }
