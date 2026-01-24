@@ -10,12 +10,15 @@ description: Carefully review, research, and verify a Renovate dependency pull r
    // turbo
    `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout <PR_NUMBER> && git pull origin $(git branch --show-current)`
 
-2. Rebase on main to ensure compatibility
+2. Rebase on main (Local verification only)
    > [!WARNING]
    > This rebase is for local verification only. **DO NOT PUSH** the rebased branch to origin unless you intend to "take over" the PR and stop Renovate updates.
+   > If rebase fails due to conflicts, we abort immediately to keep the workspace clean.
+   > [!TIP]
+   > If this step fails with a "*Merge Conflict detected!*", you should go to the Renovate Dependency Dashboard in GitHub and tick the checkbox to rebase/retry the PR.
 
    // turbo
-   `git fetch origin main && git rebase origin/main`
+   `git fetch origin main && (git rebase origin/main || (echo "❌ Merge Conflict detected! Aborting rebase to clean up..." && git rebase --abort && exit 1))`
 
 3. Identify changed dependencies
    - Parse the PR body or `package.json` diff to identify exactly which packages are being upgraded.
