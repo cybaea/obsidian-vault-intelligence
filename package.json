@@ -40,7 +40,7 @@
 		"@nolebase/vitepress-plugin-og-image": "^2.18.2",
 		"@types/node": "^22.19.7",
 		"@vitest/ui": "^4.0.17",
-		"esbuild": "0.25.5",
+		"esbuild": "0.27.2",
 		"esbuild-plugin-inline-worker": "^0.1.1",
 		"eslint": "^9.39.2",
 		"eslint-plugin-obsidianmd": "^0.1.9",
@@ -64,7 +64,7 @@
 		"zod": "^4.3.5"
 	},
 	"overrides": {
-		"esbuild": "0.25.5",
+		"esbuild": "0.27.2",
 		"lodash-es": "4.17.23"
 	}
 }
