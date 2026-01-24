@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer features
 
 - **Lazy Loading Implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
-- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
+- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
 - **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
 - **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
 - **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Documentation**: Comprehensive update to `devs/ARCHITECTURE.md` with detailed Mermaid.js data flows, control flows, and service interface definitions.
 - **Worker Robustness**: Replaced unsafe non-null assertions in the embedding worker with defensive null checks to prevent runtime exceptions during model configuration.
 - **Service Documentation**: Added comprehensive Inline JSDoc and strict access modifiers to core services like `ModelRegistry` to improve code clarity and maintainability.
+- **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (e.g. when updating worker configurations).
 
 
 ## [2.2.0] - 2026-01-22
