@@ -322,7 +322,17 @@ export class AgentService {
 
         } catch (e: unknown) {
             logger.error("Error in chat loop", e);
-            return { text: "Sorry, I encountered an error processing your request.", files: [] };
+            const errorMessage = e instanceof Error ? e.message : String(e);
+
+            // Check for common 400 errors (API key, etc)
+            if (errorMessage.includes("400") || errorMessage.includes("API key")) {
+                return {
+                    text: `I encountered an error connecting to Gemini (Status 400). Please check that your API key is valid and has not expired.\n\nError details: ${errorMessage}`,
+                    files: []
+                };
+            }
+
+            return { text: `Sorry, I encountered an error processing your request: ${errorMessage}`, files: [] };
         }
     }
 }

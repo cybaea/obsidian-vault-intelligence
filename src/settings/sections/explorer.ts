@@ -276,9 +276,16 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             }
                         }, 5000);
                     } else {
-                        await plugin.graphService.scanAll(true);
-                        btn.setButtonText('Re-index vault');
-                        btn.buttonEl.classList.remove('mod-warning');
+                        try {
+                            await plugin.graphService.scanAll(true);
+                        } catch (e) {
+                            const message = e instanceof Error ? e.message : String(e);
+                            new Notice(`Re-indexing failed: ${message}`);
+                            console.error(e);
+                        } finally {
+                            btn.setButtonText('Re-index vault');
+                            btn.buttonEl.classList.remove('mod-warning');
+                        }
                     }
                 })();
             }));

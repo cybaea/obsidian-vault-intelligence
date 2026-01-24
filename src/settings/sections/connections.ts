@@ -118,10 +118,15 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 btn.setDisabled(true);
                 btn.setButtonText("Refreshing...");
                 try {
-                    await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, 0); // bypass cache
+                    await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, 0, true); // bypass cache, throw on error
                     new Notice("Model list refreshed");
-                } catch {
-                    new Notice("Failed to refresh models");
+                } catch (e: unknown) {
+                    const message = e instanceof Error ? e.message : String(e);
+                    if (message.includes("400") || message.includes("401") || message.includes("API key")) {
+                        new Notice("Invalid API key. Check your settings.");
+                    } else {
+                        new Notice(`Failed to refresh models: ${message}`);
+                    }
                 }
                 btn.setDisabled(false);
                 btn.setButtonText("Refresh models");
