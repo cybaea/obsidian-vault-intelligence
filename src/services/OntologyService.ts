@@ -6,6 +6,10 @@ import { ONTOLOGY_TEMPLATES } from "../templates/ontology-en-GB";
 /**
  * Service to manage the vault's ontology and classification rules.
  */
+/**
+ * Service responsible for managing the vault's ontology and knowledge model.
+ * It handles concept validation, topic discovery, and structural rules.
+ */
 export class OntologyService {
     private app: App;
     private settings: VaultIntelligenceSettings;
@@ -180,6 +184,10 @@ export class OntologyService {
     /**
      * Provides descriptions for all ontology folders by reading their index files.
      * Also checks for custom Instructions.md in the root.
+     */
+    /**
+     * Retrieves the full ontology context for use by AI agents.
+     * @returns Object containing folder mappings and instructions.
      */
     public async getOntologyContext(): Promise<{ folders: Record<string, string>, instructions?: string }> {
         const basePath = normalizePath(this.settings.ontologyPath);

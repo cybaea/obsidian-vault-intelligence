@@ -286,7 +286,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
         // Find highest priority task
         const highPriorityIdx = this.requestQueue.findIndex(r => r.priority === 'high');
         const taskIdx = highPriorityIdx !== -1 ? highPriorityIdx : 0;
-        const task = this.requestQueue.splice(taskIdx, 1)[0]!;
+        const task = this.requestQueue.splice(taskIdx, 1)[0];
+        if (!task) {
+            this.isWorkerBusy = false;
+            return;
+        }
 
         this.pendingRequests.set(task.id, {
             resolve: task.resolve,

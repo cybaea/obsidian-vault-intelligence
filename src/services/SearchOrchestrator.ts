@@ -2,9 +2,14 @@ import { App } from "obsidian";
 import { GraphService } from "./GraphService";
 import { ScoringStrategy } from "./ScoringStrategy";
 
+import { SEARCH_CONSTANTS } from "../constants";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 
+/**
+ * Service that orchestrates hybrid search across the vault.
+ * Combines vector search results with keyword matching for optimal recall and precision.
+ */
 export class SearchOrchestrator {
     private app: App;
     private graphService: GraphService;
@@ -18,6 +23,9 @@ export class SearchOrchestrator {
 
     /**
      * Performs a hybrid search (Vector + Keyword) on the vault.
+     * @param query - The user's search query.
+     * @param limit - Maximum number of final results to return.
+     * @returns A promise resolving to a ranked list of search results.
      */
     public async search(query: string, limit: number): Promise<VaultSearchResult[]> {
         if (!query || query.trim().length === 0) {
@@ -56,10 +64,10 @@ export class SearchOrchestrator {
 
         const isMultiWord = tokens.length > 1;
         let keywordMatchesFound = 0;
-        const MAX_KEYWORD_MATCHES = 100;
+        const maxMatches = SEARCH_CONSTANTS.MAX_KEYWORD_MATCHES;
 
         for (const file of files) {
-            if (keywordMatchesFound >= MAX_KEYWORD_MATCHES) break;
+            if (keywordMatchesFound >= maxMatches) break;
 
             const titleLower = file.basename.toLowerCase();
 
