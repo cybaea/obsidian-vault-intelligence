@@ -219,10 +219,16 @@ export class GraphService {
 
         let count = 0;
         for (const file of files) {
-            const content = await this.vaultManager.readFile(file);
-            const { mtime, size, basename } = this.vaultManager.getFileStat(file);
-            await this.api.updateFile(file.path, content, mtime, size, basename);
-            count++;
+            try {
+                const content = await this.vaultManager.readFile(file);
+                const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+                await this.api.updateFile(file.path, content, mtime, size, basename);
+                count++;
+            } catch (error) {
+                logger.error(`[GraphService] Failed to index ${file.path}`, error);
+                // Optionally throw if it's a critical API error that affects all files
+                if (String(error).includes("API key")) throw error;
+            }
             if (count % 50 === 0) {
                 logger.debug(`[GraphService] Processed ${count}/${files.length} files`);
             }

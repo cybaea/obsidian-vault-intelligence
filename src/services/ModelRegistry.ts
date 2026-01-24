@@ -120,7 +120,7 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS): Promise<void> {
+    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, throwOnError: boolean = false): Promise<void> {
         if (!apiKey || this.isFetching) return;
 
         // 1. Check Memory Cache
@@ -196,6 +196,7 @@ export class ModelRegistry {
             }
         } catch (error) {
             logger.error("Error fetching Gemini models", error);
+            if (throwOnError) throw error;
             // Fallback to hardcoded if fetch fails and no cache
             if (this.dynamicModels.length === 0) {
                 this.dynamicModels = [

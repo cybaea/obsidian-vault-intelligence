@@ -141,6 +141,11 @@ const IndexerWorker: WorkerAPI = {
 
             workerLogger.debug(`Indexed ${path} (${embedding.length} dims)`);
         } catch (error) {
+            const msg = String(error);
+            // Critical errors that should stop the indexing process
+            if (msg.includes("API key") || msg.includes("400") || msg.includes("401")) {
+                throw error;
+            }
             workerLogger.error(`Failed to index ${path}:`, error);
         }
     },
