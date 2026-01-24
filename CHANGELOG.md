@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
-- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
 - **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
 - **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
 - **Dynamic Model Fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
@@ -28,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer features
 
+- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
 - **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
 - **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
 - **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
