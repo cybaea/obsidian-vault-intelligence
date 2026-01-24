@@ -1,6 +1,6 @@
 import { Setting, TextComponent, App, setIcon, Notice } from "obsidian";
-import { IVaultIntelligencePlugin } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
     setting: {
@@ -14,8 +14,8 @@ interface InternalPlugin {
     };
 }
 
-export function renderConnectionSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
-    new Setting(containerEl).setName('Connection').setHeading();
+export function renderConnectionSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
 
     // --- 1. API Key Setting ---
     const apiKeyDesc = getApiKeyDescription(plugin.app);

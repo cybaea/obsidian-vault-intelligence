@@ -2,6 +2,7 @@ import { Setting, App, Plugin } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { UI_CONSTANTS } from "../../constants";
+import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
     setting: {
@@ -9,8 +10,8 @@ interface InternalApp extends App {
     };
 }
 
-export function renderResearcherSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
-    new Setting(containerEl).setName('Researcher').setHeading();
+export function renderResearcherSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.setText('Personalise your research assistant’s intelligence and capabilities.');

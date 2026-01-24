@@ -1,14 +1,14 @@
 import { Setting } from "obsidian";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { DEFAULT_SETTINGS } from "../types";
 import { LogLevel } from "../../utils/logger";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { SettingsTabContext } from "../SettingsTabContext";
 
-export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
+export function renderAdvancedSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
     const gemini = "Gemini";
     const api = "API";
     const local = "Local";
-
-    new Setting(containerEl).setName('Performance and system').setHeading();
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.setText('Technical tuning and system-level configurations.');
@@ -48,7 +48,7 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
     if (plugin.settings.embeddingProvider === 'local') {
         new Setting(containerEl)
             .setName(`${local} worker threads`)
-            .setDesc(`CPU threads used for ${local.toLowerCase()} embeddings. Higher is faster but heavier.`)
+            .setDesc(`CPU threads used for ${local.toLowerCase()} embeddings.Higher is faster but heavier.`)
             .addSlider(slider => slider
                 .setLimits(1, 4, 1)
                 .setValue(plugin.settings.embeddingThreads)
@@ -63,7 +63,7 @@ export function renderAdvancedSettings(containerEl: HTMLElement, plugin: IVaultI
     }
 
     // --- 2. System and API ---
-    new Setting(containerEl).setName(`System and ${api}`).setHeading();
+    new Setting(containerEl).setName(`System and ${api} `).setHeading();
 
     new Setting(containerEl)
         .setName(`${gemini} ${api} retries`)

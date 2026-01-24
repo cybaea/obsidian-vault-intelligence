@@ -2,6 +2,7 @@ import { Setting, Notice, App, Plugin, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
+import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
     setting: {
@@ -9,8 +10,8 @@ interface InternalApp extends App {
     };
 }
 
-export function renderExplorerSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
-    new Setting(containerEl).setName('Explorer').setHeading();
+export function renderExplorerSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.setText('Configure how the explorer finds connections and similar notes in your vault.');

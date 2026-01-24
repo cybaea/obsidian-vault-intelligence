@@ -3,6 +3,7 @@ import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { UI_CONSTANTS } from "../../constants";
+import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
     setting: {
@@ -10,8 +11,8 @@ interface InternalApp extends App {
     };
 }
 
-export function renderGardenerSettings(containerEl: HTMLElement, plugin: IVaultIntelligencePlugin): void {
-    new Setting(containerEl).setName('Gardener').setHeading();
+export function renderGardenerSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.setText('Configure the gardener to maintain your vault’s ontology and hygiene.');

@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Grounding Optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
 - **Model List Debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
 - **Dynamic Budget Scaling**: Context budgets now automatically adjust when switching models to maintain a consistent capacity ratio.
+- **Tabbed Settings Interface**: Refactored the settings UI into a clean, tabbed layout (Connection, Researcher, Explorer, Gardener, and Advanced).
+- **Improved Settings Architecture**: Centralised tab rendering logic and standardised agent sections using a unified `SettingsTabContext`.
 - **Proportional Reset Buttons**: Added "Reset to default ratio" buttons to context budgets, restoring them to sensible baselines (20% for chat, 10% for gardener) based on the current model's limit.
 - **Persistent Debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
 - **UI Layout Optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer features
 
+- **Lazy Loading Implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
 - **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders already existed. The plugin now handles existing structures silently and gracefully.
 - **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
 - **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.

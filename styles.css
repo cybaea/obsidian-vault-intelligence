@@ -606,3 +606,23 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* --- Tabbed Settings UI --- */
+
+.vi-settings-tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-4-1);
+    margin-bottom: var(--size-4-4);
+    padding-bottom: var(--size-4-2);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Hide tabs by default, show only active tab */
+.vi-settings-tab {
+    display: none;
+}
+
+.vi-settings-tab.is-active {
+    display: block;
+}
