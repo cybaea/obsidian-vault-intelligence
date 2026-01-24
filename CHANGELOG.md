@@ -9,13 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Improved Error Feedback**: The Research Assistant and settings now provide friendly, actionable messages for authentication issues (e.g. "Invalid API key") instead of technical status codes or generic apologies.
+- **Reliable Indexing Alerts**: Background vault indexing now correctly reports critical failures (like expired API keys) to the user interface, preventing silent failures during re-indexing.
 - **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
 - **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
 - **Dynamic Model Fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
 - **Smart Model Caching**: Added configurable caching for the Gemini model list to ensure a snappy settings experience while keeping the list fresh.
 - **Instant Connection**: Providing a valid Gemini API key now immediately triggers a model fetch and enables model dropdowns without needing a plugin restart.
 - **Model Tooltips**: Added hover tooltips to all model dropdowns showing the raw Gemini model ID for advanced users.
-- **Improved Model Sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (e.g., Gemini 3.0 and 2.5 families).
+- **Improved Model Sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (eg Gemini 3.0 and 2.5 families).
 - **Refined Model Lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
 - **Grounding Optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
 - **Model List Debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
@@ -29,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer features
 
+- **Critical Error Propagation**: Updated the Indexer Web Worker to explicitly re-throw authentication and API errors back to the main thread.
+- **Throwing Model Discovery**: Enhanced `ModelRegistry.fetchModels` with an optional `throwOnError` flag to allow UI-driven error handling during model refreshes.
+- **Security Hardening**: Removed a leaked API key from the test suite and replaced it with a safe dummy string.
+- **UI Compliance**: Standardised interactive notices to use strict sentence case in accordance with Obsidian UI guidelines.
 - **Lazy Loading Implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
 - **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
 - **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
@@ -42,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Documentation**: Comprehensive update to `devs/ARCHITECTURE.md` with detailed Mermaid.js data flows, control flows, and service interface definitions.
 - **Worker Robustness**: Replaced unsafe non-null assertions in the embedding worker with defensive null checks to prevent runtime exceptions during model configuration.
 - **Service Documentation**: Added comprehensive Inline JSDoc and strict access modifiers to core services like `ModelRegistry` to improve code clarity and maintainability.
-- **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (e.g. when updating worker configurations).
+- **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (eg when updating worker configurations).
 
 
 ## [2.2.0] - 2026-01-22
