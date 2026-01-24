@@ -1,4 +1,6 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
+import { buildEndGenerateOpenGraphImages } from '@nolebase/vitepress-plugin-og-image'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -30,10 +32,14 @@ function getSidebarItems(dir: string, prefix: string) {
 }
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+export default withMermaid(defineConfig({
     title: "Vault Intelligence",
     description: "AI research assistant for your Obsidian vault",
     base: '/obsidian-vault-intelligence/',
+    lastUpdated: true,
+    sitemap: {
+        hostname: 'https://cybaea.github.io/obsidian-vault-intelligence/'
+    },
     head: [
         ['meta', { property: 'og:type', content: 'website' }],
         ['meta', { property: 'og:title', content: 'Vault Intelligence' }],
@@ -76,10 +82,24 @@ export default defineConfig({
 
         socialLinks: [
             { icon: 'github', link: 'https://github.com/cybaea/obsidian-vault-intelligence' }
-        ]
+        ],
+
+        search: {
+            provider: 'local'
+        },
+
+        editLink: {
+            pattern: 'https://github.com/cybaea/obsidian-vault-intelligence/edit/main/:path',
+            text: 'Edit this page on GitHub'
+        }
     },
     // Map .md files from root and subdirs
-    rewrites: {
-        'README.md': 'README_DOC.md'
+    async buildEnd(siteConfig) {
+        await buildEndGenerateOpenGraphImages({
+            baseUrl: 'https://cybaea.github.io/obsidian-vault-intelligence/',
+            category: {
+                byLevel: 1
+            }
+        })(siteConfig)
     }
-})
+}))
