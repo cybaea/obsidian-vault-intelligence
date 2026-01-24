@@ -1,6 +1,7 @@
 import { Setting, TextComponent, App, setIcon, Notice } from "obsidian";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
+import { BANNER_BASE64 } from "./banner-data";
 
 interface InternalApp extends App {
     setting: {
@@ -10,14 +11,47 @@ interface InternalApp extends App {
 
 interface InternalPlugin {
     manifest: {
+        name: string;
         id: string;
     };
 }
 
 export function renderConnectionSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
+    const pluginName = (plugin as unknown as InternalPlugin).manifest.name;
 
-    // --- 1. API Key Setting ---
+    // --- 0. Banner ---
+    const bannerLink = containerEl.createEl('a', {
+        cls: 'vi-settings-banner-link',
+        attr: {
+            href: 'https://cybaea.github.io/obsidian-vault-intelligence/',
+            target: '_blank',
+            rel: 'noopener'
+        }
+    });
+
+    bannerLink.createEl('img', {
+        cls: 'vi-settings-banner',
+        attr: {
+            src: `data:image/webp;base64,${BANNER_BASE64}`,
+            alt: 'Vault Intelligence Banner'
+        }
+    });
+
+    // --- 1. Documentation Setting ---
+    new Setting(containerEl)
+        .setName('Documentation')
+        .setDesc(`Learn how to use ${pluginName} and explore advanced features.`)
+        .addButton(btn => btn
+            .setButtonText("Open documentation")
+            .setIcon('external-link')
+            .onClick(() => {
+                window.open('https://cybaea.github.io/obsidian-vault-intelligence/', '_blank');
+            }));
+
+    // --- 2. API Key Setting ---
+    new Setting(containerEl).setName('Connection settings').setHeading();
+
     const apiKeyDesc = getApiKeyDescription(plugin.app);
     let apiTextInput: TextComponent;
 
