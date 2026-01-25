@@ -67,4 +67,4 @@ Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence/
 
 ---
 
-_New in this version: Advanced GARS (Graph-Augmented Relevance Scoring) tuning, Ontology Sibling Traversal, and improved local embedding performance._
+_New in this version: Advanced GARS (Graph-Augmented Relevance Scoring) tuning, Ontology Sibling Traversal, improved local embedding performance, and the introduction of the Gardener agent._
