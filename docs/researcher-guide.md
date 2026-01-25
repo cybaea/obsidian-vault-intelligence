@@ -54,7 +54,9 @@ graph TD
 ```
 
 ### What is GARS?
+
 **GARS (Graph-Augmented Relevance Score)** is the secret sauce. It doesn't just look at text; it looks at importance. A note becomes "relevant" if:
+
 1.  **Similarity**: It matches your query text (Standard Search).
 2.  **Centrality**: It is a "hub" or important note in your vault (Structural Importance).
 3.  **Activation**: It is directly connected to *other* notes that matched your query (Contextual Relevance).
@@ -64,6 +66,7 @@ graph TD
 You can tune how the engine "thinks" about relevance in **Settings > Advanced > Search relevance tuning**.
 
 ### The Mental Model
+
 Think of these sliders as telling the engine what you value most right now.
 
 | Weight | Mental Model | Best For... |
@@ -75,22 +78,26 @@ Think of these sliders as telling the engine what you value most right now.
 ### Common Configurations
 
 **1. The Librarian (Default)**
+
 -   Similarity: 0.60
 -   Centrality: 0.20
 -   Activation: 0.20
+
 *Balanced approach. Good for general questions.*
 
 **2. The Explorer**
+
 -   Similarity: 0.40
 -   Centrality: 0.10
 -   Activation: 0.50
+
 *Prioritizes connections. Great for finding "hidden gems" or related concepts that don't explicitly mention your keywords.*
 
 **3. The Fact-Checker**
+
 -   Similarity: 0.90
 -   Centrality: 0.05
 -   Activation: 0.05
-*Strict. Only returns notes that strongly match the query. Good when you know exactly what you are looking for.*
 
 *Strict. Only returns notes that strongly match the query. Good when you know exactly what you are looking for.*
 
