@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+### Developer features
+
+## [4.0.0] - 2026-01-25
+
+### User features
+
 - **GARS tuning**: Users can now precisely adjust the similarity, centrality, and activation weights in settings to fine-tune how the Research Assistant ranks notes.
 - **Graph & ontology awareness**: The Research Assistant now understands vault hierarchy through a new topic sibling traversal algorithm, finding related notes even if they are not directly linked.
 - **Improved hybrid search**: Combined vector and graph analysis into a unified scoring system (GARS) for more relevant search results.
