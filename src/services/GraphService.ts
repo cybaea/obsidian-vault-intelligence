@@ -7,13 +7,11 @@ import { logger } from "../utils/logger";
 import { WorkerAPI, WorkerConfig } from "../types/graph";
 import { IEmbeddingService } from "./IEmbeddingService";
 import { OntologyService } from "./OntologyService";
+import { GRAPH_CONSTANTS } from "../constants";
 
 // @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
 const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
-
-const DATA_DIR = "data";
-const GRAPH_FILE = "graph-state.json";
 
 // Interface augmentation to support dynamic service access
 interface PluginWithOntology extends Plugin {
@@ -141,7 +139,7 @@ export class GraphService {
         if (!this.api) return;
         try {
             const state = await this.api.saveIndex();
-            const dataPath = `${this.plugin.manifest.dir}/${DATA_DIR}/${GRAPH_FILE}`;
+            const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
             await this.plugin.app.vault.adapter.write(dataPath, state);
             logger.debug("[GraphService] State persisted.");
         } catch (error) {
@@ -151,7 +149,7 @@ export class GraphService {
 
     private async loadState() {
         if (!this.api) return;
-        const dataPath = `${this.plugin.manifest.dir}/${DATA_DIR}/${GRAPH_FILE}`;
+        const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
         if (await this.plugin.app.vault.adapter.exists(dataPath)) {
             try {
                 const state = await this.plugin.app.vault.adapter.read(dataPath);

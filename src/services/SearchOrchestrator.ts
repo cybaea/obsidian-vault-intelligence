@@ -122,6 +122,12 @@ export class SearchOrchestrator {
         return sortedResults;
     }
 
+    /**
+     * Performs a keyword search across the title and content of markdown files.
+     * @param query - The user's search query.
+     * @returns A promise resolving to an array of keyword matches.
+     * @private
+     */
     private async performKeywordSearch(query: string): Promise<VaultSearchResult[]> {
         const keywordResults: VaultSearchResult[] = [];
 
@@ -183,6 +189,14 @@ export class SearchOrchestrator {
         return keywordResults;
     }
 
+    /**
+     * Merges vector-based results with keyword-based results, applying boosts where they overlap.
+     * @param vectorResults - Results from the vector search.
+     * @param keywordResults - Results from the keyword search.
+     * @param limit - Maximum number of results to return after merging.
+     * @returns Array of merged and ranked search results.
+     * @private
+     */
     private mergeAndRank(vectorResults: VaultSearchResult[], keywordResults: VaultSearchResult[], limit: number): VaultSearchResult[] {
         const mergedMap = new Map<string, VaultSearchResult>();
 

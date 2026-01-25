@@ -56,7 +56,13 @@ export const SEARCH_CONSTANTS = {
     FUZZY_MIN_HITS_FOR_LONG_QUERY: 2,
 
     /** Max number of keyword matches to find before stopping */
-    MAX_KEYWORD_MATCHES: 100
+    MAX_KEYWORD_MATCHES: 100,
+
+    /** Accordion Thresholds: Higher score = more content */
+    ACCORDION_THRESHOLDS: {
+        HIGH: 0.8,
+        MED: 0.4
+    }
 };
 
 export const EMBEDDING_CONSTANTS = {
@@ -141,7 +147,11 @@ export const GRAPH_CONSTANTS = {
     /** Max neighbors to fetch per node to avoid state explosion */
     MAX_NEIGHBORS_PER_NODE: 5,
     /** Max hops to traverse (currently limited to 1 for performance) */
-    MAX_EXPANSION_DEPTH: 1
+    MAX_EXPANSION_DEPTH: 1,
+    /** Default directory for index storage */
+    DATA_DIR: "data",
+    /** Default filename for graph state */
+    STATE_FILE: "graph-state.json"
 };
 
 export const ONTOLOGY_CONSTANTS = {
@@ -196,6 +206,7 @@ export const AGENT_CONSTANTS = {
 export const GARDENER_CONSTANTS = {
     PLAN_PREFIX: "Gardener Plan",
     PLAN_DATE_FORMAT: "YYYY-MM-DD HH-mm", // Conceptual format, implementation uses manual string building
+    DEFAULT_AGENT_STEPS: 5,
     ACTIONS: {
         UPDATE_TOPICS: "update_topics"
     }
@@ -217,9 +228,16 @@ export const MODEL_REGISTRY_CONSTANTS = {
         GEMINI_2_5: 3000,
         GEMINI_2: 2500,
         GEMINI_1_5: 2000,
+        GEMINI_1_0: 1000,
+        PRO_BOOST: 500,
+        FLASH_BOOST: 300,
+        LITE_BOOST: 100,
+        EMBEDDING_BOOST: 10,
         EXPERIMENTAL_PENALTY: -50,
         PREVIEW_PENALTY: -20
-    }
+    },
+    /** Default input token limit if unknown */
+    DEFAULT_TOKEN_LIMIT: 1048576
 };
 
 export const SANITIZATION_CONSTANTS = {
