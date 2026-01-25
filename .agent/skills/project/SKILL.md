@@ -1,41 +1,49 @@
 ---
 name: project
-description: Project-specific architecture, maintenance tasks, and unique conventions. Load when performing project-wide maintenance or working with the core architecture.
+description: Project-specific architecture (Vault Intelligence), services, and maintenance tasks. Load when working on core logic, services, or specific features.
 ---
 
-# Project Context
+# Project Context: Vault Intelligence
 
-This skill provides the unique context and architectural details for this repository.
+This skill contains the domain knowledge for the **Vault Intelligence** Obsidian plugin.
 
-## Purpose
+## 1. Project Identity
+- **Name**: Vault Intelligence
+- **Core Function**: AI-powered Research Agent & Adaptive Hybrid Search.
+- **AI Backend**: Google Gemini 3 (via `GeminiService`).
+- **Data Structure**: Knowledge Graph + Vector Embeddings (via `GraphService`).
 
-To provide guidance on project-specific structures and tasks that differ from general Obsidian development patterns.
+## 2. Architectural Constraints
+**Source of Truth**: [devs/ARCHITECTURE.md](devs/ARCHITECTURE.md) (Read this for complex changes).
 
-## When to Use
+### Critical Rules
+1.  **Service-Oriented Architecture (SOA)**:
+    - **Never** put business logic in Views (UI).
+    - **Views** must call **Services** to fetch data or modify the vault.
+    - **Services** must be singletons registered in the main plugin class.
+2.  **No Direct Vault Access in UI**:
+    - ❌ `view.app.vault.read()` inside a React component.
+    - ✅ `plugin.graphService.getNoteContent()` called by the component.
 
-Load this skill when:
-- Understanding the repository's unique architecture.
-- Performing recurring maintenance tasks.
-- Following project-specific coding conventions.
+### Core Services
+- **`GeminiService`**: Handles all LLM interactions, context window management, and prompt engineering.
+- **`GraphService`**: Manages the graph database, embeddings, and relationship mapping.
+- **`SearchService`**: Orchestrates Hybrid Search (Keyword + Semantic).
 
-## Project Overview
+## 3. Project Structure
+- **`src/services/`**: Core business logic (The Brains).
+- **`src/views/`**: React/Svelte UI components (The Face).
+- **`src/utils/`**: Shared helpers (no state).
+- **`devs/`**: Documentation and Architecture Decision Records (ADRs).
 
-- **Primary Stack**: TypeScript, Obsidian API
-- **Key Directories**: `src/`, `devs/`
+## 4. Maintenance & Operations
+- **Versioning**: DO NOT bump `package.json` manually. This is handled via the Release Workflow.
+- **Manifest**: `id` and `minAppVersion` are strict constraints. Check `obsidian-ref` skill if modifying `manifest.json`.
+- **Styling**: All CSS variables must align with Obsidian's theme API. See `styles.css`.
 
-## Core Architecture
-
-- See `devs/ARCHITECTURE.md` for a high-level overview of the project's architecture.
-- See `devs/adr/` for a collection of Architecture Decision Records (ADRs) that document key design decisions and their rationales.
-- See `devs/` for additional documentation and notes.
-
-## Key Files
-
-- `manifest.json`: Plugin manifest
-- `package.json`: Build scripts and dependencies
-- `CHANGELOG.md`: Version history and release notes
-- `styles.css`: Plugin styles
-
-## Maintenance Tasks
-
-- DO NOT change version numbers or attempt to release new versions! This is a manual process.
+## 5. Common Tasks
+- **Adding a Feature**:
+    1. Define the Interface in `src/types.ts`.
+    2. Implement logic in a Service (`src/services/`).
+    3. Expose via `main.ts` if needed.
+    4. Build UI in `src/views/`.
