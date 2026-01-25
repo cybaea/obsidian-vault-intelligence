@@ -380,8 +380,10 @@ const IndexerWorker: WorkerAPI = {
         if (mode === 'ontology') {
             // Logic: For each neighbor that is a "Topic", find ITS inbound neighbors (my siblings)
             for (const neighbor of initialNeighbors) {
-                // A node is a Topic if: in Ontology folder OR high degree
-                const isOntologyPath = neighbor.includes('Ontology/');
+                // A node is a Topic if: in Ontology folder (+/- trailing slash) OR high degree
+                // Helper to normalize config path for comparison
+                const configuredOntology = workerNormalizePath(config.ontologyPath || 'Ontology');
+                const isOntologyPath = neighbor.startsWith(configuredOntology + '/');
                 const degree = graph.inDegree(neighbor);
                 const isHub = degree >= ONTOLOGY_CONSTANTS.HUB_MIN_DEGREE;
 

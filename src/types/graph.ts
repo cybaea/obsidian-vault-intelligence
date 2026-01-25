@@ -48,6 +48,7 @@ export interface WorkerConfig {
     chatModel: string;
     indexingDelayMs: number;
     minSimilarityScore: number;
+    ontologyPath: string;
 }
 
 /**

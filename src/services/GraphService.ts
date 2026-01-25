@@ -58,7 +58,8 @@ export class GraphService {
                 embeddingDimension: this.settings.embeddingDimension,
                 chatModel: this.settings.chatModel,
                 indexingDelayMs: this.settings.indexingDelayMs || 2000,
-                minSimilarityScore: this.settings.minSimilarityScore ?? 0.5
+                minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
+                ontologyPath: this.settings.ontologyPath
             };
 
             const fetcher = Comlink.proxy(async (url: string, options: { method?: string; headers?: Record<string, string>; body?: string }) => {
@@ -301,7 +302,8 @@ export class GraphService {
                 embeddingDimension: settings.embeddingDimension,
                 chatModel: settings.chatModel,
                 indexingDelayMs: settings.indexingDelayMs,
-                minSimilarityScore: settings.minSimilarityScore
+                minSimilarityScore: settings.minSimilarityScore,
+                ontologyPath: settings.ontologyPath
             });
         }
     }
