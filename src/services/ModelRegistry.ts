@@ -51,14 +51,14 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
         provider: 'gemini',
         isDefault: true,
         description: 'Fast, efficient, and great for most tasks.',
-        inputTokenLimit: 1048576
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
     },
     {
         id: 'gemini-3-pro-preview',
         label: 'Gemini 3 Pro',
         provider: 'gemini',
         description: 'Maximum intelligence for complex reasoning.',
-        inputTokenLimit: 1048576
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
     }
 ];
 
@@ -68,7 +68,7 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
         label: 'Gemini 2.5 Flash Lite (Default)',
         provider: 'gemini',
         isDefault: true,
-        inputTokenLimit: 1048576
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
     }
 ];
 
@@ -219,11 +219,11 @@ export class ModelRegistry {
                 else if (id.includes('gemini-2.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2_5;
                 else if (id.includes('gemini-2')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2;
                 else if (id.includes('gemini-1.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_5;
-                else if (id.includes('gemini-1.0')) score += 1000;
+                else if (id.includes('gemini-1.0')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_0;
 
-                if (id.includes('pro')) score += 500;
-                else if (id.includes('flash')) score += 300;
-                else if (id.includes('lite')) score += 100;
+                if (id.includes('pro')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PRO_BOOST;
+                else if (id.includes('flash')) score += MODEL_REGISTRY_CONSTANTS.SCORES.FLASH_BOOST;
+                else if (id.includes('lite')) score += MODEL_REGISTRY_CONSTANTS.SCORES.LITE_BOOST;
 
                 if (id.includes('preview')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PREVIEW_PENALTY;
                 if (id.includes('experimental')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EXPERIMENTAL_PENALTY;
@@ -233,7 +233,7 @@ export class ModelRegistry {
                 }
 
                 // Prioritize embedding if it's an embedding request? No, this is general sort.
-                if (id.includes('embedding')) score += 10;
+                if (id.includes('embedding')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EMBEDDING_BOOST;
 
                 return score;
             };

@@ -43,7 +43,7 @@ export class ContextAssembler {
                 // 2. Medium Score (0.4 - 0.8): Supporting context -> Use Smart Windowing.
                 // 3. Low Score (< 0.4): Minimal context -> Metadata/Summary only to save tokens.
 
-                if (doc.score > 0.8) {
+                if (doc.score > SEARCH_CONSTANTS.ACCORDION_THRESHOLDS.HIGH) {
                     // Scenario: High Relevance. 
                     // Use full content if it fits the soft limit, else center on keyword.
                     const isNotTooHuge = content.length < singleDocSoftLimit;
@@ -57,7 +57,7 @@ export class ContextAssembler {
                         contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
                         logger.debug(`[ContextAssembler] [Accordion:HIGH] Clipped file: ${file.path}`);
                     }
-                } else if (doc.score >= 0.4) {
+                } else if (doc.score >= SEARCH_CONSTANTS.ACCORDION_THRESHOLDS.MED) {
                     // Scenario: Supporting Relevance.
                     // Strictly use a smaller window (half of the soft limit) to leave room for others.
                     const supportWindow = Math.floor(singleDocSoftLimit / 2);

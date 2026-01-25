@@ -145,6 +145,14 @@ export class AgentService {
      * @param args - The arguments provided by the LLM.
      * @returns A promise resolving to the tool's output.
      */
+    /**
+     * Executes a specific tool called by the AI model.
+     * @param name - The name/ID of the tool (function) to execute.
+     * @param args - The arguments provided by the AI model for the tool.
+     * @param usedFiles - A set to track files that were read during tool execution for context.
+     * @returns A result object (JSON) to be returned to the model.
+     * @private
+     */
     private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>): Promise<Record<string, unknown>> {
         logger.info(`Executing tool ${name} with args:`, args);
 

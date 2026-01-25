@@ -163,7 +163,32 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >     ```
 >
 
-### 3.3. Model fetching and budget scaling (metadata flow)
+### 3.3. Context Assembly (Accordion Logic)
+
+To maximise the utility of the context window while staying within token budgets, the `ContextAssembler` employs **Accordion Logic** to dynamically scale document density:
+
+| Relevance Score | Density Level | Strategy |
+| :--- | :--- | :--- |
+| **High** (> 0.8) | Full / Extensive | Includes full file content if it fits within the "Starvation Protection" limit (25% of budget). |
+| **Medium** (0.4 - 0.8) | Snippet / Windowed | Includes a clipped window centered around query keywords to provide supporting context. |
+| **Low** (< 0.4) | Metadata / Link | Includes only document path and metadata, encouraging the agent to use tools for more detail if needed. |
+
+This ensures that "noise" from low-relevance results doesn't displace high-signal information from top matches.
+
+
+### 3.4. Dynamic Model Ranking & Fetching
+
+The `ModelRegistry` synchronises available Gemini models and ranks them to ensure the user always has access to the most capable stable versions.
+
+1. **Fetch**: Models are fetched from the Google AI API and cached locally.
+2. **Scoring**: A weighted scoring system (`ModelRegistry.sortModels`) ranks models based on:
+    - **Tier**: Gemini 3 > Gemini 2.5 > Gemini 2 > Gemini 1.5.
+    - **Capability**: Pro > Flash > Lite.
+    - **Stability**: Preview or Experimental versions receive a penalty.
+3. **Budget Scaling**: When switching models, `calculateAdjustedBudget` ensures the user's context configuration scales proportionally (eg if a user sets a 10% budget on a 1M model, it scales to 10% on a 32k model).
+
+
+### 3.5. Model fetching and budget scaling (metadata flow)
 
 > #### Dynamic model reconfiguration
 >
@@ -188,7 +213,7 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >     Models are ranked based on their capabilities (Flash vs Pro) and version (Gemini 3 > 2 > 1.5). Preview and experimental models receive a slight penalty in ranking to prefer stable releases for the main user interface.
 
 
-### 3.4. System mechanics and orchestration
+### 3.6. System mechanics and orchestration
 
 *   **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
 *   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
