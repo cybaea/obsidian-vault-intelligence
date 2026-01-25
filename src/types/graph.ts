@@ -60,6 +60,8 @@ export interface WorkerAPI {
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;
     searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    getNeighbors(path: string): Promise<GraphSearchResult[]>;
+    getCentrality(path: string): Promise<number>;
     saveIndex(): Promise<string>; // Returns serialized graph/index
     loadIndex(data: string): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;

@@ -128,6 +128,22 @@ export const WORKER_INDEXER_CONSTANTS = {
     CONTENT_PREVIEW_LENGTH: 500
 };
 
+export const GRAPH_CONSTANTS = {
+    /** Scoring Weights (alpha, beta, gamma) */
+    WEIGHTS: {
+        /** Vector Similarity weight */
+        SIMILARITY: 0.6,
+        /** Graph Centrality (structural) weight */
+        CENTRALITY: 0.2,
+        /** Spreading Activation (connectedness) weight */
+        ACTIVATION: 0.2
+    },
+    /** Max neighbors to fetch per node to avoid state explosion */
+    MAX_NEIGHBORS_PER_NODE: 5,
+    /** Max hops to traverse (currently limited to 1 for performance) */
+    MAX_EXPANSION_DEPTH: 1
+};
+
 export const UI_CONSTANTS = {
     /** Duration for basic notices (ms) */
     NOTICE_DURATION_MS: 5000,
@@ -155,7 +171,8 @@ export const AGENT_CONSTANTS = {
         VAULT_SEARCH: "vault_search",
         URL_READER: "read_url",
         GOOGLE_SEARCH: "google_search",
-        CALCULATOR: "computational_solver"
+        CALCULATOR: "computational_solver",
+        GET_CONNECTED_NOTES: "get_connected_notes"
     }
 };
 

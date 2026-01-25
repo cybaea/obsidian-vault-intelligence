@@ -97,9 +97,25 @@ export class AgentService {
             }
         };
 
-        const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch];
+        // 4. Graph Explorer
+        const graphExplorer: FunctionDeclaration = {
+            name: AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES,
+            description: "Find notes linked to or from a specific note. Use this to discover context not immediately visible in search results.",
+            parameters: {
+                type: Type.OBJECT,
+                properties: {
+                    path: {
+                        type: Type.STRING,
+                        description: "The path of the note to find connections for."
+                    }
+                },
+                required: ["path"]
+            }
+        };
 
-        // 4. Computational Solver (Conditional)
+        const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch, graphExplorer];
+
+        // 5. Computational Solver (Conditional)
         if (this.settings.enableCodeExecution && this.settings.codeModel.trim().length > 0) {
             const computationalSolver: FunctionDeclaration = {
                 name: AGENT_CONSTANTS.TOOLS.CALCULATOR,
@@ -178,6 +194,17 @@ export class AgentService {
             resultFiles.forEach(f => usedFiles.add(f));
 
             return { result: context };
+        }
+
+        if (name === AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES) {
+            const path = (args.path as string) || '';
+            if (!path) return { error: "Path argument is required." };
+
+            const neighbors = await this.graphService.getNeighbors(path);
+            if (neighbors.length === 0) return { result: `No connected notes found for: ${path}` };
+
+            const list = neighbors.map(n => `- ${n.path} (Title: ${n.title})`).join('\n');
+            return { result: `The following notes are directly connected to ${path}:\n${list}\n\nYou can use vault_search or read their content to explore further.` };
         }
 
         if (name === AGENT_CONSTANTS.TOOLS.URL_READER) {

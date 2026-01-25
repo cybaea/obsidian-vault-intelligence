@@ -180,12 +180,6 @@ export class GraphService {
         return await this.api.searchInPaths(query, paths, limit);
     }
 
-    /**
-     * Finds files similar to the given file path.
-     * @param path - The path of the source file to find connections for.
-     * @param limit - Max number of results.
-     * @returns A promise resolving to an array of similar files.
-     */
     public async getSimilar(path: string, limit?: number) {
         if (!this.api) return [];
 
@@ -199,6 +193,27 @@ export class GraphService {
         }
 
         return await this.api.getSimilar(path, limit);
+    }
+
+    /**
+     * Gets direct neighbors of a file in the graph.
+     * @param path - The path of the source file.
+     * @returns A promise resolving to an array of neighboring files.
+     */
+    public async getNeighbors(path: string) {
+        if (!this.api) return [];
+        return await this.api.getNeighbors(path);
+    }
+
+    /**
+     * Gets structural importance metrics for a node.
+     * @param path - The path of the source file.
+     * @returns A promise resolving to an object containing node metrics.
+     */
+    public async getNodeMetrics(path: string) {
+        if (!this.api) return { centrality: 0 };
+        const centrality = await this.api.getCentrality(path);
+        return { centrality };
     }
 
     /**

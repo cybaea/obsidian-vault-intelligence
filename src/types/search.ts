@@ -4,4 +4,5 @@ export interface VaultSearchResult {
     score: number;
     isKeywordMatch?: boolean;
     isTitleMatch?: boolean;
+    isGraphNeighbor?: boolean;
 }

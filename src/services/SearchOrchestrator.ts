@@ -33,17 +33,74 @@ export class SearchOrchestrator {
             return [];
         }
 
-        logger.info(`[SearchOrchestrator] Starting search for: "${query}"`);
+        logger.info(`[SearchOrchestrator] Starting GARS-aware search for: "${query}"`);
 
-        // 1. Vector Search (Semantic)
-        let vectorResults = await this.graphService.search(query, limit);
-        logger.info(`[SearchOrchestrator] Vector search returned ${vectorResults.length} candidates.`);
+        // 1. SEED PHASE: Initial Hybrid Search (Vector + Keyword)
+        // We fetch slightly more than limit to allow for graph-based reshuffling
+        const seedLimit = limit * 2;
+        const vectorResults = await this.graphService.search(query, seedLimit);
+        const keywordResults = await this.performKeywordSearch(query);
+        const seedHits = this.mergeAndRank(vectorResults, keywordResults, seedLimit);
 
-        // 2. Keyword Search (Hybrid: Exact + Bag-of-Words)
-        const keywordResults: VaultSearchResult[] = await this.performKeywordSearch(query);
+        // 2. EXPANSION PHASE: Graph Traversal
+        const candidates = new Map<string, VaultSearchResult>();
+        const seedPaths: string[] = [];
 
-        // 3. Hybrid Merge & Rank
-        return this.mergeAndRank(vectorResults, keywordResults, limit);
+        for (const hit of seedHits) {
+            candidates.set(hit.path, { ...hit });
+            seedPaths.push(hit.path);
+        }
+
+        // Expand neighbors for top seeds
+        // (Limit expansion to top 10 seeds to avoid excessive worker calls)
+        const topSeeds = seedPaths.slice(0, 10);
+        for (const path of topSeeds) {
+            const parent = candidates.get(path);
+            if (!parent) continue;
+
+            const neighbors = await this.graphService.getNeighbors(path);
+            for (const n of neighbors) {
+                if (!candidates.has(n.path)) {
+                    candidates.set(n.path, {
+                        path: n.path,
+                        score: 0,
+                        isGraphNeighbor: true
+                    });
+                }
+
+                // Spreading Activation (Implicit)
+                // If a neighbor is found, it inherits a portion of the parent's score as activation
+                const neighbor = candidates.get(n.path)!;
+                const activationBoost = parent.score * 0.5; // Constant decay factor
+                neighbor.score = Math.max(neighbor.score, activationBoost);
+            }
+        }
+
+        // 3. SCORING PHASE: Final GARS Calculation
+        const finalResults: VaultSearchResult[] = [];
+        for (const [path, res] of candidates) {
+            const { centrality } = await this.graphService.getNodeMetrics(path);
+
+            // GARS components:
+            // Similarity: the original hybrid score (0 for pure neighbors)
+            // Activation: the boosted score from spreading (0 for seed hits)
+            const similarity = res.isGraphNeighbor ? 0 : res.score;
+            const activation = res.isGraphNeighbor ? res.score : 0;
+
+            res.score = this.scoringStrategy.calculateGARS(similarity, centrality, activation);
+            finalResults.push(res);
+        }
+
+        const sortedResults = finalResults
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+
+        logger.info(`[SearchOrchestrator] GARS-ranked results: ${sortedResults.length} docs.`);
+        if (sortedResults[0]) {
+            logger.info(`[SearchOrchestrator] Top match: ${sortedResults[0].path} (GARS: ${sortedResults[0].score.toFixed(2)})`);
+        }
+
+        return sortedResults;
     }
 
     private async performKeywordSearch(query: string): Promise<VaultSearchResult[]> {
