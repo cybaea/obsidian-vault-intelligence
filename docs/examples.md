@@ -122,6 +122,7 @@ The Gardener will scan your recent notes and propose a hygiene plan. You can rev
 
 ![Gardener hygiene plan showing suggestions for categories and topics](../public/images/gardener-plan-example.png)
 
+
 ### Consistency check
 
 **Scenario**: I want to ensure my notes on "Machine Learning" follow the same pattern as my other technical notes.
@@ -137,6 +138,16 @@ More examples are available in the [Gardener](gardener.md) documentation.
 _**Answer**: Use the command palette and select **Explorer: view similar notes** while viewing a note._
 
 ![Similar notes view showing notes similar to "bard"](../public/images/similar-documents.webp)
+
+# Extended capabilities (Graph Traversal)
+
+**Scenario**: I can't find the answer in a single note, but I know the information is connected.
+
+_**Query**: "Why is Project Alpha delayed?"_
+- *Note A* says: "Project Alpha is delayed due to [Issue 123]."
+- *Note B* says: "Issue 123: Budget cuts in Q3."
+
+Previously, the agent might fail if it didn't find Note B. Now, the Researcher can **follow the link** from Note A to Note B to deduce: *"Project Alpha is delayed due to budget cuts in Q3."*
 
 
 ---
