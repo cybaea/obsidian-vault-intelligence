@@ -79,9 +79,6 @@ export class ScoringStrategy {
         return fuzzyScore;
     }
 
-    /**
-     * Merges Vector and Keyword results, applying boosts.
-     */
     public boostHybridResult(vectorScore: number, keywordMatch?: ScoringResult): number {
         let score = vectorScore;
         if (keywordMatch) {
@@ -91,5 +88,12 @@ export class ScoringStrategy {
             }
         }
         return score;
+    }
+
+    /**
+     * Calculates the final Graph-Aware Relevance Score (GARS).
+     */
+    public calculateGARS(similarity: number, centrality: number, activation: number, weights: { similarity: number, centrality: number, activation: number }): number {
+        return (similarity * weights.similarity) + (centrality * weights.centrality) + (activation * weights.activation);
     }
 }

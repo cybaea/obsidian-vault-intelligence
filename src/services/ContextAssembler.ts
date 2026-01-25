@@ -38,49 +38,48 @@ export class ContextAssembler {
                 const content = await this.app.vault.read(file);
                 let contentToAdd = "";
 
-                // DECISION: Full Content vs. Smart Window
-                // We use full content IF:
-                // 1. It fits in the remaining budget AND
-                // 2. It is smaller than the 'Soft Limit' (to prevent starvation of other docs)
-                const fitsInBudget = (currentUsage + content.length) < budgetChars;
-                const isNotTooHuge = content.length < singleDocSoftLimit;
+                // GARS-Aware Density (Accordion Logic)
+                // 1. High Score (> 0.8): Direct relevant context -> Try to include full/large content.
+                // 2. Medium Score (0.4 - 0.8): Supporting context -> Use Smart Windowing.
+                // 3. Low Score (< 0.4): Minimal context -> Metadata/Summary only to save tokens.
 
-                if (fitsInBudget && isNotTooHuge) {
-                    contentToAdd = content;
-                    logger.debug(`[ContextAssembler] Added full file: ${file.path} (${content.length} chars)`);
-                } else {
-                    // Fallback: Use Smart Windowing (clipping)
-                    // We take a slice of the document centered on the keyword
-                    logger.debug(`[ContextAssembler] Clipping file ${file.path} (Size: ${content.length}).`);
+                if (doc.score > 0.8) {
+                    // Scenario: High Relevance. 
+                    // Use full content if it fits the soft limit, else center on keyword.
+                    const isNotTooHuge = content.length < singleDocSoftLimit;
+                    const fitsInBudget = (currentUsage + content.length) < budgetChars;
 
-                    // Calculate how much space we can reasonably give this doc
-                    // (Either the remaining budget OR the soft limit, whichever is smaller)
-                    const availableSpace = Math.min(singleDocSoftLimit, budgetChars - currentUsage);
-
-                    if (availableSpace < SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) continue; // Skip if too little space left
-
-                    if (doc.isKeywordMatch) {
-                        // Center window on match
-                        const idx = content.toLowerCase().indexOf(query.toLowerCase());
-                        if (idx !== -1) {
-                            const halfWindow = Math.floor(availableSpace / 2);
-                            const start = Math.max(0, idx - halfWindow);
-                            const end = Math.min(content.length, idx + halfWindow);
-                            contentToAdd = `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
-                        } else {
-                            contentToAdd = content.substring(0, availableSpace) + "\n...[clipped]...";
-                        }
+                    if (isNotTooHuge && fitsInBudget) {
+                        contentToAdd = content;
+                        logger.debug(`[ContextAssembler] [Accordion:HIGH] Added full file: ${file.path}`);
                     } else {
-                        // Vector match without keyword? Just take the start.
-                        contentToAdd = content.substring(0, availableSpace) + "\n...[clipped]...";
+                        const availableSpace = Math.min(singleDocSoftLimit, budgetChars - currentUsage);
+                        contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
+                        logger.debug(`[ContextAssembler] [Accordion:HIGH] Clipped file: ${file.path}`);
                     }
-                    logger.debug(`[ContextAssembler] Added clipped file: ${file.path} (${contentToAdd.length} chars)`);
+                } else if (doc.score >= 0.4) {
+                    // Scenario: Supporting Relevance.
+                    // Strictly use a smaller window (half of the soft limit) to leave room for others.
+                    const supportWindow = Math.floor(singleDocSoftLimit / 2);
+                    const availableSpace = Math.min(supportWindow, budgetChars - currentUsage);
+
+                    if (availableSpace > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
+                        contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
+                        logger.debug(`[ContextAssembler] [Accordion:MED] Added snippet: ${file.path}`);
+                    }
+                } else {
+                    // Scenario: Peripheral Relevance (Neighbors).
+                    // Just add the metadata header to let the agent know it exists.
+                    contentToAdd = "... (Note available via get_connected_notes tool if needed) ...";
+                    logger.debug(`[ContextAssembler] [Accordion:LOW] Added metadata only: ${file.path}`);
                 }
 
-                const header = `\n--- Document: ${doc.path} (Score: ${doc.score.toFixed(2)}) ---\n`;
-                constructedContext += header + contentToAdd + "\n";
-                currentUsage += contentToAdd.length;
-                includedCount++;
+                if (contentToAdd) {
+                    const header = `\n--- Document: ${doc.path} (Relevance Score: ${doc.score.toFixed(2)}) ---\n`;
+                    constructedContext += header + contentToAdd + "\n";
+                    currentUsage += contentToAdd.length;
+                    includedCount++;
+                }
 
             } catch (e) {
                 logger.error(`Failed to read file for context: ${doc.path}`, e);
@@ -88,5 +87,22 @@ export class ContextAssembler {
         }
 
         return { context: constructedContext, usedFiles: Array.from(new Set(results.slice(0, includedCount).map(r => r.path))) };
+    }
+
+    private clipContent(content: string, query: string, availableSpace: number, isKeywordMatch: boolean): string {
+        if (availableSpace < SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) return "";
+
+        if (isKeywordMatch) {
+            const idx = content.toLowerCase().indexOf(query.toLowerCase());
+            if (idx !== -1) {
+                const halfWindow = Math.floor(availableSpace / 2);
+                const start = Math.max(0, idx - halfWindow);
+                const end = Math.min(content.length, idx + halfWindow);
+                return `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
+            }
+        }
+
+        // Default: Start of doc
+        return content.substring(0, availableSpace) + "\n...[clipped]...";
     }
 }

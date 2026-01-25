@@ -128,6 +128,39 @@ export const WORKER_INDEXER_CONSTANTS = {
     CONTENT_PREVIEW_LENGTH: 500
 };
 
+export const GRAPH_CONSTANTS = {
+    /** Scoring Weights (alpha, beta, gamma) */
+    WEIGHTS: {
+        /** Vector Similarity weight */
+        SIMILARITY: 0.6,
+        /** Graph Centrality (structural) weight */
+        CENTRALITY: 0.2,
+        /** Spreading Activation (connectedness) weight */
+        ACTIVATION: 0.2
+    },
+    /** Max neighbors to fetch per node to avoid state explosion */
+    MAX_NEIGHBORS_PER_NODE: 5,
+    /** Max hops to traverse (currently limited to 1 for performance) */
+    MAX_EXPANSION_DEPTH: 1
+};
+
+export const ONTOLOGY_CONSTANTS = {
+    /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
+    HUB_MIN_DEGREE: 5,
+
+    /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
+    HUB_PENALTY_ENABLED: true,
+
+    /** Dampening factor for 2-hop (Sibling) relevance */
+    SIBLING_DECAY: 0.25,
+
+    /** Weights for edge sources */
+    EDGE_WEIGHTS: {
+        FRONTMATTER: 1.5,
+        BODY: 1.0
+    }
+};
+
 export const UI_CONSTANTS = {
     /** Duration for basic notices (ms) */
     NOTICE_DURATION_MS: 5000,
@@ -155,7 +188,8 @@ export const AGENT_CONSTANTS = {
         VAULT_SEARCH: "vault_search",
         URL_READER: "read_url",
         GOOGLE_SEARCH: "google_search",
-        CALCULATOR: "computational_solver"
+        CALCULATOR: "computational_solver",
+        GET_CONNECTED_NOTES: "get_connected_notes"
     }
 };
 

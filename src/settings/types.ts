@@ -1,6 +1,7 @@
 import { App, Platform } from "obsidian";
 import { LogLevel } from "../utils/logger";
 import { IEmbeddingService } from "../services/IEmbeddingService";
+import { GRAPH_CONSTANTS } from "../constants";
 
 export type EmbeddingProvider = 'gemini' | 'local';
 
@@ -37,6 +38,9 @@ export interface VaultIntelligenceSettings {
     gardenerSkipRetentionDays: number;
     excludedFolders: string[];
     modelCacheDurationDays: number;
+    garsSimilarityWeight: number;
+    garsCentralityWeight: number;
+    garsActivationWeight: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -122,7 +126,10 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
-    modelCacheDurationDays: 7
+    modelCacheDurationDays: 7,
+    garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
+    garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
+    garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION
 };
 
 export interface IVaultIntelligencePlugin {

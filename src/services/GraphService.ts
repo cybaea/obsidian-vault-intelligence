@@ -5,8 +5,8 @@ import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 import { WorkerAPI, WorkerConfig } from "../types/graph";
-
 import { IEmbeddingService } from "./IEmbeddingService";
+import { OntologyService } from "./OntologyService";
 
 // @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
@@ -14,6 +14,11 @@ const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
 
 const DATA_DIR = "data";
 const GRAPH_FILE = "graph-state.json";
+
+// Interface augmentation to support dynamic service access
+interface PluginWithOntology extends Plugin {
+    ontologyService?: OntologyService;
+}
 
 export class GraphService {
     private plugin: Plugin;
@@ -53,7 +58,8 @@ export class GraphService {
                 embeddingDimension: this.settings.embeddingDimension,
                 chatModel: this.settings.chatModel,
                 indexingDelayMs: this.settings.indexingDelayMs || 2000,
-                minSimilarityScore: this.settings.minSimilarityScore ?? 0.5
+                minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
+                ontologyPath: this.settings.ontologyPath
             };
 
             const fetcher = Comlink.proxy(async (url: string, options: { method?: string; headers?: Record<string, string>; body?: string }) => {
@@ -180,12 +186,6 @@ export class GraphService {
         return await this.api.searchInPaths(query, paths, limit);
     }
 
-    /**
-     * Finds files similar to the given file path.
-     * @param path - The path of the source file to find connections for.
-     * @param limit - Max number of results.
-     * @returns A promise resolving to an array of similar files.
-     */
     public async getSimilar(path: string, limit?: number) {
         if (!this.api) return [];
 
@@ -202,6 +202,53 @@ export class GraphService {
     }
 
     /**
+     * Gets direct neighbors of a file in the graph.
+     * @param path - The path of the source file.
+     * @param options - Traversal options (direction, mode).
+     * @returns A promise resolving to an array of neighboring files.
+     */
+    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }) {
+        if (!this.api) return [];
+        return await this.api.getNeighbors(path, options);
+    }
+
+    /**
+     * Pushes the latest alias map from OntologyService to the Worker.
+     * This ensures the graph worker knows how to canonicalize [[Alias]] links.
+     */
+    public async syncAliases() {
+        if (!this.api) return;
+
+        const plugin = this.plugin as unknown as PluginWithOntology;
+        const ontologyService = plugin.ontologyService;
+
+        if (ontologyService && typeof ontologyService.getValidTopics === 'function') {
+            const topics = await ontologyService.getValidTopics();
+            const map: Record<string, string> = {};
+
+            for (const t of topics) {
+                // Map the topic name/alias to its canonical path
+                // "Project FooBar" -> "Ontology/Project FooBar.md"
+                map[t.name] = t.path;
+            }
+
+            await this.api.updateAliasMap(map);
+            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker.`);
+        }
+    }
+
+    /**
+     * Gets structural importance metrics for a node.
+     * @param path - The path of the source file.
+     * @returns A promise resolving to an object containing node metrics.
+     */
+    public async getNodeMetrics(path: string) {
+        if (!this.api) return { centrality: 0 };
+        const centrality = await this.api.getCentrality(path);
+        return { centrality };
+    }
+
+    /**
      * Scans all markdown files in the vault and queues them for indexing.
      * @param forceWipe - If true, clears the existing graph and Orama index before scanning.
      */
@@ -212,6 +259,9 @@ export class GraphService {
             logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
             await this.api.fullReset();
         }
+
+        // Ensure aliases are up to date before scanning content
+        await this.syncAliases();
 
         const files = this.vaultManager.getMarkdownFiles();
         logger.info(`[GraphService] Starting scan of ${files.length} files`);
@@ -252,7 +302,8 @@ export class GraphService {
                 embeddingDimension: settings.embeddingDimension,
                 chatModel: settings.chatModel,
                 indexingDelayMs: settings.indexingDelayMs,
-                minSimilarityScore: settings.minSimilarityScore
+                minSimilarityScore: settings.minSimilarityScore,
+                ontologyPath: settings.ontologyPath
             });
         }
     }

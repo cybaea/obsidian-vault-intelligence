@@ -25,6 +25,7 @@ export interface GraphNodeData {
 export interface GraphEdgeData {
     type: EdgeType;
     weight: number; // 0.0 to 1.0
+    source?: 'frontmatter' | 'body';
 }
 
 /**
@@ -47,6 +48,7 @@ export interface WorkerConfig {
     chatModel: string;
     indexingDelayMs: number;
     minSimilarityScore: number;
+    ontologyPath: string;
 }
 
 /**
@@ -60,6 +62,9 @@ export interface WorkerAPI {
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;
     searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]>;
+    getCentrality(path: string): Promise<number>;
+    updateAliasMap(map: Record<string, string>): Promise<void>;
     saveIndex(): Promise<string>; // Returns serialized graph/index
     loadIndex(data: string): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
