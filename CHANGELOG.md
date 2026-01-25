@@ -9,46 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
-- **Improved Error Feedback**: The Research Assistant and settings now provide friendly, actionable messages for authentication issues (e.g. "Invalid API key") instead of technical status codes or generic apologies.
-- **Reliable Indexing Alerts**: Background vault indexing now correctly reports critical failures (like expired API keys) to the user interface, preventing silent failures during re-indexing.
-- **Context Transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
-- **Interactive References**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
-- **Dynamic Model Fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
-- **Smart Model Caching**: Added configurable caching for the Gemini model list to ensure a snappy settings experience while keeping the list fresh.
-- **Instant Connection**: Providing a valid Gemini API key now immediately triggers a model fetch and enables model dropdowns without needing a plugin restart.
-- **Model Tooltips**: Added hover tooltips to all model dropdowns showing the raw Gemini model ID for advanced users.
-- **Improved Model Sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (eg Gemini 3.0 and 2.5 families).
-- **Refined Model Lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
-- **Grounding Optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
-- **Model List Debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
-- **Dynamic Budget Scaling**: Context budgets now automatically adjust when switching models to maintain a consistent capacity ratio.
-- **Tabbed Settings Interface**: Refactored the settings UI into a clean, tabbed layout (Connection, Researcher, Explorer, Gardener, and Advanced).
-- **Improved Settings Architecture**: Centralised tab rendering logic and standardised agent sections using a unified `SettingsTabContext`.
-- **Proportional Reset Buttons**: Added "Reset to default ratio" buttons to context budgets, restoring them to sensible baselines (20% for chat, 10% for gardener) based on the current model's limit.
-- **Persistent Debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
-- **UI Layout Optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
+- **GARS tuning**: Users can now precisely adjust the similarity, centrality, and activation weights in settings to fine-tune how the Research Assistant ranks notes.
+- **Graph & ontology awareness**: The Research Assistant now understands vault hierarchy through a new topic sibling traversal algorithm, finding related notes even if they are not directly linked.
+- **Improved hybrid search**: Combined vector and graph analysis into a unified scoring system (GARS) for more relevant search results.
+- **Adaptive context assembler**: Implemented an "Accordion" strategy that packs more context into the AI memory by intelligently switching between full text, snippets, and metadata based on relevance.
+- **Comprehensive documentation**: Added a new user guide for the Researcher and a deep technical specification for developers.
+- **Improved error feedback**: The Research Assistant and settings now provide friendly, actionable messages for authentication issues (eg "Invalid API key") instead of technical status codes or generic apologies.
+- **Reliable indexing alerts**: Background vault indexing now correctly reports critical failures (like expired API keys) to the user interface, preventing silent failures during re-indexing.
+- **Context transparency**: The Research Assistant now displays a collapsible list of all "Context Documents" used to generate the answer (Resolves #59).
+- **Interactive references**: Context documents in the chat reference list are clickable (to open the note) and draggable (to insert a link into other notes).
+- **Dynamic model fetching**: The plugin now dynamically retrieves available Gemini models from the Google API, ensuring support for the latest model versions without plugin updates.
+- **Smart model caching**: Added configurable caching for the Gemini model list to ensure a snappy settings experience while keeping the list fresh.
+- **Instant connection**: Providing a valid Gemini API key now immediately triggers a model fetch and enables model dropdowns without needing a plugin restart.
+- **Model tooltips**: Added hover tooltips to all model dropdowns showing the raw Gemini model ID for advanced users.
+- **Improved model sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (eg Gemini 3.0 and 2.5 families).
+- **Refined model lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
+- **Grounding optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
+- **Model list debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
+- **Dynamic budget scaling**: Context budgets now automatically adjust when switching models to maintain a consistent capacity ratio.
+- **Tabbed settings interface**: Refactored the settings UI into a clean, tabbed layout (Connection, Researcher, Explorer, Gardener, and Advanced).
+- **Improved settings architecture**: Centralised tab rendering logic and standardised agent sections using a unified `SettingsTabContext`.
+- **Proportional reset buttons**: Added "Reset to default ratio" buttons to context budgets, restoring them to sensible baselines (20% for chat, 10% for gardener) based on the current model's limit.
+- **Persistent debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
+- **UI layout optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
 
 
 ### Developer features
 
-- **Critical Error Propagation**: Updated the Indexer Web Worker to explicitly re-throw authentication and API errors back to the main thread.
-- **Throwing Model Discovery**: Enhanced `ModelRegistry.fetchModels` with an optional `throwOnError` flag to allow UI-driven error handling during model refreshes.
-- **Security Hardening**: Removed a leaked API key from the test suite and replaced it with a safe dummy string.
-- **UI Compliance**: Standardised interactive notices to use strict sentence case in accordance with Obsidian UI guidelines.
-- **Lazy Loading Implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
-- **Ontology Robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
-- **Internal Storage Migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
-- **Robust Storage Interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
-- **UI Auto-Refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
-- **Standardised Logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
-- **Concurrency Protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
-- **Settings Sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
-- **UI Architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
-- **Constant Centralisation**: Refactored view types, sanitisation limits, and model ranking scores into `src/constants.ts` to improve maintainability and eliminate magic numbers.
-- **Architectural Documentation**: Enhanced `devs/ARCHITECTURE.md` with detailed Mermaid.js diagrams for Agent control flows and Model selection logic.
-- **Service Safety**: Replaced unsafe non-null assertions in `LocalEmbeddingService` with defensive checks to ensure stable task dequeuing.
-- **Service Documentation**: Improved JSDoc coverage for core services including `OntologyService`, `GardenerService`, and `SearchOrchestrator` to improve maintainability.
-- **Security Masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (eg when updating worker configurations).
+- **GARS mathematical model**: Formalized the graph-augmented relevance score calculation in `ScoringStrategy.ts`.
+- **Dynamic ontology config**: Propagated `ontologyPath` settings to the background worker to ensure traversal logic respects custom folder structures.
+- **Shadow graph specification**: Created a deep technical document (`devs/shadow-graph-technical.md`) covering architecture, pipelines, and algorithms.
+- **UI standardisation**: Refined settings labels and messages to strictly follow sentence case for a more native feel.
+- **Critical error propagation**: Updated the Indexer Web Worker to explicitly re-throw authentication and API errors back to the main thread.
+- **Throwing model discovery**: Enhanced `ModelRegistry.fetchModels` with an optional `throwOnError` flag to allow UI-driven error handling during model refreshes.
+- **Security hardening**: Removed a leaked API key from the test suite and replaced it with a safe dummy string.
+- **UI compliance**: Standardised interactive notices to use strict sentence case in accordance with Obsidian UI guidelines.
+- **Lazy loading implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
+- **Ontology robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
+- **Internal storage migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
+- **Robust storage interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
+- **UI auto-refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
+- **Standardised logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
+- **Concurrency protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
+- **Settings sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
+- **UI architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
+- **Constant centralisation**: Refactored view types, sanitisation limits, and model ranking scores into `src/constants.ts` to improve maintainability and eliminate magic numbers.
+- **Architectural documentation**: Enhanced `devs/ARCHITECTURE.md` with detailed Mermaid.js diagrams for Agent control flows and Model selection logic.
+- **Service safety**: Replaced unsafe non-null assertions in `LocalEmbeddingService` with defensive checks to ensure stable task dequeuing.
+- **Service documentation**: Improved JSDoc coverage for core services including `OntologyService`, `GardenerService`, and `SearchOrchestrator` to improve maintainability.
+- **Security masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (eg when updating worker configurations).
 
 
 ## [2.2.0] - 2026-01-22
