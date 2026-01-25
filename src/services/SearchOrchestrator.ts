@@ -58,7 +58,19 @@ export class SearchOrchestrator {
             const parent = candidates.get(path);
             if (!parent) continue;
 
-            const neighbors = await this.graphService.getNeighbors(path);
+            const neighbors = await this.graphService.getNeighbors(path, {
+                mode: 'ontology',
+                direction: 'outbound' // We want to navigate FROM the seed TO its topics/neighbors
+                // Wait, if we use 'ontology' mode, the worker handles the specific 2-hop logic (1-hop outbound -> filter topics -> 1-hop inbound)
+                // The worker's getNeighbors logic for 'ontology' mode does:
+                // 1. Get initial neighbors based on options.direction (default both)
+                // 2. Filter topics
+                // 3. Get inbound neighbors of topics
+
+                // So if we pass direction: 'outbound', the worker will get Outbound neighbors (Topics) of the Seed.
+                // Then for each Topic, it gets Inbound neighbors (Siblings).
+                // This matches the "Sibling" requirement perfectly.
+            });
             for (const n of neighbors) {
                 if (!candidates.has(n.path)) {
                     candidates.set(n.path, {

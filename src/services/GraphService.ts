@@ -5,8 +5,8 @@ import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 import { WorkerAPI, WorkerConfig } from "../types/graph";
-
 import { IEmbeddingService } from "./IEmbeddingService";
+import { OntologyService } from "./OntologyService";
 
 // @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
@@ -14,6 +14,11 @@ const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
 
 const DATA_DIR = "data";
 const GRAPH_FILE = "graph-state.json";
+
+// Interface augmentation to support dynamic service access
+interface PluginWithOntology extends Plugin {
+    ontologyService?: OntologyService;
+}
 
 export class GraphService {
     private plugin: Plugin;
@@ -198,11 +203,37 @@ export class GraphService {
     /**
      * Gets direct neighbors of a file in the graph.
      * @param path - The path of the source file.
+     * @param options - Traversal options (direction, mode).
      * @returns A promise resolving to an array of neighboring files.
      */
-    public async getNeighbors(path: string) {
+    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }) {
         if (!this.api) return [];
-        return await this.api.getNeighbors(path);
+        return await this.api.getNeighbors(path, options);
+    }
+
+    /**
+     * Pushes the latest alias map from OntologyService to the Worker.
+     * This ensures the graph worker knows how to canonicalize [[Alias]] links.
+     */
+    public async syncAliases() {
+        if (!this.api) return;
+
+        const plugin = this.plugin as unknown as PluginWithOntology;
+        const ontologyService = plugin.ontologyService;
+
+        if (ontologyService && typeof ontologyService.getValidTopics === 'function') {
+            const topics = await ontologyService.getValidTopics();
+            const map: Record<string, string> = {};
+
+            for (const t of topics) {
+                // Map the topic name/alias to its canonical path
+                // "Project FooBar" -> "Ontology/Project FooBar.md"
+                map[t.name] = t.path;
+            }
+
+            await this.api.updateAliasMap(map);
+            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker.`);
+        }
     }
 
     /**
@@ -227,6 +258,9 @@ export class GraphService {
             logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
             await this.api.fullReset();
         }
+
+        // Ensure aliases are up to date before scanning content
+        await this.syncAliases();
 
         const files = this.vaultManager.getMarkdownFiles();
         logger.info(`[GraphService] Starting scan of ${files.length} files`);

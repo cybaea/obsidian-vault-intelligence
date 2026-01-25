@@ -144,6 +144,23 @@ export const GRAPH_CONSTANTS = {
     MAX_EXPANSION_DEPTH: 1
 };
 
+export const ONTOLOGY_CONSTANTS = {
+    /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
+    HUB_MIN_DEGREE: 5,
+
+    /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
+    HUB_PENALTY_ENABLED: true,
+
+    /** Dampening factor for 2-hop (Sibling) relevance */
+    SIBLING_DECAY: 0.25,
+
+    /** Weights for edge sources */
+    EDGE_WEIGHTS: {
+        FRONTMATTER: 1.5,
+        BODY: 1.0
+    }
+};
+
 export const UI_CONSTANTS = {
     /** Duration for basic notices (ms) */
     NOTICE_DURATION_MS: 5000,

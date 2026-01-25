@@ -1,8 +1,8 @@
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
-import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
-import { WORKER_INDEXER_CONSTANTS } from '../constants';
+import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult, GraphEdgeData } from '../types/graph';
+import { WORKER_INDEXER_CONSTANTS, ONTOLOGY_CONSTANTS } from '../constants';
 import { maskObject } from '../utils/masking';
 
 let graph: Graph;
@@ -47,14 +47,18 @@ const IndexerWorker: WorkerAPI = {
         workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions and ${conf.embeddingModel}`);
     },
 
+    async updateAliasMap(map: Record<string, string>) {
+        await Promise.resolve();
+        // Clear and reload alias map from main thread source of truth
+        aliasMap.clear();
+        for (const [alias, path] of Object.entries(map)) {
+            aliasMap.set(alias.toLowerCase(), workerNormalizePath(path));
+        }
+        workerLogger.debug(`Updated alias map with ${aliasMap.size} entries.`);
+    },
+
     async updateFile(path: string, content: string, mtime: number, size: number, title: string) {
         const normalizedPath = workerNormalizePath(path);
-
-        // 0. Update alias map from frontmatter
-        const aliases = parseAliases(content);
-        for (const alias of aliases) {
-            aliasMap.set(alias.toLowerCase(), normalizedPath);
-        }
 
         // 1. Hash check
         const hash = await computeHash(content);
@@ -116,17 +120,46 @@ const IndexerWorker: WorkerAPI = {
             });
         }
 
-        // 2. Parse Wikilinks -> Add Explicit Edges
-        const links = parseWikilinks(content);
-        for (const link of links) {
+        // 2. Parse Links (Source-Aware)
+        // Split frontmatter vs body to detect link types
+        const { frontmatter, body } = splitFrontmatter(content);
+
+        const fmLinks = parseWikilinks(frontmatter);
+        const bodyLinks = parseWikilinks(body);
+
+        // Add explicit structural edges (Frontmatter)
+        for (const link of fmLinks) {
             const resolvedPath = resolvePath(link);
             if (!graph.hasNode(resolvedPath)) {
-                // Add placeholder for missing files if needed
                 graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
-            if (!graph.hasEdge(normalizedPath, resolvedPath)) {
-                graph.addEdge(normalizedPath, resolvedPath, { type: 'link', weight: 1.0 });
+            // Frontmatter links overwrite existing body links via weight
+            graph.addEdge(normalizedPath, resolvedPath, {
+                type: 'link',
+                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER,
+                source: 'frontmatter'
+            });
+        }
+
+        // Add associative edges (Body)
+        for (const link of bodyLinks) {
+            const resolvedPath = resolvePath(link);
+            if (!graph.hasNode(resolvedPath)) {
+                graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
+            // Only add if explicit frontmatter edge doesn't already exist (or overwrite if logic demanded, but graphology multi-edge is tricky)
+            // Simpler: Just add/update. If it exists, check weight.
+            if (graph.hasEdge(normalizedPath, resolvedPath)) {
+                const attr = graph.getEdgeAttributes(normalizedPath, resolvedPath) as GraphEdgeData;
+                // Don't downgrade a frontmatter link to a body link
+                if (attr.source === 'frontmatter') continue;
+            }
+
+            graph.addEdge(normalizedPath, resolvedPath, {
+                type: 'link',
+                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY,
+                source: 'body'
+            });
         }
 
         try {
@@ -314,24 +347,75 @@ const IndexerWorker: WorkerAPI = {
         return finalResults;
     },
 
-    async getNeighbors(path: string): Promise<GraphSearchResult[]> {
+    async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]> {
         await Promise.resolve();
         const normalizedPath = workerNormalizePath(path);
         if (!graph.hasNode(normalizedPath)) return [];
 
-        const neighbors = graph.neighbors(normalizedPath);
-        const results: GraphSearchResult[] = [];
+        const direction = options?.direction || 'both';
+        const mode = options?.mode || 'simple';
 
-        for (const neighbor of neighbors) {
+        // Helper to get 1-hop
+        const getOneHop = (node: string, dir: 'both' | 'inbound' | 'outbound') => {
+            if (dir === 'outbound') return graph.outNeighbors(node);
+            if (dir === 'inbound') return graph.inNeighbors(node);
+            return graph.neighbors(node);
+        };
+
+        const initialNeighbors = getOneHop(normalizedPath, direction);
+        const results = new Map<string, GraphSearchResult>();
+
+        // 1. Add direct neighbors
+        for (const neighbor of initialNeighbors) {
             const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
-            results.push({
+            results.set(neighbor, {
                 path: neighbor,
-                score: 1.0, // Base neighbor score
+                score: 1.0,
                 title: attr.title || neighbor.split('/').pop()?.replace('.md', ''),
-                excerpt: "" // Optional: could fetch preview from Orama if needed
+                excerpt: ""
             });
         }
-        return results;
+
+        // 2. Ontology Expansion (Topic -> Sibling)
+        if (mode === 'ontology') {
+            // Logic: For each neighbor that is a "Topic", find ITS inbound neighbors (my siblings)
+            for (const neighbor of initialNeighbors) {
+                // A node is a Topic if: in Ontology folder OR high degree
+                const isOntologyPath = neighbor.includes('Ontology/');
+                const degree = graph.inDegree(neighbor);
+                const isHub = degree >= ONTOLOGY_CONSTANTS.HUB_MIN_DEGREE;
+
+                if (isOntologyPath || isHub) {
+                    // It's a Topic/Hub. Get its connected nodes (Siblings)
+                    // Usually we want nodes that LINK TO this topic => Inbound neighbors of the topic
+                    const siblings = graph.inNeighbors(neighbor);
+
+                    for (const sibling of siblings) {
+                        if (sibling === normalizedPath) continue; // Don't add self
+                        if (results.has(sibling)) continue; // Already found
+
+                        // Calculate Hub Penalty
+                        let score = ONTOLOGY_CONSTANTS.SIBLING_DECAY;
+                        if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
+                            // Penalize if the shared parent is a massive hub (like a Daily Note)
+                            // Score = Base / log10(Degree + 1)
+                            // e.g. Degree 10 -> / 1.04. Degree 100 -> / 2. Degree 1000 -> / 3.
+                            score = score / Math.max(1, Math.log10(degree + 1));
+                        }
+
+                        const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
+                        results.set(sibling, {
+                            path: sibling,
+                            score: score,
+                            title: attr.title || sibling.split('/').pop()?.replace('.md', ''),
+                            excerpt: `(Sibling via ${neighbor})`
+                        });
+                    }
+                }
+            }
+        }
+
+        return Array.from(results.values());
     },
 
     async getCentrality(path: string): Promise<number> {
@@ -497,39 +581,13 @@ async function computeHash(text: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function parseAliases(content: string): string[] {
-    const aliases: string[] = [];
-    // YAML Frontmatter parsing
-    const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*/;
-    const match = content.match(frontmatterRegex);
+
+function splitFrontmatter(text: string): { frontmatter: string, body: string } {
+    const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
     if (match) {
-        const yaml = match[1] ?? "";
-        // Matches aliases: [a, b] or aliases: "a"
-        const aliasesMatch = yaml.match(/^aliases:\s*(.*)$/m);
-        if (aliasesMatch) {
-            const val = (aliasesMatch[1] ?? "").trim();
-            if (val.startsWith('[') && val.endsWith(']')) {
-                const list = val.slice(1, -1).split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
-                aliases.push(...list.filter(v => v.length > 0));
-            } else if (val.length > 0) {
-                aliases.push(val.replace(/^["']|["']$/g, ''));
-            }
-        }
-        // Also match list format aliases:
-        // aliases:
-        //   - a
-        //   - b
-        const listRegex = /^aliases:\s*\n((\s+-\s+.*\n)+)/m;
-        const listMatch = yaml.match(listRegex);
-        if (listMatch) {
-            const items = (listMatch[1] ?? "").split('\n')
-                .map(line => line.trim())
-                .filter(line => line.startsWith('-'))
-                .map(line => line.slice(1).trim().replace(/^["']|["']$/g, ''));
-            aliases.push(...items.filter(v => v.length > 0));
-        }
+        return { frontmatter: match[1] || "", body: match[2] || "" };
     }
-    return [...new Set(aliases)];
+    return { frontmatter: "", body: text };
 }
 
 function parseWikilinks(text: string): string[] {
