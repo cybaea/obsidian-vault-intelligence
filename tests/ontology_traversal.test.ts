@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import Graph from 'graphology';
 
 // Mocking the Graph Logic from indexer.worker.ts purely for logic testing
