@@ -93,9 +93,7 @@ export class ScoringStrategy {
     /**
      * Calculates the final Graph-Aware Relevance Score (GARS).
      */
-    public calculateGARS(similarity: number, centrality: number, activation: number): number {
-        // We use hardcoded weights for now, ideally these could be configurable.
-        // alpha=0.6, beta=0.2, gamma=0.2
-        return (similarity * 0.6) + (centrality * 0.2) + (activation * 0.2);
+    public calculateGARS(similarity: number, centrality: number, activation: number, weights: { similarity: number, centrality: number, activation: number }): number {
+        return (similarity * weights.similarity) + (centrality * weights.centrality) + (activation * weights.activation);
     }
 }

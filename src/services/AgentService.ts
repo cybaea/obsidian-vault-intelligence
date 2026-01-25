@@ -44,7 +44,7 @@ export class AgentService {
         this.settings = settings;
 
         // Initialize delegates
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, settings);
         this.contextAssembler = new ContextAssembler(app);
     }
 

@@ -93,7 +93,92 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 }
             }));
 
-    // --- 3. Developer and Debugging ---
+    // --- 3. Search Relevance (GARS Tuning) ---
+    new Setting(containerEl).setName('Search relevance tuning').setHeading();
+
+    containerEl.createEl('p', {
+        text: 'Adjust the weights used to calculate the graph-aware relevance score. The total does not have to be 1.0, as scores are compared relatively.',
+        cls: 'setting-item-description'
+    });
+
+    const garsReset = () => {
+        plugin.settings.garsSimilarityWeight = DEFAULT_SETTINGS.garsSimilarityWeight;
+        plugin.settings.garsCentralityWeight = DEFAULT_SETTINGS.garsCentralityWeight;
+        plugin.settings.garsActivationWeight = DEFAULT_SETTINGS.garsActivationWeight;
+    };
+
+    new Setting(containerEl)
+        .setName('Similarity weight')
+        .setDesc('How much weight to give to vector/keyword match similarity.')
+        .addSlider(slider => slider
+            .setLimits(0, 1, 0.05)
+            .setValue(plugin.settings.garsSimilarityWeight)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.garsSimilarityWeight = value;
+                await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsSimilarityWeight.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.garsSimilarityWeight = DEFAULT_SETTINGS.garsSimilarityWeight;
+                await plugin.saveSettings();
+                renderAdvancedSettings(context); // Refresh
+            }));
+
+    new Setting(containerEl)
+        .setName('Centrality weight')
+        .setDesc('How much weight to give to the structural importance of a note.')
+        .addSlider(slider => slider
+            .setLimits(0, 1, 0.05)
+            .setValue(plugin.settings.garsCentralityWeight)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.garsCentralityWeight = value;
+                await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsCentralityWeight.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.garsCentralityWeight = DEFAULT_SETTINGS.garsCentralityWeight;
+                await plugin.saveSettings();
+                renderAdvancedSettings(context); // Refresh
+            }));
+
+    new Setting(containerEl)
+        .setName('Activation weight')
+        .setDesc('How much weight to give to spreading activation (connectedness to other hits).')
+        .addSlider(slider => slider
+            .setLimits(0, 1, 0.05)
+            .setValue(plugin.settings.garsActivationWeight)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.garsActivationWeight = value;
+                await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsActivationWeight.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.garsActivationWeight = DEFAULT_SETTINGS.garsActivationWeight;
+                await plugin.saveSettings();
+                renderAdvancedSettings(context); // Refresh
+            }));
+
+    new Setting(containerEl)
+        .setName('Reset weights')
+        .setDesc('Restore all weights to their default balanced values.')
+        .addButton(btn => btn
+            .setButtonText('Restore defaults')
+            .onClick(async () => {
+                garsReset();
+                await plugin.saveSettings();
+                renderAdvancedSettings(context); // Refresh
+            }));
+
+    // --- 4. Developer and Debugging ---
     new Setting(containerEl).setName('Developer').setHeading();
 
     new Setting(containerEl)

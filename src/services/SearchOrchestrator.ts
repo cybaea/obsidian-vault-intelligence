@@ -4,6 +4,7 @@ import { ScoringStrategy } from "./ScoringStrategy";
 
 import { SEARCH_CONSTANTS } from "../constants";
 import { VaultSearchResult } from "../types/search";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
 /**
@@ -14,10 +15,12 @@ export class SearchOrchestrator {
     private app: App;
     private graphService: GraphService;
     private scoringStrategy: ScoringStrategy;
+    private settings: VaultIntelligenceSettings;
 
-    constructor(app: App, graphService: GraphService) {
+    constructor(app: App, graphService: GraphService, settings: VaultIntelligenceSettings) {
         this.app = app;
         this.graphService = graphService;
+        this.settings = settings;
         this.scoringStrategy = new ScoringStrategy();
     }
 
@@ -99,7 +102,11 @@ export class SearchOrchestrator {
             const similarity = res.isGraphNeighbor ? 0 : res.score;
             const activation = res.isGraphNeighbor ? res.score : 0;
 
-            res.score = this.scoringStrategy.calculateGARS(similarity, centrality, activation);
+            res.score = this.scoringStrategy.calculateGARS(similarity, centrality, activation, {
+                similarity: this.settings.garsSimilarityWeight,
+                centrality: this.settings.garsCentralityWeight,
+                activation: this.settings.garsActivationWeight
+            });
             finalResults.push(res);
         }
 
