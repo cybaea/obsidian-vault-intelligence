@@ -523,7 +523,7 @@ const IndexerWorker: WorkerAPI = {
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
 
         config = { ...config, ...newConfig };
-        workerLogger.debug(`Worker config updated: ${JSON.stringify(maskObject(newConfig))}`);
+        workerLogger.debug(`Worker config updated: ${JSON.stringify(await maskObject(newConfig))}`);
 
         if (dimensionChanged || modelChanged) {
             workerLogger.info(`Critical config change (Model: ${modelChanged}, Dims: ${dimensionChanged}). Recreating Orama index.`);
