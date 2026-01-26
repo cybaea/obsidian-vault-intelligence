@@ -287,23 +287,37 @@ export class GraphService {
         await this.syncAliases();
 
         const files = this.vaultManager.getMarkdownFiles();
-        logger.info(`[GraphService] Starting scan of ${files.length} files`);
-        new Notice(`GraphService: scanning ${files.length} files`);
+        const states = await this.api.getFileStates();
+
+        logger.info(`[GraphService] Comparing ${files.length} files against index.`);
+        if (forceWipe) {
+            new Notice(`GraphService: scanning ${files.length} files`);
+        }
 
         let count = 0;
+        let skipCount = 0;
+
         for (const file of files) {
+            const state = states[file.path];
+            const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+
+            // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
+            if (!forceWipe && state && state.mtime === mtime) {
+                skipCount++;
+                continue;
+            }
+
             // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
             // all respect the same serial throttle.
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 try {
                     const content = await this.vaultManager.readFile(file);
-                    const { mtime, size, basename } = this.vaultManager.getFileStat(file);
                     await this.api.updateFile(file.path, content, mtime, size, basename);
                     count++;
 
                     if (count % 50 === 0) {
-                        logger.debug(`[GraphService] Processed ${count}/${files.length} files`);
+                        logger.debug(`[GraphService] Processed ${count} files...`);
                     }
                 } catch (error) {
                     logger.error(`[GraphService] Failed to index ${file.path}`, error);
@@ -312,12 +326,18 @@ export class GraphService {
             });
         }
 
+        if (skipCount > 0) {
+            logger.info(`[GraphService] Skipped ${skipCount} unchanged files.`);
+        }
+
         // Wait for the entire queue to flush before saving/marking done
         await this.processingQueue;
 
         await this.saveState();
-        logger.info(`[GraphService] Scan complete. Total: ${count}`);
-        new Notice("GraphService: initial scan complete");
+        if (count > 0) {
+            logger.info(`[GraphService] Scan complete. Total indexed: ${count}`);
+            if (forceWipe) new Notice("GraphService: scan complete");
+        }
     }
 
     /**

@@ -57,18 +57,35 @@ const IndexerWorker: WorkerAPI = {
         workerLogger.debug(`Updated alias map with ${aliasMap.size} entries.`);
     },
 
+    async getFileStates() {
+        await Promise.resolve(); // Satisfy linter for async method
+        const states: Record<string, { mtime: number, hash: string }> = {};
+        if (graph) {
+            graph.forEachNode((node, attr) => {
+                const a = attr as GraphNodeData;
+                if (a.type === 'file') {
+                    states[node] = { mtime: a.mtime, hash: a.hash || '' };
+                }
+            });
+        }
+        return states;
+    },
+
     async updateFile(path: string, content: string, mtime: number, size: number, title: string) {
         const normalizedPath = workerNormalizePath(path);
 
         // 1. Hash check
         const hash = await computeHash(content);
+        const isEmpty = content.trim().length === 0;
+        const needsOrama = !isEmpty;
         let forceReindex = false;
 
         const { getByID } = await import('@orama/orama');
         const existingOramaDoc = getByID(orama, normalizedPath) as unknown as OramaDocument | undefined;
 
         // Force re-index if not in Orama OR missing embedding OR dimension mismatch
-        if (!existingOramaDoc || !existingOramaDoc.embedding || existingOramaDoc.embedding.length !== config.embeddingDimension) {
+        // (Only for non-empty files that should have Orama presence)
+        if (needsOrama && (!existingOramaDoc || !existingOramaDoc.embedding || existingOramaDoc.embedding.length !== config.embeddingDimension)) {
             forceReindex = true;
             const reason = !existingOramaDoc ? 'Missing from Orama' :
                 (!existingOramaDoc.embedding ? 'Missing embedding' :
