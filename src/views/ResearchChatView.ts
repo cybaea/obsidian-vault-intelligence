@@ -129,7 +129,6 @@ export class ResearchChatView extends ItemView {
     }
 
     private async handleSubmit() {
-        const startTime = performance.now();
         const text = this.inputComponent.getValue().trim();
         if (!text) return;
 
@@ -148,7 +147,6 @@ export class ResearchChatView extends ItemView {
         // Updated regex to be more lenient with characters and handle quoted strings better
         const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
         let match;
-        const mentionStartTime = performance.now();
         while ((match = mentionRegex.exec(text)) !== null) {
             const pathOrName = match[1] || match[2];
             if (pathOrName) {
@@ -215,19 +213,15 @@ export class ResearchChatView extends ItemView {
                 }
             }
         }
-        console.debug(`[PERF] Mention parsing and folder expansion took ${(performance.now() - mentionStartTime).toFixed(2)}ms`);
 
         try {
-            const agentStartTime = performance.now();
             const response = await this.agent.chat(this.messages, text, files);
-            console.debug(`[PERF] Agent chat call (total) took ${(performance.now() - agentStartTime).toFixed(2)}ms`);
             this.addMessage("model", response.text, undefined, response.files);
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
         }
-        console.debug(`[PERF] Total handleSubmit execution took ${(performance.now() - startTime).toFixed(2)}ms`);
     }
 
     private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[]) {

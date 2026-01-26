@@ -197,9 +197,7 @@ export class GraphService {
      */
     public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const startTime = performance.now();
         const results = await this.api.search(query, limit);
-        console.debug(`[PERF] GraphService.search (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
         return results;
     }
 
@@ -211,9 +209,7 @@ export class GraphService {
      */
     public async keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const startTime = performance.now();
         const results = await this.api.keywordSearch(query, limit);
-        console.debug(`[PERF] GraphService.keywordSearch (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
         return results;
     }
 
@@ -226,9 +222,7 @@ export class GraphService {
      */
     public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const startTime = performance.now();
         const results = await this.api.searchInPaths(query, paths, limit);
-        console.debug(`[PERF] GraphService.searchInPaths (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
         return results;
     }
 
@@ -258,9 +252,7 @@ export class GraphService {
      */
     public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const startTime = performance.now();
         const neighbors = await this.api.getNeighbors(path, options);
-        console.debug(`[PERF] GraphService.getNeighbors [${options?.mode || 'simple'}] took ${(performance.now() - startTime).toFixed(2)}ms`);
         return neighbors;
     }
 
@@ -296,9 +288,7 @@ export class GraphService {
      */
     public async getCentrality(path: string): Promise<number> {
         if (!this.api) return 0;
-        const startTime = performance.now();
         const centrality = await this.api.getCentrality(path);
-        console.debug(`[PERF] GraphService.getNodeMetrics took ${(performance.now() - startTime).toFixed(2)}ms`);
         return centrality;
     }
 
@@ -320,9 +310,7 @@ export class GraphService {
      */
     public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[] }>> {
         if (!this.api) return {};
-        const startTime = performance.now();
         const results = await this.api.getBatchMetadata(paths);
-        console.debug(`[PERF] GraphService.getBatchMetadata (${paths.length} nodes) took ${(performance.now() - startTime).toFixed(2)}ms`);
         return results;
     }
 
@@ -333,9 +321,7 @@ export class GraphService {
      */
     public async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
         if (!this.api) return {};
-        const startTime = performance.now();
         const results = await this.api.getBatchCentrality(paths);
-        console.debug(`[PERF] GraphService.getBatchCentrality (${paths.length} nodes) took ${(performance.now() - startTime).toFixed(2)}ms`);
         return results;
     }
 
