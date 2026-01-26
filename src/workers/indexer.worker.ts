@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
-import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult, GraphEdgeData } from '../types/graph';
+import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { WORKER_INDEXER_CONSTANTS, ONTOLOGY_CONSTANTS } from '../constants';
 import { maskObject } from '../utils/masking';
 
@@ -124,8 +124,8 @@ const IndexerWorker: WorkerAPI = {
         // Split frontmatter vs body to detect link types
         const { frontmatter, body } = splitFrontmatter(content);
 
-        const fmLinks = parseWikilinks(frontmatter);
-        const bodyLinks = parseWikilinks(body);
+        const fmLinks = extractLinks(frontmatter);
+        const bodyLinks = extractLinks(body);
 
         // Add explicit structural edges (Frontmatter)
         for (const link of fmLinks) {
@@ -598,7 +598,11 @@ function splitFrontmatter(text: string): { frontmatter: string, body: string } {
     return { frontmatter: "", body: text };
 }
 
-export function parseWikilinks(text: string): string[] {
+/**
+ * Unified link extractor that handles both Obsidian wikilinks [[link]] 
+ * and standard Markdown links [text](url).
+ */
+export function extractLinks(text: string): string[] {
     const links: string[] = [];
 
     let i = 0;
@@ -608,7 +612,6 @@ export function parseWikilinks(text: string): string[] {
         const char = text[i];
 
         // 1. Handle Escapes
-        // Outside of code, backslash escapes the next character.
         if (char === '\\') {
             i += 2;
             continue;
@@ -617,20 +620,16 @@ export function parseWikilinks(text: string): string[] {
         // 2. Handle Code (Blocks and Inline)
         if (char === '`') {
             const startBackticks = i;
-            while (i < len && text[i] === '`') {
-                i++;
-            }
+            while (i < len && text[i] === '`') i++;
             const backtickCount = i - startBackticks;
             const delimiter = '`'.repeat(backtickCount);
 
-            // Search for the closing delimiter
             let searchPos = i;
             let found = false;
             while (searchPos < len) {
                 const nextDelimiterPos = text.indexOf(delimiter, searchPos);
                 if (nextDelimiterPos === -1) break;
 
-                // Check if it's an exact match (not followed by more backticks)
                 let actualCount = 0;
                 let j = nextDelimiterPos;
                 while (j < len && text[j] === '`') {
@@ -639,9 +638,7 @@ export function parseWikilinks(text: string): string[] {
                 }
 
                 if (actualCount === backtickCount) {
-                    // Special case: Escaped backtick in a single-backtick code span
                     if (backtickCount === 1 && nextDelimiterPos > startBackticks && text[nextDelimiterPos - 1] === '\\') {
-                        // Check if the backslash itself is escaped
                         let backslashCount = 0;
                         let k = nextDelimiterPos - 1;
                         while (k >= startBackticks && text[k] === '\\') {
@@ -649,7 +646,6 @@ export function parseWikilinks(text: string): string[] {
                             k--;
                         }
                         if (backslashCount % 2 === 1) {
-                            // It's escaped, keep searching
                             searchPos = j;
                             continue;
                         }
@@ -658,39 +654,79 @@ export function parseWikilinks(text: string): string[] {
                     found = true;
                     break;
                 } else {
-                    // Skip over these backticks and keep searching
                     searchPos = j;
                 }
             }
-
             if (found) continue;
-
-            // If no closing delimiter, these backticks are literal. 
-            // Reset cursor to after the opening backticks and continue.
             i = startBackticks + backtickCount;
-            // But actually MD treats them as literal, so we just continue from here.
-            // i is already startBackticks + backtickCount.
             continue;
         }
 
-        // 3. Look for Wikilinks ([[ ... ]])
-        if (char === '[' && text[i + 1] === '[') {
-            const start = i + 2;
-            const end = text.indexOf(']]', start);
+        // 3. Look for Links
+        if (char === '[') {
+            // Case A: Wikilinks [[ ... ]]
+            if (text[i + 1] === '[') {
+                const start = i + 2;
+                const end = text.indexOf(']]', start);
 
-            if (end !== -1) {
-                const rawContent = text.substring(start, end);
-
-                // CRITICAL: Ensure there are no newlines in it (Obsidian links are single line)
-                if (!rawContent.includes('\n')) {
-                    // Extract clean link (remove alias)
-                    const link = rawContent.split('|')[0]?.trim();
-                    if (link && link.length > 0) {
-                        links.push(link);
+                if (end !== -1) {
+                    const rawContent = text.substring(start, end);
+                    if (!rawContent.includes('\n')) {
+                        const link = rawContent.split('|')[0]?.trim();
+                        if (link && link.length > 0) {
+                            links.push(link);
+                        }
+                        i = end + 2;
+                        continue;
                     }
-                    // Advance cursor past the closing ]]
-                    i = end + 2;
-                    continue;
+                }
+            }
+            // Case B: Standard Markdown Links [text](url)
+            else {
+                // Find potential closing bracket ]
+                let bracketDepth = 1;
+                let j = i + 1;
+                while (j < len && bracketDepth > 0) {
+                    if (text[j] === '\\') { j += 2; continue; }
+                    if (text[j] === '[') bracketDepth++;
+                    else if (text[j] === ']') bracketDepth--;
+                    j++;
+                }
+
+                // If we found a closing bracket, check for (url)
+                if (bracketDepth === 0 && text[j] === '(') {
+                    const urlStart = j + 1;
+                    let parenDepth = 1;
+                    let k = urlStart;
+                    while (k < len && parenDepth > 0) {
+                        if (text[k] === '\\') { k += 2; continue; }
+                        if (text[k] === '(') parenDepth++;
+                        else if (text[k] === ')') parenDepth--;
+                        k++;
+                    }
+
+                    if (parenDepth === 0) {
+                        const rawUrl = text.substring(urlStart, k - 1).trim();
+
+                        // Clean up the URL
+                        // 1. Ignore external links (http, https, mailto)
+                        // 2. Strip anchors (#)
+                        // 3. Strip leading slash
+                        if (rawUrl && !rawUrl.match(/^(https?|mailto):/i)) {
+                            let cleanUrl = rawUrl.split('#')[0] || "";
+                            cleanUrl = cleanUrl.trim();
+
+                            if (cleanUrl.length > 0) {
+                                // If it's a vault-absolute path like /Folder/Note.md, strip the leading /
+                                if (cleanUrl.startsWith('/')) {
+                                    cleanUrl = cleanUrl.substring(1);
+                                }
+                                links.push(decodeURIComponent(cleanUrl));
+                            }
+                        }
+                        i = k;
+                        continue;
+                    }
                 }
             }
         }
