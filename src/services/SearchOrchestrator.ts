@@ -93,7 +93,7 @@ export class SearchOrchestrator {
             const neighbors = await this.graphService.getNeighbors(path, {
                 mode: 'ontology',
                 direction: 'outbound',
-                decay: 0.3 // Standard calibrated decay
+                decay: SEARCH_CONSTANTS.NEIGHBOR_DECAY
             });
 
             return { parent, neighbors };
@@ -113,7 +113,7 @@ export class SearchOrchestrator {
 
                 // Spreading Activation
                 const neighbor = candidates.get(n.path)!;
-                const activationBoost = parent.score * 0.3; // Standard weight
+                const activationBoost = parent.score * SEARCH_CONSTANTS.SPREADING_ACTIVATION_WEIGHT;
                 neighbor.score = Math.max(neighbor.score, activationBoost);
             }
         }

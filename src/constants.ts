@@ -82,7 +82,13 @@ export const SEARCH_CONSTANTS = {
     DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.2,
 
     /** Default safety cap for total documents in context */
-    DEFAULT_CONTEXT_MAX_FILES: 100
+    DEFAULT_CONTEXT_MAX_FILES: 100,
+
+    /** Default weight for spreading activation */
+    SPREADING_ACTIVATION_WEIGHT: 0.3,
+
+    /** Default decay for neighbor expansion */
+    NEIGHBOR_DECAY: 0.3
 };
 
 export const EMBEDDING_CONSTANTS = {
