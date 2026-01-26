@@ -1,35 +1,39 @@
 <!--
-Source: Based on Obsidian community guidelines for Plugins
-Last synced: 2026-01-25
+Source: Based on Obsidian community guidelines
+Last synced: See sync-status.json for authoritative sync dates
+Update frequency: Check Obsidian releases repo for validation requirements
 -->
 
 # Manifest rules (`manifest.json`)
 
-## Required Fields
+### Required Fields
 
-All **plugins** must include these fields in `manifest.json`:
+All themes must include these fields in `manifest.json`:
 
-- **`id`** (string, required) - unique ID. **Must not change after release**. For local dev, matches folder name.
-- **`name`** (string, required) - Human readable name.
-- **`version`** (string, required) - Semantic Versioning `x.y.z` (e.g., `"1.0.0"`). **Do not use a 'v' prefix**.
-- **`minAppVersion`** (string, required) - Minimum Obsidian version required.
-- **`description`** (string, required) - Brief description shown in settings.
-- **`isDesktopOnly`** (boolean, required) - `true` if it uses Node.js/Electron APIs, `false` otherwise.
+- **`name`** (string, required) - Theme name
+- **`version`** (string, required) - Semantic Versioning format `x.y.z` (e.g., `"1.0.0"`)
+- **`minAppVersion`** (string, required) - Minimum Obsidian version required
+- **`author`** (string, required) - Author name (required for themes)
 
-## Optional Fields
+### Optional Fields
 
-- **`author`** (string, optional)
-- **`authorUrl`** (string, optional)
-- **`fundingUrl`** (string, optional) - For "Buy me a coffee" or GitHub Sponsors.
+- **`authorUrl`** (string, optional) - URL to author's website or profile
+- **`fundingUrl`** (string, optional) - URL for funding/support
+
+### Important Notes
+
+- Themes do **not** use `id` or `isDesktopOnly` fields.
+- Canonical requirements: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-theme-entry.yml
 
 ## Validation Checklist
 
-- [ ] `id` is stable and globally unique.
-- [ ] `version` matches the GitHub Release tag (without 'v').
-- [ ] `isDesktopOnly` is actively set.
-- [ ] `minAppVersion` matches the API version used.
+When reviewing or creating a `manifest.json` file, ensure:
 
-## Important Notes
+- [ ] All required fields are present (`name`, `version`, `minAppVersion`, `author`)
+- [ ] `version` follows semantic versioning (x.y.z)
+- [ ] `minAppVersion` is set appropriately
+- [ ] JSON syntax is valid (proper quotes, commas, brackets)
+- [ ] All string values are properly quoted
+- [ ] No plugin-specific fields (`id`, `isDesktopOnly`) are present
 
-- **Never change `id`** after release. This breaks updates for all users.
-- **Themes vs Plugins**: Themes do not use `id` or `isDesktopOnly`. This file documents **Plugin** rules.
+
