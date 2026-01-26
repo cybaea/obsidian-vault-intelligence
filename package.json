@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-vault-intelligence",
-	"version": "4.0.0",
+	"version": "4.0.1",
 	"description": "Research your vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
 	"author": "Allan Engelhardt",
 	"main": "main.js",
