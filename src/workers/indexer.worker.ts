@@ -133,7 +133,14 @@ const IndexerWorker: WorkerAPI = {
             if (!graph.hasNode(resolvedPath)) {
                 graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
-            // Frontmatter links overwrite existing body links via weight
+            // FIX: STRICT IDEMPOTENCY
+            // If the edge already exists, skip it. Frontmatter is processed first,
+            // so we don't need to worry about overwriting body links here.
+            // Duplicate frontmatter links are simply skipped.
+            if (graph.hasEdge(normalizedPath, resolvedPath)) {
+                continue;
+            }
+
             graph.addEdge(normalizedPath, resolvedPath, {
                 type: 'link',
                 weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER,
@@ -147,12 +154,11 @@ const IndexerWorker: WorkerAPI = {
             if (!graph.hasNode(resolvedPath)) {
                 graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
-            // Only add if explicit frontmatter edge doesn't already exist (or overwrite if logic demanded, but graphology multi-edge is tricky)
-            // Simpler: Just add/update. If it exists, check weight.
+            // FIX: STRICT IDEMPOTENCY
+            // If the edge already exists (whether from frontmatter OR a previous body link), skip it.
+            // This prevents "UsageGraphError: edge already exists" crashes on duplicate links.
             if (graph.hasEdge(normalizedPath, resolvedPath)) {
-                const attr = graph.getEdgeAttributes(normalizedPath, resolvedPath) as GraphEdgeData;
-                // Don't downgrade a frontmatter link to a body link
-                if (attr.source === 'frontmatter') continue;
+                continue;
             }
 
             graph.addEdge(normalizedPath, resolvedPath, {
@@ -592,71 +598,100 @@ function splitFrontmatter(text: string): { frontmatter: string, body: string } {
     return { frontmatter: "", body: text };
 }
 
-function parseWikilinks(text: string): string[] {
+export function parseWikilinks(text: string): string[] {
     const links: string[] = [];
 
     let i = 0;
     const len = text.length;
 
-    // State flags
-    let inCodeBlock = false;      // Inside ``` ... ```
-    let inInlineCode = false;     // Inside ` ... `
-
     while (i < len) {
         const char = text[i];
 
-        // 1. Handle Code Blocks (```)
-        if (!inInlineCode && text.startsWith("```", i)) {
-            inCodeBlock = !inCodeBlock;
-            i += 3; // Skip the markers
+        // 1. Handle Escapes
+        // Outside of code, backslash escapes the next character.
+        if (char === '\\') {
+            i += 2;
             continue;
         }
 
-        // 2. Handle Inline Code (`)
-        // Note: If we are in a code block, we ignore backticks.
-        if (!inCodeBlock && char === '`') {
-            // Check for escaped backtick (e.g. \`) - ONLY if we are already inside inline code
-            // (Markdown allows \` to escape a backtick, but only if it's not the opening delimiter)
-            // Actually, in standard MD, `foo\`bar` is often valid code. 
-            // The simple rule: An escaped backtick (`\``) is treated as a literal backtick inside code.
-
-            // Lookbehind is tricky in simple loops, so we look at the previous char
-            const isEscaped = (i > 0 && text[i - 1] === '\\');
-
-            if (inInlineCode && isEscaped) {
-                // It's just a literal backtick inside the code, move on.
+        // 2. Handle Code (Blocks and Inline)
+        if (char === '`') {
+            const startBackticks = i;
+            while (i < len && text[i] === '`') {
                 i++;
-                continue;
+            }
+            const backtickCount = i - startBackticks;
+            const delimiter = '`'.repeat(backtickCount);
+
+            // Search for the closing delimiter
+            let searchPos = i;
+            let found = false;
+            while (searchPos < len) {
+                const nextDelimiterPos = text.indexOf(delimiter, searchPos);
+                if (nextDelimiterPos === -1) break;
+
+                // Check if it's an exact match (not followed by more backticks)
+                let actualCount = 0;
+                let j = nextDelimiterPos;
+                while (j < len && text[j] === '`') {
+                    j++;
+                    actualCount++;
+                }
+
+                if (actualCount === backtickCount) {
+                    // Special case: Escaped backtick in a single-backtick code span
+                    if (backtickCount === 1 && nextDelimiterPos > startBackticks && text[nextDelimiterPos - 1] === '\\') {
+                        // Check if the backslash itself is escaped
+                        let backslashCount = 0;
+                        let k = nextDelimiterPos - 1;
+                        while (k >= startBackticks && text[k] === '\\') {
+                            backslashCount++;
+                            k--;
+                        }
+                        if (backslashCount % 2 === 1) {
+                            // It's escaped, keep searching
+                            searchPos = j;
+                            continue;
+                        }
+                    }
+                    i = j;
+                    found = true;
+                    break;
+                } else {
+                    // Skip over these backticks and keep searching
+                    searchPos = j;
+                }
             }
 
-            // Toggle state
-            inInlineCode = !inInlineCode;
-            i++;
+            if (found) continue;
+
+            // If no closing delimiter, these backticks are literal. 
+            // Reset cursor to after the opening backticks and continue.
+            i = startBackticks + backtickCount;
+            // But actually MD treats them as literal, so we just continue from here.
+            // i is already startBackticks + backtickCount.
             continue;
         }
 
         // 3. Look for Wikilinks ([[ ... ]])
-        // Only if we are NOT in any code state
-        if (!inCodeBlock && !inInlineCode && char === '[' && text[i + 1] === '[') {
+        if (char === '[' && text[i + 1] === '[') {
             const start = i + 2;
-            let end = text.indexOf(']]', start);
+            const end = text.indexOf(']]', start);
 
             if (end !== -1) {
-                // We found a potential link. 
-                // CRITICAL: Ensure there are no newlines in it (Obsidian links are usually single line)
-                // and that we didn't accidentally skip over a code block start inside the link text (rare but possible).
-
                 const rawContent = text.substring(start, end);
 
-                // Extract clean link (remove alias)
-                const link = rawContent.split('|')[0]?.trim();
-                if (link) {
-                    links.push(link);
+                // CRITICAL: Ensure there are no newlines in it (Obsidian links are single line)
+                if (!rawContent.includes('\n')) {
+                    // Extract clean link (remove alias)
+                    const link = rawContent.split('|')[0]?.trim();
+                    if (link && link.length > 0) {
+                        links.push(link);
+                    }
+                    // Advance cursor past the closing ]]
+                    i = end + 2;
+                    continue;
                 }
-
-                // Advance cursor past the closing ]]
-                i = end + 2;
-                continue;
             }
         }
 
@@ -674,4 +709,6 @@ async function generateEmbedding(text: string, title: string): Promise<number[]>
     return await embedderProxy(text, title);
 }
 
-Comlink.expose(IndexerWorker);
+if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined') {
+    Comlink.expose(IndexerWorker);
+}
