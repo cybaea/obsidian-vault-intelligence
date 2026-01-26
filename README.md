@@ -21,6 +21,18 @@ Examples:
 - **Gardener: [Vault hygiene](docs/examples.md#vault-hygiene-gardener)**: Organize my vault concepts to maintain structure and consistency. (Analyses recent notes and suggests a hygiene plan or your ontology).
 - **Explorer: [Similar documents](docs/examples.md#similar-documents)**: Shows related notes for the current document in a sidebar (D&D 5e vault).
 
+**Installation**
+
+1. Install BRAT from Obsidian Community Plugins.
+2. Install Vault Intelligence from BRAT (use the GitHub URL: https://github.com/cybaea/obsidian-vault-intelligence).
+3. Configure your Gemini API key in the plugin settings.
+
+**Getting Started**
+
+1. Open the Vault Intelligence sidebar using the robot icon in the left sidebar or the command palette.
+2. Select the tool, eg Researcher: chat with vault.
+3. Ask a question, eg _"What do I know about love?"_. More [examples](docs/examples.md).
+
 
 ---
 
