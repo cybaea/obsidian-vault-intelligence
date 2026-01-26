@@ -58,11 +58,28 @@ export const SEARCH_CONSTANTS = {
     /** Max number of keyword matches to find before stopping */
     MAX_KEYWORD_MATCHES: 100,
 
-    /** Accordion Thresholds: Higher score = more content */
     ACCORDION_THRESHOLDS: {
-        HIGH: 0.8,
-        MED: 0.4
-    }
+        HIGH: 1.2,
+        MED: 0.6
+    },
+
+    /** Default number of nodes to trigger graph expansion */
+    DEFAULT_EXPANSION_SEEDS_LIMIT: 5,
+
+    /** Default threshold for expansion seeds (relative to top score) */
+    DEFAULT_EXPANSION_THRESHOLD: 0.7,
+
+    /** Default cap for nodes considered in centrality calculation */
+    DEFAULT_CENTRALITY_LIMIT: 50,
+
+    /** Default relative threshold for full-file context inclusion */
+    DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
+
+    /** Default relative threshold for snippet context inclusion */
+    DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.55,
+
+    /** Default safety cap for total documents in context */
+    DEFAULT_CONTEXT_MAX_FILES: 50
 };
 
 export const EMBEDDING_CONSTANTS = {

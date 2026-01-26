@@ -4,10 +4,16 @@ import { VaultManager } from "./VaultManager";
 import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
-import { WorkerAPI, WorkerConfig, GraphSearchResult } from "../types/graph";
+import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../types/graph";
 import { IEmbeddingService } from "./IEmbeddingService";
 import { OntologyService } from "./OntologyService";
 import { GRAPH_CONSTANTS } from "../constants";
+
+export interface GraphState {
+    graph?: {
+        nodes?: Array<{ id: string; attributes?: GraphNodeData }>;
+    };
+}
 
 // @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
@@ -191,7 +197,24 @@ export class GraphService {
      */
     public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        return await this.api.search(query, limit);
+        const startTime = performance.now();
+        const results = await this.api.search(query, limit);
+        console.debug(`[PERF] GraphService.search (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return results;
+    }
+
+    /**
+     * Performs a keyword search on the Orama index.
+     * @param query - The search query string.
+     * @param limit - Max number of results.
+     * @returns A promise resolving to an array of search results.
+     */
+    public async keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]> {
+        if (!this.api) return [];
+        const startTime = performance.now();
+        const results = await this.api.keywordSearch(query, limit);
+        console.debug(`[PERF] GraphService.keywordSearch (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return results;
     }
 
     /**
@@ -203,7 +226,10 @@ export class GraphService {
      */
     public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        return await this.api.searchInPaths(query, paths, limit);
+        const startTime = performance.now();
+        const results = await this.api.searchInPaths(query, paths, limit);
+        console.debug(`[PERF] GraphService.searchInPaths (Worker call) took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return results;
     }
 
     public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
@@ -230,9 +256,12 @@ export class GraphService {
      * @param options - Traversal options (direction, mode).
      * @returns A promise resolving to an array of neighboring files.
      */
-    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]> {
+    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        return await this.api.getNeighbors(path, options);
+        const startTime = performance.now();
+        const neighbors = await this.api.getNeighbors(path, options);
+        console.debug(`[PERF] GraphService.getNeighbors [${options?.mode || 'simple'}] took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return neighbors;
     }
 
     /**
@@ -265,10 +294,49 @@ export class GraphService {
      * @param path - The path of the source file.
      * @returns A promise resolving to an object containing node metrics.
      */
-    public async getNodeMetrics(path: string): Promise<{ centrality: number }> {
-        if (!this.api) return { centrality: 0 };
+    public async getCentrality(path: string): Promise<number> {
+        if (!this.api) return 0;
+        const startTime = performance.now();
         const centrality = await this.api.getCentrality(path);
-        return { centrality };
+        console.debug(`[PERF] GraphService.getNodeMetrics took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return centrality;
+    }
+
+    /**
+     * Gets structural importance metrics for a node.
+     * @param path - The path of the source file.
+     * @returns A promise resolving to an object containing node metrics.
+     */
+    public async getNodeMetadata(path: string): Promise<{ title?: string; headers?: string[] }> {
+        if (!this.api) return {};
+        const results = await this.api.getBatchMetadata([path]);
+        return results[path] || {};
+    }
+
+    /**
+     * Gets metadata for multiple nodes in a single worker call.
+     * @param paths - Array of file paths.
+     * @returns A promise resolving to a record of path -> metadata.
+     */
+    public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[] }>> {
+        if (!this.api) return {};
+        const startTime = performance.now();
+        const results = await this.api.getBatchMetadata(paths);
+        console.debug(`[PERF] GraphService.getBatchMetadata (${paths.length} nodes) took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return results;
+    }
+
+    /**
+     * Fetches degree centrality for multiple nodes in a single worker call.
+     * @param paths - Array of file paths.
+     * @returns A promise resolving to a record of path -> centrality.
+     */
+    public async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
+        if (!this.api) return {};
+        const startTime = performance.now();
+        const results = await this.api.getBatchCentrality(paths);
+        console.debug(`[PERF] GraphService.getBatchCentrality (${paths.length} nodes) took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return results;
     }
 
     /**

@@ -41,6 +41,12 @@ export interface VaultIntelligenceSettings {
     garsSimilarityWeight: number;
     garsCentralityWeight: number;
     garsActivationWeight: number;
+    searchExpansionSeedsLimit: number;
+    searchExpansionThreshold: number;
+    searchCentralityLimit: number;
+    contextPrimaryThreshold: number;
+    contextSupportingThreshold: number;
+    contextMaxFiles: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -59,7 +65,8 @@ Core Guidelines:
 4. **Context & Syntax**:
    - The user may reference specific notes using the '@' symbol (e.g., "@Note Name").
    - If the user asks "what is this?", they are referring to the currently open notes.
-5. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
+5. **Efficiency**: Aim to solve the user's request with as few tool calls as possible. Use parallel tool calling for independent searches. If the answer is clear, stop early.
+6. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
 `.trim();
 
 const DEFAULT_GARDENER_SYSTEM_PROMPT = `
@@ -129,7 +136,13 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     modelCacheDurationDays: 7,
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
     garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
-    garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION
+    garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION,
+    searchExpansionSeedsLimit: 5,
+    searchExpansionThreshold: 0.7,
+    searchCentralityLimit: 50,
+    contextPrimaryThreshold: 0.9,
+    contextSupportingThreshold: 0.55,
+    contextMaxFiles: 50
 };
 
 export interface IVaultIntelligencePlugin {

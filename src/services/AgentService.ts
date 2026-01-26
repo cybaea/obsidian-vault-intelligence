@@ -8,6 +8,7 @@ import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 import { SEARCH_CONSTANTS, AGENT_CONSTANTS } from "../constants";
 import { SearchOrchestrator } from "./SearchOrchestrator";
 import { ContextAssembler } from "./ContextAssembler";
+import { VaultSearchResult } from "../types/search";
 
 export interface ChatMessage {
     role: "user" | "model" | "system";
@@ -45,7 +46,7 @@ export class AgentService {
 
         // Initialize delegates
         this.searchOrchestrator = new SearchOrchestrator(app, graphService, settings);
-        this.contextAssembler = new ContextAssembler(app);
+        this.contextAssembler = new ContextAssembler(app, graphService, settings);
     }
 
     /**
@@ -148,7 +149,10 @@ export class AgentService {
      * @private
      */
     private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>): Promise<Record<string, unknown>> {
+        const startTime = performance.now();
         logger.info(`Executing tool ${name} with args:`, args);
+
+        let result: Record<string, unknown>;
 
         if (name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH) {
             try {
@@ -158,89 +162,91 @@ export class AgentService {
 
                 logger.info(`Delegating search to sub-agent for: ${query}`);
                 const searchResult = await this.gemini.searchWithGrounding(query);
-                return { result: searchResult };
+                result = { result: searchResult };
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
                 logger.error("Search sub-agent failed", e);
-                return { error: `Search failed: ${message}` };
+                result = { error: `Search failed: ${message}` };
             }
-        }
-
-        if (name === AGENT_CONSTANTS.TOOLS.VAULT_SEARCH) {
+        } else if (name === AGENT_CONSTANTS.TOOLS.VAULT_SEARCH) {
             // Safety: Ensure query is a string
             const rawQuery = args.query;
             const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
 
             if (!query || query.trim().length === 0) {
                 logger.warn("Vault search called with empty query.");
-                return { result: "Error: Search query was empty." };
+                result = { result: "Error: Search query was empty." };
+            } else {
+                // 1. Search (Delegated to Orchestrator)
+                const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
+                const limit = Math.max(0, Math.trunc(rawLimit));
+
+                const results = await this.searchOrchestrator.search(query, limit);
+
+                if (results.length === 0) {
+                    result = { result: "No relevant notes found." };
+                } else {
+                    // 2. Assemble Context (Delegated to Assembler)
+                    const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+                    const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
+
+                    const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, totalCharBudget);
+
+                    if (!context) {
+                        result = { result: "No relevant notes found or context budget exceeded." };
+                    } else {
+                        // Track files used
+                        resultFiles.forEach(f => usedFiles.add(f));
+                        result = { result: context };
+                    }
+                }
             }
-
-            // 1. Search (Delegated to Orchestrator)
-            const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
-            const limit = Math.max(0, Math.trunc(rawLimit));
-
-            const results = await this.searchOrchestrator.search(query, limit);
-
-            if (results.length === 0) return { result: "No relevant notes found." };
-
-            // 2. Assemble Context (Delegated to Assembler)
-            const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-            const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
-
-            const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, totalCharBudget);
-
-            if (!context) return { result: "No relevant notes found or context budget exceeded." };
-
-            // Track files used
-            resultFiles.forEach(f => usedFiles.add(f));
-
-            return { result: context };
-        }
-
-        if (name === AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES) {
+        } else if (name === AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES) {
             const path = (args.path as string) || '';
-            if (!path) return { error: "Path argument is required." };
-
-            const neighbors = await this.graphService.getNeighbors(path);
-            if (neighbors.length === 0) return { result: `No connected notes found for: ${path}` };
-
-            const list = neighbors.map(n => `- ${n.path} (Title: ${n.title})`).join('\n');
-            return { result: `The following notes are directly connected to ${path}:\n${list}\n\nYou can use vault_search or read their content to explore further.` };
-        }
-
-        if (name === AGENT_CONSTANTS.TOOLS.URL_READER) {
+            if (!path) {
+                result = { error: "Path argument is required." };
+            } else {
+                const neighbors = await this.graphService.getNeighbors(path);
+                if (neighbors.length === 0) {
+                    result = { result: `No connected notes found for: ${path}` };
+                } else {
+                    const list = neighbors.map(n => `- ${n.path} (Title: ${n.title})`).join('\n');
+                    result = { result: `The following notes are directly connected to ${path}:\n${list}\n\nYou can use vault_search or read their content to explore further.` };
+                }
+            }
+        } else if (name === AGENT_CONSTANTS.TOOLS.URL_READER) {
             try {
                 const url = args.url as string;
                 const res = await requestUrl({ url });
-                return { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
+                result = { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
-                return { error: `Failed to read URL: ${message}` };
+                result = { error: `Failed to read URL: ${message}` };
             }
-        }
-
-        if (name === AGENT_CONSTANTS.TOOLS.CALCULATOR) {
+        } else if (name === AGENT_CONSTANTS.TOOLS.CALCULATOR) {
             try {
                 // Double check settings at runtime
                 if (!this.settings.enableCodeExecution) {
-                    return { error: "Code execution tool is disabled in settings." };
+                    result = { error: "Code execution tool is disabled in settings." };
+                } else {
+                    const task = args.task as string;
+                    logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
+
+                    // Call GeminiService
+                    const codeResult = await this.gemini.solveWithCode(task);
+                    result = { result: codeResult };
                 }
-
-                const task = args.task as string;
-                logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-
-                // Call GeminiService
-                const result = await this.gemini.solveWithCode(task);
-                return { result: result };
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
                 logger.error("Code sub-agent failed", e);
-                return { error: `Calculation failed: ${message}` };
+                result = { error: `Calculation failed: ${message}` };
             }
+        } else {
+            result = { error: "Tool not found." };
         }
 
-        return { error: "Tool not found." };
+        console.debug(`[PERF] Tool execution [${name}] took ${(performance.now() - startTime).toFixed(2)}ms`);
+        return result;
     }
 
     /**
@@ -251,6 +257,7 @@ export class AgentService {
      * @returns The final response from the agent.
      */
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<{ text: string; files: string[] }> {
+        const startTime = performance.now();
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
@@ -281,16 +288,23 @@ export class AgentService {
         })) as Content[];
 
         if (contextFiles.length > 0) {
-            let fileContext = "The user has explicitly referenced the following notes (or has them open). Please prioritize this information:\n\n";
-            for (const file of contextFiles) {
-                try {
-                    const content = await this.app.vault.read(file);
-                    fileContext += `--- Content of ${file.path} ---\n${content}\n\n`;
-                } catch (e) {
-                    logger.error(`Failed to read referenced file: ${file.path}`, e);
-                }
+            // Map files to VaultSearchResult format for assembler
+            // We treat explicit/open files with a perfect score (1.0) to prioritize them
+            const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
+                path: f.path,
+                score: 1.0,
+                isKeywordMatch: true
+            }));
+
+            // Assemble intelligently respecting budget
+            const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+            const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
+
+            const { context } = await this.contextAssembler.assemble(fileResults, message, totalCharBudget);
+
+            if (context) {
+                message = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${message}`;
             }
-            message = `${fileContext}User Query: ${message}`;
         }
 
         const currentDate = new Date().toDateString();
@@ -300,10 +314,14 @@ export class AgentService {
         const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
 
         // Pass dynamic systemInstruction to the service
+        const startChatTime = performance.now();
         const chat = await this.gemini.startChat(formattedHistory, this.getTools(), systemInstruction);
+        console.debug(`[PERF] gemini.startChat took ${(performance.now() - startChatTime).toFixed(2)}ms`);
 
         try {
+            const firstMsgTime = performance.now();
             let result = await chat.sendMessage({ message: message });
+            console.debug(`[PERF] chat.sendMessage (initial) took ${(performance.now() - firstMsgTime).toFixed(2)}ms`);
 
             let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
@@ -329,7 +347,9 @@ export class AgentService {
                     const completedParts = (await Promise.all(toolPromises)).filter((p): p is Part => p !== null);
 
                     if (completedParts.length > 0) {
+                        const loopMsgTime = performance.now();
                         result = await chat.sendMessage({ message: completedParts });
+                        console.debug(`[PERF] chat.sendMessage (loop ${loops}) took ${(performance.now() - loopMsgTime).toFixed(2)}ms`);
                     } else {
                         break;
                     }
@@ -347,6 +367,7 @@ export class AgentService {
                 };
             }
 
+            console.debug(`[PERF] Total Agent.chat execution took ${(performance.now() - startTime).toFixed(2)}ms`);
             return { text: result.text || "", files: Array.from(usedFiles) };
 
         } catch (e: unknown) {

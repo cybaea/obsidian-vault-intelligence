@@ -2,20 +2,26 @@ import { App, TFile } from "obsidian";
 import { SEARCH_CONSTANTS } from "../constants";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
+import { GraphService } from "./GraphService";
+import { VaultIntelligenceSettings } from "../settings/types";
 
 export class ContextAssembler {
     private app: App;
+    private graphService?: GraphService;
+    private settings?: VaultIntelligenceSettings;
 
-    constructor(app: App) {
+    constructor(app: App, graphService?: GraphService, settings?: VaultIntelligenceSettings) {
         this.app = app;
+        this.graphService = graphService;
+        this.settings = settings;
     }
 
     /**
      * Dynamically assembles context from search results based on the provided token budget.
+     * Use relative score gaps to determine context density.
      */
     public async assemble(results: VaultSearchResult[], query: string, budgetChars: number): Promise<{ context: string; usedFiles: string[] }> {
-        // Define "Starvation Protection" limit
-        // No single document should take up more than 25% of the budget if there are other results.
+        // Starvation Protection
         const singleDocSoftLimit = Math.floor(budgetChars * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
 
         logger.debug(`[ContextAssembler] Budget: ${budgetChars} chars. Soft Cap: ${singleDocSoftLimit} chars.`);
@@ -23,11 +29,26 @@ export class ContextAssembler {
         let constructedContext = "";
         let currentUsage = 0;
         let includedCount = 0;
+        const startTime = performance.now();
 
-        for (const doc of results) {
-            // Check if we are already full
-            if (currentUsage >= budgetChars) {
-                logger.info(`[ContextAssembler] Budget exhausted after ${includedCount} documents.`);
+        // Sort by score
+        const sortedResults = [...results].sort((a, b) => b.score - a.score);
+        const topScore = sortedResults[0]?.score || 0;
+
+        // BATCH METADATA FETCH: Fetch all needed metadata in one worker call to avoid loop overhead
+        const resultPaths = sortedResults.map(r => r.path);
+        const metadataMap = this.graphService ? await this.graphService.getBatchMetadata(resultPaths) : {};
+
+        // Settings / Thresholds
+        const primaryThreshold = this.settings?.contextPrimaryThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD;
+        const supportingThreshold = this.settings?.contextSupportingThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_SUPPORTING_THRESHOLD;
+        const maxFiles = this.settings?.contextMaxFiles || SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES;
+
+        for (const doc of sortedResults) {
+            // Check if we are already full or hit a safety limit
+            if (currentUsage >= budgetChars || includedCount >= maxFiles) {
+                const reason = currentUsage >= budgetChars ? "Budget exhausted" : `Max document safety limit (${maxFiles}) reached`;
+                logger.info(`[ContextAssembler] Stop assembly: ${reason} after ${includedCount} documents.`);
                 break;
             }
 
@@ -35,47 +56,56 @@ export class ContextAssembler {
             if (!(file instanceof TFile)) continue;
 
             try {
-                const content = await this.app.vault.read(file);
+                // Use cachedRead for zero-latency memory access
+                const content = await this.app.vault.cachedRead(file);
                 let contentToAdd = "";
 
-                // GARS-Aware Density (Accordion Logic)
-                // 1. High Score (> 0.8): Direct relevant context -> Try to include full/large content.
-                // 2. Medium Score (0.4 - 0.8): Supporting context -> Use Smart Windowing.
-                // 3. Low Score (< 0.4): Minimal context -> Metadata/Summary only to save tokens.
+                /**
+                 * DYNAMIC RELATIVE ACCORDION LOGIC
+                 * 1. Primary Tier (Score > Primary % of top): High confidence. Full file allowed.
+                 * 2. Supporting Tier (Score Supporting % to Primary % of top): Medium confidence. Snippet allowed.
+                 * 3. Structural Tier (Score < Supporting % of top): Low confidence / Neighbor. Headers only.
+                 */
+                const relativeRelevance = topScore > 0 ? (doc.score / topScore) : 0;
 
-                if (doc.score > SEARCH_CONSTANTS.ACCORDION_THRESHOLDS.HIGH) {
-                    // Scenario: High Relevance. 
-                    // Use full content if it fits the soft limit, else center on keyword.
+                if (relativeRelevance >= primaryThreshold) {
+                    // Scenario: Primary relevance.
                     const isNotTooHuge = content.length < singleDocSoftLimit;
                     const fitsInBudget = (currentUsage + content.length) < budgetChars;
 
                     if (isNotTooHuge && fitsInBudget) {
                         contentToAdd = content;
-                        logger.debug(`[ContextAssembler] [Accordion:HIGH] Added full file: ${file.path}`);
+                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path}`);
                     } else {
                         const availableSpace = Math.min(singleDocSoftLimit, budgetChars - currentUsage);
                         contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
-                        logger.debug(`[ContextAssembler] [Accordion:HIGH] Clipped file: ${file.path}`);
+                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) clipped: ${file.path}`);
                     }
-                } else if (doc.score >= SEARCH_CONSTANTS.ACCORDION_THRESHOLDS.MED) {
-                    // Scenario: Supporting Relevance.
-                    // Strictly use a smaller window (half of the soft limit) to leave room for others.
+                } else if (relativeRelevance >= supportingThreshold) {
+                    // Scenario: Supporting relevance.
                     const supportWindow = Math.floor(singleDocSoftLimit / 2);
                     const availableSpace = Math.min(supportWindow, budgetChars - currentUsage);
 
                     if (availableSpace > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
                         contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
-                        logger.debug(`[ContextAssembler] [Accordion:MED] Added snippet: ${file.path}`);
+                        logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet: ${file.path}`);
                     }
                 } else {
-                    // Scenario: Peripheral Relevance (Neighbors).
-                    // Just add the metadata header to let the agent know it exists.
-                    contentToAdd = "... (Note available via get_connected_notes tool if needed) ...";
-                    logger.debug(`[ContextAssembler] [Accordion:LOW] Added metadata only: ${file.path}`);
+                    // Scenario: Structural context.
+                    // Use pre-fetched headers for a "Table of Contents" view.
+                    const meta = metadataMap[doc.path];
+                    const headers = meta?.headers || [];
+
+                    if (headers.length > 0) {
+                        contentToAdd = "Note Structure / Key Topics:\n" + headers.map(h => `- ${h}`).join('\n') + "\n... (Full content available via search) ...";
+                    } else {
+                        contentToAdd = "... (Note details available via search or tools if needed) ...";
+                    }
+                    logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
                 }
 
                 if (contentToAdd) {
-                    const header = `\n--- Document: ${doc.path} (Relevance Score: ${doc.score.toFixed(2)}) ---\n`;
+                    const header = `\n--- Document: ${doc.path} (Relevance: ${doc.score.toFixed(2)}) ---\n`;
                     constructedContext += header + contentToAdd + "\n";
                     currentUsage += contentToAdd.length;
                     includedCount++;
@@ -86,7 +116,8 @@ export class ContextAssembler {
             }
         }
 
-        return { context: constructedContext, usedFiles: Array.from(new Set(results.slice(0, includedCount).map(r => r.path))) };
+        console.debug(`[PERF] ContextAssembler.assemble took ${(performance.now() - startTime).toFixed(2)}ms for ${includedCount} docs.`);
+        return { context: constructedContext, usedFiles: Array.from(new Set(sortedResults.slice(0, includedCount).map(r => r.path))) };
     }
 
     private clipContent(content: string, query: string, availableSpace: number, isKeywordMatch: boolean): string {
