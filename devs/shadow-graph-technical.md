@@ -95,15 +95,21 @@ The `ContextAssembler` uses a proprietary **Accordion Strategy** to pack the max
 
 Documents are ranked by GARS and assigned a "Context Mode" based on their position:
 
-| Mode | Threshold | Content |
+| Mode | Relative Threshold | Content |
 | :--- | :--- | :--- |
-| **Full Content** | Top 1-5 hits | Entire document body is read. |
-| **Snippet** | Mid-tier hits | 500-character blocks around query matches are extracted. |
-| **Reference** | Bottom-tier | Only title and metadata (tags, properties) are included. |
+| **Full Content** | >= 90% of top | Entire document body is read (capped at 10% context budget). |
+| **Snippet** | >= 70% of top | 500-character blocks around query matches are extracted. |
+| **Structural** | >= 35% of top | Headers (TOC view) extracted from metadata. Capped at top 10 files. |
+
+### Precision controls
+
+- **Expansion Floor**: Neighbor expansion only triggers for seeds with an absolute score >= 0.40.
+- **Structural Cap**: A hard cap of 10 structural documents prevents metadata bloat.
+- **Batch Metadata**: Fetches all headers in a single worker call to avoid per-file loop latency.
 
 ### Sliding budget
 
-The budget is distributed using a **Soft Limit Ratio** (default: 25% per doc). If a high-rank doc is small, the remaining space is carried over to the next document in the list, ensuring efficiency.
+The budget is distributed using a **Soft Limit Ratio** (default: 10% per doc). If a high-rank doc is small, the remaining space is carried over to the next document in the list, ensuring efficiency.
 
 ## 5. Persistence and state
 
