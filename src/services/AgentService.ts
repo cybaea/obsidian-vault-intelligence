@@ -245,7 +245,6 @@ export class AgentService {
             result = { error: "Tool not found." };
         }
 
-        console.debug(`[PERF] Tool execution [${name}] took ${(performance.now() - startTime).toFixed(2)}ms`);
         return result;
     }
 
@@ -313,15 +312,10 @@ export class AgentService {
         // Replace {{DATE}} placeholder
         const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
 
-        // Pass dynamic systemInstruction to the service
-        const startChatTime = performance.now();
         const chat = await this.gemini.startChat(formattedHistory, this.getTools(), systemInstruction);
-        console.debug(`[PERF] gemini.startChat took ${(performance.now() - startChatTime).toFixed(2)}ms`);
 
         try {
-            const firstMsgTime = performance.now();
             let result = await chat.sendMessage({ message: message });
-            console.debug(`[PERF] chat.sendMessage (initial) took ${(performance.now() - firstMsgTime).toFixed(2)}ms`);
 
             let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
@@ -347,9 +341,7 @@ export class AgentService {
                     const completedParts = (await Promise.all(toolPromises)).filter((p): p is Part => p !== null);
 
                     if (completedParts.length > 0) {
-                        const loopMsgTime = performance.now();
                         result = await chat.sendMessage({ message: completedParts });
-                        console.debug(`[PERF] chat.sendMessage (loop ${loops}) took ${(performance.now() - loopMsgTime).toFixed(2)}ms`);
                     } else {
                         break;
                     }
@@ -367,7 +359,6 @@ export class AgentService {
                 };
             }
 
-            console.debug(`[PERF] Total Agent.chat execution took ${(performance.now() - startTime).toFixed(2)}ms`);
             return { text: result.text || "", files: Array.from(usedFiles) };
 
         } catch (e: unknown) {

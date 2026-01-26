@@ -30,7 +30,6 @@ export class ContextAssembler {
         let currentUsage = 0;
         let includedCount = 0;
         let structuralCount = 0;
-        const startTime = performance.now();
 
         // Sort by score
         const sortedResults = [...results].sort((a, b) => b.score - a.score);
@@ -130,7 +129,6 @@ export class ContextAssembler {
             }
         }
 
-        console.debug(`[PERF] ContextAssembler.assemble took ${(performance.now() - startTime).toFixed(2)}ms for ${includedCount} docs.`);
         return { context: constructedContext, usedFiles: Array.from(new Set(sortedResults.slice(0, includedCount).map(r => r.path))) };
     }
 

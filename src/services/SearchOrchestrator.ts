@@ -38,7 +38,6 @@ export class SearchOrchestrator {
         }
 
         logger.info(`[SearchOrchestrator] Starting GARS-aware search for: "${query}" (Limit: ${limit})`);
-        const startTime = performance.now();
 
         // 1. SEED PHASE: Initial Hybrid Search (Vector + Keyword)
         // RECCO 1: Overshoot the worker limit to ensure we see the "relevance tail"
@@ -62,10 +61,8 @@ export class SearchOrchestrator {
         }));
 
         const seedHits = this.mergeAndRank(vResults, kResults, workerLimit);
-        console.debug(`[PERF] Search Seed Phase took ${(performance.now() - startTime).toFixed(2)}ms`);
 
         // 2. EXPANSION PHASE: Graph Traversal
-        const expansionStartTime = performance.now();
         const candidates = new Map<string, VaultSearchResult>();
 
         // RECCO 1: Dynamic Expansion Based on score gaps
@@ -119,10 +116,8 @@ export class SearchOrchestrator {
                 neighbor.score = Math.max(neighbor.score, activationBoost);
             }
         }
-        console.debug(`[PERF] Search Expansion Phase took ${(performance.now() - expansionStartTime).toFixed(2)}ms`);
 
         // 3. SCORING PHASE: Final GARS Calculation
-        const scoringStartTime = performance.now();
         // Safety slice for centrality calculation
         const centralityLimit = this.settings.searchCentralityLimit || SEARCH_CONSTANTS.DEFAULT_CENTRALITY_LIMIT;
         const candidatePaths = Array.from(candidates.keys()).slice(0, centralityLimit);
@@ -142,7 +137,6 @@ export class SearchOrchestrator {
             });
             finalResults.push(res);
         }
-        console.debug(`[PERF] Search Scoring Phase took ${(performance.now() - scoringStartTime).toFixed(2)}ms`);
 
         const sortedResults = finalResults
             .sort((a, b) => b.score - a.score)
@@ -153,7 +147,6 @@ export class SearchOrchestrator {
             logger.info(`[SearchOrchestrator] Top match: ${sortedResults[0].path} (GARS: ${sortedResults[0].score.toFixed(2)})`);
         }
 
-        console.debug(`[PERF] Total SearchOrchestrator.search took ${(performance.now() - startTime).toFixed(2)}ms`);
         return sortedResults;
     }
 
