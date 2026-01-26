@@ -42,6 +42,7 @@ export class ContextAssembler {
         // Settings / Thresholds
         const primaryThreshold = this.settings?.contextPrimaryThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD;
         const supportingThreshold = this.settings?.contextSupportingThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_SUPPORTING_THRESHOLD;
+        const structuralThreshold = this.settings?.contextStructuralThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD;
         const maxFiles = this.settings?.contextMaxFiles || SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES;
 
         for (const doc of sortedResults) {
@@ -64,7 +65,8 @@ export class ContextAssembler {
                  * DYNAMIC RELATIVE ACCORDION LOGIC
                  * 1. Primary Tier (Score > Primary % of top): High confidence. Full file allowed.
                  * 2. Supporting Tier (Score Supporting % to Primary % of top): Medium confidence. Snippet allowed.
-                 * 3. Structural Tier (Score < Supporting % of top): Low confidence / Neighbor. Headers only.
+                 * 3. Structural Tier (Score Structural % to Supporting % of top): Low confidence / Neighbor. Headers only.
+                 * 4. Skip: Below structural threshold.
                  */
                 const relativeRelevance = topScore > 0 ? (doc.score / topScore) : 0;
 
@@ -90,7 +92,7 @@ export class ContextAssembler {
                         contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
                         logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet: ${file.path}`);
                     }
-                } else {
+                } else if (relativeRelevance >= structuralThreshold) {
                     // Scenario: Structural context.
                     // Use pre-fetched headers for a "Table of Contents" view.
                     const meta = metadataMap[doc.path];
@@ -102,6 +104,10 @@ export class ContextAssembler {
                         contentToAdd = "... (Note details available via search or tools if needed) ...";
                     }
                     logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
+                } else {
+                    // Scenario: Below threshold, skip entirely to avoid bloat.
+                    logger.debug(`[ContextAssembler] [Accordion:SKIP] (${(relativeRelevance * 100).toFixed(0)}% rel) below threshold: ${file.path}`);
+                    continue;
                 }
 
                 if (contentToAdd) {

@@ -78,8 +78,11 @@ export const SEARCH_CONSTANTS = {
     /** Default relative threshold for snippet context inclusion */
     DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.55,
 
+    /** Default relative threshold for structural (headers) context inclusion */
+    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.2,
+
     /** Default safety cap for total documents in context */
-    DEFAULT_CONTEXT_MAX_FILES: 50
+    DEFAULT_CONTEXT_MAX_FILES: 100
 };
 
 export const EMBEDDING_CONSTANTS = {

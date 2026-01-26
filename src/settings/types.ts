@@ -46,6 +46,7 @@ export interface VaultIntelligenceSettings {
     searchCentralityLimit: number;
     contextPrimaryThreshold: number;
     contextSupportingThreshold: number;
+    contextStructuralThreshold: number;
     contextMaxFiles: number;
 }
 
@@ -142,7 +143,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     searchCentralityLimit: 50,
     contextPrimaryThreshold: 0.9,
     contextSupportingThreshold: 0.55,
-    contextMaxFiles: 50
+    contextStructuralThreshold: 0.2,
+    contextMaxFiles: 100
 };
 
 export interface IVaultIntelligencePlugin {

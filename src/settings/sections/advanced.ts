@@ -227,7 +227,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
 
     new Setting(containerEl)
         .setName('Supporting context threshold')
-        .setDesc('Score relative to top match required for snippet inclusion. Below this, only headers are shown.')
+        .setDesc('Score relative to top match required for snippet inclusion.')
         .addSlider(slider => slider
             .setLimits(0.1, 0.9, 0.05)
             .setValue(plugin.settings.contextSupportingThreshold)
@@ -238,10 +238,22 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     new Setting(containerEl)
-        .setName('Max context documents')
-        .setDesc('Safety limit for total number of documents injected into context to prevent prompt noise.')
+        .setName('Structural context threshold')
+        .setDesc('Score relative to top match required for header inclusion. Below this, notes are skipped.')
         .addSlider(slider => slider
-            .setLimits(5, 100, 5)
+            .setLimits(0.01, 0.5, 0.02)
+            .setValue(plugin.settings.contextStructuralThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.contextStructuralThreshold = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Max context documents')
+        .setDesc('Safety limit for total number of documents injected into context.')
+        .addSlider(slider => slider
+            .setLimits(5, 500, 5)
             .setValue(plugin.settings.contextMaxFiles)
             .setDynamicTooltip()
             .onChange(async (value) => {
