@@ -29,6 +29,7 @@ export class ContextAssembler {
         let constructedContext = "";
         let currentUsage = 0;
         let includedCount = 0;
+        let structuralCount = 0;
         const startTime = performance.now();
 
         // Sort by score
@@ -94,6 +95,12 @@ export class ContextAssembler {
                     }
                 } else if (relativeRelevance >= structuralThreshold) {
                     // Scenario: Structural context.
+                    // NEW: Check structural cap
+                    if (structuralCount >= SEARCH_CONSTANTS.MAX_STRUCTURAL_DOCS) {
+                        logger.debug(`[ContextAssembler] [Accordion:SKIP] Structural cap reached for: ${file.path}`);
+                        continue;
+                    }
+
                     // Use pre-fetched headers for a "Table of Contents" view.
                     const meta = metadataMap[doc.path];
                     const headers = meta?.headers || [];
@@ -103,6 +110,7 @@ export class ContextAssembler {
                     } else {
                         contentToAdd = "... (Note details available via search or tools if needed) ...";
                     }
+                    structuralCount++;
                     logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
                 } else {
                     // Scenario: Below threshold, skip entirely to avoid bloat.

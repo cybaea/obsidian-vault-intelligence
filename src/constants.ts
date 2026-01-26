@@ -11,7 +11,7 @@ export const SEARCH_CONSTANTS = {
     CONTEXT_SAFETY_MARGIN: 0.8,
 
     /** Max % of the budget a single document can consume if others are present */
-    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.25,
+    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
 
     /** Minimum characters required to bother adding a document snippet */
     MIN_DOC_CONTEXT_CHARS: 500,
@@ -76,16 +76,22 @@ export const SEARCH_CONSTANTS = {
     DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
 
     /** Default relative threshold for snippet context inclusion */
-    DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.55,
+    DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.70,
 
     /** Default relative threshold for structural (headers) context inclusion */
-    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.2,
+    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.35,
 
     /** Default safety cap for total documents in context */
     DEFAULT_CONTEXT_MAX_FILES: 100,
 
+    /** Max number of structural (header-only) documents allowed in context */
+    MAX_STRUCTURAL_DOCS: 10,
+
+    /** Absolute minimum score for a seed to trigger neighbor expansion */
+    ABSOLUTE_MIN_EXPANSION_SCORE: 0.40,
+
     /** Default weight for spreading activation */
-    SPREADING_ACTIVATION_WEIGHT: 0.3,
+    SPREADING_ACTIVATION_WEIGHT: 0.25,
 
     /** Default decay for neighbor expansion */
     NEIGHBOR_DECAY: 0.3

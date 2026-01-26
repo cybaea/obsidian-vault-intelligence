@@ -78,8 +78,10 @@ export class SearchOrchestrator {
 
         for (const hit of seedHits) {
             candidates.set(hit.path, { ...hit });
-            // Expand neighbors for anything within the threshold, up to cap
-            if (hit.score >= expansionThreshold && expansionSeeds.length < maxSeeds) {
+            // Expand neighbors for anything within the threshold, up to cap, and above absolute floor
+            if (hit.score >= expansionThreshold &&
+                hit.score >= SEARCH_CONSTANTS.ABSOLUTE_MIN_EXPANSION_SCORE &&
+                expansionSeeds.length < maxSeeds) {
                 expansionSeeds.push(hit.path);
             }
         }

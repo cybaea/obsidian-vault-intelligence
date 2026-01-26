@@ -142,8 +142,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     searchExpansionThreshold: 0.7,
     searchCentralityLimit: 50,
     contextPrimaryThreshold: 0.9,
-    contextSupportingThreshold: 0.55,
-    contextStructuralThreshold: 0.2,
+    contextSupportingThreshold: 0.70,
+    contextStructuralThreshold: 0.35,
     contextMaxFiles: 100
 };
 
