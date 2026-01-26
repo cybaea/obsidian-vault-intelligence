@@ -32,8 +32,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     new Setting(containerEl)
-        .setName('Bulk scan delay (ms)')
-        .setDesc('Delay between files during full vault scans.')
+        .setName('Indexing throttle (ms)')
+        .setDesc('Delay between files during indexing to respect API rate limits.')
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.queueDelayMs))
             .setValue(String(plugin.settings.queueDelayMs))
@@ -46,20 +46,23 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     if (plugin.settings.embeddingProvider === 'local') {
+        const maxThreads = Math.max(4, navigator.hardwareConcurrency || 4);
         new Setting(containerEl)
             .setName(`${local} worker threads`)
-            .setDesc(`CPU threads used for ${local.toLowerCase()} embeddings.Higher is faster but heavier.`)
-            .addSlider(slider => slider
-                .setLimits(1, 4, 1)
-                .setValue(plugin.settings.embeddingThreads)
-                .setDynamicTooltip()
-                .onChange(async (value) => {
-                    plugin.settings.embeddingThreads = value;
-                    await plugin.saveSettings();
-                    if (plugin.embeddingService.updateConfiguration) {
-                        plugin.embeddingService.updateConfiguration();
-                    }
-                }));
+            .setDesc(`CPU threads used for ${local.toLowerCase()} embeddings. Higher is faster but heavier.`)
+            .addSlider(slider => {
+                slider
+                    .setLimits(1, maxThreads, 1)
+                    .setValue(plugin.settings.embeddingThreads)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        plugin.settings.embeddingThreads = value;
+                        await plugin.saveSettings();
+                        if (plugin.embeddingService.updateConfiguration) {
+                            plugin.embeddingService.updateConfiguration();
+                        }
+                    });
+            });
     }
 
     // --- 2. System and API ---

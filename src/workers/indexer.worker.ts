@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
-import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult, GraphEdgeData } from '../types/graph';
+import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { WORKER_INDEXER_CONSTANTS, ONTOLOGY_CONSTANTS } from '../constants';
 import { maskObject } from '../utils/masking';
 
@@ -57,18 +57,35 @@ const IndexerWorker: WorkerAPI = {
         workerLogger.debug(`Updated alias map with ${aliasMap.size} entries.`);
     },
 
+    async getFileStates() {
+        await Promise.resolve(); // Satisfy linter for async method
+        const states: Record<string, { mtime: number, hash: string }> = {};
+        if (graph) {
+            graph.forEachNode((node, attr) => {
+                const a = attr as GraphNodeData;
+                if (a.type === 'file') {
+                    states[node] = { mtime: a.mtime, hash: a.hash || '' };
+                }
+            });
+        }
+        return states;
+    },
+
     async updateFile(path: string, content: string, mtime: number, size: number, title: string) {
         const normalizedPath = workerNormalizePath(path);
 
         // 1. Hash check
         const hash = await computeHash(content);
+        const isEmpty = content.trim().length === 0;
+        const needsOrama = !isEmpty;
         let forceReindex = false;
 
         const { getByID } = await import('@orama/orama');
         const existingOramaDoc = getByID(orama, normalizedPath) as unknown as OramaDocument | undefined;
 
         // Force re-index if not in Orama OR missing embedding OR dimension mismatch
-        if (!existingOramaDoc || !existingOramaDoc.embedding || existingOramaDoc.embedding.length !== config.embeddingDimension) {
+        // (Only for non-empty files that should have Orama presence)
+        if (needsOrama && (!existingOramaDoc || !existingOramaDoc.embedding || existingOramaDoc.embedding.length !== config.embeddingDimension)) {
             forceReindex = true;
             const reason = !existingOramaDoc ? 'Missing from Orama' :
                 (!existingOramaDoc.embedding ? 'Missing embedding' :
@@ -124,8 +141,8 @@ const IndexerWorker: WorkerAPI = {
         // Split frontmatter vs body to detect link types
         const { frontmatter, body } = splitFrontmatter(content);
 
-        const fmLinks = parseWikilinks(frontmatter);
-        const bodyLinks = parseWikilinks(body);
+        const fmLinks = extractLinks(frontmatter);
+        const bodyLinks = extractLinks(body);
 
         // Add explicit structural edges (Frontmatter)
         for (const link of fmLinks) {
@@ -133,7 +150,14 @@ const IndexerWorker: WorkerAPI = {
             if (!graph.hasNode(resolvedPath)) {
                 graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
-            // Frontmatter links overwrite existing body links via weight
+            // FIX: STRICT IDEMPOTENCY
+            // If the edge already exists, skip it. Frontmatter is processed first,
+            // so we don't need to worry about overwriting body links here.
+            // Duplicate frontmatter links are simply skipped.
+            if (graph.hasEdge(normalizedPath, resolvedPath)) {
+                continue;
+            }
+
             graph.addEdge(normalizedPath, resolvedPath, {
                 type: 'link',
                 weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER,
@@ -147,12 +171,11 @@ const IndexerWorker: WorkerAPI = {
             if (!graph.hasNode(resolvedPath)) {
                 graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
             }
-            // Only add if explicit frontmatter edge doesn't already exist (or overwrite if logic demanded, but graphology multi-edge is tricky)
-            // Simpler: Just add/update. If it exists, check weight.
+            // FIX: STRICT IDEMPOTENCY
+            // If the edge already exists (whether from frontmatter OR a previous body link), skip it.
+            // This prevents "UsageGraphError: edge already exists" crashes on duplicate links.
             if (graph.hasEdge(normalizedPath, resolvedPath)) {
-                const attr = graph.getEdgeAttributes(normalizedPath, resolvedPath) as GraphEdgeData;
-                // Don't downgrade a frontmatter link to a body link
-                if (attr.source === 'frontmatter') continue;
+                continue;
             }
 
             graph.addEdge(normalizedPath, resolvedPath, {
@@ -517,7 +540,7 @@ const IndexerWorker: WorkerAPI = {
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
 
         config = { ...config, ...newConfig };
-        workerLogger.debug(`Worker config updated: ${JSON.stringify(maskObject(newConfig))}`);
+        workerLogger.debug(`Worker config updated: ${JSON.stringify(await maskObject(newConfig))}`);
 
         if (dimensionChanged || modelChanged) {
             workerLogger.info(`Critical config change (Model: ${modelChanged}, Dims: ${dimensionChanged}). Recreating Orama index.`);
@@ -592,15 +615,142 @@ function splitFrontmatter(text: string): { frontmatter: string, body: string } {
     return { frontmatter: "", body: text };
 }
 
-function parseWikilinks(text: string): string[] {
+/**
+ * Unified link extractor that handles both Obsidian wikilinks [[link]] 
+ * and standard Markdown links [text](url).
+ */
+export function extractLinks(text: string): string[] {
     const links: string[] = [];
-    const wikiLinkRegex = /\[\[(.*?)\]\]/g;
-    let match: RegExpExecArray | null;
-    while ((match = wikiLinkRegex.exec(text)) !== null) {
-        // Handle [[Link|Alias]]
-        const link = match[1]?.split('|')[0]?.trim();
-        if (link) links.push(link);
+
+    let i = 0;
+    const len = text.length;
+
+    while (i < len) {
+        const char = text[i];
+
+        // 1. Handle Escapes
+        if (char === '\\') {
+            i += 2;
+            continue;
+        }
+
+        // 2. Handle Code (Blocks and Inline)
+        if (char === '`') {
+            const startBackticks = i;
+            while (i < len && text[i] === '`') i++;
+            const backtickCount = i - startBackticks;
+            const delimiter = '`'.repeat(backtickCount);
+
+            let searchPos = i;
+            let found = false;
+            while (searchPos < len) {
+                const nextDelimiterPos = text.indexOf(delimiter, searchPos);
+                if (nextDelimiterPos === -1) break;
+
+                let actualCount = 0;
+                let j = nextDelimiterPos;
+                while (j < len && text[j] === '`') {
+                    j++;
+                    actualCount++;
+                }
+
+                if (actualCount === backtickCount) {
+                    if (backtickCount === 1 && nextDelimiterPos > startBackticks && text[nextDelimiterPos - 1] === '\\') {
+                        let backslashCount = 0;
+                        let k = nextDelimiterPos - 1;
+                        while (k >= startBackticks && text[k] === '\\') {
+                            backslashCount++;
+                            k--;
+                        }
+                        if (backslashCount % 2 === 1) {
+                            searchPos = j;
+                            continue;
+                        }
+                    }
+                    i = j;
+                    found = true;
+                    break;
+                } else {
+                    searchPos = j;
+                }
+            }
+            if (found) continue;
+            i = startBackticks + backtickCount;
+            continue;
+        }
+
+        // 3. Look for Links
+        if (char === '[') {
+            // Case A: Wikilinks [[ ... ]]
+            if (text[i + 1] === '[') {
+                const start = i + 2;
+                const end = text.indexOf(']]', start);
+
+                if (end !== -1) {
+                    const rawContent = text.substring(start, end);
+                    if (!rawContent.includes('\n')) {
+                        const link = rawContent.split('|')[0]?.trim();
+                        if (link && link.length > 0) {
+                            links.push(link);
+                        }
+                        i = end + 2;
+                        continue;
+                    }
+                }
+            }
+            // Case B: Standard Markdown Links [text](url)
+            else {
+                // Find potential closing bracket ]
+                let bracketDepth = 1;
+                let j = i + 1;
+                while (j < len && bracketDepth > 0) {
+                    if (text[j] === '\\') { j += 2; continue; }
+                    if (text[j] === '[') bracketDepth++;
+                    else if (text[j] === ']') bracketDepth--;
+                    j++;
+                }
+
+                // If we found a closing bracket, check for (url)
+                if (bracketDepth === 0 && text[j] === '(') {
+                    const urlStart = j + 1;
+                    let parenDepth = 1;
+                    let k = urlStart;
+                    while (k < len && parenDepth > 0) {
+                        if (text[k] === '\\') { k += 2; continue; }
+                        if (text[k] === '(') parenDepth++;
+                        else if (text[k] === ')') parenDepth--;
+                        k++;
+                    }
+
+                    if (parenDepth === 0) {
+                        const rawUrl = text.substring(urlStart, k - 1).trim();
+
+                        // Clean up the URL
+                        // 1. Ignore external links (http, https, mailto)
+                        // 2. Strip anchors (#)
+                        // 3. Strip leading slash
+                        if (rawUrl && !rawUrl.match(/^(https?|mailto):/i)) {
+                            let cleanUrl = rawUrl.split('#')[0] || "";
+                            cleanUrl = cleanUrl.trim();
+
+                            if (cleanUrl.length > 0) {
+                                // If it's a vault-absolute path like /Folder/Note.md, strip the leading /
+                                if (cleanUrl.startsWith('/')) {
+                                    cleanUrl = cleanUrl.substring(1);
+                                }
+                                links.push(decodeURIComponent(cleanUrl));
+                            }
+                        }
+                        i = k;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        i++;
     }
+
     return links;
 }
 
@@ -612,4 +762,6 @@ async function generateEmbedding(text: string, title: string): Promise<number[]>
     return await embedderProxy(text, title);
 }
 
-Comlink.expose(IndexerWorker);
+if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined') {
+    Comlink.expose(IndexerWorker);
+}

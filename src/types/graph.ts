@@ -57,6 +57,7 @@ export interface WorkerConfig {
 export interface WorkerAPI {
     initialize(config: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>): Promise<void>;
     updateFile(path: string, content: string, mtime: number, size: number, title: string): Promise<void>;
+    getFileStates(): Promise<Record<string, { mtime: number, hash: string }>>;
     deleteFile(path: string): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;

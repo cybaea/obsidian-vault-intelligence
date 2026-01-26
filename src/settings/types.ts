@@ -107,7 +107,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableCodeExecution: true,
     contextWindowTokens: 200000,
     indexingDelayMs: 5000,
-    queueDelayMs: 300,
+    queueDelayMs: 100,
     minSimilarityScore: 0.5,
     similarNotesLimit: 20,
     vaultSearchResultsLimit: 25,
