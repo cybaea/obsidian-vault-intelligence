@@ -107,9 +107,9 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >    ```
 > 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
 
-### 3.2. Search & Answer Loop (Data Flow)
+### 3.2. Search and Answer loop (Data Flow)
 
-> #### The "RAG" Cycle
+> #### The RAG cycle
 >
 > 1.  **Intent**: User asks a question in the chat.
 > 2.  **Mechanics**:
@@ -129,7 +129,7 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >         G-->>A: Request Tool: "VaultSearch"
 >         A->>S: search(query)
 >         S->>I: search(query_vector)
->         I-->>S: Results (GraphNode[])
+>         I-->>S: Results (GraphSearchResult[])
 >         S-->>A: Results
 >         A->>C: assemble(results)
 >         C-->>A: Context String
@@ -139,8 +139,8 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >         V-->>U: Read Answer
 >     ```
 >
-> 2.  **Mechanics (Detailed Control Flow)**:
->     The `AgentService` uses a loop to handle multiple tool calls (if necessary) before providing a final answer.
+> 3.  **Tool calling loop (Control Flow)**:
+>     The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer.
 >     ```mermaid
 >     flowchart TD
 >         Start[User Prompt] --> Agent[AgentService: chat]
@@ -155,11 +155,13 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >             T2[Google Search]
 >             T3[Read URL]
 >             T4[Code Execution]
+>             T5[Graph Connections]
 >         end
 >         Exec -.-> T1
 >         Exec -.-> T2
 >         Exec -.-> T3
 >         Exec -.-> T4
+>         Exec -.-> T5
 >     ```
 >
 
@@ -308,15 +310,21 @@ The contract exposed by the Web Worker to the main thread.
 
 ```typescript
 export interface WorkerAPI {
-    initialize(config: WorkerConfig, fetcher?: unknown, embedder?: unknown): Promise<void>;
+    initialize(config: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>): Promise<void>;
     updateFile(path: string, content: string, mtime: number, size: number, title: string): Promise<void>;
+    getFileStates(): Promise<Record<string, { mtime: number, hash: string }>>;
     deleteFile(path: string): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
-    search(query: string, limit: number): Promise<GraphSearchResult[]>;
-    getSimilar(path: string, limit: number): Promise<GraphSearchResult[]>;
+    search(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
+    getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]>;
+    getCentrality(path: string): Promise<number>;
+    updateAliasMap(map: Record<string, string>): Promise<void>;
     saveIndex(): Promise<string>;
     loadIndex(data: string): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
+    clearIndex(): Promise<void>;
     fullReset(): Promise<void>;
 }
 ```
@@ -347,8 +355,10 @@ export interface ModelDefinition {
 }
 
 export class ModelRegistry {
-    public static fetchModels(app: App, apiKey: string): Promise<void>;
+    public static fetchModels(app: App, apiKey: string, cacheDurationDays?: number): Promise<void>;
     public static getChatModels(): ModelDefinition[];
+    public static getEmbeddingModels(provider?: 'gemini' | 'local'): ModelDefinition[];
+    public static getGroundingModels(): ModelDefinition[];
     public static calculateAdjustedBudget(current: number, oldId: string, newId: string): number;
 }
 ```

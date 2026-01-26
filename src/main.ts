@@ -268,7 +268,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		let changed = false;
 
 		const sanitize = (val: number, modelId: string, defaultVal: number): number => {
-			const limit = ModelRegistry.getModelById(modelId)?.inputTokenLimit ?? 1048576;
+			const limit = ModelRegistry.getModelById(modelId)?.inputTokenLimit ?? SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY;
 
 			// 1. Initial sanity: must be a safe integer
 			let cleaned = Number.isSafeInteger(val) ? val : defaultVal;

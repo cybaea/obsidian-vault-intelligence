@@ -151,7 +151,9 @@ export const GRAPH_CONSTANTS = {
     /** Default directory for index storage */
     DATA_DIR: "data",
     /** Default filename for graph state */
-    STATE_FILE: "graph-state.json"
+    STATE_FILE: "graph-state.json",
+    /** Throttle/Idle time before auto-saving graph state (ms) */
+    IDLE_SAVE_TIMEOUT_MS: 5000
 };
 
 export const ONTOLOGY_CONSTANTS = {
@@ -245,5 +247,7 @@ export const SANITIZATION_CONSTANTS = {
     MIN_TOKEN_LIMIT: 1024,
 
     /** Default embedding dimension */
-    DEFAULT_EMBEDDING_DIMENSION: 768
+    DEFAULT_EMBEDDING_DIMENSION: 768,
+    /** Absolute maximum token limit used for sanity checks */
+    MAX_TOKEN_LIMIT_SANITY: 1048576
 };
