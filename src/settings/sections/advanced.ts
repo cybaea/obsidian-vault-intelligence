@@ -69,7 +69,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     new Setting(containerEl).setName(`System and ${api} `).setHeading();
 
     new Setting(containerEl)
-        .setName(`${gemini} ${api} retries`)
+        .setName(`${gemini} API retries`)
         .setDesc('Number of retries for spotty connections.')
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.geminiRetries))
@@ -181,7 +181,87 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 renderAdvancedSettings(context); // Refresh
             }));
 
-    // --- 4. Developer and Debugging ---
+    // --- 4. Search and Context Tuning ---
+    new Setting(containerEl).setName('Search and context tuning').setHeading();
+
+    containerEl.createEl('p', {
+        text: 'Adjust search result expansion and context assembly.',
+        cls: 'setting-item-description'
+    });
+
+    new Setting(containerEl)
+        .setName('Max expansion seeds')
+        .setDesc('Capped number of results that trigger graph neighbor expansion. Prevents performance lag.')
+        .addSlider(slider => slider
+            .setLimits(1, 20, 1)
+            .setValue(plugin.settings.searchExpansionSeedsLimit)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.searchExpansionSeedsLimit = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Expansion gap threshold')
+        .setDesc('Relative score gap (multiplier of top match) within which a result triggers neighbor expansion.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 1.0, 0.05)
+            .setValue(plugin.settings.searchExpansionThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.searchExpansionThreshold = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Primary context threshold')
+        .setDesc('Score relative to top match required for full file content inclusion.')
+        .addSlider(slider => slider
+            .setLimits(0.5, 0.99, 0.05)
+            .setValue(plugin.settings.contextPrimaryThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.contextPrimaryThreshold = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Supporting context threshold')
+        .setDesc('Score relative to top match required for snippet inclusion.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 0.9, 0.05)
+            .setValue(plugin.settings.contextSupportingThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.contextSupportingThreshold = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Structural context threshold')
+        .setDesc('Score relative to top match required for header inclusion. Below this, notes are skipped.')
+        .addSlider(slider => slider
+            .setLimits(0.01, 0.5, 0.02)
+            .setValue(plugin.settings.contextStructuralThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.contextStructuralThreshold = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Max context documents')
+        .setDesc('Safety limit for total number of documents injected into context.')
+        .addSlider(slider => slider
+            .setLimits(5, 500, 5)
+            .setValue(plugin.settings.contextMaxFiles)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.contextMaxFiles = value;
+                await plugin.saveSettings();
+            }));
+
+    // --- 5. Developer and Debugging ---
     new Setting(containerEl).setName('Developer').setHeading();
 
     new Setting(containerEl)

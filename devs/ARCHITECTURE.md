@@ -165,17 +165,18 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >     ```
 >
 
-### 3.3. Context Assembly (Accordion Logic)
+### 3.3. Context assembly (relative accordion)
 
-To maximise the utility of the context window while staying within token budgets, the `ContextAssembler` employs **Accordion Logic** to dynamically scale document density:
+To maximise the utility of the context window while staying within token budgets, the `ContextAssembler` employs **Relative Accordion Logic** to dynamically scale document density based on the gap between the top match and secondary results:
 
-| Relevance Score | Density Level | Strategy |
+| Relevance Tier | Threshold | Strategy |
 | :--- | :--- | :--- |
-| **High** (> 0.8) | Full / Extensive | Includes full file content if it fits within the "Starvation Protection" limit (25% of budget). |
-| **Medium** (0.4 - 0.8) | Snippet / Windowed | Includes a clipped window centered around query keywords to provide supporting context. |
-| **Low** (< 0.4) | Metadata / Link | Includes only document path and metadata, encouraging the agent to use tools for more detail if needed. |
+| **Primary** | >= 90% of top | Full file content (subject to 10% soft limit cap). |
+| **Supporting** | >= 70% of top | Contextual snippets extracted around search terms. |
+| **Structural** | >= 35% of top | Note structure (headers) only. Capped at top 10 files. |
+| **Filtered** | < 35% of top | Skipped entirely to reduce prompt noise. |
 
-This ensures that "noise" from low-relevance results doesn't displace high-signal information from top matches.
+This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
 
 ### 3.4. Dynamic Model Ranking & Fetching
@@ -374,7 +375,7 @@ export class ModelRegistry {
 | `WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT` | `5` | Default number of results for vector search. |
 | `WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT` | `0.001` | Minimum cosine similarity to consider a note "related". |
 | `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` | `4` | Heuristic for budget calculation (English). |
-| `SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO` | `0.25` | Prevent any single doc from starving others in context assembly. |
+| `SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO` | `0.10` | Prevent any single doc from starving others in context assembly. |
 | `GARDENER_CONSTANTS.PLAN_PREFIX` | `"Gardener Plan"` | Prefix for generated hygiene plans. |
 | `WORKER_CONSTANTS.CIRCUIT_BREAKER_RESET_MS` | `300000` | (5 mins) Time before retrying a crashed worker. |
 

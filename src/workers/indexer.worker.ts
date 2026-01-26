@@ -124,10 +124,11 @@ const IndexerWorker: WorkerAPI = {
                     mtime,
                     size,
                     hash,
-                    title
+                    title,
+                    headers: []
                 }));
             } else {
-                graph.addNode(normalizedPath, { path: normalizedPath, type: 'file', mtime, size, hash, title });
+                graph.addNode(normalizedPath, { path: normalizedPath, type: 'file', mtime, size, hash, title, headers: [] });
             }
             return;
         }
@@ -142,7 +143,8 @@ const IndexerWorker: WorkerAPI = {
                 mtime,
                 size,
                 hash,
-                title
+                title,
+                headers: extractHeaders(content)
             }));
         } else {
             graph.addNode(normalizedPath, {
@@ -151,7 +153,8 @@ const IndexerWorker: WorkerAPI = {
                 mtime,
                 size,
                 hash,
-                title
+                title,
+                headers: extractHeaders(content)
             });
         }
 
@@ -273,6 +276,26 @@ const IndexerWorker: WorkerAPI = {
     },
 
     /**
+     * Performs a keyword search on the Orama index.
+     * @param query - Search query.
+     * @param limit - Maximum number of hits.
+     */
+    async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        const results = await search(orama, {
+            term: query,
+            properties: ['title', 'content'],
+            limit
+        });
+
+        return results.hits.map(hit => ({
+            path: hit.document.path as string,
+            score: hit.score,
+            title: hit.document.title as string,
+            excerpt: hit.document.content as string
+        }));
+    },
+
+    /**
      * Performs a vector search restricted to specific paths.
      * @param query - Search query.
      * @param paths - Allowed paths.
@@ -368,7 +391,7 @@ const IndexerWorker: WorkerAPI = {
      * @param path - Source file path.
      * @param options - Traversal options.
      */
-    async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]> {
+    async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
         await Promise.resolve();
         const normalizedPath = workerNormalizePath(path);
         if (!graph.hasNode(normalizedPath)) return [];
@@ -408,7 +431,7 @@ const IndexerWorker: WorkerAPI = {
                         if (sibling === normalizedPath) continue;
                         if (results.has(sibling)) continue;
 
-                        let score = ONTOLOGY_CONSTANTS.SIBLING_DECAY;
+                        let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
                         if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
                             score = score / Math.max(1, Math.log10(degree + 1));
                         }
@@ -440,6 +463,50 @@ const IndexerWorker: WorkerAPI = {
         const degree = graph.degree(normalizedPath);
         const totalNodes = graph.order;
         return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
+    },
+
+    /**
+     * Calculates degree centrality for multiple nodes.
+     * @param paths - Array of node paths.
+     */
+    async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
+        await Promise.resolve();
+        const results: Record<string, number> = {};
+        const totalNodes = graph.order;
+
+        for (const path of paths) {
+            const normalizedPath = workerNormalizePath(path);
+            if (!graph.hasNode(normalizedPath)) {
+                results[path] = 0;
+            } else {
+                const degree = graph.degree(normalizedPath);
+                results[path] = totalNodes > 1 ? degree / (totalNodes - 1) : 0;
+            }
+        }
+        return results;
+    },
+
+    /**
+     * Calculates degree centrality for multiple nodes.
+     * @param paths - Array of node paths.
+     */
+    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
+        await Promise.resolve();
+        const results: Record<string, { title?: string, headers?: string[] }> = {};
+
+        for (const path of paths) {
+            const normalizedPath = workerNormalizePath(path);
+            if (graph.hasNode(normalizedPath)) {
+                const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
+                results[path] = {
+                    title: attr.title,
+                    headers: attr.headers
+                };
+            } else {
+                results[path] = {};
+            }
+        }
+        return results;
     },
 
     /**
@@ -553,6 +620,21 @@ async function computeHash(text: string): Promise<string> {
     const hashAsBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashAsBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Extracts Markdown headers (H1, H2, H3) for structural context.
+ */
+function extractHeaders(text: string): string[] {
+    const headers: string[] = [];
+    const lines = text.split('\n');
+    for (const line of lines) {
+        const match = line.match(/^(#{1,3})\s+(.*)$/);
+        if (match) {
+            headers.push(line.trim());
+        }
+    }
+    return headers;
 }
 
 /**

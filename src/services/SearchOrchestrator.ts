@@ -2,10 +2,11 @@ import { App } from "obsidian";
 import { GraphService } from "./GraphService";
 import { ScoringStrategy } from "./ScoringStrategy";
 
-import { SEARCH_CONSTANTS } from "../constants";
 import { VaultSearchResult } from "../types/search";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
+import { GraphSearchResult } from "../types/graph";
+import { SEARCH_CONSTANTS } from "../constants";
 
 /**
  * Service that orchestrates hybrid search across the vault.
@@ -36,44 +37,73 @@ export class SearchOrchestrator {
             return [];
         }
 
-        logger.info(`[SearchOrchestrator] Starting GARS-aware search for: "${query}"`);
+        logger.info(`[SearchOrchestrator] Starting GARS-aware search for: "${query}" (Limit: ${limit})`);
+        const startTime = performance.now();
 
         // 1. SEED PHASE: Initial Hybrid Search (Vector + Keyword)
-        // We fetch slightly more than limit to allow for graph-based reshuffling
-        const seedLimit = limit * 2;
-        const vectorResults = await this.graphService.search(query, seedLimit);
-        const keywordResults = await this.performKeywordSearch(query);
-        const seedHits = this.mergeAndRank(vectorResults, keywordResults, seedLimit);
+        // RECCO 1: Overshoot the worker limit to ensure we see the "relevance tail"
+        const workerLimit = Math.max(limit * 2, this.settings.searchCentralityLimit || SEARCH_CONSTANTS.DEFAULT_CENTRALITY_LIMIT);
+        const vectorResults = await this.graphService.search(query, workerLimit);
+        const keywordResults = await this.graphService.keywordSearch(query, workerLimit);
+
+        // Map Results to internal VaultSearchResult format
+        const vResults: VaultSearchResult[] = vectorResults.map(r => ({
+            path: r.path,
+            score: r.score,
+            isKeywordMatch: false,
+            isTitleMatch: false
+        }));
+
+        const kResults: VaultSearchResult[] = keywordResults.map(r => ({
+            path: r.path,
+            score: r.score,
+            isKeywordMatch: true,
+            isTitleMatch: false
+        }));
+
+        const seedHits = this.mergeAndRank(vResults, kResults, workerLimit);
+        console.debug(`[PERF] Search Seed Phase took ${(performance.now() - startTime).toFixed(2)}ms`);
 
         // 2. EXPANSION PHASE: Graph Traversal
+        const expansionStartTime = performance.now();
         const candidates = new Map<string, VaultSearchResult>();
-        const seedPaths: string[] = [];
+
+        // RECCO 1: Dynamic Expansion Based on score gaps
+        const topScore = seedHits[0]?.score || 0;
+        const expansionThreshold = topScore * (this.settings.searchExpansionThreshold || SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD);
+
+        const expansionSeeds: string[] = [];
+        // Hard cap on expansion seeds to prevent worker flood
+        const maxSeeds = this.settings.searchExpansionSeedsLimit || SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT;
 
         for (const hit of seedHits) {
             candidates.set(hit.path, { ...hit });
-            seedPaths.push(hit.path);
+            // Expand neighbors for anything within the threshold, up to cap, and above absolute floor
+            if (hit.score >= expansionThreshold &&
+                hit.score >= SEARCH_CONSTANTS.ABSOLUTE_MIN_EXPANSION_SCORE &&
+                expansionSeeds.length < maxSeeds) {
+                expansionSeeds.push(hit.path);
+            }
         }
 
-        // Expand neighbors for top seeds
-        // (Limit expansion to top 10 seeds to avoid excessive worker calls)
-        const topSeeds = seedPaths.slice(0, 10);
-        for (const path of topSeeds) {
+        // Expand neighbors for top seeds in parallel
+        const neighborPromises = expansionSeeds.map(async (path) => {
             const parent = candidates.get(path);
-            if (!parent) continue;
+            if (!parent) return;
 
+            // RECCO 2: Dynamic Decay Control
             const neighbors = await this.graphService.getNeighbors(path, {
                 mode: 'ontology',
-                direction: 'outbound' // We want to navigate FROM the seed TO its topics/neighbors
-                // Wait, if we use 'ontology' mode, the worker handles the specific 2-hop logic (1-hop outbound -> filter topics -> 1-hop inbound)
-                // The worker's getNeighbors logic for 'ontology' mode does:
-                // 1. Get initial neighbors based on options.direction (default both)
-                // 2. Filter topics
-                // 3. Get inbound neighbors of topics
-
-                // So if we pass direction: 'outbound', the worker will get Outbound neighbors (Topics) of the Seed.
-                // Then for each Topic, it gets Inbound neighbors (Siblings).
-                // This matches the "Sibling" requirement perfectly.
+                direction: 'outbound',
+                decay: SEARCH_CONSTANTS.NEIGHBOR_DECAY
             });
+
+            return { parent, neighbors };
+        });
+
+        const neighborResults = (await Promise.all(neighborPromises)).filter((r): r is { parent: VaultSearchResult; neighbors: GraphSearchResult[] } => r !== undefined);
+
+        for (const { parent, neighbors } of neighborResults) {
             for (const n of neighbors) {
                 if (!candidates.has(n.path)) {
                     candidates.set(n.path, {
@@ -83,22 +113,25 @@ export class SearchOrchestrator {
                     });
                 }
 
-                // Spreading Activation (Implicit)
-                // If a neighbor is found, it inherits a portion of the parent's score as activation
+                // Spreading Activation
                 const neighbor = candidates.get(n.path)!;
-                const activationBoost = parent.score * 0.5; // Constant decay factor
+                const activationBoost = parent.score * SEARCH_CONSTANTS.SPREADING_ACTIVATION_WEIGHT;
                 neighbor.score = Math.max(neighbor.score, activationBoost);
             }
         }
+        console.debug(`[PERF] Search Expansion Phase took ${(performance.now() - expansionStartTime).toFixed(2)}ms`);
 
         // 3. SCORING PHASE: Final GARS Calculation
+        const scoringStartTime = performance.now();
+        // Safety slice for centrality calculation
+        const centralityLimit = this.settings.searchCentralityLimit || SEARCH_CONSTANTS.DEFAULT_CENTRALITY_LIMIT;
+        const candidatePaths = Array.from(candidates.keys()).slice(0, centralityLimit);
+        const centralityMap = await this.graphService.getBatchCentrality(candidatePaths);
+
         const finalResults: VaultSearchResult[] = [];
         for (const [path, res] of candidates) {
-            const { centrality } = await this.graphService.getNodeMetrics(path);
+            const centrality = centralityMap[path] || 0;
 
-            // GARS components:
-            // Similarity: the original hybrid score (0 for pure neighbors)
-            // Activation: the boosted score from spreading (0 for seed hits)
             const similarity = res.isGraphNeighbor ? 0 : res.score;
             const activation = res.isGraphNeighbor ? res.score : 0;
 
@@ -109,6 +142,7 @@ export class SearchOrchestrator {
             });
             finalResults.push(res);
         }
+        console.debug(`[PERF] Search Scoring Phase took ${(performance.now() - scoringStartTime).toFixed(2)}ms`);
 
         const sortedResults = finalResults
             .sort((a, b) => b.score - a.score)
@@ -119,74 +153,8 @@ export class SearchOrchestrator {
             logger.info(`[SearchOrchestrator] Top match: ${sortedResults[0].path} (GARS: ${sortedResults[0].score.toFixed(2)})`);
         }
 
+        console.debug(`[PERF] Total SearchOrchestrator.search took ${(performance.now() - startTime).toFixed(2)}ms`);
         return sortedResults;
-    }
-
-    /**
-     * Performs a keyword search across the title and content of markdown files.
-     * @param query - The user's search query.
-     * @returns A promise resolving to an array of keyword matches.
-     * @private
-     */
-    private async performKeywordSearch(query: string): Promise<VaultSearchResult[]> {
-        const keywordResults: VaultSearchResult[] = [];
-
-        if (query.length <= 2) return [];
-
-        const files = this.app.vault.getMarkdownFiles();
-
-        // Token Cleaning
-        // 1. Remove quotes
-        // 2. Remove boolean operators (OR, AND) which the Agent likes to use
-        // 3. Filter short words
-        const cleanQuery = query.replace(/["'()]/g, " ");
-        const tokens = cleanQuery.split(/\s+/)
-            .map(t => t.trim())
-            .filter(t => t.length > 2 && t !== "or" && t !== "and");
-
-        const isMultiWord = tokens.length > 1;
-        let keywordMatchesFound = 0;
-        const maxMatches = SEARCH_CONSTANTS.MAX_KEYWORD_MATCHES;
-
-        for (const file of files) {
-            if (keywordMatchesFound >= maxMatches) break;
-
-            const titleLower = file.basename.toLowerCase();
-
-            // A. Title Exact Match
-            const titleScore = this.scoringStrategy.calculateTitleScore(titleLower, query);
-            if (titleScore !== null) {
-                keywordResults.push({ path: file.path, score: titleScore, isKeywordMatch: true, isTitleMatch: true });
-                keywordMatchesFound++;
-                continue;
-            }
-
-            // B. Body Scan
-            try {
-                const content = await this.app.vault.cachedRead(file);
-                const contentLower = content.toLowerCase();
-
-                // B1. Exact Phrase Match (Highest Body Score)
-                const bodyExactScore = this.scoringStrategy.calculateExactBodyScore(contentLower, query);
-                if (bodyExactScore !== null) {
-                    keywordResults.push({ path: file.path, score: bodyExactScore, isKeywordMatch: true, isTitleMatch: false });
-                    keywordMatchesFound++;
-                    continue;
-                }
-
-                // B2. "Bag of Words" Match (Flexible)
-                if (isMultiWord) {
-                    const fuzzyScore = this.scoringStrategy.calculateFuzzyScore(tokens, contentLower);
-
-                    if (fuzzyScore > 0) {
-                        keywordResults.push({ path: file.path, score: fuzzyScore, isKeywordMatch: true, isTitleMatch: false });
-                        keywordMatchesFound++;
-                    }
-                }
-            } catch { /* ignore read errors */ }
-        }
-        logger.info(`[SearchOrchestrator] Keyword search found ${keywordResults.length} matches for "${query}" (Exact + Fuzzy).`);
-        return keywordResults;
     }
 
     /**
