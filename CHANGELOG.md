@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+### Developer features
+
+## [4.1.0] - 2026-01-26
+
+### User features
+
 - **Configurable context engine**: Introduced a new "Search and context tuning" section in Advanced Settings, allowing users to fine-tune the GARS algorithm and context assembly.
 - **Structural context pruning**: Implemented intelligent filtering that automatically skips low-relevance results. This restores a clean "3-5 relevant notes" context feel even when search finds dozens of matches.
 - **Adjustable relevance thresholds**: Users can now tune the Supporting (snippets) and Structural (headers) thresholds to balance detail vs prompt noise.
