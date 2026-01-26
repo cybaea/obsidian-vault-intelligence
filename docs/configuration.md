@@ -34,6 +34,9 @@ Configure how connections and similar notes are discovered.
 | **Embedding model** | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX models. |
 | **Minimum similarity score** | `0.5` | Relevance threshold (0.0 to 1.0). Matches below this are ignored. |
 | **Similar notes limit** | `20` | Max number of related notes displayed in the sidebar. |
+| **GARS Similarity weight** | `1.0` | Importance of vector similarity in hybrid scoring. |
+| **GARS Centrality weight** | `0.2` | Importance of graph centrality (popularity) in hybrid scoring. |
+| **GARS Activation weight** | `0.4` | Importance of semantic activation (connections) in hybrid scoring. |
 | **Re-index vault** | `None` | Wipe and rebuild all embeddings. Required after changing models. |
 
 ## Gardener
@@ -60,6 +63,7 @@ Technical tuning for power users.
 | **Indexing delay** | `5000ms` | Wait time after typing stops before re-indexing the current note. |
 | **Bulk scan delay** | `300ms` | Delay between files during full vault scans. |
 | **Local worker threads** | `1-2` | CPU threads for local embeddings. Higher is faster but heavier. |
+| **Local SIMD acceleration** | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |
 | **Gemini API retries** | `10` | Number of retries for spotty connections. |
 | **Model cache duration** | `7 days` | Duration to cache Gemini model list locally. |
 | **Log level** | `Warn` | Developer console verbosity (`Debug` for full CoT). |

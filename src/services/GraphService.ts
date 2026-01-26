@@ -4,7 +4,7 @@ import { VaultManager } from "./VaultManager";
 import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
-import { WorkerAPI, WorkerConfig } from "../types/graph";
+import { WorkerAPI, WorkerConfig, GraphSearchResult } from "../types/graph";
 import { IEmbeddingService } from "./IEmbeddingService";
 import { OntologyService } from "./OntologyService";
 import { GRAPH_CONSTANTS } from "../constants";
@@ -147,7 +147,7 @@ export class GraphService {
 
         // Use requestIdleCallback if available, otherwise setTimeout
         const win = window as unknown as { requestIdleCallback?: (cb: (deadline: unknown) => void, options?: { timeout: number }) => number };
-        const scheduler = win.requestIdleCallback?.bind(win) || ((cb: () => void) => setTimeout(cb, 5000));
+        const scheduler = win.requestIdleCallback?.bind(win) || ((cb: () => void) => setTimeout(cb, GRAPH_CONSTANTS.IDLE_SAVE_TIMEOUT_MS));
 
         this.saveTimeout = scheduler(() => {
             void (async () => {
@@ -189,7 +189,7 @@ export class GraphService {
      * @param limit - Max number of results (default determined by worker).
      * @returns A promise resolving to an array of search results.
      */
-    public async search(query: string, limit?: number) {
+    public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         return await this.api.search(query, limit);
     }
@@ -201,12 +201,12 @@ export class GraphService {
      * @param limit - Max number of results.
      * @returns A promise resolving to an array of search results.
      */
-    public async searchInPaths(query: string, paths: string[], limit?: number) {
+    public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         return await this.api.searchInPaths(query, paths, limit);
     }
 
-    public async getSimilar(path: string, limit?: number) {
+    public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
 
         // Ensure the source file is indexed before looking for similar files
@@ -230,7 +230,7 @@ export class GraphService {
      * @param options - Traversal options (direction, mode).
      * @returns A promise resolving to an array of neighboring files.
      */
-    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }) {
+    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         return await this.api.getNeighbors(path, options);
     }
@@ -265,7 +265,7 @@ export class GraphService {
      * @param path - The path of the source file.
      * @returns A promise resolving to an object containing node metrics.
      */
-    public async getNodeMetrics(path: string) {
+    public async getNodeMetrics(path: string): Promise<{ centrality: number }> {
         if (!this.api) return { centrality: 0 };
         const centrality = await this.api.getCentrality(path);
         return { centrality };

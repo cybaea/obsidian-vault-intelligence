@@ -140,12 +140,6 @@ export class AgentService {
     }
 
     /**
-     * Executes a tool called by the LLM.
-     * @param name - The name of the tool to execute.
-     * @param args - The arguments provided by the LLM.
-     * @returns A promise resolving to the tool's output.
-     */
-    /**
      * Executes a specific tool called by the AI model.
      * @param name - The name/ID of the tool (function) to execute.
      * @param args - The arguments provided by the AI model for the tool.

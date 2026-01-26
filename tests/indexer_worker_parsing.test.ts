@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLinks } from '../src/workers/indexer.worker';
+import { extractLinks } from '../src/utils/link-parsing';
 
 describe('extractLinks', () => {
     describe('Wikilinks', () => {
