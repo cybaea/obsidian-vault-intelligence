@@ -29,6 +29,9 @@ export class GraphService {
     private api: Comlink.Remote<WorkerAPI> | null = null;
     private isInitialized = false;
 
+    // Serial queue to handle API rate limiting across all indexing tasks
+    private processingQueue: Promise<unknown> = Promise.resolve();
+
     constructor(plugin: Plugin, vaultManager: VaultManager, gemini: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
         this.vaultManager = vaultManager;
@@ -93,30 +96,49 @@ export class GraphService {
 
     private registerEvents() {
         this.vaultManager.onModify((file) => {
-            void (async () => {
+            void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 const content = await this.vaultManager.readFile(file);
                 const { mtime, size, basename } = this.vaultManager.getFileStat(file);
                 await this.api.updateFile(file.path, content, mtime, size, basename);
                 this.requestSave();
-            })();
+            });
         });
 
         this.vaultManager.onDelete((path) => {
-            void (async () => {
+            void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 await this.api.deleteFile(path);
                 this.requestSave();
-            })();
+            });
         });
 
         this.vaultManager.onRename((oldPath, newPath) => {
-            void (async () => {
+            void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 await this.api.renameFile(oldPath, newPath);
                 this.requestSave();
-            })();
+            });
         });
+    }
+
+    /**
+     * Enqueues a task for the indexer worker, ensuring serial execution and rate limiting.
+     */
+    private async enqueueIndexingTask<T>(task: () => Promise<T>): Promise<T> {
+        const result = this.processingQueue.then(async () => {
+            const val = await task();
+            const delay = this.settings.queueDelayMs || 100;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return val;
+        });
+
+        // Update the queue but ensure failures don't block the next task
+        this.processingQueue = result.then(() => { }).catch((err) => {
+            logger.error("[GraphService] Queue task failed:", err);
+        });
+
+        return result;
     }
 
     private saveTimeout: ReturnType<typeof setTimeout> | number | undefined = undefined;
@@ -267,23 +289,27 @@ export class GraphService {
 
         let count = 0;
         for (const file of files) {
-            try {
-                const content = await this.vaultManager.readFile(file);
-                const { mtime, size, basename } = this.vaultManager.getFileStat(file);
-                await this.api.updateFile(file.path, content, mtime, size, basename);
-                count++;
+            // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
+            // all respect the same serial throttle.
+            void this.enqueueIndexingTask(async () => {
+                try {
+                    const content = await this.vaultManager.readFile(file);
+                    const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+                    await this.api!.updateFile(file.path, content, mtime, size, basename);
+                    count++;
 
-                // Throttle the scanner to respect API rate limits (100ms delay)
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (error) {
-                logger.error(`[GraphService] Failed to index ${file.path}`, error);
-                // Optionally throw if it's a critical API error that affects all files
-                if (String(error).includes("API key")) throw error;
-            }
-            if (count % 50 === 0) {
-                logger.debug(`[GraphService] Processed ${count}/${files.length} files`);
-            }
+                    if (count % 50 === 0) {
+                        logger.debug(`[GraphService] Processed ${count}/${files.length} files`);
+                    }
+                } catch (error) {
+                    logger.error(`[GraphService] Failed to index ${file.path}`, error);
+                    if (String(error).includes("API key")) throw error;
+                }
+            });
         }
+
+        // Wait for the entire queue to flush before saving/marking done
+        await this.processingQueue;
 
         await this.saveState();
         logger.info(`[GraphService] Scan complete. Total: ${count}`);
