@@ -594,13 +594,75 @@ function splitFrontmatter(text: string): { frontmatter: string, body: string } {
 
 function parseWikilinks(text: string): string[] {
     const links: string[] = [];
-    const wikiLinkRegex = /\[\[(.*?)\]\]/g;
-    let match: RegExpExecArray | null;
-    while ((match = wikiLinkRegex.exec(text)) !== null) {
-        // Handle [[Link|Alias]]
-        const link = match[1]?.split('|')[0]?.trim();
-        if (link) links.push(link);
+
+    let i = 0;
+    const len = text.length;
+
+    // State flags
+    let inCodeBlock = false;      // Inside ``` ... ```
+    let inInlineCode = false;     // Inside ` ... `
+
+    while (i < len) {
+        const char = text[i];
+
+        // 1. Handle Code Blocks (```)
+        if (!inInlineCode && text.startsWith("```", i)) {
+            inCodeBlock = !inCodeBlock;
+            i += 3; // Skip the markers
+            continue;
+        }
+
+        // 2. Handle Inline Code (`)
+        // Note: If we are in a code block, we ignore backticks.
+        if (!inCodeBlock && char === '`') {
+            // Check for escaped backtick (e.g. \`) - ONLY if we are already inside inline code
+            // (Markdown allows \` to escape a backtick, but only if it's not the opening delimiter)
+            // Actually, in standard MD, `foo\`bar` is often valid code. 
+            // The simple rule: An escaped backtick (`\``) is treated as a literal backtick inside code.
+
+            // Lookbehind is tricky in simple loops, so we look at the previous char
+            const isEscaped = (i > 0 && text[i - 1] === '\\');
+
+            if (inInlineCode && isEscaped) {
+                // It's just a literal backtick inside the code, move on.
+                i++;
+                continue;
+            }
+
+            // Toggle state
+            inInlineCode = !inInlineCode;
+            i++;
+            continue;
+        }
+
+        // 3. Look for Wikilinks ([[ ... ]])
+        // Only if we are NOT in any code state
+        if (!inCodeBlock && !inInlineCode && char === '[' && text[i + 1] === '[') {
+            const start = i + 2;
+            let end = text.indexOf(']]', start);
+
+            if (end !== -1) {
+                // We found a potential link. 
+                // CRITICAL: Ensure there are no newlines in it (Obsidian links are usually single line)
+                // and that we didn't accidentally skip over a code block start inside the link text (rare but possible).
+
+                const rawContent = text.substring(start, end);
+
+                // Extract clean link (remove alias)
+                const link = rawContent.split('|')[0]?.trim();
+                if (link) {
+                    links.push(link);
+                }
+
+                // Advance cursor past the closing ]]
+                i = end + 2;
+                continue;
+            }
+        }
+
+        i++;
     }
+
     return links;
 }
 
