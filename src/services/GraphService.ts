@@ -215,9 +215,12 @@ export class GraphService {
         if (file instanceof TFile) {
             const content = await this.vaultManager.readFile(file);
             const { mtime, size, basename } = this.vaultManager.getFileStat(file);
-            await this.api.updateFile(path, content, mtime, size, basename);
+            if (this.api) {
+                await this.api.updateFile(path, content, mtime, size, basename);
+            }
         }
 
+        if (!this.api) return [];
         return await this.api.getSimilar(path, limit);
     }
 
@@ -292,10 +295,11 @@ export class GraphService {
             // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
             // all respect the same serial throttle.
             void this.enqueueIndexingTask(async () => {
+                if (!this.api) return;
                 try {
                     const content = await this.vaultManager.readFile(file);
                     const { mtime, size, basename } = this.vaultManager.getFileStat(file);
-                    await this.api!.updateFile(file.path, content, mtime, size, basename);
+                    await this.api.updateFile(file.path, content, mtime, size, basename);
                     count++;
 
                     if (count % 50 === 0) {
