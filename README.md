@@ -50,6 +50,7 @@ Managing a growing vault is hard. Notes get lost, facts get outdated, and connec
 
 -   **Chat with your notes:** Ask complex questions like *"How has my thinking on Project Alpha evolved?"* to synthesize insights across hundreds of files.
 -   **Verify facts:** Instantly cross-reference your private notes with live Google Search results to check accuracy.
+-   **Build and maintain your ontology:** Use the **Gardener** to organize your vault concepts and refine your ontology.
 -   **Analyze your data:** Use the integrated **Computational Solver** to extract tables or logs from your notes and run real Python analysis (forecasting, trends, statistics) directly in the chat.
 -   **Connect the dots:** Automatically discover related notes you wrote months ago, surfacing insights you might have forgotten.
 
