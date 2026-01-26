@@ -27,7 +27,8 @@ In addition to the broad review, consider carefully these points:
 
 Adopt roles as systems architect and systems analyst. Carefully analyse the code to **update** the markdown document `devs/ARCHITECTURE.md` as a detailed reference of the system architecture. This document is complemented by `devs/adr/`.
 
-**Target Audience:** Developers, Collaborators, Systems Analysts, Maintainers. **Format:** GitHub Markdown with embedded Mermaid.js diagrams.
+**Target Audience:** Developers, Collaborators, Systems Analysts, Maintainers.
+**Format:** GitHub Markdown with embedded Mermaid.js diagrams.
 
 In addition to the detailed descriptions, be sure to include:
 
@@ -35,5 +36,18 @@ In addition to the detailed descriptions, be sure to include:
 - Detailed Mermaid.js diagrams of the Control Flows and interfaces in the system.
 - Strict documentation on all Service interfaces.
 	- Where missing, update sources with Inline JSDoc.
+
+Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
+
+# 3. Review user documentation
+
+Adopt role as an expert in user experience and documentation. Carefully review the user documentation in `README.md` and `docs/` to assess:
+
+- if anything needs updating due to our recent changes
+- if the documentation is still clear and helpful
+- if the documentation serves our ambition of gaining more users.
+
+**Target Audience:** New and exsisting users. Content creators for Obsidian who want to showcase our plugin.
+**Format:** GitHub Markdown with linked images in `public/images/` and, where useful, embedded Mermaid.js diagrams.
 
 Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
