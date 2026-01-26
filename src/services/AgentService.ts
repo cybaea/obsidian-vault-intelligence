@@ -149,7 +149,6 @@ export class AgentService {
      * @private
      */
     private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>): Promise<Record<string, unknown>> {
-        const startTime = performance.now();
         logger.info(`Executing tool ${name} with args:`, args);
 
         let result: Record<string, unknown>;
@@ -256,7 +255,6 @@ export class AgentService {
      * @returns The final response from the agent.
      */
     public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<{ text: string; files: string[] }> {
-        const startTime = performance.now();
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
