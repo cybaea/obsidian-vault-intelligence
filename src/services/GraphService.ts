@@ -272,6 +272,9 @@ export class GraphService {
                 const { mtime, size, basename } = this.vaultManager.getFileStat(file);
                 await this.api.updateFile(file.path, content, mtime, size, basename);
                 count++;
+
+                // Throttle the scanner to respect API rate limits (100ms delay)
+                await new Promise(resolve => setTimeout(resolve, 100));
             } catch (error) {
                 logger.error(`[GraphService] Failed to index ${file.path}`, error);
                 // Optionally throw if it's a critical API error that affects all files
