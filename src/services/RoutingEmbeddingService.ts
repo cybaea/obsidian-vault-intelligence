@@ -57,4 +57,10 @@ export class RoutingEmbeddingService implements IEmbeddingService {
     public terminate() {
         this.localService.terminate();
     }
+
+    public async forceRedownload() {
+        if (this.settings.embeddingProvider === 'local') {
+            await this.localService.forceRedownload();
+        }
+    }
 }

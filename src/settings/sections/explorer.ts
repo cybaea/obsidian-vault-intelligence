@@ -2,6 +2,7 @@ import { Setting, Notice, App, Plugin, setIcon } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
+import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
@@ -218,7 +219,13 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     void (async () => {
                         const pluginWithService = plugin as unknown as { embeddingService?: unknown };
                         const service = pluginWithService.embeddingService;
-                        if (service instanceof LocalEmbeddingService) {
+                        if (service instanceof RoutingEmbeddingService) {
+                            btn.setDisabled(true);
+                            btn.setButtonText("Downloading...");
+                            await service.forceRedownload();
+                            btn.setDisabled(false);
+                            btn.setButtonText("Force re-download");
+                        } else if (service instanceof LocalEmbeddingService) {
                             btn.setDisabled(true);
                             btn.setButtonText("Downloading...");
                             await service.forceRedownload();
