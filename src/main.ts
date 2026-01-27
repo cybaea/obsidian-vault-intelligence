@@ -194,7 +194,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	}
 
 	onunload() {
-		if (this.graphService) this.graphService.shutdown();
+		if (this.graphService) {
+			void this.graphService.forceSave();
+			this.graphService.shutdown();
+		}
 
 		if (this.embeddingService instanceof RoutingEmbeddingService) {
 			this.embeddingService.terminate();

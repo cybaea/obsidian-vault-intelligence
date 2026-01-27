@@ -1,4 +1,5 @@
 import * as Comlink from 'comlink';
+import { encode, decode } from '@msgpack/msgpack';
 import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
@@ -510,26 +511,48 @@ const IndexerWorker: WorkerAPI = {
     },
 
     /**
-     * Serializes the current graph and Orama index to a JSON string.
+     * Serializes the current graph and Orama index to a MessagePack buffer.
+     * Optimizes vectors to Float32Array for compact binary storage.
      */
-    async saveIndex(): Promise<string> {
+    async saveIndex(): Promise<Uint8Array> {
         const { save } = await import('@orama/orama');
+        const oramaRaw = save(orama) as unknown as { docs: { docs: Record<string, OramaDocument> } };
+
+        // Optimization: In-place conversion of standard arrays to Float32Array for 'embedding' property
+        // This makes MessagePack encode them as raw binary (d-type) instead of array of numbers
+        if (oramaRaw && oramaRaw.docs && oramaRaw.docs.docs) {
+            for (const docId in oramaRaw.docs.docs) {
+                const doc = oramaRaw.docs.docs[docId];
+                if (doc && Array.isArray(doc.embedding)) {
+                    // @ts-expect-error - Float32Array is valid for MessagePack but not effectively strictly checked against Orama types here
+                    doc.embedding = new Float32Array(doc.embedding);
+                }
+            }
+        }
+
         const serialized = {
             graph: graph.export(),
-            orama: save(orama),
+            orama: oramaRaw,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel
         };
-        return JSON.stringify(serialized);
+
+        return encode(serialized);
     },
 
     /**
-     * Loads a serialized graph and index state from a JSON string.
-     * @param data - Serialized state string.
+     * Loads a serialized graph and index state.
+     * @param data - Serialized state (JSON string for legacy, Uint8Array for MessagePack).
      */
-    async loadIndex(data: string) {
+    async loadIndex(data: string | Uint8Array) {
         const { load, count } = await import('@orama/orama');
-        const parsed = JSON.parse(data) as SerializedIndexState;
+
+        let parsed: SerializedIndexState;
+        if (typeof data === 'string') {
+            parsed = JSON.parse(data) as SerializedIndexState;
+        } else {
+            parsed = decode(data) as SerializedIndexState;
+        }
 
         graph.clear();
         if (parsed.graph) graph.import(parsed.graph);
