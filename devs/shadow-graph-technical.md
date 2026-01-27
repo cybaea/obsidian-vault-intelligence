@@ -1,4 +1,4 @@
-# Shadow Graph: deep technical specification
+# Developer guide: Shadow graph technical
 
 This document provides a deep dive into the architecture, implementation, and mathematical models underpinning the Shadow Graph and the Hybrid Search engine in Vault Intelligence.
 

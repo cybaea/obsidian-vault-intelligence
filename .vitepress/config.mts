@@ -50,7 +50,14 @@ export default withMermaid(defineConfig({
         ['meta', { name: 'twitter:description', content: 'AI research assistant for your Obsidian vault' }],
         ['meta', { name: 'twitter:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
     ],
-    srcExclude: ['devs/adr/**'],
+    srcExclude: [
+        'devs/adr/**',
+        'devs/maintainability.md',
+        'devs/settings_best_practices.md',
+        'devs/docs-recommendations.md',
+        'devs/2026-agent-support.md',
+        'devs/web-worker-embedding.md'
+    ],
     vite: {
         build: {
             chunkSizeWarningLimit: 600
@@ -60,7 +67,7 @@ export default withMermaid(defineConfig({
         // https://vitepress.dev/reference/default-theme-config
         nav: [
             { text: 'Home', link: '/' },
-            { text: 'Guide', link: '/docs/configuration' },
+            { text: 'Documentation', link: '/docs/tutorials/getting-started' },
             { text: 'Changelog', link: '/CHANGELOG' }
         ],
 
@@ -68,20 +75,52 @@ export default withMermaid(defineConfig({
             {
                 text: 'Introduction',
                 items: [
-                    { text: 'Getting Started', link: '/README_DOC' },
+                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' },
                     { text: 'Roadmap', link: '/ROADMAP' },
+                    { text: 'Changelog', link: '/CHANGELOG' }
                 ]
             },
             {
-                text: 'User Guides',
-                items: getSidebarItems('docs', 'docs')
+                text: 'Tutorials',
+                items: [
+                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' }
+                ]
+            },
+            {
+                text: 'How-To Guides',
+                items: [
+                    { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
+                    { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
+                    { text: 'Gardener: Vault Hygiene', link: '/docs/how-to/maintain-vault' },
+                    { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' }
+                ]
+            },
+            {
+                text: 'Reference',
+                items: [
+                    { text: 'Plugin settings', link: '/docs/reference/configuration' },
+                    { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
+                ]
+            },
+            {
+                text: 'Explanation',
+                items: [
+                    { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
+                    { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
+                    { text: 'Why Gemini?', link: '/docs/explanation/computing-model' }
+                ]
             },
             {
                 text: 'Development',
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
-                    { text: 'Internal Agents Guide', link: '/AGENTS' },
-                    ...getSidebarItems('devs', 'devs')
+                    { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
+                    { text: 'Search Tuning', link: '/devs/SEARCH_TUNING' },
+                    { text: 'Shadow Graph Technical', link: '/devs/shadow-graph-technical' },
+                    { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
+                    { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
+                    { text: 'Documentation Standards', link: '/devs/documentation-standards' },
+                    { text: 'Internal Agents Guide', link: '/AGENTS' }
                 ]
             }
         ],
@@ -91,12 +130,30 @@ export default withMermaid(defineConfig({
         ],
 
         search: {
-            provider: 'local'
+            provider: 'local',
+            options: {
+                miniSearch: {
+                    searchOptions: {
+                        boost: {
+                            title: 5,    // H1 gets massive priority
+                            titles: 1,   // Sub-headings (H2, H3)
+                            text: 0.2    // Content matches are low priority
+                        }
+                    }
+                }
+            }
         },
 
         editLink: {
             pattern: 'https://github.com/cybaea/obsidian-vault-intelligence/edit/main/:path',
             text: 'Edit this page on GitHub'
+        }
+    },
+
+    transformPageData(pageData) {
+        // Automatically prefix developer guides in the UI without cluttering source files
+        if (pageData.relativePath.startsWith('devs/')) {
+            pageData.title = `Developer guide: ${pageData.title}`
         }
     },
     // Map .md files from root and subdirs

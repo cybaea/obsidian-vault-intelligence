@@ -221,7 +221,7 @@ These interfaces represent the actual data returned by a query.
 - **[BasesPropertyId](https://docs.obsidian.md/Reference/TypeScript+API/BasesPropertyId)**: Unique identifier for a property.
 - **[BasesPropertyType](https://docs.obsidian.md/Reference/TypeScript+API/BasesPropertyType)**: Enum defining the data type (Text, Number, Date, etc.).
 
-### Configuration (The Schema)
+### Developer API: Bases schema configuration
 
 These interfaces handle the structure of the `.base` file (or code block) itself—how the user has configured filters, sorts, and visible columns.
 
