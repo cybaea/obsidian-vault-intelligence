@@ -1,4 +1,4 @@
-# Specification: The Vault Intelligence Documentation Standard
+# Developer guide: Documentation standards
 
 ## 1. Core Philosophy
 

@@ -1,4 +1,9 @@
-# Configuration
+---
+description: Comprehensive reference for all Vault Intelligence plugin settings.
+keywords: configuration, settings, setup, api key, context budget, gardener, researcher
+---
+
+# Configuration: Plugin settings
 
 Vault Intelligence is designed to be powerful out of the box, but you can customise it to suit different hardware, budgets, and workflows.
 
