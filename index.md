@@ -36,8 +36,8 @@ features:
       alt: Explorer Icon
     title: "Explorer: Serendipitous Discovery"
     details: Rediscover forgotten insights. Surface high-recall relationships and bridge siloed ideas as you write.
-    link: /docs/reference/configuration#explorer
-    linkText: Configure
+    link: /docs/how-to/explore-connections
+    linkText: See examples
   - icon:
       light: /images/icon-solver-light.png
       dark: /images/icon-solver.png

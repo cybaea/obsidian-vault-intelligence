@@ -84,7 +84,8 @@ export default withMermaid(defineConfig({
                 items: [
                     { text: 'Researcher Workflows', link: '/docs/how-to/researcher-workflows' },
                     { text: 'Data Analysis (Python)', link: '/docs/how-to/data-analysis' },
-                    { text: 'Maintain Vault Hygiene', link: '/docs/how-to/maintain-vault' }
+                    { text: 'Maintain Vault Hygiene', link: '/docs/how-to/maintain-vault' },
+                    { text: 'Explore Connections', link: '/docs/how-to/explore-connections' }
                 ]
             },
             {
@@ -98,7 +99,8 @@ export default withMermaid(defineConfig({
                 text: 'Explanation',
                 items: [
                     { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
-                    { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' }
+                    { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
+                    { text: 'Why Gemini?', link: '/docs/explanation/computing-model' }
                 ]
             },
             {
