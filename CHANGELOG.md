@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer features
 
+## [4.1.1] - 2026-01-27
+
+### User features
+
+### Developer features
+
 - Service routing delegation: Fixed an issue where the "force re-download" button was inactive by implementing proper method delegation in the `RoutingEmbeddingService` wrapper, allowing the UI to access the underlying local service instance.
 
 
