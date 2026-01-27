@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from "../types";
 import { LogLevel } from "../../utils/logger";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
+import { DOCUMENTATION_URLS } from "../../constants";
 
 export function renderAdvancedSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
@@ -15,7 +16,17 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 1. Indexing Performance ---
-    new Setting(containerEl).setName('Performance').setHeading();
+    new Setting(containerEl)
+        .setName('Performance')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Technical tuning for background indexing. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+        });
+    });
 
     new Setting(containerEl)
         .setName('Indexing delay (ms)')
@@ -66,7 +77,17 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     }
 
     // --- 2. System and API ---
-    new Setting(containerEl).setName(`System and ${api} `).setHeading();
+    new Setting(containerEl)
+        .setName(`System and ${api}`)
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'System-level settings and API connection tuning. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+        });
+    });
 
     new Setting(containerEl)
         .setName(`${gemini} API retries`)
@@ -97,7 +118,17 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     // --- 3. Search Relevance (GARS Tuning) ---
-    new Setting(containerEl).setName('Search relevance tuning').setHeading();
+    new Setting(containerEl)
+        .setName('Search relevance tuning')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Adjust weights for the proprietary graph-aware scoring engine. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+        });
+    });
 
     containerEl.createEl('p', {
         text: 'Adjust the weights used to calculate the graph-aware relevance score. The total does not have to be 1.0, as scores are compared relatively.',
@@ -182,7 +213,17 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     // --- 4. Search and Context Tuning ---
-    new Setting(containerEl).setName('Search and context tuning').setHeading();
+    new Setting(containerEl)
+        .setName('Search and context tuning')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+        });
+    });
 
     containerEl.createEl('p', {
         text: 'Adjust search result expansion and context assembly.',
@@ -262,7 +303,17 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
     // --- 5. Developer and Debugging ---
-    new Setting(containerEl).setName('Developer').setHeading();
+    new Setting(containerEl)
+        .setName('Developer')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+        });
+    });
 
     new Setting(containerEl)
         .setName('Log level')

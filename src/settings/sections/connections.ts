@@ -2,6 +2,7 @@ import { Setting, TextComponent, App, setIcon, Notice } from "obsidian";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { BANNER_BASE64 } from "./banner-data";
+import { DOCUMENTATION_URLS } from "../../constants";
 
 interface InternalApp extends App {
     setting: {
@@ -24,7 +25,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
     const bannerLink = containerEl.createEl('a', {
         cls: 'vi-settings-banner-link',
         attr: {
-            href: 'https://cybaea.github.io/obsidian-vault-intelligence/',
+            href: DOCUMENTATION_URLS.BASE,
             target: '_blank',
             rel: 'noopener'
         }
@@ -41,12 +42,12 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
     // --- 1. Documentation Setting ---
     new Setting(containerEl)
         .setName('Documentation')
-        .setDesc(`Learn how to use ${pluginName} and explore advanced features.`)
+        .setDesc(`Learn how to use ${pluginName} and explore advanced features. `)
         .addButton(btn => btn
             .setButtonText("Open documentation")
             .setIcon('external-link')
             .onClick(() => {
-                window.open('https://cybaea.github.io/obsidian-vault-intelligence/', '_blank');
+                window.open(DOCUMENTATION_URLS.SECTIONS.CONNECTION, '_blank');
             }));
 
     // --- 2. API Key Setting ---

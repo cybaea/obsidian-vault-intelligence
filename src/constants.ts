@@ -285,3 +285,15 @@ export const SANITIZATION_CONSTANTS = {
     /** Absolute maximum token limit used for sanity checks */
     MAX_TOKEN_LIMIT_SANITY: 1048576
 };
+
+export const DOCUMENTATION_URLS = {
+    BASE: "https://cybaea.github.io/obsidian-vault-intelligence/",
+    CONFIGURATION: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html",
+    SECTIONS: {
+        CONNECTION: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#connection",
+        RESEARCHER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#researcher",
+        EXPLORER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#explorer",
+        GARDENER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#gardener",
+        PERFORMANCE: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#performance-and-system",
+    }
+};
