@@ -4,6 +4,7 @@ import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegis
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { SettingsTabContext } from "../SettingsTabContext";
+import { DOCUMENTATION_URLS } from "../../constants";
 
 interface InternalApp extends App {
     setting: {
@@ -15,10 +16,15 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.setText('Configure how the explorer finds connections and similar notes in your vault.');
+        div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+        });
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+
 
     // --- 1. Embedding Provider ---
     new Setting(containerEl)

@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+- **Integrated documentation**: Added direct links to the official VitePress documentation across all settings sections. Each tab now includes section-specific anchors to help users find relevant help articles instantly.
+- **Improved settings visibility**: Refined the placement of documentation links, moving them into subheadings and under section headers for better accessibility and a cleaner UI.
+
 ### Developer features
+
+- **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place.
 
 ## [4.2.0] - 2026-01-27
 
@@ -34,7 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer features
 
 - Service routing delegation: Fixed an issue where the "force re-download" button was inactive by implementing proper method delegation in the `RoutingEmbeddingService` wrapper, allowing the UI to access the underlying local service instance.
-
 
 ## [4.1.0] - 2026-01-26
 

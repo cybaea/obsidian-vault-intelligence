@@ -2,7 +2,7 @@ import { Setting, App, Plugin, TextComponent } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
-import { UI_CONSTANTS } from "../../constants";
+import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
@@ -15,10 +15,15 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.setText('Configure the gardener to maintain your vault’s ontology and hygiene.');
+        div.createSpan({ text: 'Configure the gardener to maintain your vault’s ontology and hygiene. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' }
+        });
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+
 
     // --- 1. Model & Limits ---
     const gardenerModelCurrent = plugin.settings.gardenerModel;

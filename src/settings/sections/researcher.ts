@@ -1,7 +1,7 @@
 import { Setting, App, Plugin } from "obsidian";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 import { ModelRegistry } from "../../services/ModelRegistry";
-import { UI_CONSTANTS } from "../../constants";
+import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { SettingsTabContext } from "../SettingsTabContext";
 
 interface InternalApp extends App {
@@ -14,10 +14,15 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.setText('Personalise your research assistant’s intelligence and capabilities.');
+        div.createSpan({ text: 'Personalise your research assistant’s intelligence and capabilities. ' });
+        div.createEl('a', {
+            text: 'View documentation',
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.RESEARCHER, target: '_blank' }
+        });
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+
 
     // --- 1. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
