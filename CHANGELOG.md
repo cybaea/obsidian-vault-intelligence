@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### User features
 
+### Developer features
+
+## [4.2.0] - 2026-01-27
+
+### User features
+
 - **High-performance graph storage**: Migrated graph and search index storage to MessagePack binary format. This results in up to 80% reduction in file size for large vaults and significantly faster plugin startup times.
 - **Improved disk longevity**: Increased auto-save debounce to 30 seconds and implemented a smart "force-save" on plugin shutdown, drastically reducing unnecessary disk writes without risking data loss.
 - **Automated privacy protection**: The plugin now automatically manages a nested `.gitignore` for its generated data directory, ensuring large binary index files are never accidentally committed to your repository.
