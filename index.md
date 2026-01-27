@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /README_DOC
+      link: /docs/tutorials/getting-started
     - theme: alt
       text: View on GitHub
       link: https://github.com/cybaea/obsidian-vault-intelligence
@@ -20,7 +20,7 @@ features:
       alt: Researcher Icon
     title: "Researcher: Synthesise & Verify"
     details: Ask your vault anything. The Researcher answers cited from your notes and cross-checked against live web data.
-    link: /docs/examples
+    link: /docs/how-to/researcher-workflows
     linkText: See examples
   - icon:
       light: /images/icon-gardener-light.png
@@ -28,7 +28,7 @@ features:
       alt: Gardener Icon
     title: "Gardener: Scale your Ontology"
     details: Banish inconsistent tagging. The Gardener proactively suggests structure and links based on your personal knowledge standards.
-    link: /docs/gardener
+    link: /docs/how-to/maintain-vault
     linkText: Learn more
   - icon:
       light: /images/icon-explorer-light.png
@@ -36,14 +36,14 @@ features:
       alt: Explorer Icon
     title: "Explorer: Serendipitous Discovery"
     details: Rediscover forgotten insights. Surface high-recall relationships and bridge siloed ideas as you write.
-    link: /docs/examples#explorer-semantic-discovery
-    linkText: See in action
+    link: /docs/reference/configuration#explorer
+    linkText: Configure
   - icon:
       light: /images/icon-solver-light.png
       dark: /images/icon-solver.png
       alt: Solver Icon
     title: "Solver: Markdown Data Science"
     details: Turn notes into insights. Automatically extract tables and run Python analysis to visualise trends and forecast outcomes.
-    link: /docs/examples#computational-solver-python
+    link: /docs/how-to/data-analysis
     linkText: See cases
 ---

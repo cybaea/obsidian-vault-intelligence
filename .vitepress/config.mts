@@ -68,20 +68,45 @@ export default withMermaid(defineConfig({
             {
                 text: 'Introduction',
                 items: [
-                    { text: 'Getting Started', link: '/README_DOC' },
+                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' },
                     { text: 'Roadmap', link: '/ROADMAP' },
+                    { text: 'Changelog', link: '/CHANGELOG' }
                 ]
             },
             {
-                text: 'User Guides',
-                items: getSidebarItems('docs', 'docs')
+                text: 'Tutorials',
+                items: [
+                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' }
+                ]
+            },
+            {
+                text: 'How-To Guides',
+                items: [
+                    { text: 'Researcher Workflows', link: '/docs/how-to/researcher-workflows' },
+                    { text: 'Data Analysis (Python)', link: '/docs/how-to/data-analysis' },
+                    { text: 'Maintain Vault Hygiene', link: '/docs/how-to/maintain-vault' }
+                ]
+            },
+            {
+                text: 'Reference',
+                items: [
+                    { text: 'Configuration', link: '/docs/reference/configuration' },
+                    { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
+                ]
+            },
+            {
+                text: 'Explanation',
+                items: [
+                    { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
+                    { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' }
+                ]
             },
             {
                 text: 'Development',
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
                     { text: 'Internal Agents Guide', link: '/AGENTS' },
-                    ...getSidebarItems('devs', 'devs')
+                    { text: 'Documentation Standards', link: '/devs/documentation-standards' }
                 ]
             }
         ],
