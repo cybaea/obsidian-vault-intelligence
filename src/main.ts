@@ -77,12 +77,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		});
 
 		// Ribbon Icon
-		this.addRibbonIcon('bot', 'Vault intelligence', (evt: MouseEvent) => {
+		this.addRibbonIcon('brain-circuit', 'Vault intelligence', (evt: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem((item) =>
 				item
 					.setTitle('Researcher: chat with vault')
-					.setIcon('message-square')
+					.setIcon('message-circle')
 					.onClick(() => {
 						void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
 					})
@@ -90,7 +90,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			menu.addItem((item) =>
 				item
 					.setTitle('Explorer: view similar notes')
-					.setIcon('files')
+					.setIcon('layout-grid')
 					.onClick(() => {
 						void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
 					})

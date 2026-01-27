@@ -15,6 +15,7 @@ export class ResearchChatView extends ItemView {
     embeddingService: IEmbeddingService; // Add property
     agent: AgentService;
     private messages: ChatMessage[] = [];
+    private isThinking = false;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -38,6 +39,7 @@ export class ResearchChatView extends ItemView {
 
         // Pass embeddingService to Agent
         this.agent = new AgentService(plugin.app, gemini, graphService, embeddingService, plugin.settings);
+        this.icon = "message-circle";
     }
 
     getViewType() {
@@ -215,9 +217,13 @@ export class ResearchChatView extends ItemView {
         }
 
         try {
+            this.isThinking = true;
+            void this.renderMessages();
             const response = await this.agent.chat(this.messages, text, files);
+            this.isThinking = false;
             this.addMessage("model", response.text, undefined, response.files);
         } catch (e: unknown) {
+            this.isThinking = false;
             const message = e instanceof Error ? e.message : String(e);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
@@ -339,9 +345,15 @@ export class ResearchChatView extends ItemView {
                         });
                     }
                 }
+
             } else {
                 contentDiv.setText(msg.text);
             }
+        }
+
+        if (this.isThinking) {
+            const thinkingDiv = this.chatContainer.createDiv({ cls: "chat-message thinking" });
+            thinkingDiv.createDiv({ cls: "thinking-dots" });
         }
 
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;

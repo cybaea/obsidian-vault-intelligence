@@ -25,6 +25,7 @@ export class SimilarNotesView extends ItemView {
         this.graphService = graphService;
         this.gemini = gemini;
         this.embeddingService = embeddingService;
+        this.icon = "layout-grid";
     }
 
     getViewType() {

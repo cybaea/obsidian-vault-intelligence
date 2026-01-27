@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **High-performance graph storage**: Migrated graph and search index storage to MessagePack binary format. This results in up to 80% reduction in file size for large vaults and significantly faster plugin startup times.
 - **Improved disk longevity**: Increased auto-save debounce to 30 seconds and implemented a smart "force-save" on plugin shutdown, drastically reducing unnecessary disk writes without risking data loss.
 - **Automated privacy protection**: The plugin now automatically manages a nested `.gitignore` for its generated data directory, ensuring large binary index files are never accidentally committed to your repository.
+- **Semantic icons**: Updated the ribbon and menu icons to be more descriptive. The researcher now uses a "Message Circle", the Explorer uses a "Grid", and the main ribbon uses a "Brain Circuit".
+- **Thinking indicator**: Added a visual pulsing indicator to the chat interface so you know when the agent is "thinking" about your request.
 
 ### Developer features
 
