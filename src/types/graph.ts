@@ -70,8 +70,8 @@ export interface WorkerAPI {
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
-    saveIndex(): Promise<string>; // Returns serialized graph/index
-    loadIndex(data: string): Promise<void>;
+    saveIndex(): Promise<Uint8Array>; // Returns serialized graph/index
+    loadIndex(data: string | Uint8Array): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
     clearIndex(): Promise<void>;
     fullReset(): Promise<void>;

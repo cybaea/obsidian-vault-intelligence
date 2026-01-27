@@ -86,7 +86,10 @@ export class GraphService {
 
             await this.api.initialize(config, fetcher, embedder);
 
-            // 3. Load existing state if any
+            // 3. Ensure gitignore exists for data folder
+            await this.ensureGitignore();
+
+            // 4. Load existing state if any
             await this.loadState();
 
             // 4. Register event listeners
@@ -163,13 +166,40 @@ export class GraphService {
         });
     }
 
+    /**
+     * Forces an immediate save of the graph state, clearing any pending debounce.
+     * Useful for clean shutdowns.
+     */
+    public async forceSave() {
+        if (this.saveTimeout !== undefined) {
+            // Clear both standard timeout and RequestIdleCallback handle (treated as number in many envs)
+            clearTimeout(this.saveTimeout as number);
+            // If it was an idle callback, cancelIdleCallback might be needed but generic clearTimeout often safe enough or we just let it run.
+            // For simplicity in this env, assuming clearTimeout covers strict setTimeout usage or we just race it.
+            this.saveTimeout = undefined;
+        }
+        await this.saveState();
+    }
+
     private async saveState() {
         if (!this.api) return;
         try {
-            const state = await this.api.saveIndex();
+            // Returns Uint8Array (MessagePack)
+            const stateBuffer = await this.api.saveIndex();
+
             const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
-            await this.plugin.app.vault.adapter.write(dataPath, state);
-            logger.debug("[GraphService] State persisted.");
+
+            // Write binary (convert Uint8Array to ArrayBuffer)
+            await this.plugin.app.vault.adapter.writeBinary(dataPath, stateBuffer.buffer as ArrayBuffer);
+            logger.debug("[GraphService] State persisted (MessagePack).");
+
+            // Cleanup legacy JSON if it exists
+            const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
+            if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
+                await this.plugin.app.vault.adapter.remove(legacyPath);
+                logger.debug("[GraphService] Legacy JSON state removed.");
+            }
+
         } catch (error) {
             logger.error("[GraphService] Save failed:", error);
         }
@@ -177,14 +207,56 @@ export class GraphService {
 
     private async loadState() {
         if (!this.api) return;
+
         const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
+        const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
+
+        // 1. Try loading MessagePack (Preferred)
         if (await this.plugin.app.vault.adapter.exists(dataPath)) {
             try {
-                const state = await this.plugin.app.vault.adapter.read(dataPath);
-                await this.api.loadIndex(state);
-                logger.info("[GraphService] State loaded.");
+                const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
+                // Transfer buffer to worker
+                await this.api.loadIndex(new Uint8Array(stateBuffer));
+                logger.info("[GraphService] State loaded (MessagePack).");
+                return;
             } catch (error) {
-                logger.error("[GraphService] Load failed:", error);
+                logger.error("[GraphService] Load failed (MessagePack):", error);
+            }
+        }
+
+        // 2. Fallback to Legacy JSON (Migration)
+        if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
+            try {
+                const stateJson = await this.plugin.app.vault.adapter.read(legacyPath);
+                await this.api.loadIndex(stateJson);
+                logger.info("[GraphService] State loaded (Legacy JSON).");
+            } catch (error) {
+                logger.error("[GraphService] Load failed (Legacy JSON):", error);
+            }
+        }
+    }
+
+    /**
+     * Ensures a .gitignore file exists in the data directory to ignore generated files.
+     */
+    private async ensureGitignore() {
+        const ignorePath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/.gitignore`;
+        const exists = await this.plugin.app.vault.adapter.exists(ignorePath);
+
+        if (!exists) {
+            // Ignore everything in data/ except the .gitignore itself
+            const content = "# Ignore everything\n*\n!.gitignore\n";
+            try {
+                // Ensure data folder exists first
+                const dataFolder = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}`;
+                if (!(await this.plugin.app.vault.adapter.exists(dataFolder))) {
+                    await this.plugin.app.vault.createFolder(dataFolder);
+                }
+
+                await this.plugin.app.vault.adapter.write(ignorePath, content);
+                logger.debug("[GraphService] Created .gitignore in data folder.");
+            } catch (error) {
+                logger.warn("[GraphService] Failed to create data/.gitignore:", error);
             }
         }
     }

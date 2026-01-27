@@ -183,9 +183,11 @@ export const GRAPH_CONSTANTS = {
     /** Default directory for index storage */
     DATA_DIR: "data",
     /** Default filename for graph state */
-    STATE_FILE: "graph-state.json",
+    /** Default filename for graph state */
+    STATE_FILE: "graph-state.msgpack",
+    legacy_STATE_FILE: "graph-state.json",
     /** Throttle/Idle time before auto-saving graph state (ms) */
-    IDLE_SAVE_TIMEOUT_MS: 5000
+    IDLE_SAVE_TIMEOUT_MS: 30000
 };
 
 export const ONTOLOGY_CONSTANTS = {
