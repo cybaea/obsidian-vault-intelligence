@@ -650,3 +650,53 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vi-settings-banner-link:active {
     transform: scale(0.99);
 }
+
+/* Thinking Indicator */
+.chat-message.thinking {
+    opacity: 0.8;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: transparent; /* Or match message style */
+    padding: 5px 10px;
+}
+
+.thinking-dots {
+    display: inline-block;
+    position: relative;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+    animation: dot-flashing 1s infinite linear alternate;
+    animation-delay: 0.5s;
+    margin-left: 10px;
+}
+
+.thinking-dots::before, .thinking-dots::after {
+    content: '';
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--text-muted);
+    animation: dot-flashing 1s infinite alternate;
+}
+
+.thinking-dots::before {
+    left: -12px;
+    animation-delay: 0s;
+}
+
+.thinking-dots::after {
+    left: 12px;
+    animation-delay: 1s;
+}
+
+@keyframes dot-flashing {
+    0% { background-color: var(--text-muted); }
+    50%, 100% { background-color: var(--text-accent); }
+}
