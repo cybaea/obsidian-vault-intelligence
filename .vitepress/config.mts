@@ -50,6 +50,12 @@ export default withMermaid(defineConfig({
         ['meta', { name: 'twitter:description', content: 'AI research assistant for your Obsidian vault' }],
         ['meta', { name: 'twitter:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
     ],
+    srcExclude: ['devs/adr/**'],
+    vite: {
+        build: {
+            chunkSizeWarningLimit: 600
+        }
+    },
     themeConfig: {
         // https://vitepress.dev/reference/default-theme-config
         nav: [
