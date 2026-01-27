@@ -144,7 +144,7 @@ Focus entirely on the Tutorial quadrant. New users do not care about architectur
 
 **When writing for Retention (Objective 2):**
 
-Focus on How-To Guides. Power users stay because they find new workflows. Write guides like "How to use Vault Intelligence for weekly reviews" or "How to generate graph connections."
+Focus on How-To Guides and Explanation. Power users stay because they find new workflows and understand the system deeply. Write guides like "How to use Vault Intelligence for weekly reviews" and explanations like "How the Graph algorithm weights connections" to enable mastery.
 
 **When writing for Self-Service (Objective 3):**
 
