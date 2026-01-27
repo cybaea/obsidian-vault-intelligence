@@ -7,7 +7,12 @@ The Researcher is your conversational partner in the vault. Learn how to direct 
 By default, the Researcher indexes your vault in the background. However, for specific tasks, you should explicitly tell it what to look at using the `@` symbol.
 
 ### Mentioning a single note
-Type `@` and start typing the name of a note.
+10. Type `@` and start typing the name of a note.
+    
+    ![The @ autocomplete dropdown showing note suggestions](/images/screenshots/mention-autocomplete.png)
+
+    > [!NOTE] Screenshot Needed
+    > Capture the @ autocomplete dropdown menu appearing in the Researcher chat while typing a note or folder name.
 -   _Use case:_ "Summarise @Meeting Notes"
 -   _Benefit:_ Forces the agent to read that specific file in full.
 

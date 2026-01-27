@@ -25,6 +25,11 @@ You need an API key to power the AI reasoning. [Why an API key?](../explanation/
 Let's see the magic immediately.
 
 1.  Click the robot icon in the left ribbon to open the Researcher sidebar.
+    
+    ![The Obsidian Sidebar highlighting the Vault Intelligence robot icon](/images/screenshots/obsidian-sidebar-icon.png)
+
+    > [!NOTE] Screenshot Needed
+    > Capture the Obsidian left ribbon, highlighting the Vault Intelligence (robot) icon.
 2.  Click the Agent dropdown and select Researcher.
 3.  Type this exact query (or pick a topic relevant to your notes):
 
@@ -37,6 +42,11 @@ Let's see the magic immediately.
 -   It read your notes: The agent found relevant files without you searching for keywords.
 -   It reasoned: It didn't just copy text; it understood the relationship between the concepts.
 -   It answered: You got a synthesized answer, cited with links to your source files.
+
+    ![A chat response showing citations as clickable links](/images/screenshots/researcher-citations.png)
+
+    > [!NOTE] Screenshot Needed
+    > Capture a successful Researcher chat response that clearly shows citations and links to vault source files.
 
 ## Next steps
 

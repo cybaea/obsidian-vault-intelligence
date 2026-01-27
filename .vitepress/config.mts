@@ -135,9 +135,9 @@ export default withMermaid(defineConfig({
                 miniSearch: {
                     searchOptions: {
                         boost: {
-                            title: 10,    // H1 gets massive priority
+                            title: 5,    // H1 gets massive priority
                             titles: 1,   // Sub-headings (H2, H3)
-                            text: 0.1    // Content matches are low priority
+                            text: 0.2    // Content matches are low priority
                         }
                     }
                 }
