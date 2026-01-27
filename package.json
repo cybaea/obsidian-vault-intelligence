@@ -44,7 +44,7 @@
 		"esbuild-plugin-inline-worker": "^0.1.1",
 		"eslint": "^9.39.2",
 		"eslint-plugin-obsidianmd": "^0.1.9",
-		"globals": "17.1.0",
+		"globals": "17.2.0",
 		"jiti": "2.6.1",
 		"mermaid": "^11.12.2",
 		"obsidian": "^1.11.4",
