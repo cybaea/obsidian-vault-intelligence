@@ -1,4 +1,4 @@
-# How to Maintain Vault Hygiene
+# Gardener: Maintain vault hygiene
 
 The Gardener agent helps you keep your vault structured by suggesting topics, links, and tags based on your own ontology.
 

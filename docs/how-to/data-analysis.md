@@ -1,4 +1,4 @@
-# How to Analyse Data with Python
+# Solver: Analyse data with Python
 
 Vault Intelligence includes a Computational Solver—an embedded Python environment that can execute code to analyse your notes.
 

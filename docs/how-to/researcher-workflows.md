@@ -1,4 +1,4 @@
-# How to Use the Researcher
+# Researcher: Workflows
 
 The Researcher is your conversational partner in the vault. Learn how to direct its attention and ask better questions.
 

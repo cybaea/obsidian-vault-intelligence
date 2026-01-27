@@ -1,4 +1,4 @@
-# How to Explore Connections
+# Explorer: Find connections
 
 The Explorer view helps you rediscover forgotten notes and find hidden relationships between ideas as you write.
 

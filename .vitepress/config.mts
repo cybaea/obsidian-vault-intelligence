@@ -82,10 +82,10 @@ export default withMermaid(defineConfig({
             {
                 text: 'How-To Guides',
                 items: [
-                    { text: 'Researcher Workflows', link: '/docs/how-to/researcher-workflows' },
-                    { text: 'Data Analysis (Python)', link: '/docs/how-to/data-analysis' },
-                    { text: 'Maintain Vault Hygiene', link: '/docs/how-to/maintain-vault' },
-                    { text: 'Explore Connections', link: '/docs/how-to/explore-connections' }
+                    { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
+                    { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
+                    { text: 'Gardener: Vault Hygiene', link: '/docs/how-to/maintain-vault' },
+                    { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' }
                 ]
             },
             {
