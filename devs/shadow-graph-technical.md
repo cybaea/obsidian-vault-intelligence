@@ -115,7 +115,9 @@ The budget is distributed using a **Soft Limit Ratio** (default: 10% per doc). I
 
 ### Serialization bridge
 
-Because the graph and index live in the worker, state must be serialized to JSON for persistence.
+Because the graph and index live in the worker, state must be serialized for persistence.
+- **Format**: MessagePack binary format (`.msgpack`).
+- **Optimization**: Numerical arrays (embeddings) are cast to `Float32Array` before encoding to minimize overhead.
 - **Graphology**: Uses `graph.export()` and `graph.import()`.
 - **Orama**: Uses the native `save()` and `load()` functions.
 

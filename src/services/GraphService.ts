@@ -189,8 +189,12 @@ export class GraphService {
 
             const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
 
-            // Write binary (convert Uint8Array to ArrayBuffer)
-            await this.plugin.app.vault.adapter.writeBinary(dataPath, stateBuffer.buffer as ArrayBuffer);
+            // Write binary (ensure we only write the view's bytes, not the whole underlying buffer)
+            const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
+                ? stateBuffer.buffer
+                : stateBuffer.buffer.slice(stateBuffer.byteOffset, stateBuffer.byteOffset + stateBuffer.byteLength);
+
+            await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
             logger.debug("[GraphService] State persisted (MessagePack).");
 
             // Cleanup legacy JSON if it exists

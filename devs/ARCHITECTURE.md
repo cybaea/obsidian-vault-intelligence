@@ -103,7 +103,7 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >      E --> F[Worker message]
 >      F --> G(Graphology: update edges)
 >      F --> H(Orama: upsert vector)
->      H --> I[Serialize to disk]
+>      H --> I[Serialize to MessagePack]
 >    ```
 > 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
 
@@ -322,8 +322,8 @@ export interface WorkerAPI {
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]>;
     getCentrality(path: string): Promise<number>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
-    saveIndex(): Promise<string>;
-    loadIndex(data: string): Promise<void>;
+    saveIndex(): Promise<Uint8Array>;
+    loadIndex(data: string | Uint8Array): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
     clearIndex(): Promise<void>;
     fullReset(): Promise<void>;
