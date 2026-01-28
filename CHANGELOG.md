@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer features
 
-- **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place.
+- **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.
 - **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
 - **Enhanced API documentation**: Fully synchronised the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.
 - **Improved JSDoc coverage**: Added detailed inline documentation for core lifecycle methods and service orchestrators to improve developer experience and code readability.

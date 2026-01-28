@@ -304,14 +304,17 @@ export const UI_STRINGS = {
     ERROR_GARDENER_PLAN_RENDER: "Failed to render Gardener Plan"
 };
 
+const DOCS_BASE = "https://cybaea.github.io/obsidian-vault-intelligence/";
+const DOCS_CONFIG = `${DOCS_BASE}docs/reference/configuration.html`;
+
 export const DOCUMENTATION_URLS = {
-    BASE: "https://cybaea.github.io/obsidian-vault-intelligence/",
-    CONFIGURATION: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html",
+    BASE: DOCS_BASE,
+    CONFIGURATION: DOCS_CONFIG,
     SECTIONS: {
-        CONNECTION: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#connection",
-        RESEARCHER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#researcher",
-        EXPLORER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#explorer",
-        GARDENER: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#gardener",
-        PERFORMANCE: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html#performance-and-system",
+        CONNECTION: `${DOCS_CONFIG}#connection`,
+        RESEARCHER: `${DOCS_CONFIG}#researcher`,
+        EXPLORER: `${DOCS_CONFIG}#explorer`,
+        GARDENER: `${DOCS_CONFIG}#gardener`,
+        PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
     }
 };
