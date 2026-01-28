@@ -11,7 +11,7 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored in plain text in your plugin settings. Required for all Gemini models and Gemini embeddings. |
+| Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored in plain text in your plugin settings (`data.json`), but masked for display and logging using SHA-256 fingerprints. Required for all Gemini models and Gemini embeddings. |
 | Refresh models | `None` | A manual trigger to force a fresh fetch of available models from the Gemini API. |
 
 ## Researcher

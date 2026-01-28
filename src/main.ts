@@ -14,8 +14,13 @@ import { OntologyService } from "./services/OntologyService";
 import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
 import { GardenerStateService } from "./services/GardenerStateService";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
-import { VIEW_TYPES, SANITIZATION_CONSTANTS } from "./constants";
+import { VIEW_TYPES, SANITIZATION_CONSTANTS, UI_STRINGS } from "./constants";
 
+/**
+ * Main plugin class for Obsidian Vault Intelligence.
+ * Orchestrates services for semantic search, knowledge graph maintenance,
+ * and agentic reasoning (Researcher/Gardener).
+ */
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiService;
@@ -31,6 +36,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Consistently handled by VectorStore now
 	}
 
+	/**
+	 * Obsidian plugin lifecycle method called when the plugin is loaded.
+	 * Initializes all singleton services and registers UI components.
+	 */
 	async onload() {
 		await this.loadSettings();
 
@@ -77,11 +86,11 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		});
 
 		// Ribbon Icon
-		this.addRibbonIcon('brain-circuit', 'Vault intelligence', (evt: MouseEvent) => {
+		this.addRibbonIcon(UI_STRINGS.RIBBON_ICON, UI_STRINGS.RIBBON_TOOLTIP, (evt: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem((item) =>
 				item
-					.setTitle('Researcher: chat with vault')
+					.setTitle(UI_STRINGS.RESEARCHER_TITLE)
 					.setIcon('message-circle')
 					.onClick(() => {
 						void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
@@ -89,7 +98,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle('Explorer: view similar notes')
+					.setTitle(UI_STRINGS.EXPLORER_TITLE)
 					.setIcon('layout-grid')
 					.onClick(() => {
 						void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
@@ -128,7 +137,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		this.addCommand({
 			id: 'gardener-tidy-vault',
-			name: 'Gardener: organize vault concepts',
+			name: UI_STRINGS.GARDENER_TITLE_TIDY,
 			callback: async () => {
 				try {
 					const planFile = await this.gardenerService.tidyVault();
@@ -138,20 +147,20 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					}
 				} catch (error: unknown) {
 					const message = error instanceof Error ? error.message : String(error);
-					new Notice(`Gardener failed: ${message}`);
+					new Notice(`${UI_STRINGS.NOTICE_GARDENER_FAILED}${message}`);
 				}
 			}
 		});
 
 		this.addCommand({
 			id: 'gardener-purge-plans',
-			name: 'Gardener: purge old plans',
+			name: UI_STRINGS.GARDENER_TITLE_PURGE,
 			callback: async () => {
 				try {
 					await this.gardenerService.purgeOldPlans();
-					new Notice("Gardener: old plans purged.");
+					new Notice(UI_STRINGS.NOTICE_GARDENER_PURGED);
 				} catch (error: unknown) {
-					new Notice(`Purge failed: ${error instanceof Error ? error.message : String(error)}`);
+					new Notice(`${UI_STRINGS.NOTICE_PURGE_FAILED}${error instanceof Error ? error.message : String(error)}`);
 				}
 			}
 		});
@@ -190,9 +199,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			})
 		);
 
-		logger.info("Vault Intelligence Plugin Loaded");
+		logger.info(UI_STRINGS.NOTICE_PLUGIN_LOADED);
 	}
 
+	/**
+	 * Obsidian plugin lifecycle method called when the plugin is unloaded.
+	 * Ensures clean shutdown of workers and saves final state.
+	 */
 	onunload() {
 		if (this.graphService) {
 			void this.graphService.forceSave();
@@ -203,7 +216,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.embeddingService.terminate();
 		}
 
-		logger.info("Vault Intelligence Plugin Unloaded");
+		logger.info(UI_STRINGS.NOTICE_PLUGIN_UNLOADED);
 	}
 
 	async loadSettings() {
@@ -305,7 +318,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		);
 
 		if (changed) {
-			logger.info("Sanitized context budgets to safe bounds");
+			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);
 			await this.saveData(this.settings);
 		}
 	}

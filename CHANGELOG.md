@@ -11,10 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Integrated documentation**: Added direct links to the official VitePress documentation across all settings sections. Each tab now includes section-specific anchors to help users find relevant help articles instantly.
 - **Improved settings visibility**: Refined the placement of documentation links, moving them into subheadings and under section headers for better accessibility and a cleaner UI.
+- **Improved documentation clarity**: Clarified API key storage security and ensured consistent British English usage throughout the configuration guide.
 
 ### Developer features
 
 - **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place.
+- **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
+- **Enhanced API documentation**: Fully synchronised the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.
+- **Improved JSDoc coverage**: Added detailed inline documentation for core lifecycle methods and service orchestrators to improve developer experience and code readability.
 
 ## [4.2.0] - 2026-01-27
 

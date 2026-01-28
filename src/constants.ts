@@ -286,6 +286,24 @@ export const SANITIZATION_CONSTANTS = {
     MAX_TOKEN_LIMIT_SANITY: 1048576
 };
 
+export const UI_STRINGS = {
+    PLUGIN_NAME: "Vault Intelligence",
+    RIBBON_ICON: "brain-circuit",
+    RIBBON_TOOLTIP: "Vault intelligence",
+    RESEARCHER_TITLE: "Researcher: chat with vault",
+    EXPLORER_TITLE: "Explorer: view similar notes",
+    GARDENER_TITLE_TIDY: "Gardener: organize vault concepts",
+    GARDENER_TITLE_PURGE: "Gardener: purge old plans",
+    NOTICE_GARDENER_FAILED: "Gardener failed: ",
+    NOTICE_GARDENER_PURGED: "Gardener: old plans purged.",
+    NOTICE_PURGE_FAILED: "Purge failed: ",
+    NOTICE_PLUGIN_LOADED: "Vault Intelligence Plugin Loaded",
+    NOTICE_PLUGIN_UNLOADED: "Vault Intelligence Plugin Unloaded",
+    NOTICE_SANITISED_BUDGETS: "Sanitised context budgets to safe bounds",
+    ERROR_GRAPH_INIT_FAILED: "Failed to initialize vault intelligence graph",
+    ERROR_GARDENER_PLAN_RENDER: "Failed to render Gardener Plan"
+};
+
 export const DOCUMENTATION_URLS = {
     BASE: "https://cybaea.github.io/obsidian-vault-intelligence/",
     CONFIGURATION: "https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration.html",
