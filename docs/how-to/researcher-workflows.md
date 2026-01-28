@@ -11,8 +11,6 @@ By default, the Researcher indexes your vault in the background. However, for sp
     
     ![The @ autocomplete dropdown showing note suggestions](/images/screenshots/mention-autocomplete.png)
 
-    > [!NOTE] Screenshot Needed
-    > Capture the @ autocomplete dropdown menu appearing in the Researcher chat while typing a note or folder name.
 -   _Use case:_ "Summarise @Meeting Notes"
 -   _Benefit:_ Forces the agent to read that specific file in full.
 

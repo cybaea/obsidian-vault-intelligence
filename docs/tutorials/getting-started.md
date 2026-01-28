@@ -28,8 +28,6 @@ Let's see the magic immediately.
     
     ![The Obsidian Sidebar highlighting the Vault Intelligence brain circuit icon](/images/screenshots/obsidian-sidebar-icon.png)
 
-    > [!NOTE] Screenshot Needed
-    > Capture the Obsidian left ribbon, highlighting the Vault Intelligence (brain circuit) icon.
 2.  Click the Agent dropdown and select Researcher.
 3.  Type this exact query (or pick a topic relevant to your notes):
 
@@ -45,8 +43,6 @@ Let's see the magic immediately.
 
     ![A chat response showing citations as clickable links](/images/screenshots/researcher-citations.png)
 
-    > [!NOTE] Screenshot Needed
-    > Capture a successful Researcher chat response that clearly shows citations and links to vault source files.
 
 ## Next steps
 
