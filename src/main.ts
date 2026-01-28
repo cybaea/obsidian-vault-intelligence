@@ -31,8 +31,6 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	ontologyService: OntologyService;
 	gardenerService: GardenerService;
 	gardenerStateService: GardenerStateService;
-	// @ts-ignore -- Deliberate unused variable for lint testing
-	private _unusedTestVariable: string = "fail";
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -43,7 +41,6 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 * Initializes all singleton services and registers UI components.
 	 */
 	async onload() {
-		console.log("This should fail the lint check");
 		await this.loadSettings();
 
 		// Initialize Logger
