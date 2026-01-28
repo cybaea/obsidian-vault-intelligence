@@ -24,9 +24,6 @@ The Gardener never changes your notes without permission. It creates a Gardener 
 
     ![The Gardener Plan UI showing action cards and checkboxes](/images/screenshots/gardener-plan-ui.png)
 
-    > [!NOTE] Screenshot Needed
-    > Capture a 'Gardener Plan' note showing multiple action cards with rationale and checked/unchecked checkboxes.
-
 ## Customising behaviour
 
 You can teach the Gardener your specific rules by creating an `Instructions.md` file in your ontology folder.
