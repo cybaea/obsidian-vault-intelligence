@@ -317,10 +317,13 @@ export interface WorkerAPI {
     deleteFile(path: string): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
-    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology' }): Promise<GraphSearchResult[]>;
+    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
     getCentrality(path: string): Promise<number>;
+    getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
+    getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
     saveIndex(): Promise<Uint8Array>;
     loadIndex(data: string | Uint8Array): Promise<void>;

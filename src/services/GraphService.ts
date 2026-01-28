@@ -24,6 +24,11 @@ interface PluginWithOntology extends Plugin {
     ontologyService?: OntologyService;
 }
 
+/**
+ * Service responsible for managing the semantic graph and vector index.
+ * It spawns and communicates with the Indexer Worker to offload heavy computation
+ * and ensures that the vault's semantic state is persisted.
+ */
 export class GraphService {
     private plugin: Plugin;
     private vaultManager: VaultManager;
@@ -103,6 +108,9 @@ export class GraphService {
         }
     }
 
+    /**
+     * Registers vault event listeners to keep the index and graph in sync with file changes.
+     */
     private registerEvents() {
         this.vaultManager.onModify((file) => {
             void this.enqueueIndexingTask(async () => {
@@ -151,6 +159,10 @@ export class GraphService {
     }
 
     private saveTimeout: ReturnType<typeof setTimeout> | number | undefined = undefined;
+    /**
+     * Debounces and schedules a save of the graph state to disk.
+     * Uses requestIdleCallback for low-priority background persistence.
+     */
     private requestSave() {
         if (this.saveTimeout) return;
 
@@ -181,6 +193,9 @@ export class GraphService {
         await this.saveState();
     }
 
+    /**
+     * Internal method to fetch state from worker and write binary MessagePack to vault.
+     */
     private async saveState() {
         if (!this.api) return;
         try {
@@ -209,6 +224,10 @@ export class GraphService {
         }
     }
 
+    /**
+     * Internal method to load state from vault and push to worker.
+     * Handles migration from legacy JSON format.
+     */
     private async loadState() {
         if (!this.api) return;
 
