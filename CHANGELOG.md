@@ -106,7 +106,6 @@ New features are added in the "Unreleased" section.
 - **Persistent debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
 - **UI layout optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
 
-
 ### Developer features
 
 - **GARS mathematical model**: Formalized the graph-augmented relevance score calculation in `ScoringStrategy.ts`.
@@ -131,7 +130,6 @@ New features are added in the "Unreleased" section.
 - **Service safety**: Replaced unsafe non-null assertions in `LocalEmbeddingService` with defensive checks to ensure stable task dequeuing.
 - **Service documentation**: Improved JSDoc coverage for core services including `OntologyService`, `GardenerService`, and `SearchOrchestrator` to improve maintainability.
 - **Security masking**: Implemented a recursive masking utility to prevent plaintext API keys from being leaked in developer console debug logs (eg when updating worker configurations).
-
 
 ## [2.2.0] - 2026-01-22
 
@@ -196,7 +194,6 @@ New features are added in the "Unreleased" section.
 - **Model hygiene**: Added a `quantized` flag to the `ModelRegistry` to support loading unquantized models (like Potion-8M) and implemented worker-side event loop yielding to prevent 60s timeouts on large files.
 - **Stable mode persistence**: Automatically updates and saves plugin settings when stable modes are triggered to prevent repeat crashes in future sessions.
 
-
 ## [1.5.0] - 2026-01-10
 
 ### User features
@@ -219,7 +216,6 @@ New features are added in the "Unreleased" section.
 - **Fine-Tuning:** Added dedicated settings for `queueDelayMs` and `embeddingThreads` to fine-tune performance on different hardware.
 - **Fixed InteliSense errors** in Visual Studio Code. No user impact, but it makes the developer happy. [PR44](https://github.com/cybaea/obsidian-vault-intelligence/pull/44)
 
-
 ## [1.4.0] - 2026-01-03
 
 ### Added
@@ -231,13 +227,13 @@ New features are added in the "Unreleased" section.
 ### Changed
 
 - **Settings restructure**:
-  - Settings restructured into logical functional groups (Researcher, Explorer, Gardener).
-  - Models selection moved directly into relevant agent sections.
-  - "Researcher" section now includes chat model, system instructions, and grounding settings.
-  - "Explorer" section consolidates embedding provider, model, and similarity settings.
-  - "Gardener" section (formerly Ontology) now groups hygiene and maintenance settings.
-  - "Advanced" section focused on system performance and technical tuning.
-  - Re-index vault and Refresh model list buttons moved to more contextual locations.
+    - Settings restructured into logical functional groups (Researcher, Explorer, Gardener).
+    - Models selection moved directly into relevant agent sections.
+    - "Researcher" section now includes chat model, system instructions, and grounding settings.
+    - "Explorer" section consolidates embedding provider, model, and similarity settings.
+    - "Gardener" section (formerly Ontology) now groups hygiene and maintenance settings.
+    - "Advanced" section focused on system performance and technical tuning.
+    - Re-index vault and Refresh model list buttons moved to more contextual locations.
 - **Context engine:** Replaced the static 50,000-character limit per note with a "Greedy Packing" strategy. The agent now reads entire documents whenever the token budget allows, **significantly improving** its ability to understand long reports and avoiding arbitrary cut-offs.
 
 ### Developers

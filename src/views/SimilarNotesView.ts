@@ -1,10 +1,11 @@
 import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
-import VaultIntelligencePlugin from "../main";
-import { logger } from "../utils/logger";
-import { GraphService } from "../services/GraphService";
-import { GeminiService } from "../services/GeminiService";
-import { IEmbeddingService } from "../services/IEmbeddingService";
+
 import { VIEW_TYPES } from "../constants";
+import VaultIntelligencePlugin from "../main";
+import { GeminiService } from "../services/GeminiService";
+import { GraphService } from "../services/GraphService";
+import { IEmbeddingService } from "../services/IEmbeddingService";
+import { logger } from "../utils/logger";
 
 export class SimilarNotesView extends ItemView {
     plugin: VaultIntelligencePlugin;
@@ -90,13 +91,13 @@ export class SimilarNotesView extends ItemView {
                 // Display score
                 const scorePercent = Math.round(doc.score * 100);
                 item.createSpan({
-                    text: `${scorePercent}%`,
-                    cls: "similar-notes-score"
+                    cls: "similar-notes-score",
+                    text: `${scorePercent}%`
                 });
 
                 const link = item.createEl("a", {
-                    text: doc.path.split('/').pop() || doc.path,
-                    cls: "similar-notes-link"
+                    cls: "similar-notes-link",
+                    text: doc.path.split('/').pop() || doc.path
                 });
                 link.setAttr("title", doc.path);
                 link.setAttr("data-score", String(scorePercent));

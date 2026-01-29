@@ -1,11 +1,12 @@
-import { GeminiService } from "../services/GeminiService";
-import { GraphService } from "../services/GraphService";
 import { requestUrl } from "obsidian";
 
+import { GeminiService } from "../services/GeminiService";
+import { GraphService } from "../services/GraphService";
+
 export interface Tool {
-    name: string;
     description: string;
     execute(args: Record<string, unknown>): Promise<string>;
+    name: string;
 }
 
 export class VaultSearchTool implements Tool {

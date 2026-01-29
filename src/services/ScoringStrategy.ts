@@ -1,9 +1,9 @@
 import { SEARCH_CONSTANTS } from "../constants";
 
 export interface ScoringResult {
-    score: number;
     isKeywordMatch: boolean;
     isTitleMatch: boolean;
+    score: number;
 }
 
 /**

@@ -14,14 +14,15 @@
 - **Name**: Vault Intelligence (AI-powered Research Agent & Hybrid Search).
 - **Architecture Source of Truth**: Read `devs/ARCHITECTURE.md` before suggesting core changes.
 - **Critical constraints**: 
-  - Service-Oriented Architecture (GeminiService, GraphService).
-  - No direct vault access in UI Views.
+    - Service-Oriented Architecture (GeminiService, GraphService).
+    - No direct vault access in UI Views.
 
 ## Operational Protocols
 
 ### 1. The "Skill First" Workflow
 
 Do not rely on internal training data for Obsidian specifics. You must load the relevant skill:
+
 - **Coding & Patterns**: Load `obsidian-dev`. (Contains lifecycle, settings, modals, views)
 - **Release & Ops**: Load `obsidian-ops`. (Contains versioning, manifest rules, BRAT)
 - **Reference**: Load `obsidian-ref`. (Contains API specs, CSS variables)
@@ -30,6 +31,7 @@ Do not rely on internal training data for Obsidian specifics. You must load the 
 ### 2. Search Grounding (Mandatory)
 
 If the user asks for "modern AI features" or "latest Obsidian API":
+
 1. Acknowledgement: "Checking latest documentation..."
 2. Tool Use: `search_web` for current 2026 implementations.
 3. Synthesis: Combine search results with `obsidian-dev` patterns.
@@ -50,11 +52,13 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
 
 How to use skills:
+
 - Read skill: `cat ./.agent/skills/<skill-name>/SKILL.md`
 - The skill content will load with detailed instructions on how to complete the task
 - Skills are stored locally in ./.agent/skills/ directory
 
 Usage notes:
+
 - Only use skills listed in <available_skills> below
 - Do not invoke a skill that is already loaded in your context
 - Each skill invocation is stateless

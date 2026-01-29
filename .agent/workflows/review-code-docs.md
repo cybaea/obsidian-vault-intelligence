@@ -11,17 +11,16 @@ In addition to the broad review, consider carefully these points:
 - Scan the code for any instances where we disable lint checks: if possible, we want to avoid this to keep our code clean.
 - Does the code adhere to the don’t-repeat-yourself (DRY) principles? Are there any duplicated code that could usefully be refactored?
 - Does the code have any “magic numbers”, “magic strings”, or other constants in the code that could and should be replaced with a named constant (e.g. in `src/constants.ts`) or, perhaps better, replace with a user setting (in the existing files or a new file in `src/settings/`)?
-	- A _magic number_ is a unique value with unexplained meaning or multiple occurrences which could (and should) be replaced with a named constant.
+   	- A _magic number_ is a unique value with unexplained meaning or multiple occurrences which could (and should) be replaced with a named constant.
 - Review the code for other common anti-patterns, e.g.:
-	- The `any` abuse. We don’t permit the use of `any`. Ideally, find or define the interface type; if you truly don’t know it, use `unknown`.
-	- The "Bang" (`!`) operator overuse: forcing a type to exist rather than handling the null case. Consider using optional chaining (`?.`) or nullish coalescing (`??`).
-	- The God Object: A single class or file that knows too much or does too much. It violates the Single Responsibility Principle. Where appropriate, break logic into smaller, focused modules.
-	- Primitive obsession: Using primitive types (`string`, `number`) to represent complex domain concepts. This is related to “magic numbers" but specifically about _types_. Consider using "Branded Types" or specific interfaces to distinguish them.
-	- Arrow Code (Nested `If`s): Code that looks like an arrow (`>`) because it is heavily indented with nested `if/else` statements. Consider return early ("Guard Clauses").
-	- Promise Hell (Nested `.then()`): Nesting `.then()` calls creates a pyramid structure that is hard to read and debug.  Consider: Use `async/await`.
+   	- The `any` abuse. We don’t permit the use of `any`. Ideally, find or define the interface type; if you truly don’t know it, use `unknown`.
+   	- The "Bang" (`!`) operator overuse: forcing a type to exist rather than handling the null case. Consider using optional chaining (`?.`) or nullish coalescing (`??`).
+   	- The God Object: A single class or file that knows too much or does too much. It violates the Single Responsibility Principle. Where appropriate, break logic into smaller, focused modules.
+   	- Primitive obsession: Using primitive types (`string`, `number`) to represent complex domain concepts. This is related to “magic numbers" but specifically about _types_. Consider using "Branded Types" or specific interfaces to distinguish them.
+   	- Arrow Code (Nested `If`s): Code that looks like an arrow (`>`) because it is heavily indented with nested `if/else` statements. Consider return early ("Guard Clauses").
+   	- Promise Hell (Nested `.then()`): Nesting `.then()` calls creates a pyramid structure that is hard to read and debug.  Consider: Use `async/await`.
 - Review the code for unnessesary abstractions.
-	- Quote: "Abstractions are not your enemy but they are a dangerous temptation".
-
+   	- Quote: "Abstractions are not your enemy but they are a dangerous temptation".
 
 # 2. Review developer documentation
 
@@ -35,7 +34,7 @@ In addition to the detailed descriptions, be sure to include:
 - Detailed Mermaid.js diagrams of the Data Flows in the system.
 - Detailed Mermaid.js diagrams of the Control Flows and interfaces in the system.
 - Strict documentation on all Service interfaces.
-	- Where missing, update sources with Inline JSDoc.
+   	- Where missing, update sources with Inline JSDoc.
 
 Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
 

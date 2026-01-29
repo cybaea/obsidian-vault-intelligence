@@ -1,19 +1,19 @@
-import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { Notice, requestUrl } from "obsidian";
-import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
-import { logger } from "../utils/logger";
-import { WORKER_CONSTANTS } from "../constants";
-import { ModelRegistry } from "./ModelRegistry";
-import { WorkerMessage, ProgressPayload, ConfigureMessage } from "../types/worker.types";
 
+import { WORKER_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
+import { WorkerMessage, ProgressPayload, ConfigureMessage } from "../types/worker.types";
+import { logger } from "../utils/logger";
 import EmbeddingWorker from "../workers/embedding.worker";
+import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
+import { ModelRegistry } from "./ModelRegistry";
 
 interface EmbeddingTask {
     id: number;
-    text: string;
     priority: EmbeddingPriority;
-    resolve: (val: number[][]) => void;
     reject: (err: unknown) => void;
+    resolve: (val: number[][]) => void;
+    text: string;
     title?: string;
 }
 
@@ -117,11 +117,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
                 }
 
                 const errorInfo = {
-                    message: e.message,
+                    colno: e.colno,
+                    error: errorDetails,
                     filename: e.filename,
                     lineno: e.lineno,
-                    colno: e.colno,
-                    error: errorDetails
+                    message: e.message
                 };
 
                 logger.error("[LocalEmbedding] Worker Thread Crash:", errorInfo);
@@ -202,10 +202,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
             this.lastInitTime = Date.now();
             instance.postMessage({
-                type: 'configure',
+                cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
                 numThreads,
                 simd,
-                cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
+                type: 'configure',
                 version: WORKER_CONSTANTS.WASM_VERSION
             } as ConfigureMessage);
 
@@ -219,10 +219,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
     public updateConfiguration() {
         if (!this.worker) return;
         this.worker.postMessage({
-            type: 'configure',
+            cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
             numThreads: this.settings.embeddingThreads,
             simd: this.settings.embeddingSimd,
-            cdnUrl: WORKER_CONSTANTS.WASM_CDN_URL,
+            type: 'configure',
             version: WORKER_CONSTANTS.WASM_VERSION
         } as ConfigureMessage);
     }
@@ -255,7 +255,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
             return;
         }
 
-        const { id, status, output, error } = data;
+        const { error, id, output, status } = data;
 
         const promise = this.pendingRequests.get(id);
         if (promise) {
@@ -293,8 +293,8 @@ export class LocalEmbeddingService implements IEmbeddingService {
         }
 
         this.pendingRequests.set(task.id, {
-            resolve: task.resolve,
-            reject: task.reject
+            reject: task.reject,
+            resolve: task.resolve
         });
 
         const modelDef = ModelRegistry.getModelById(this.settings.embeddingModel);
@@ -304,10 +304,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
         logger.debug(`[LocalEmbedding] Posting to worker: id=${task.id}, model=${this.settings.embeddingModel}, textLength=${task.text.length}`);
         this.worker.postMessage({
             id: task.id,
-            type: 'embed',
-            text: task.text,
             model: this.settings.embeddingModel,
-            quantized: modelDef?.quantized !== false // Default to true unless explicitly false in registry
+            quantized: modelDef?.quantized !== false, // Default to true unless explicitly false in registry
+            text: task.text,
+            type: 'embed'
         });
     }
 
@@ -328,10 +328,10 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
             this.requestQueue.push({
                 id,
-                text,
                 priority,
-                resolve: wrappedResolve,
                 reject,
+                resolve: wrappedResolve,
+                text,
                 title
             });
 
@@ -385,11 +385,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
             }
 
             const response = await requestUrl({
-                url: data.url,
-                method: data.method || 'GET',
-                headers: headers,
                 body: data.body,
+                headers: headers,
+                method: data.method || 'GET',
                 throw: false, // Don't throw on 401, let the worker handle the status
+                url: data.url,
             });
 
             if (response.status >= 400) {
@@ -397,18 +397,18 @@ export class LocalEmbeddingService implements IEmbeddingService {
             }
 
             this.worker.postMessage({
-                type: 'fetch_response',
+                body: response.arrayBuffer,
+                headers: response.headers,
                 requestId: data.requestId,
                 status: response.status,
-                headers: response.headers,
-                body: response.arrayBuffer,
+                type: 'fetch_response',
             }, [response.arrayBuffer]); // Use transferrable
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             this.worker.postMessage({
-                type: 'fetch_response',
-                requestId: data.requestId,
                 error: message,
+                requestId: data.requestId,
+                type: 'fetch_response',
             });
         }
     }

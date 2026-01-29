@@ -1,0 +1,32 @@
+{
+    "config": {
+        "default": true,
+        "MD013": false, // Line length
+        "MD033": false, // Inline HTML
+        "MD036": false, // No bold headings (sometimes used for emphasis)
+        "MD041": false, // First line not header
+        "MD049": {
+            "style": "underscore"
+        }, // Consistent italics
+        "MD050": {
+            "style": "asterisk"
+        }, // Consistent bold (though used sparingly)
+        "MD007": {
+            "indent": 4
+        }, // Standard indentation
+        "MD009": false, // Trailing spaces
+        "MD010": false, // Hard tabs
+        "MD024": false, // Duplicate headings (for CHANGELOG.md)
+        "MD025": false // Multiple top-level headings
+    },
+    "globs": [
+        "**/*.md"
+    ],
+    "ignores": [
+        "node_modules",
+        "dist",
+        ".tmp",
+        "README_DOC.md",
+        ".agent/**"
+    ]
+}

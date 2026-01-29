@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import Graph from 'graphology';
+import { describe, it, expect } from 'vitest';
 
 // Mocking the Graph Logic from indexer.worker.ts purely for logic testing
 
@@ -8,12 +8,12 @@ describe('Ontology Graph Traversal Logic', () => {
     it('should respect configured ontology path for finding siblings', () => {
         // Setup scenarios with different ontology paths
         const scenarios = [
-            { configPath: 'Ontology', topic: 'Ontology/Code.md', shouldMatch: true },
-            { configPath: 'Concepts', topic: 'Concepts/Software.md', shouldMatch: true },
-            { configPath: 'Ontology', topic: 'Concepts/Software.md', shouldMatch: false }, // Mismatch
+            { configPath: 'Ontology', shouldMatch: true, topic: 'Ontology/Code.md' },
+            { configPath: 'Concepts', shouldMatch: true, topic: 'Concepts/Software.md' },
+            { configPath: 'Ontology', shouldMatch: false, topic: 'Concepts/Software.md' }, // Mismatch
         ];
 
-        for (const { configPath, topic, shouldMatch } of scenarios) {
+        for (const { configPath, shouldMatch, topic } of scenarios) {
             const g = new Graph({ type: 'directed' });
             const journal = 'Journal.md';
             const sibling = 'Sibling.md';

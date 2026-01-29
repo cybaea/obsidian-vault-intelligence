@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { isPublicUrl } from '../src/utils/url';
 
 describe('URL Utility', () => {

@@ -1,17 +1,18 @@
 import { requestUrl } from "obsidian";
+
 import { logger } from "./logger";
 
 export interface ValidationResult {
-    valid: boolean;
     reason?: string;
     recommendedDims?: number;
+    valid: boolean;
 }
 
 interface HFConfig {
     architectures?: string[];
-    hidden_size?: number;
     d_model?: number;
     dim?: number;
+    hidden_size?: number;
 }
 
 export async function validateModel(modelId: string): Promise<ValidationResult> {
@@ -24,7 +25,7 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
         const configResp = await requestUrl({ url: configUrl });
 
         if (configResp.status !== 200) {
-            return { valid: false, reason: "Model repository not found or missing config.json" };
+            return { reason: "Model repository not found or missing config.json", valid: false };
         }
 
         const config = configResp.json as HFConfig;
@@ -36,8 +37,8 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
 
         if (!isSupportedArch) {
             return {
-                valid: false,
-                reason: `Unsupported architecture: ${architectures.join(', ')}. Currently supporting: BERT, NomicBERT, MPNet, etc.`
+                reason: `Unsupported architecture: ${architectures.join(', ')}. Currently supporting: BERT, NomicBERT, MPNet, etc.`,
+                valid: false
             };
         }
 
@@ -64,7 +65,7 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
                 // we'll try to rely on the fact that if we request it, a 200 means it exists.
                 // However, downloading 20MB just to check is bad.
                 // Obsidian requestUrl supports method 'HEAD'.
-                const resp = await requestUrl({ url: `${baseUrl}/${path}`, method: 'HEAD' });
+                const resp = await requestUrl({ method: 'HEAD', url: `${baseUrl}/${path}` });
                 if (resp.status === 200) {
                     hasOnnx = true;
                     break;
@@ -78,15 +79,15 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
 
         if (!hasOnnx) {
             return {
-                valid: false,
-                reason: "No ONNX weights found. Please use a 'Xenova/' version of this model or one with an 'onnx' folder."
+                reason: "No ONNX weights found. Please use a 'Xenova/' version of this model or one with an 'onnx' folder.",
+                valid: false
             };
         }
 
-        return { valid: true, recommendedDims: dims };
+        return { recommendedDims: dims, valid: true };
 
     } catch (e) {
         logger.error("Validation error", e);
-        return { valid: false, reason: "Network error or invalid model ID." };
+        return { reason: "Network error or invalid model ID.", valid: false };
     }
 }

@@ -10,5 +10,3 @@ Update frequency: Check Obsidian community discussions for updates
 - Use CSS variables efficiently. Avoid excessive specificity.
 - Minimize use of complex selectors that require expensive DOM queries.
 - Test theme performance on lower-end devices, especially mobile.
-
-

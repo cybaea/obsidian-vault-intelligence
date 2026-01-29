@@ -1,5 +1,5 @@
 import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
-import { logger } from '../utils/logger';
+
 import {
     TransformersEnv,
     ConfigureMessage,
@@ -8,6 +8,7 @@ import {
     WorkerErrorResponse,
     ProgressPayload
 } from '../types/worker.types';
+import { logger } from '../utils/logger';
 import { isPublicUrl } from '../utils/url';
 
 // --- 1. Strong Typing for Environment ---
@@ -47,7 +48,7 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
 
     return new Promise((resolve, reject) => {
         const requestId = fetchRequestId++;
-        pendingFetches.set(requestId, { resolve, reject });
+        pendingFetches.set(requestId, { reject, resolve });
 
         // Properly convert Headers to Record
         const headers: Record<string, string> = {};
@@ -82,12 +83,12 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         }
 
         ctx.postMessage({
-            type: 'fetch',
-            requestId,
-            url,
-            method: init?.method || 'GET',
+            body: init?.body,
             headers,
-            body: init?.body
+            method: init?.method || 'GET',
+            requestId,
+            type: 'fetch',
+            url
         });
     });
 };
@@ -100,8 +101,8 @@ interface PipelineOutput {
 type TokenIds = number[] | BigInt64Array | Tensor;
 
 interface TokenizerOutput {
-    input_ids: TokenIds;
     attention_mask?: TokenIds;
+    input_ids: TokenIds;
 }
 
 interface FeatureExtractorPipeline {
@@ -130,11 +131,11 @@ self.addEventListener('error', (e: ErrorEvent) => {
         }
     }
     logger.error("[Worker] Global Error:", {
-        message: e.message,
+        colno: e.colno,
+        error: detail,
         filename: e.filename,
         lineno: e.lineno,
-        colno: e.colno,
-        error: detail
+        message: e.message
     });
 });
 
@@ -182,10 +183,10 @@ class PipelineSingleton {
             const progress_callback = (progress: ProgressPayload) => {
                 if (progress.status === 'progress' || progress.status === 'initiate' || progress.status === 'downloading' || progress.status === 'done') {
                     ctx.postMessage({
-                        type: 'progress',
-                        status: progress.status,
                         file: progress.file || '',
-                        progress: progress.progress || 0
+                        progress: progress.progress || 0,
+                        status: progress.status,
+                        type: 'progress'
                     });
                 }
             };
@@ -206,12 +207,12 @@ class PipelineSingleton {
         // 1. Try generic load
         let pipe: FeatureExtractorPipeline;
         try {
-            pipe = await pipeline(this.task, modelName, { quantized, progress_callback }) as unknown as FeatureExtractorPipeline;
+            pipe = await pipeline(this.task, modelName, { progress_callback, quantized }) as unknown as FeatureExtractorPipeline;
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (quantized && msg.includes("404")) {
                 logger.warn(`[Worker] Retrying unquantized for ${modelName}...`);
-                pipe = await pipeline(this.task, modelName, { quantized: false, progress_callback }) as unknown as FeatureExtractorPipeline;
+                pipe = await pipeline(this.task, modelName, { progress_callback, quantized: false }) as unknown as FeatureExtractorPipeline;
             } else {
                 throw err;
             }
@@ -257,13 +258,13 @@ class PipelineSingleton {
                 const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
                 try {
                     const chunkText = tokenizer.decode(chunkIds, {
-                        skip_special_tokens: true,
-                        clean_up_tokenization_spaces: true
+                        clean_up_tokenization_spaces: true,
+                        skip_special_tokens: true
                     });
 
                     if (!chunkText.trim()) continue;
 
-                    const output = await pipe(chunkText, { pooling: 'mean', normalize: true }) as unknown as PipelineOutput;
+                    const output = await pipe(chunkText, { normalize: true, pooling: 'mean' }) as unknown as PipelineOutput;
                     vectors.push(Array.from(output.data as ArrayLike<number>));
                 } catch (e) {
                     logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
@@ -283,12 +284,12 @@ class PipelineSingleton {
         let model: PreTrainedModel;
 
         try {
-            model = await AutoModel.from_pretrained(modelName, { quantized, progress_callback });
+            model = await AutoModel.from_pretrained(modelName, { progress_callback, quantized });
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (quantized) {
                 logger.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
-                model = await AutoModel.from_pretrained(modelName, { quantized: false, progress_callback });
+                model = await AutoModel.from_pretrained(modelName, { progress_callback, quantized: false });
             } else {
                 throw err;
             }
@@ -354,10 +355,10 @@ ctx.addEventListener('message', (event: MessageEvent) => {
             if (config.cdnUrl && safeEnv.backends?.onnx?.wasm) {
                 const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : `${config.cdnUrl}/`;
                 safeEnv.backends.onnx.wasm.wasmPaths = {
-                    'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
+                    'ort-wasm-simd-threaded.wasm': `${baseUrl}ort-wasm-simd-threaded.wasm`,
                     'ort-wasm-simd.wasm': `${baseUrl}ort-wasm-simd.wasm`,
                     'ort-wasm-threaded.wasm': `${baseUrl}ort-wasm-threaded.wasm`,
-                    'ort-wasm-simd-threaded.wasm': `${baseUrl}ort-wasm-simd-threaded.wasm`,
+                    'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
                 };
                 logger.info(`[Worker] CDN set to: ${baseUrl}`);
             }
@@ -385,8 +386,8 @@ ctx.addEventListener('message', (event: MessageEvent) => {
                     pending.reject(new Error(response.error));
                 } else {
                     const resp = new Response(response.body, {
-                        status: response.status,
-                        headers: response.headers
+                        headers: response.headers,
+                        status: response.status
                     });
                     pending.resolve(resp);
                 }
@@ -397,7 +398,7 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         if (!isEmbedMessage(data)) return;
 
-        const { id, text, model = 'Xenova/all-MiniLM-L6-v2', quantized = true } = data;
+        const { id, model = 'Xenova/all-MiniLM-L6-v2', quantized = true, text } = data;
 
         try {
             const extractor = await PipelineSingleton.getInstance(model, quantized);
@@ -407,17 +408,17 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
             const response: WorkerSuccessResponse = {
                 id,
-                status: 'success',
-                output: vectors
+                output: vectors,
+                status: 'success'
             };
             ctx.postMessage(response);
 
         } catch (err) {
             logger.error("[Worker] Error:", err);
             const response: WorkerErrorResponse = {
+                error: err instanceof Error ? err.message : String(err),
                 id,
-                status: 'error',
-                error: err instanceof Error ? err.message : String(err)
+                status: 'error'
             };
             ctx.postMessage(response);
         }

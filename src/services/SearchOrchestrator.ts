@@ -1,12 +1,12 @@
 import { App } from "obsidian";
+
+import { SEARCH_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
+import { GraphSearchResult } from "../types/graph";
+import { VaultSearchResult } from "../types/search";
+import { logger } from "../utils/logger";
 import { GraphService } from "./GraphService";
 import { ScoringStrategy } from "./ScoringStrategy";
-
-import { VaultSearchResult } from "../types/search";
-import { VaultIntelligenceSettings } from "../settings/types";
-import { logger } from "../utils/logger";
-import { GraphSearchResult } from "../types/graph";
-import { SEARCH_CONSTANTS } from "../constants";
 
 /**
  * Service that orchestrates hybrid search across the vault.
@@ -47,17 +47,17 @@ export class SearchOrchestrator {
 
         // Map Results to internal VaultSearchResult format
         const vResults: VaultSearchResult[] = vectorResults.map(r => ({
-            path: r.path,
-            score: r.score,
             isKeywordMatch: false,
-            isTitleMatch: false
+            isTitleMatch: false,
+            path: r.path,
+            score: r.score
         }));
 
         const kResults: VaultSearchResult[] = keywordResults.map(r => ({
-            path: r.path,
-            score: r.score,
             isKeywordMatch: true,
-            isTitleMatch: false
+            isTitleMatch: false,
+            path: r.path,
+            score: r.score
         }));
 
         const seedHits = this.mergeAndRank(vResults, kResults, workerLimit);
@@ -90,23 +90,23 @@ export class SearchOrchestrator {
 
             // RECCO 2: Dynamic Decay Control
             const neighbors = await this.graphService.getNeighbors(path, {
-                mode: 'ontology',
+                decay: SEARCH_CONSTANTS.NEIGHBOR_DECAY,
                 direction: 'outbound',
-                decay: SEARCH_CONSTANTS.NEIGHBOR_DECAY
+                mode: 'ontology'
             });
 
-            return { parent, neighbors };
+            return { neighbors, parent };
         });
 
         const neighborResults = (await Promise.all(neighborPromises)).filter((r): r is { parent: VaultSearchResult; neighbors: GraphSearchResult[] } => r !== undefined);
 
-        for (const { parent, neighbors } of neighborResults) {
+        for (const { neighbors, parent } of neighborResults) {
             for (const n of neighbors) {
                 if (!candidates.has(n.path)) {
                     candidates.set(n.path, {
+                        isGraphNeighbor: true,
                         path: n.path,
-                        score: 0,
-                        isGraphNeighbor: true
+                        score: 0
                     });
                 }
 
@@ -131,9 +131,9 @@ export class SearchOrchestrator {
             const activation = res.isGraphNeighbor ? res.score : 0;
 
             res.score = this.scoringStrategy.calculateGARS(similarity, centrality, activation, {
-                similarity: this.settings.garsSimilarityWeight,
+                activation: this.settings.garsActivationWeight,
                 centrality: this.settings.garsCentralityWeight,
-                activation: this.settings.garsActivationWeight
+                similarity: this.settings.garsSimilarityWeight
             });
             finalResults.push(res);
         }
@@ -173,9 +173,9 @@ export class SearchOrchestrator {
             if (existing !== undefined) {
                 logger.debug(`[SearchOrchestrator] Boosting score for: ${res.path} (Vector + Keyword)`);
                 existing.score = this.scoringStrategy.boostHybridResult(existing.score, {
-                    score: res.score,
                     isKeywordMatch: !!res.isKeywordMatch,
-                    isTitleMatch: !!res.isTitleMatch
+                    isTitleMatch: !!res.isTitleMatch,
+                    score: res.score
                 });
                 existing.isKeywordMatch = true;
             } else {

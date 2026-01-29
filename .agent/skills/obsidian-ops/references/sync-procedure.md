@@ -10,6 +10,7 @@ Applicability: Both
 **Sync Tracking**: All sync dates are tracked centrally in [sync-status.json](sync-status.json). Always update this file with the actual current date when syncing (use `Get-Date -Format "yyyy-MM-dd"` to get the date - never use placeholder dates).
 
 This document outlines the standard procedure for keeping the `.agents` directory content synchronized with the latest updates from the 6 core Obsidian repositories:
+
 - [Obsidian API](https://github.com/obsidianmd/obsidian-api) - Official API documentation and type definitions
 - [Obsidian Sample Plugin](https://github.com/obsidianmd/obsidian-sample-plugin) - Template plugin with best practices
 - [Obsidian Developer Docs](https://github.com/obsidianmd/obsidian-developer-docs) - Source vault for docs.obsidian.md
@@ -32,6 +33,7 @@ This document outlines the standard procedure for keeping the `.agents` director
 ## Sync Workflow
 
 **Before starting**: Get the current date for tracking (always use actual date, never placeholder):
+
 ```powershell
 $syncDate = Get-Date -Format "yyyy-MM-dd"
 Write-Host "Sync date: $syncDate"
@@ -44,6 +46,7 @@ Write-Host "Sync date: $syncDate"
 #### Check if .ref Contains Symlinks
 
 **Windows (PowerShell)**:
+
 ```powershell
 # Check if a specific repo is a symlink
 $item = Get-Item .ref/obsidian-api
@@ -58,6 +61,7 @@ if ($item.LinkType -eq "Junction" -or $item.LinkType -eq "SymbolicLink") {
 ```
 
 **macOS/Linux**:
+
 ```bash
 # Check if a specific repo is a symlink
 if [ -L .ref/obsidian-api ]; then
@@ -85,6 +89,7 @@ Once you know your setup, update the repos:
 #### Option A: If Using Symlinks to Central Location
 
 **Windows (PowerShell)**:
+
 ```powershell
 # First, check where symlinks point (usually ..\.ref\obsidian-dev)
 $target = (Get-Item .ref/obsidian-api).Target
@@ -101,6 +106,7 @@ cd eslint-plugin; git pull; cd ..
 ```
 
 **macOS/Linux**:
+
 ```bash
 # First, check where symlinks point (usually ../.ref/obsidian-dev)
 if command -v realpath >/dev/null 2>&1; then
@@ -126,6 +132,7 @@ cd eslint-plugin && git pull && cd ..
 If `.ref` contains actual repos (not symlinks), update from project root:
 
 **Windows (PowerShell)**:
+
 ```powershell
 # Always start from project root for each command
 cd C:\path\to\your\obsidian-project
@@ -143,6 +150,7 @@ cd .ref/eslint-plugin; git pull
 ```
 
 **macOS/Linux**:
+
 ```bash
 # Always start from project root for each command
 cd .ref/obsidian-api && git pull && cd ../..
@@ -160,6 +168,7 @@ cd .ref/eslint-plugin && git pull && cd ../..
 Check what's changed in the reference repos. **Remember**: If using symlinks, navigate to the actual target location (usually `..\.ref\obsidian-dev`), not the symlink.
 
 **Windows (PowerShell)** - If using symlinks:
+
 ```powershell
 # Navigate to central location first
 cd ..\.ref\obsidian-dev  # Adjust if your central .ref is elsewhere
@@ -187,6 +196,7 @@ cd ..
 ```
 
 **Windows (PowerShell)** - If using local clones:
+
 ```powershell
 # Always start from project root for each command
 cd C:\path\to\your\obsidian-project
@@ -199,6 +209,7 @@ git diff HEAD~1 HEAD -- AGENTS.md
 ```
 
 **macOS/Linux** - If using symlinks:
+
 ```bash
 # Navigate to central location first
 cd ../.ref/obsidian-dev  # or cd ~/Development/.ref/obsidian-dev
@@ -215,37 +226,37 @@ cd obsidian-plugin-docs && git log --oneline -10 && cd ..
 Based on the changes, identify which `.agents` files need updates:
 
 - **Sample Plugin changes** → Check these files:
-  - `environment.md` - Build tooling, npm scripts
-  - `file-conventions.md` - File structure recommendations
-  - `common-tasks.md` - Code examples
-  - `testing.md` - Installation procedures
-  - `versioning-releases.md` - Release workflow
-  - `coding-conventions.md` - TypeScript patterns
+    - `environment.md` - Build tooling, npm scripts
+    - `file-conventions.md` - File structure recommendations
+    - `common-tasks.md` - Code examples
+    - `testing.md` - Installation procedures
+    - `versioning-releases.md` - Release workflow
+    - `coding-conventions.md` - TypeScript patterns
 
 - **API changes** → Check these files:
-  - `project-overview.md` - API usage patterns
-  - `commands-settings.md` - Command API changes
-  - `common-tasks.md` - API usage examples
-  - `references.md` - API documentation links
+    - `project-overview.md` - API usage patterns
+    - `commands-settings.md` - Command API changes
+    - `common-tasks.md` - API usage examples
+    - `references.md` - API documentation links
 
 - **Developer Docs changes** → Check:
-  - `security-privacy.md` - Policy updates
-  - `manifest.md` - Manifest requirements
-  - `ux-copy.md` - Style guide updates
-  - `commands-settings.md` - Command documentation
-  - `testing.md` - Testing procedures
-  - `versioning-releases.md` - Release guidelines
-  - Review `en/` directory for new or updated documentation
+    - `security-privacy.md` - Policy updates
+    - `manifest.md` - Manifest requirements
+    - `ux-copy.md` - Style guide updates
+    - `commands-settings.md` - Command documentation
+    - `testing.md` - Testing procedures
+    - `versioning-releases.md` - Release guidelines
+    - Review `en/` directory for new or updated documentation
 
 - **Plugin Docs changes** → Check:
-  - `project-overview.md` - Plugin architecture
-  - `common-tasks.md` - Plugin-specific patterns
-  - `troubleshooting.md` - Common plugin issues
-  - Any plugin-specific best practices
+    - `project-overview.md` - Plugin architecture
+    - `common-tasks.md` - Plugin-specific patterns
+    - `troubleshooting.md` - Common plugin issues
+    - Any plugin-specific best practices
 
 - **Sample Theme changes** (optional reference):
-  - `file-conventions.md` - File organization patterns
-  - `versioning-releases.md` - Release workflow similarities
+    - `file-conventions.md` - File organization patterns
+    - `versioning-releases.md` - Release workflow similarities
 
 ### Step 5: Update .agents Files
 
@@ -266,11 +277,13 @@ For each file that needs updating:
 3. **Update the sync status**:
    
    **Easy way** (recommended): Use the helper script:
+
    ```bash
    node scripts/update-sync-status.mjs "Description of what was synced"
    ```
    
    **Manual way**: Edit `.agent/sync-status.json` directly:
+
    ```powershell
    # Get the current date
    $syncDate = Get-Date -Format "yyyy-MM-dd"
@@ -319,6 +332,7 @@ For each file that needs updating:
 **Problem**: You're trying to run git commands on a symlink, or paths are accumulating incorrectly.
 
 **Solution**:
+
 1. Check if `.ref` contains symlinks: `Get-Item .ref/obsidian-api | Select-Object LinkType, Target` (Windows) or `ls -la .ref/obsidian-api` (Unix)
 2. If symlinks, navigate to the **actual target location** (usually `..\.ref\obsidian-dev`) before running git commands
 3. If local clones, always start from project root for each command
@@ -326,6 +340,7 @@ For each file that needs updating:
 ### "Already up to date" but you want to verify
 
 **Solution**: Use `git fetch` first to check for updates without merging:
+
 ```bash
 git fetch
 git log HEAD..origin/main --oneline  # Shows what's new
@@ -334,6 +349,7 @@ git log HEAD..origin/main --oneline  # Shows what's new
 ### Verify Your Setup (Symlinks vs. Local Clones)
 
 **Windows**:
+
 ```powershell
 Get-Item .ref/obsidian-api | Select-Object LinkType, Target
 # If LinkType shows "Junction" or "SymbolicLink", you're using symlinks
@@ -341,6 +357,7 @@ Get-Item .ref/obsidian-api | Select-Object LinkType, Target
 ```
 
 **macOS/Linux**:
+
 ```bash
 ls -la .ref/obsidian-api
 # If it shows "->" with a path, it's a symlink
@@ -357,6 +374,7 @@ ls -la .ref/obsidian-api
 ## Automation Ideas (Future)
 
 Consider creating a script to:
+
 - Automatically check for updates in reference repos
 - Compare `AGENTS.md` from sample plugin with current `.agents` structure
 - Generate a diff report of what changed
@@ -367,11 +385,13 @@ Consider creating a script to:
 After completing a sync, update `.agent/sync-status.json`:
 
 **Easy way** (recommended): Use the helper script:
+
 ```bash
 node scripts/update-sync-status.mjs "Description of what was synced"
 ```
 
 **Manual way**: Edit the file directly:
+
 ```powershell
 # Get actual current date (CRITICAL: never use placeholder!)
 $syncDate = Get-Date -Format "yyyy-MM-dd"

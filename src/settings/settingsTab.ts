@@ -1,11 +1,12 @@
 import { App, PluginSettingTab, Plugin, ButtonComponent } from "obsidian";
-import { IVaultIntelligencePlugin } from "./types";
+
+import { renderAdvancedSettings } from "./sections/advanced";
 import { renderConnectionSettings } from "./sections/connections";
-import { renderResearcherSettings } from "./sections/researcher";
 import { renderExplorerSettings } from "./sections/explorer";
 import { renderGardenerSettings } from "./sections/gardener";
-import { renderAdvancedSettings } from "./sections/advanced";
+import { renderResearcherSettings } from "./sections/researcher";
 import { SettingsTabContext } from "./SettingsTabContext";
+import { IVaultIntelligencePlugin } from "./types";
 
 type TabId = "connections" | "researcher" | "explorer" | "gardener" | "advanced";
 
@@ -72,8 +73,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             const tabContainer = contentWrapper.createDiv("vi-settings-tab");
             const context: SettingsTabContext = {
                 app: this.app,
-                plugin: this.plugin,
-                containerEl: tabContainer
+                containerEl: tabContainer,
+                plugin: this.plugin
             };
             definition.render(context);
             this.tabContentMap.set(id, tabContainer);

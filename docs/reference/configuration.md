@@ -21,7 +21,7 @@ Consolidate settings for the Research Assistant agent.
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Chat model | `gemini-3-flash-preview` | The main intelligence engine. <br>• _Flash:_ Best for speed and agentic loops. <br>• _Pro:_ Best for deep reasoning or creative writing. |
-| System instruction | *Default Persona* | The core personality, role, and rules for the Researcher. |
+| System instruction | _Default Persona_ | The core personality, role, and rules for the Researcher. |
 | Context window budget | `200,000` | Max tokens the AI can consider at once. Automatically scales proportionally when you switch models. |
 | Max agent steps | `5` | Limits reasoning loops to prevent infinite "thinking" or high costs. |
 | Web search model | `gemini-2.5-flash-lite` | Model used specifically for web searches and fact-checking. |
@@ -51,11 +51,11 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Gardener model | `gemini-3-flash-preview` | The model used for analyzing vault structure and recommending improvements. |
-| Gardener rules | *Default Rules* | The persona and hygiene instructions for the Gardener. |
+| Gardener rules | _Default Rules_ | The persona and hygiene instructions for the Gardener. |
 | Ontology path | `Ontology` | Folder where concepts, entities, and MOCs are stored. |
 | Gardener plans path | `Gardener/Plans` | Folder where proposed plans are saved. |
 | Plans retention | `7 days` | How long to keep gardener plans before purging. |
-| Excluded folders | *Default* | Folders the gardener should ignore. |
+| Excluded folders | _Default_ | Folders the gardener should ignore. |
 | Recent note limit | `10` | Max notes to scan in a single session. |
 | Context budget | `100,000` | Max token usage for a single gardener analysis. |
 
@@ -78,10 +78,12 @@ Technical tuning for power users.
 ## Gemini vs Local Models
 
 ### Google Gemini (Cloud)
+
 - **Pros:** Highest quality (`gemini-embedding-001`), zero local CPU/RAM overhead, handles large documents.
 - **Cons:** Requires API key, internet dependent, remote processing.
 
 ### Transformers.js (Local)
+
 - **Pros:** 100% private, offline, no API costs.
 - **Cons:** Uses local resources, slightly lower quality on smaller presets.
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { maskSecret, maskObject } from '../src/utils/masking';
 
 describe('Masking Utility', () => {
@@ -31,8 +32,8 @@ describe('Masking Utility', () => {
     describe('maskObject', () => {
         it('should mask specified sensitive keys in an object', async () => {
             const input = {
-                googleApiKey: 'DUMMY_KEY_FOR_TESTING_PURPOSES_ONLY',
                 embeddingModel: 'gemini-embedding-001',
+                googleApiKey: 'DUMMY_KEY_FOR_TESTING_PURPOSES_ONLY',
                 other: 'value'
             };
             const result = await maskObject(input);

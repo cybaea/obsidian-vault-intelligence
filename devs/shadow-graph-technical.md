@@ -8,8 +8,8 @@ The Shadow Graph is a dual-engine indexing system designed to combine the streng
 
 ### The dual-engine core
 
-1.  **Orama (Vector Store)**: A fast, in-memory search engine providing vector and keyword retrieval.
-2.  **Graphology (Relationship Engine)**: A formal graph library for maintaining note connections, calculating centrality, and performing multi-hop traversals.
+1. **Orama (Vector Store)**: A fast, in-memory search engine providing vector and keyword retrieval.
+2. **Graphology (Relationship Engine)**: A formal graph library for maintaining note connections, calculating centrality, and performing multi-hop traversals.
 
 **Edge Typing**: Edges are typed (`source: 'frontmatter'` vs `source: 'body'`) to prioritize structural hierarchy over casual mentions. Frontmatter links (e.g. `topics:`) are treated as stronger signals during traversal.
 
@@ -47,6 +47,7 @@ Initial candidates are pulled from Orama using a mixture of **Vector Search** (s
 ### Stage 2: Graph analysis
 
 For every candidate in the pool, the engine queries the Graphology instance to extract structural metrics:
+
 - **Centrality**: Degree centrality (normalized by graph size).
 - **Activation**: Neighbor analysis. Does this node connect to other nodes that also matched the query?
 
@@ -57,22 +58,23 @@ The final relevance score (GARS) is calculated by combining normalized component
 $$GARS = (sim \cdot W_{sim}) + (cent \cdot W_{cent}) + (act \cdot W_{act})$$
 
 Where:
+
 - $sim$: Vector similarity/relevance.
 - $cent$: Node centrality (structural importance).
 - $act$: Activation (connectedness to other hits).
 
 ## 3. Ontology traversal: topic siblings
 
-A key innovation in Vault Intelligence is the **Topic Sibling** traversal. This enables discovery of related notes that are *conceptually* linked through a shared topic even if they lack direct wikilinks.
+A key innovation in Vault Intelligence is the **Topic Sibling** traversal. This enables discovery of related notes that are _conceptually_ linked through a shared topic even if they lack direct wikilinks.
 
 ### The algorithm
 
-1.  **1-Hop Discovery**: Find direct neighbors of the seed file.
-2.  **Topic Identification**: A node is identified as a "Topic" if:
+1. **1-Hop Discovery**: Find direct neighbors of the seed file.
+2. **Topic Identification**: A node is identified as a "Topic" if:
     - It resides in the configured `ontologyPath` (e.g. `Ontology/`).
     - Its in-degree exceeds `HUB_MIN_DEGREE` (default: 5).
-3.  **Sibling Expansion**: For every identified Topic neighbor, look "backwards" (inbound neighbors) to find other notes linking to it.
-4.  **Hub Penalty**: To avoid noise from massive hubs (e.g. Daily Notes), scores are penalized using a logarithmic decay function based on the topic's degree.
+3. **Sibling Expansion**: For every identified Topic neighbor, look "backwards" (inbound neighbors) to find other notes linking to it.
+4. **Hub Penalty**: To avoid noise from massive hubs (e.g. Daily Notes), scores are penalized using a logarithmic decay function based on the topic's degree.
 
 ```mermaid
 graph BT
@@ -116,12 +118,14 @@ The budget is distributed using a **Soft Limit Ratio** (default: 10% per doc). I
 ### Serialization bridge
 
 Because the graph and index live in the worker, state must be serialized for persistence.
+
 - **Format**: MessagePack binary format (`.msgpack`).
 - **Optimization**: Numerical arrays (embeddings) are cast to `Float32Array` before encoding to minimize overhead.
 - **Graphology**: Uses `graph.export()` and `graph.import()`.
 - **Orama**: Uses the native `save()` and `load()` functions.
 
 ### Alias normalization
+
 The worker maintains an internal `aliasMap` synced from the main thread to resolve wikilinks (e.g. `[[PF]]`) to their canonical paths before traversal or re-indexing.
 
 ### Incremental synchronization
@@ -131,6 +135,7 @@ The `GraphService` registers event listeners for vault changes. Only modified fi
 ---
 
 ### Implementation notes for contributors
+
 - **Path Normalization**: Always use `workerNormalizePath` inside the worker to prevent OS-specific path issues.
 - **RPC Overhead**: Use `Comlink.proxy()` for passing large data or callbacks across the bridge.
 - **Memory Management**: The worker index is cleared and rebuilt only if critical config (embedding model/dimension) changes to avoid high CPU spikes.

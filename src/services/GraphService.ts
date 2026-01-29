@@ -1,13 +1,14 @@
-import { Plugin, Notice, TFile } from "obsidian";
 import * as Comlink from 'comlink';
-import { VaultManager } from "./VaultManager";
-import { GeminiService } from "./GeminiService";
+import { Plugin, Notice, TFile } from "obsidian";
+
+import { GRAPH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
-import { logger } from "../utils/logger";
 import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../types/graph";
+import { logger } from "../utils/logger";
+import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
 import { OntologyService } from "./OntologyService";
-import { GRAPH_CONSTANTS } from "../constants";
+import { VaultManager } from "./VaultManager";
 
 export interface GraphState {
     graph?: {
@@ -65,10 +66,10 @@ export class GraphService {
 
             // 2. Configure worker
             const config: WorkerConfig = {
-                googleApiKey: this.settings.googleApiKey,
-                embeddingModel: this.settings.embeddingModel,
-                embeddingDimension: this.settings.embeddingDimension,
                 chatModel: this.settings.chatModel,
+                embeddingDimension: this.settings.embeddingDimension,
+                embeddingModel: this.settings.embeddingModel,
+                googleApiKey: this.settings.googleApiKey,
                 indexingDelayMs: this.settings.indexingDelayMs || 2000,
                 minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
                 ontologyPath: this.settings.ontologyPath
@@ -77,10 +78,10 @@ export class GraphService {
             const fetcher = Comlink.proxy(async (url: string, options: { method?: string; headers?: Record<string, string>; body?: string }) => {
                 const { requestUrl } = await import("obsidian");
                 const res = await requestUrl({
-                    url,
-                    method: options.method || 'GET',
+                    body: options.body,
                     headers: options.headers,
-                    body: options.body
+                    method: options.method || 'GET',
+                    url
                 });
                 return res.json as unknown;
             });
@@ -116,7 +117,7 @@ export class GraphService {
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 const content = await this.vaultManager.readFile(file);
-                const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+                const { basename, mtime, size } = this.vaultManager.getFileStat(file);
                 await this.api.updateFile(file.path, content, mtime, size, basename);
                 this.requestSave();
             });
@@ -329,7 +330,7 @@ export class GraphService {
         const file = this.plugin.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
             const content = await this.vaultManager.readFile(file);
-            const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+            const { basename, mtime, size } = this.vaultManager.getFileStat(file);
             if (this.api) {
                 await this.api.updateFile(path, content, mtime, size, basename);
             }
@@ -448,7 +449,7 @@ export class GraphService {
 
         for (const file of files) {
             const state = states[file.path];
-            const { mtime, size, basename } = this.vaultManager.getFileStat(file);
+            const { basename, mtime, size } = this.vaultManager.getFileStat(file);
 
             // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
             if (!forceWipe && state && state.mtime === mtime) {
@@ -497,10 +498,10 @@ export class GraphService {
         this.settings = settings;
         if (this.api) {
             await this.api.updateConfig({
-                googleApiKey: settings.googleApiKey,
-                embeddingModel: settings.embeddingModel,
-                embeddingDimension: settings.embeddingDimension,
                 chatModel: settings.chatModel,
+                embeddingDimension: settings.embeddingDimension,
+                embeddingModel: settings.embeddingModel,
+                googleApiKey: settings.googleApiKey,
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath

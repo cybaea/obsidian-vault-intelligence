@@ -1,8 +1,9 @@
 import { MarkdownRenderChild, ButtonComponent, setIcon, TFile, TFolder, Notice, App } from "obsidian";
+
 import { GardenerPlan } from "../services/GardenerService";
+import { GardenerStateService } from "../services/GardenerStateService";
 import { MetadataManager } from "../services/MetadataManager";
 import { OntologyService } from "../services/OntologyService";
-import { GardenerStateService } from "../services/GardenerStateService";
 import { logger } from "../utils/logger";
 
 /**
@@ -51,24 +52,24 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
         const header = this.containerEl.createDiv({ cls: "gardener-header" });
         const titleContainer = header.createDiv({ cls: "gardener-title-container" });
         setIcon(titleContainer.createSpan({ cls: "gardener-icon" }), "sprout");
-        titleContainer.createEl("h3", { text: `Gardener Plan: ${this.plan.date}`, cls: "gardener-title" });
+        titleContainer.createEl("h3", { cls: "gardener-title", text: `Gardener Plan: ${this.plan.date}` });
 
         // Loading State
         if (this.plan.loading) {
-            this.containerEl.createEl("p", { text: this.plan.summary, cls: "gardener-summary" });
+            this.containerEl.createEl("p", { cls: "gardener-summary", text: this.plan.summary });
             const loadingContainer = this.containerEl.createDiv({ cls: "gardener-loading-container" });
             loadingContainer.createDiv({ cls: "gardener-progress-bar" });
-            loadingContainer.createEl("p", { text: "Analyzing vault. This may take a few seconds.", cls: "gardener-loading-text" });
+            loadingContainer.createEl("p", { cls: "gardener-loading-text", text: "Analyzing vault. This may take a few seconds." });
             return;
         }
 
         // Error State
         if (this.plan.error) {
-            this.containerEl.createEl("pre", { text: `Error: ${this.plan.error}`, cls: "gardener-error" });
+            this.containerEl.createEl("pre", { cls: "gardener-error", text: `Error: ${this.plan.error}` });
             return;
         }
 
-        this.containerEl.createEl("p", { text: this.plan.summary, cls: "gardener-summary" });
+        this.containerEl.createEl("p", { cls: "gardener-summary", text: this.plan.summary });
 
         // Actions List
         const actionsContainer = this.containerEl.createDiv({ cls: "gardener-actions-list" });
@@ -80,7 +81,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
 
             // Checkbox for selection
             const checkboxContainer = actionHeader.createDiv({ cls: "action-checkbox-container" });
-            const checkbox = checkboxContainer.createEl("input", { type: "checkbox", cls: "action-checkbox" });
+            const checkbox = checkboxContainer.createEl("input", { cls: "action-checkbox", type: "checkbox" });
             checkbox.checked = this.selectedActions.has(index);
             checkbox.addEventListener("change", () => {
                 if (checkbox.checked) this.selectedActions.add(index);
@@ -91,7 +92,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             void setIcon(actionHeader.createSpan({ cls: "action-type-icon" }), iconType);
 
             // Clickable File Path
-            const fileLink = actionHeader.createEl("a", { text: action.filePath, cls: "action-file-path interactive-link" });
+            const fileLink = actionHeader.createEl("a", { cls: "action-file-path interactive-link", text: action.filePath });
             fileLink.addEventListener("click", (e) => {
                 e.preventDefault();
                 void this.app.workspace.openLinkText(action.filePath, "/", true);
@@ -100,7 +101,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             const changesList = actionCard.createDiv({ cls: "action-changes" });
             for (const change of action.changes) {
                 const changeItem = changesList.createDiv({ cls: "change-item" });
-                changeItem.createSpan({ text: change.field, cls: "change-field" });
+                changeItem.createSpan({ cls: "change-field", text: change.field });
                 void setIcon(changeItem.createSpan({ cls: "change-arrow" }), "arrow-right");
 
                 const valuesContainer = changeItem.createDiv({ cls: "change-values-container" });
@@ -116,7 +117,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         const linkName = isLink[1].replace(/[[\]]/g, "").trim();
                         const linkPath = decodeURIComponent(isLink[2]);
 
-                        const valueSpan = valueWrapper.createEl("a", { text: linkName, cls: "change-value interactive-link" });
+                        const valueSpan = valueWrapper.createEl("a", { cls: "change-value interactive-link", text: linkName });
                         valueSpan.addEventListener("click", (e) => {
                             e.preventDefault();
                             void this.app.workspace.openLinkText(linkPath, "/", true);
@@ -155,7 +156,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                             }
                         }
                     } else {
-                        valueWrapper.createSpan({ text: valueStr, cls: "change-value" });
+                        valueWrapper.createSpan({ cls: "change-value", text: valueStr });
 
                         const removeIcon = valueWrapper.createSpan({ cls: "remove-value-icon" });
                         setIcon(removeIcon, "x");
@@ -181,7 +182,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                 }
             }
 
-            actionCard.createEl("p", { text: action.rationale, cls: "action-rationale" });
+            actionCard.createEl("p", { cls: "action-rationale", text: action.rationale });
         });
 
         // Footer / Apply Button

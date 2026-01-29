@@ -1,9 +1,10 @@
 import { Setting } from "obsidian";
-import { DEFAULT_SETTINGS } from "../types";
-import { LogLevel } from "../../utils/logger";
-import { ModelRegistry } from "../../services/ModelRegistry";
-import { SettingsTabContext } from "../SettingsTabContext";
+
 import { DOCUMENTATION_URLS } from "../../constants";
+import { ModelRegistry } from "../../services/ModelRegistry";
+import { LogLevel } from "../../utils/logger";
+import { SettingsTabContext } from "../SettingsTabContext";
+import { DEFAULT_SETTINGS } from "../types";
 
 export function renderAdvancedSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
@@ -23,8 +24,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Technical tuning for background indexing. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
+            text: 'View documentation'
         });
     });
 
@@ -84,8 +85,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'System-level settings and API connection tuning. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
+            text: 'View documentation'
         });
     });
 
@@ -125,14 +126,14 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Adjust weights for the proprietary graph-aware scoring engine. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
+            text: 'View documentation'
         });
     });
 
     containerEl.createEl('p', {
-        text: 'Adjust the weights used to calculate the graph-aware relevance score. The total does not have to be 1.0, as scores are compared relatively.',
-        cls: 'setting-item-description'
+        cls: 'setting-item-description',
+        text: 'Adjust the weights used to calculate the graph-aware relevance score. The total does not have to be 1.0, as scores are compared relatively.'
     });
 
     const garsReset = () => {
@@ -220,14 +221,14 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
+            text: 'View documentation'
         });
     });
 
     containerEl.createEl('p', {
-        text: 'Adjust search result expansion and context assembly.',
-        cls: 'setting-item-description'
+        cls: 'setting-item-description',
+        text: 'Adjust search result expansion and context assembly.'
     });
 
     new Setting(containerEl)
@@ -310,8 +311,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
+            text: 'View documentation'
         });
     });
 

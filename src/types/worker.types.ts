@@ -1,60 +1,58 @@
 export type EmbeddingPriority = 'high' | 'low';
 
 export interface WorkerMessage {
-    id: number;
-    status: 'success' | 'error';
-    output?: number[][];
+    body?: string | ArrayBuffer;
     error?: string;
+    // For progress reporting
+    file?: string;
+    headers?: Record<string, string>;
+    id: number;
+    method?: string;
+    output?: number[][];
+    progress?: number;
+    requestId?: number;
+    status: 'success' | 'error';
     type?: string;
     // For fetch proxy
     url?: string;
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string | ArrayBuffer;
-    requestId?: number;
-    // For progress reporting
-    file?: string;
-    progress?: number;
 }
 
 export interface ProgressPayload {
-    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
     file?: string;
     progress?: number;
+    status: 'initiate' | 'downloading' | 'progress' | 'done' | 'ready';
 }
 
 export interface ConfigureMessage {
-    type: 'configure';
+    cdnUrl?: string; // Optional in some contexts, strictly set in others
     numThreads: number;
     simd: boolean;
-    cdnUrl?: string; // Optional in some contexts, strictly set in others
+    type: 'configure';
     version?: string;
 }
 
 export interface EmbedMessage {
     id: number;
-    type: 'embed';
-    text: string;
     model?: string;
     quantized?: boolean;
+    text: string;
+    type: 'embed';
 }
 
 export interface WorkerSuccessResponse {
     id: number;
-    status: 'success';
     output: number[][];
+    status: 'success';
 }
 
 export interface WorkerErrorResponse {
+    error: string;
     id: number;
     status: 'error';
-    error: string;
 }
 
 export interface TransformersEnv {
     allowLocalModels: boolean;
-    useBrowserCache: boolean;
-    useFS: boolean;
     backends?: {
         onnx?: {
             wasm?: {
@@ -65,4 +63,6 @@ export interface TransformersEnv {
             }
         }
     }
+    useBrowserCache: boolean;
+    useFS: boolean;
 }

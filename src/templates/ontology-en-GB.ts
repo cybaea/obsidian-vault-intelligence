@@ -13,11 +13,6 @@ Examples: [[Artificial Intelligence]], [[Productivity]], [[Philosophy]].
 Concrete things, people, organisations, or tools.
 Examples: [[Python]], [[Obsidian]], [[Gemini]], [[Google]].
 `.trim(),
-    MOCS: `
-# MOCs
-Maps of Content (MOCs) are navigational hubs that aggregate and organise thoughts on a specific topic.
-Examples: [[My Content Strategy]], [[AI Research Hub]], [[Consulting Playbook]].
-`.trim(),
     INSTRUCTIONS: `
 # Gardener Instructions
 Use this file to steer the Gardener Agent's behavior. The content of this file is appended to the AI's core logic.
@@ -31,5 +26,10 @@ Use this file to steer the Gardener Agent's behavior. The content of this file i
 - "Prefer shorter topic names over longer ones."
 - "Always suggest at least one tag per note."
 - "For technical topics, focus on architectural impact."
+`.trim(),
+    MOCS: `
+# MOCs
+Maps of Content (MOCs) are navigational hubs that aggregate and organise thoughts on a specific topic.
+Examples: [[My Content Strategy]], [[AI Research Hub]], [[Consulting Playbook]].
 `.trim()
 };

@@ -113,21 +113,21 @@ _**Goal**: Novel interaction paradigms that define the future of PKM._
 
 ### 1. The "Batteries included" embedding layer
 
-* **Status:** Delivered (Phase 1).
-* **Next:** WebGPU transition.
+- **Status:** Delivered (Phase 1).
+- **Next:** WebGPU transition.
 
 ### 2. Editor integration ("Ghostwriter")
 
-* **Constraint:** Concurrency safety.
-* **Strategy:** `Editor` transaction API.
+- **Constraint:** Concurrency safety.
+- **Strategy:** `Editor` transaction API.
 
 ### 3. Model Context Protocol (MCP) implementation
 
-* **Constraint:** Local server security.
+- **Constraint:** Local server security.
 
 ### 4. Handling Excalidraw hybrid files
 
-* **Strategy:** `LZString` decompression.
+- **Strategy:** `LZString` decompression.
 
 ---
 
@@ -135,8 +135,8 @@ _**Goal**: Novel interaction paradigms that define the future of PKM._
 
 This roadmap is not set in stone. We welcome community feedback!
 
-* **Have an idea?** Open a [Feature Request](https://github.com/cybaea/obsidian-vault-intelligence/issues).
-* **Want to build it?** Look for issues tagged `help wanted` or `good first issue`.
+- **Have an idea?** Open a [Feature Request](https://github.com/cybaea/obsidian-vault-intelligence/issues).
+- **Want to build it?** Look for issues tagged `help wanted` or `good first issue`.
 
 ---
 
@@ -145,13 +145,17 @@ This roadmap is not set in stone. We welcome community feedback!
 _Experimental features targeting the new capabilities of Gemini 3, GPT-5, and Llama 4._
 
 ## 1. Visual vault indexing (multimodal RAG)
+
 Index every chart, whiteboard photo, and PDF diagram.
 
 ## 2. Autonomous verification layers (corrective RAG)
+
 The agent verifies its own retrieval quality before answering.
 
 ## 3. "Agent OS" orchestration (knowledge runtimes)
+
 Treat the Vault as a "Knowledge Runtime" with specialized agents.
 
 ## 4. Federated RAG (privacy & silos)
+
 Connect to data _outside_ the Obsidian vault without importing it.

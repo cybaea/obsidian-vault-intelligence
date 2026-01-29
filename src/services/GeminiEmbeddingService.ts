@@ -1,6 +1,6 @@
-import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
-import { GeminiService } from "./GeminiService";
 import { VaultIntelligenceSettings } from "../settings";
+import { GeminiService } from "./GeminiService";
+import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 
 export class GeminiEmbeddingService implements IEmbeddingService {
     private gemini: GeminiService;

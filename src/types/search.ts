@@ -1,8 +1,8 @@
 
 export interface VaultSearchResult {
-    path: string;
-    score: number;
+    isGraphNeighbor?: boolean;
     isKeywordMatch?: boolean;
     isTitleMatch?: boolean;
-    isGraphNeighbor?: boolean;
+    path: string;
+    score: number;
 }

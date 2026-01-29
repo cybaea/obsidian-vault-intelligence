@@ -23,7 +23,7 @@ All themes must include these fields in `manifest.json`:
 ### Important Notes
 
 - Themes do **not** use `id` or `isDesktopOnly` fields.
-- Canonical requirements: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-theme-entry.yml
+- Canonical requirements: <https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-theme-entry.yml>
 
 ## Validation Checklist
 
@@ -35,5 +35,3 @@ When reviewing or creating a `manifest.json` file, ensure:
 - [ ] JSON syntax is valid (proper quotes, commas, brackets)
 - [ ] All string values are properly quoted
 - [ ] No plugin-specific fields (`id`, `isDesktopOnly`) are present
-
-

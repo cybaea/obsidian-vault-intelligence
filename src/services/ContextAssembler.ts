@@ -1,9 +1,10 @@
 import { App, TFile } from "obsidian";
+
 import { SEARCH_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { GraphService } from "./GraphService";
-import { VaultIntelligenceSettings } from "../settings/types";
 
 export class ContextAssembler {
     private app: App;

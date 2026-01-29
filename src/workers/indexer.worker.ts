@@ -1,9 +1,10 @@
-import * as Comlink from 'comlink';
 import { encode, decode } from '@msgpack/msgpack';
-import Graph from 'graphology';
 import { search, type AnyOrama, type RawData } from '@orama/orama';
-import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
+import * as Comlink from 'comlink';
+import Graph from 'graphology';
+
 import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS } from '../constants';
+import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
 let graph: Graph;
@@ -14,28 +15,264 @@ const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical pat
 
 interface OramaDocument {
     [key: string]: string | number | boolean | number[] | undefined;
-    path: string;
-    title: string;
     content: string;
     embedding?: number[];
+    path: string;
+    title: string;
 }
 
 interface SerializedIndexState {
-    graph: object;
-    orama: RawData;
     embeddingDimension: number;
     embeddingModel: string;
+    graph: object;
+    orama: RawData;
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
 const workerLogger = {
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
+    error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
     info: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args), // Obsidian convention
-    warn: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args),
-    error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args)
+    warn: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
 };
 
 const IndexerWorker: WorkerAPI = {
+    /**
+     * Clears the Orama index.
+     */
+    async clearIndex() {
+        await recreateOrama();
+    },
+
+    /**
+     * Removes a file from the graph and index.
+     * @param path - File path to delete.
+     */
+    async deleteFile(path: string) {
+        if (graph.hasNode(path)) {
+            graph.dropNode(path);
+        }
+        try {
+            const { remove } = await import('@orama/orama');
+            await remove(orama, path);
+        } catch (e) {
+            workerLogger.warn(`Failed to remove ${path} from Orama:`, e);
+        }
+        return Promise.resolve();
+    },
+
+    /**
+     * Resets both the graph and Orama index.
+     */
+    async fullReset() {
+        graph.clear();
+        await recreateOrama();
+    },
+
+    /**
+     * Calculates degree centrality for multiple nodes.
+     * @param paths - Array of node paths.
+     */
+    async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
+        await Promise.resolve();
+        const results: Record<string, number> = {};
+        const totalNodes = graph.order;
+
+        for (const path of paths) {
+            const normalizedPath = workerNormalizePath(path);
+            if (!graph.hasNode(normalizedPath)) {
+                results[path] = 0;
+            } else {
+                const degree = graph.degree(normalizedPath);
+                results[path] = totalNodes > 1 ? degree / (totalNodes - 1) : 0;
+            }
+        }
+        return results;
+    },
+
+    /**
+     * Calculates degree centrality for multiple nodes.
+     * @param paths - Array of node paths.
+     */
+    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
+        await Promise.resolve();
+        const results: Record<string, { title?: string, headers?: string[] }> = {};
+
+        for (const path of paths) {
+            const normalizedPath = workerNormalizePath(path);
+            if (graph.hasNode(normalizedPath)) {
+                const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
+                results[path] = {
+                    headers: attr.headers,
+                    title: attr.title
+                };
+            } else {
+                results[path] = {};
+            }
+        }
+        return results;
+    },
+
+    /**
+     * Calculates degree centrality for a node normalized by graph size.
+     * @param path - Node path.
+     */
+    async getCentrality(path: string): Promise<number> {
+        await Promise.resolve();
+        const normalizedPath = workerNormalizePath(path);
+        if (!graph.hasNode(normalizedPath)) return 0;
+
+        const degree = graph.degree(normalizedPath);
+        const totalNodes = graph.order;
+        return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
+    },
+
+    /**
+     * Returns the mtime and hash for all tracked files.
+     * @returns Record of file paths to their metadata.
+     */
+    async getFileStates() {
+        await Promise.resolve(); // Satisfy linter for async method
+        const states: Record<string, { mtime: number, hash: string }> = {};
+        if (graph) {
+            graph.forEachNode((node, attr) => {
+                const a = attr as GraphNodeData;
+                if (a.type === 'file') {
+                    states[node] = { hash: a.hash || '', mtime: a.mtime };
+                }
+            });
+        }
+        return states;
+    },
+
+    /**
+     * Gets neighbors in the graph, with optional ontology-based expansion.
+     * @param path - Source file path.
+     * @param options - Traversal options.
+     */
+    async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
+        await Promise.resolve();
+        const normalizedPath = workerNormalizePath(path);
+        if (!graph.hasNode(normalizedPath)) return [];
+
+        const direction = options?.direction || 'both';
+        const mode = options?.mode || 'simple';
+
+        const getOneHop = (node: string, dir: 'both' | 'inbound' | 'outbound') => {
+            if (dir === 'outbound') return graph.outNeighbors(node);
+            if (dir === 'inbound') return graph.inNeighbors(node);
+            return graph.neighbors(node);
+        };
+
+        const initialNeighbors = getOneHop(normalizedPath, direction);
+        const results = new Map<string, GraphSearchResult>();
+
+        for (const neighbor of initialNeighbors) {
+            const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
+            results.set(neighbor, {
+                excerpt: "",
+                path: neighbor,
+                score: 1.0,
+                title: attr.title || neighbor.split('/').pop()?.replace('.md', '')
+            });
+        }
+
+        if (mode === 'ontology') {
+            for (const neighbor of initialNeighbors) {
+                const configuredOntology = workerNormalizePath(config.ontologyPath || 'Ontology');
+                const isOntologyPath = neighbor.startsWith(configuredOntology + '/');
+                const degree = graph.inDegree(neighbor);
+                const isHub = degree >= ONTOLOGY_CONSTANTS.HUB_MIN_DEGREE;
+
+                if (isOntologyPath || isHub) {
+                    const siblings = graph.inNeighbors(neighbor);
+                    for (const sibling of siblings) {
+                        if (sibling === normalizedPath) continue;
+                        if (results.has(sibling)) continue;
+
+                        let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
+                        if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
+                            score = score / Math.max(1, Math.log10(degree + 1));
+                        }
+
+                        const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
+                        results.set(sibling, {
+                            excerpt: `(Sibling via ${neighbor})`,
+                            path: sibling,
+                            score: score,
+                            title: attr.title || sibling.split('/').pop()?.replace('.md', '')
+                        });
+                    }
+                }
+            }
+        }
+
+        return Array.from(results.values());
+    },
+
+    /**
+     * Finds files similar to a given document using vector similarity.
+     * @param path - Source file path.
+     * @param limit - Maximum number of hits.
+     */
+    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        if (!orama) return [];
+        const normalizedPath = workerNormalizePath(path);
+
+        const docResult = await search(orama, {
+            includeVectors: true,
+            limit: 1,
+            where: {
+                path: { eq: normalizedPath }
+            }
+        });
+
+        const firstHit = docResult.hits[0];
+        if (!firstHit) return [];
+
+        if (!firstHit.document.embedding) return [];
+
+        const embedding = firstHit.document.embedding as number[];
+        if (embedding.length === 0) return [];
+
+        const results = await search(orama, {
+            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP,
+            mode: 'vector',
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
+            vector: {
+                property: 'embedding',
+                value: embedding
+            },
+            where: {
+                path: { nin: [normalizedPath] }
+            }
+        } as Parameters<typeof search>[1]);
+
+        const minScore = config.minSimilarityScore ?? 0;
+        const uniqueHits = new Map<string, GraphSearchResult>();
+
+        for (const hit of results.hits) {
+            if (hit.score < minScore) continue;
+
+            const doc = hit.document as OramaDocument;
+            const docPath = doc.path;
+
+            const existing = uniqueHits.get(docPath);
+            if (!existing || hit.score > existing.score) {
+                uniqueHits.set(docPath, {
+                    excerpt: String(doc.content),
+                    path: docPath,
+                    score: hit.score,
+                    title: String(doc.title)
+                });
+            }
+        }
+
+        return Array.from(uniqueHits.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+    },
+
     /**
      * Initializes the worker state, including Orama and Graphology.
      * @param conf - Worker configuration.
@@ -55,6 +292,176 @@ const IndexerWorker: WorkerAPI = {
     },
 
     /**
+     * Performs a keyword search on the Orama index.
+     * @param query - Search query.
+     * @param limit - Maximum number of hits.
+     */
+    async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        const results = await search(orama, {
+            limit,
+            properties: ['title', 'content'],
+            term: query
+        });
+
+        return results.hits.map(hit => ({
+            excerpt: hit.document.content as string,
+            path: hit.document.path as string,
+            score: hit.score,
+            title: hit.document.title as string
+        }));
+    },
+
+    /**
+     * Loads a serialized graph and index state.
+     * @param data - Serialized state (JSON string for legacy, Uint8Array for MessagePack).
+     */
+    async loadIndex(data: string | Uint8Array) {
+        const { count, load } = await import('@orama/orama');
+
+        let parsed: SerializedIndexState;
+        if (typeof data === 'string') {
+            parsed = JSON.parse(data) as SerializedIndexState;
+        } else {
+            parsed = decode(data) as SerializedIndexState;
+        }
+
+        graph.clear();
+        if (parsed.graph) graph.import(parsed.graph);
+
+        if (parsed.orama) {
+            const loadedDimension = parsed.embeddingDimension;
+            const expectedDimension = config.embeddingDimension;
+            const loadedModel = parsed.embeddingModel;
+            const expectedModel = config.embeddingModel;
+
+            const modelMismatch = loadedModel !== undefined && loadedModel !== expectedModel;
+            const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
+
+            if (modelMismatch || dimMismatch || loadedDimension === undefined) {
+                await recreateOrama();
+            } else {
+                load(orama, parsed.orama as unknown as RawData);
+                const total = count(orama);
+
+                const { remove, search } = await import('@orama/orama');
+                const allDocs = await search(orama, {
+                    includeVectors: true,
+                    limit: total
+                });
+
+                for (const hit of allDocs.hits) {
+                    const doc = hit.document as unknown as OramaDocument;
+                    if (hit.id !== doc.path || !doc.embedding) {
+                        await remove(orama, hit.id);
+                    }
+                }
+            }
+        }
+        return Promise.resolve();
+    },
+
+    /**
+     * Handles file renames by updating the graph node ID and Orama index.
+     * @param oldPath - Original file path.
+     * @param newPath - New file path.
+     */
+    async renameFile(oldPath: string, newPath: string) {
+        if (graph.hasNode(oldPath)) {
+            const attr = graph.getNodeAttributes(oldPath);
+            graph.dropNode(oldPath);
+            graph.addNode(newPath, { ...(attr as GraphNodeData), path: newPath });
+        }
+        try {
+            const { remove } = await import('@orama/orama');
+            await remove(orama, oldPath);
+        } catch (e) {
+            workerLogger.warn(`Failed to remove ${oldPath} from Orama during rename:`, e);
+        }
+        return Promise.resolve();
+    },
+
+    /**
+     * Serializes the current graph and Orama index to a MessagePack buffer.
+     * Optimizes vectors to Float32Array for compact binary storage.
+     */
+    async saveIndex(): Promise<Uint8Array> {
+        const { save } = await import('@orama/orama');
+        const oramaRaw = save(orama) as unknown as { docs: { docs: Record<string, OramaDocument> } };
+
+        // Optimization: In-place conversion of standard arrays to Float32Array for 'embedding' property
+        // This makes MessagePack encode them as raw binary (d-type) instead of array of numbers
+        if (oramaRaw && oramaRaw.docs && oramaRaw.docs.docs) {
+            for (const docId in oramaRaw.docs.docs) {
+                const doc = oramaRaw.docs.docs[docId];
+                if (doc && Array.isArray(doc.embedding)) {
+                    // @ts-expect-error - Float32Array is valid for MessagePack but not effectively strictly checked against Orama types here
+                    doc.embedding = new Float32Array(doc.embedding);
+                }
+            }
+        }
+
+        const serialized = {
+            embeddingDimension: config.embeddingDimension,
+            embeddingModel: config.embeddingModel,
+            graph: graph.export(),
+            orama: oramaRaw
+        };
+
+        return encode(serialized);
+    },
+
+    /**
+     * Performs a vector search on the Orama index.
+     * @param query - Search query.
+     * @param limit - Maximum number of hits.
+     */
+    async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        const results = await search(orama, {
+            limit,
+            mode: 'vector',
+            vector: {
+                property: 'embedding',
+                value: await generateEmbedding(query, 'Query')
+            }
+        });
+
+        return results.hits.map(hit => ({
+            excerpt: hit.document.content as string,
+            path: hit.document.path as string,
+            score: hit.score,
+            title: hit.document.title as string
+        }));
+    },
+
+    /**
+     * Performs a vector search restricted to specific paths.
+     * @param query - Search query.
+     * @param paths - Allowed paths.
+     * @param limit - Maximum number of hits.
+     */
+    async searchInPaths(query: string, paths: string[], limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        const normalizedPaths = paths.map(p => workerNormalizePath(p));
+        const results = await search(orama, {
+            limit,
+            mode: 'vector',
+            vector: {
+                property: 'embedding',
+                value: await generateEmbedding(query, 'Query')
+            },
+            where: {
+                path: { in: normalizedPaths }
+            }
+        });
+
+        return results.hits.map(hit => ({
+            excerpt: hit.document.content as string,
+            path: hit.document.path as string,
+            score: hit.score,
+            title: hit.document.title as string
+        }));
+    },
+
+    /**
      * Updates the local alias map for link resolution from main thread source of truth.
      * @param map - Record of aliases to canonical paths.
      */
@@ -69,21 +476,18 @@ const IndexerWorker: WorkerAPI = {
     },
 
     /**
-     * Returns the mtime and hash for all tracked files.
-     * @returns Record of file paths to their metadata.
+     * Updates worker configuration and recreates index if critical settings changed.
+     * @param newConfig - Partial worker configuration.
      */
-    async getFileStates() {
-        await Promise.resolve(); // Satisfy linter for async method
-        const states: Record<string, { mtime: number, hash: string }> = {};
-        if (graph) {
-            graph.forEachNode((node, attr) => {
-                const a = attr as GraphNodeData;
-                if (a.type === 'file') {
-                    states[node] = { mtime: a.mtime, hash: a.hash || '' };
-                }
-            });
+    async updateConfig(newConfig: Partial<WorkerConfig>) {
+        const dimensionChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
+        const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
+
+        config = { ...config, ...newConfig };
+        if (dimensionChanged || modelChanged) {
+            await recreateOrama();
         }
-        return states;
+        await Promise.resolve();
     },
 
     /**
@@ -122,14 +526,14 @@ const IndexerWorker: WorkerAPI = {
             if (graph.hasNode(normalizedPath)) {
                 graph.updateNodeAttributes(normalizedPath, (oldAttr: unknown) => ({
                     ...(oldAttr as GraphNodeData),
+                    hash,
+                    headers: [],
                     mtime,
                     size,
-                    hash,
-                    title,
-                    headers: []
+                    title
                 }));
             } else {
-                graph.addNode(normalizedPath, { path: normalizedPath, type: 'file', mtime, size, hash, title, headers: [] });
+                graph.addNode(normalizedPath, { hash, headers: [], mtime, path: normalizedPath, size, title, type: 'file' });
             }
             return;
         }
@@ -141,54 +545,54 @@ const IndexerWorker: WorkerAPI = {
             }
             graph.updateNodeAttributes(normalizedPath, (oldAttr: unknown) => ({
                 ...(oldAttr as GraphNodeData),
+                hash,
+                headers: extractHeaders(content),
                 mtime,
                 size,
-                hash,
-                title,
-                headers: extractHeaders(content)
+                title
             }));
         } else {
             graph.addNode(normalizedPath, {
-                path: normalizedPath,
-                type: 'file',
-                mtime,
-                size,
                 hash,
+                headers: extractHeaders(content),
+                mtime,
+                path: normalizedPath,
+                size,
                 title,
-                headers: extractHeaders(content)
+                type: 'file'
             });
         }
 
         // 2. Parse Links (Source-Aware)
-        const { frontmatter, body } = splitFrontmatter(content);
+        const { body, frontmatter } = splitFrontmatter(content);
         const fmLinks = extractLinks(frontmatter);
         const bodyLinks = extractLinks(body);
 
         for (const link of fmLinks) {
             const resolvedPath = resolvePath(link, aliasMap);
             if (!graph.hasNode(resolvedPath)) {
-                graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
+                graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
             }
             if (graph.hasEdge(normalizedPath, resolvedPath)) continue;
 
             graph.addEdge(normalizedPath, resolvedPath, {
+                source: 'frontmatter',
                 type: 'link',
-                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER,
-                source: 'frontmatter'
+                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
             });
         }
 
         for (const link of bodyLinks) {
             const resolvedPath = resolvePath(link, aliasMap);
             if (!graph.hasNode(resolvedPath)) {
-                graph.addNode(resolvedPath, { path: resolvedPath, type: 'file', mtime: 0, size: 0 });
+                graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
             }
             if (graph.hasEdge(normalizedPath, resolvedPath)) continue;
 
             graph.addEdge(normalizedPath, resolvedPath, {
+                source: 'body',
                 type: 'link',
-                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY,
-                source: 'body'
+                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY
             });
         }
 
@@ -201,11 +605,11 @@ const IndexerWorker: WorkerAPI = {
 
             const { upsert } = await import('@orama/orama');
             await upsert(orama, {
+                content: content.slice(0, WORKER_INDEXER_CONSTANTS.CONTENT_PREVIEW_LENGTH),
+                embedding,
                 id: normalizedPath,
                 path: normalizedPath,
-                title,
-                content: content.slice(0, WORKER_INDEXER_CONSTANTS.CONTENT_PREVIEW_LENGTH),
-                embedding
+                title
             });
         } catch (error) {
             const msg = String(error);
@@ -214,409 +618,6 @@ const IndexerWorker: WorkerAPI = {
             }
             workerLogger.error(`Failed to index ${normalizedPath}:`, error);
         }
-    },
-
-    /**
-     * Removes a file from the graph and index.
-     * @param path - File path to delete.
-     */
-    async deleteFile(path: string) {
-        if (graph.hasNode(path)) {
-            graph.dropNode(path);
-        }
-        try {
-            const { remove } = await import('@orama/orama');
-            await remove(orama, path);
-        } catch (e) {
-            workerLogger.warn(`Failed to remove ${path} from Orama:`, e);
-        }
-        return Promise.resolve();
-    },
-
-    /**
-     * Handles file renames by updating the graph node ID and Orama index.
-     * @param oldPath - Original file path.
-     * @param newPath - New file path.
-     */
-    async renameFile(oldPath: string, newPath: string) {
-        if (graph.hasNode(oldPath)) {
-            const attr = graph.getNodeAttributes(oldPath);
-            graph.dropNode(oldPath);
-            graph.addNode(newPath, { ...(attr as GraphNodeData), path: newPath });
-        }
-        try {
-            const { remove } = await import('@orama/orama');
-            await remove(orama, oldPath);
-        } catch (e) {
-            workerLogger.warn(`Failed to remove ${oldPath} from Orama during rename:`, e);
-        }
-        return Promise.resolve();
-    },
-
-    /**
-     * Performs a vector search on the Orama index.
-     * @param query - Search query.
-     * @param limit - Maximum number of hits.
-     */
-    async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        const results = await search(orama, {
-            mode: 'vector',
-            vector: {
-                value: await generateEmbedding(query, 'Query'),
-                property: 'embedding'
-            },
-            limit
-        });
-
-        return results.hits.map(hit => ({
-            path: hit.document.path as string,
-            score: hit.score,
-            title: hit.document.title as string,
-            excerpt: hit.document.content as string
-        }));
-    },
-
-    /**
-     * Performs a keyword search on the Orama index.
-     * @param query - Search query.
-     * @param limit - Maximum number of hits.
-     */
-    async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        const results = await search(orama, {
-            term: query,
-            properties: ['title', 'content'],
-            limit
-        });
-
-        return results.hits.map(hit => ({
-            path: hit.document.path as string,
-            score: hit.score,
-            title: hit.document.title as string,
-            excerpt: hit.document.content as string
-        }));
-    },
-
-    /**
-     * Performs a vector search restricted to specific paths.
-     * @param query - Search query.
-     * @param paths - Allowed paths.
-     * @param limit - Maximum number of hits.
-     */
-    async searchInPaths(query: string, paths: string[], limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        const normalizedPaths = paths.map(p => workerNormalizePath(p));
-        const results = await search(orama, {
-            mode: 'vector',
-            vector: {
-                value: await generateEmbedding(query, 'Query'),
-                property: 'embedding'
-            },
-            where: {
-                path: { in: normalizedPaths }
-            },
-            limit
-        });
-
-        return results.hits.map(hit => ({
-            path: hit.document.path as string,
-            score: hit.score,
-            title: hit.document.title as string,
-            excerpt: hit.document.content as string
-        }));
-    },
-
-    /**
-     * Finds files similar to a given document using vector similarity.
-     * @param path - Source file path.
-     * @param limit - Maximum number of hits.
-     */
-    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        if (!orama) return [];
-        const normalizedPath = workerNormalizePath(path);
-
-        const docResult = await search(orama, {
-            where: {
-                path: { eq: normalizedPath }
-            },
-            limit: 1,
-            includeVectors: true
-        });
-
-        const firstHit = docResult.hits[0];
-        if (!firstHit) return [];
-
-        if (!firstHit.document.embedding) return [];
-
-        const embedding = firstHit.document.embedding as number[];
-        if (embedding.length === 0) return [];
-
-        const results = await search(orama, {
-            mode: 'vector',
-            vector: {
-                value: embedding,
-                property: 'embedding'
-            },
-            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
-            where: {
-                path: { nin: [normalizedPath] }
-            },
-            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP
-        } as Parameters<typeof search>[1]);
-
-        const minScore = config.minSimilarityScore ?? 0;
-        const uniqueHits = new Map<string, GraphSearchResult>();
-
-        for (const hit of results.hits) {
-            if (hit.score < minScore) continue;
-
-            const doc = hit.document as OramaDocument;
-            const docPath = doc.path;
-
-            const existing = uniqueHits.get(docPath);
-            if (!existing || hit.score > existing.score) {
-                uniqueHits.set(docPath, {
-                    path: docPath,
-                    score: hit.score,
-                    title: String(doc.title),
-                    excerpt: String(doc.content)
-                });
-            }
-        }
-
-        return Array.from(uniqueHits.values())
-            .sort((a, b) => b.score - a.score)
-            .slice(0, limit);
-    },
-
-    /**
-     * Gets neighbors in the graph, with optional ontology-based expansion.
-     * @param path - Source file path.
-     * @param options - Traversal options.
-     */
-    async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
-        await Promise.resolve();
-        const normalizedPath = workerNormalizePath(path);
-        if (!graph.hasNode(normalizedPath)) return [];
-
-        const direction = options?.direction || 'both';
-        const mode = options?.mode || 'simple';
-
-        const getOneHop = (node: string, dir: 'both' | 'inbound' | 'outbound') => {
-            if (dir === 'outbound') return graph.outNeighbors(node);
-            if (dir === 'inbound') return graph.inNeighbors(node);
-            return graph.neighbors(node);
-        };
-
-        const initialNeighbors = getOneHop(normalizedPath, direction);
-        const results = new Map<string, GraphSearchResult>();
-
-        for (const neighbor of initialNeighbors) {
-            const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
-            results.set(neighbor, {
-                path: neighbor,
-                score: 1.0,
-                title: attr.title || neighbor.split('/').pop()?.replace('.md', ''),
-                excerpt: ""
-            });
-        }
-
-        if (mode === 'ontology') {
-            for (const neighbor of initialNeighbors) {
-                const configuredOntology = workerNormalizePath(config.ontologyPath || 'Ontology');
-                const isOntologyPath = neighbor.startsWith(configuredOntology + '/');
-                const degree = graph.inDegree(neighbor);
-                const isHub = degree >= ONTOLOGY_CONSTANTS.HUB_MIN_DEGREE;
-
-                if (isOntologyPath || isHub) {
-                    const siblings = graph.inNeighbors(neighbor);
-                    for (const sibling of siblings) {
-                        if (sibling === normalizedPath) continue;
-                        if (results.has(sibling)) continue;
-
-                        let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
-                        if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
-                            score = score / Math.max(1, Math.log10(degree + 1));
-                        }
-
-                        const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
-                        results.set(sibling, {
-                            path: sibling,
-                            score: score,
-                            title: attr.title || sibling.split('/').pop()?.replace('.md', ''),
-                            excerpt: `(Sibling via ${neighbor})`
-                        });
-                    }
-                }
-            }
-        }
-
-        return Array.from(results.values());
-    },
-
-    /**
-     * Calculates degree centrality for a node normalized by graph size.
-     * @param path - Node path.
-     */
-    async getCentrality(path: string): Promise<number> {
-        await Promise.resolve();
-        const normalizedPath = workerNormalizePath(path);
-        if (!graph.hasNode(normalizedPath)) return 0;
-
-        const degree = graph.degree(normalizedPath);
-        const totalNodes = graph.order;
-        return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
-    },
-
-    /**
-     * Calculates degree centrality for multiple nodes.
-     * @param paths - Array of node paths.
-     */
-    async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
-        await Promise.resolve();
-        const results: Record<string, number> = {};
-        const totalNodes = graph.order;
-
-        for (const path of paths) {
-            const normalizedPath = workerNormalizePath(path);
-            if (!graph.hasNode(normalizedPath)) {
-                results[path] = 0;
-            } else {
-                const degree = graph.degree(normalizedPath);
-                results[path] = totalNodes > 1 ? degree / (totalNodes - 1) : 0;
-            }
-        }
-        return results;
-    },
-
-    /**
-     * Calculates degree centrality for multiple nodes.
-     * @param paths - Array of node paths.
-     */
-    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
-        await Promise.resolve();
-        const results: Record<string, { title?: string, headers?: string[] }> = {};
-
-        for (const path of paths) {
-            const normalizedPath = workerNormalizePath(path);
-            if (graph.hasNode(normalizedPath)) {
-                const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
-                results[path] = {
-                    title: attr.title,
-                    headers: attr.headers
-                };
-            } else {
-                results[path] = {};
-            }
-        }
-        return results;
-    },
-
-    /**
-     * Serializes the current graph and Orama index to a MessagePack buffer.
-     * Optimizes vectors to Float32Array for compact binary storage.
-     */
-    async saveIndex(): Promise<Uint8Array> {
-        const { save } = await import('@orama/orama');
-        const oramaRaw = save(orama) as unknown as { docs: { docs: Record<string, OramaDocument> } };
-
-        // Optimization: In-place conversion of standard arrays to Float32Array for 'embedding' property
-        // This makes MessagePack encode them as raw binary (d-type) instead of array of numbers
-        if (oramaRaw && oramaRaw.docs && oramaRaw.docs.docs) {
-            for (const docId in oramaRaw.docs.docs) {
-                const doc = oramaRaw.docs.docs[docId];
-                if (doc && Array.isArray(doc.embedding)) {
-                    // @ts-expect-error - Float32Array is valid for MessagePack but not effectively strictly checked against Orama types here
-                    doc.embedding = new Float32Array(doc.embedding);
-                }
-            }
-        }
-
-        const serialized = {
-            graph: graph.export(),
-            orama: oramaRaw,
-            embeddingDimension: config.embeddingDimension,
-            embeddingModel: config.embeddingModel
-        };
-
-        return encode(serialized);
-    },
-
-    /**
-     * Loads a serialized graph and index state.
-     * @param data - Serialized state (JSON string for legacy, Uint8Array for MessagePack).
-     */
-    async loadIndex(data: string | Uint8Array) {
-        const { load, count } = await import('@orama/orama');
-
-        let parsed: SerializedIndexState;
-        if (typeof data === 'string') {
-            parsed = JSON.parse(data) as SerializedIndexState;
-        } else {
-            parsed = decode(data) as SerializedIndexState;
-        }
-
-        graph.clear();
-        if (parsed.graph) graph.import(parsed.graph);
-
-        if (parsed.orama) {
-            const loadedDimension = parsed.embeddingDimension;
-            const expectedDimension = config.embeddingDimension;
-            const loadedModel = parsed.embeddingModel;
-            const expectedModel = config.embeddingModel;
-
-            const modelMismatch = loadedModel !== undefined && loadedModel !== expectedModel;
-            const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
-
-            if (modelMismatch || dimMismatch || loadedDimension === undefined) {
-                await recreateOrama();
-            } else {
-                load(orama, parsed.orama as unknown as RawData);
-                const total = count(orama);
-
-                const { remove, search } = await import('@orama/orama');
-                const allDocs = await search(orama, {
-                    limit: total,
-                    includeVectors: true
-                });
-
-                for (const hit of allDocs.hits) {
-                    const doc = hit.document as unknown as OramaDocument;
-                    if (hit.id !== doc.path || !doc.embedding) {
-                        await remove(orama, hit.id);
-                    }
-                }
-            }
-        }
-        return Promise.resolve();
-    },
-
-    /**
-     * Updates worker configuration and recreates index if critical settings changed.
-     * @param newConfig - Partial worker configuration.
-     */
-    async updateConfig(newConfig: Partial<WorkerConfig>) {
-        const dimensionChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
-        const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
-
-        config = { ...config, ...newConfig };
-        if (dimensionChanged || modelChanged) {
-            await recreateOrama();
-        }
-        await Promise.resolve();
-    },
-
-    /**
-     * Clears the Orama index.
-     */
-    async clearIndex() {
-        await recreateOrama();
-    },
-
-    /**
-     * Resets both the graph and Orama index.
-     */
-    async fullReset() {
-        graph.clear();
-        await recreateOrama();
     }
 };
 
@@ -627,10 +628,10 @@ async function recreateOrama() {
     const { create } = await import('@orama/orama');
     orama = create({
         schema: {
-            path: 'enum',
-            title: 'string',
             content: 'string',
-            embedding: `vector[${config.embeddingDimension}]`
+            embedding: `vector[${config.embeddingDimension}]`,
+            path: 'enum',
+            title: 'string'
         }
     });
 }

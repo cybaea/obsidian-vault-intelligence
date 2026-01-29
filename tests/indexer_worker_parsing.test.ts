@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { extractLinks } from '../src/utils/link-parsing';
 
 describe('extractLinks', () => {

@@ -9,6 +9,7 @@ Update frequency: Check reference repos for new patterns
 Comprehensive code patterns for common Obsidian plugin development tasks. **Always verify API details in `.ref/obsidian-api/obsidian.d.ts`** - it's the authoritative source and may have features not yet documented in plugin docs.
 
 **When to use this vs [common-tasks.md](common-tasks.md)**:
+
 - **code-patterns.md**: Complete, production-ready examples with full context, error handling, and best practices
 - **common-tasks.md**: Quick snippets and basic patterns for simple operations
 
@@ -137,6 +138,7 @@ this.addSettingTab(new MySettingTab(this.app, this));
 **Use this when**: You want to use `SettingGroup` for users on Obsidian 1.11.0+ while still supporting older versions. This provides conditional settings groups that automatically use the modern API when available, with a fallback for older versions.
 
 **Note**: Use the backward compatibility approach below to support both users on Obsidian 1.11.0+ and users on older versions. Alternatively, you can choose to:
+
 - Continue using the compatibility utility (supports all versions)
 - Force `minAppVersion: "1.11.0"` in `manifest.json` and use `SettingGroup` directly (simpler, but excludes older versions)
 
@@ -367,6 +369,7 @@ Add this CSS to your `styles.css` file, replacing `{manifest-id}` with your plug
 **Example**: If your manifest ID is `sample-plugin`, use `.sample-plugin-settings-compat` as the scoping class.
 
 **How it works**:
+
 - The CSS uses the `:has()` selector to detect if a `.setting-item` immediately follows the heading
 - If settings exist below the heading, no border-bottom is applied (avoiding double divider)
 - If no settings follow, border-bottom is applied for visual separation
@@ -387,6 +390,7 @@ Add this CSS to your `styles.css` file, replacing `{manifest-id}` with your plug
 #### Pitfall 1: TypeScript Errors with SettingGroup Import
 
 **Problem**: You may see this TypeScript error:
+
 ```ts
 Module '"obsidian"' has no exported member 'SettingGroup'
 ```
@@ -849,4 +853,3 @@ getCurrentLine(): string {
   return "";
 }
 ```
-
