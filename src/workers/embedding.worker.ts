@@ -9,7 +9,7 @@ import {
     ProgressPayload
 } from '../types/worker.types';
 import { logger } from '../utils/logger';
-import { isPublicUrl } from '../utils/url';
+import { isSafeUrl } from '../utils/url';
 
 // --- 1. Strong Typing for Environment ---
 // Cast env for safe configuration
@@ -69,7 +69,7 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         // --- Header Sanitization ---
         // Aggressively strip Authorization headers for HuggingFace and Public CDNs 
         // as they cause 401s if malformed or present on public models.
-        if (isPublicUrl(url)) {
+        if (isSafeUrl(url)) {
             delete headers['authorization'];
             delete headers['Authorization'];
         } else {

@@ -324,3 +324,31 @@ export const DOCUMENTATION_URLS = {
     },
     SPONSOR: "https://github.com/sponsors/cybaea"
 };
+
+export const VALIDATION_CONSTANTS = {
+    /** Standard paths to check for ONNX weights */
+    ONNX_PATHS: [
+        'onnx/model_quantized.onnx', // Standard location for Xenova models
+        'model_quantized.onnx',      // Root location (rare but possible)
+        'onnx/model.onnx',           // Unquantized (Standard location)
+        'model.onnx'                 // Unquantized (Root)
+    ],
+    /** Common supported architectures in Transformers.js */
+    SUPPORTED_ARCHITECTURES: [
+        'BertModel',
+        'NomicBertModel',
+        'MPNetModel',
+        'RobertaModel',
+        'DistilBertModel',
+        'XLM_RoBERTaModel'
+    ]
+};
+
+export const URL_CONSTANTS = {
+    /** Allowed domains for downloading models or assets */
+    TRUSTED_DOMAINS: [
+        'huggingface.co',
+        'jsdelivr.net',
+        'raw.githubusercontent.com' // Often used for config but less common in this specific logic
+    ]
+};

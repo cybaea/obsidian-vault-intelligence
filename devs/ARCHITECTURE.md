@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 1.0.0
+**Version**: 4.2.0
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 

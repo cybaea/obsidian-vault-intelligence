@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 
+import { VALIDATION_CONSTANTS } from "../constants";
 import { logger } from "./logger";
 
 export interface ValidationResult {
@@ -29,8 +30,7 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
         }
 
         const config = configResp.json as HFConfig;
-        // Common supported architectures in Transformers.js
-        const supportedArchs = ['BertModel', 'NomicBertModel', 'MPNetModel', 'RobertaModel', 'DistilBertModel', 'XLM_RoBERTaModel'];
+        const supportedArchs = VALIDATION_CONSTANTS.SUPPORTED_ARCHITECTURES;
         // config.architectures is an array, e.g. ["NomicBertModel"]
         const architectures = config.architectures || [];
         const isSupportedArch = architectures.some((arch) => supportedArchs.includes(arch));
@@ -46,14 +46,7 @@ export async function validateModel(modelId: string): Promise<ValidationResult> 
         const dims: number | undefined = config.hidden_size || config.d_model || config.dim;
 
         // Step 2: Check for ONNX Files
-        // Transformers.js usually looks for 'onnx/model_quantized.onnx' or just 'model_quantized.onnx'
-        // For 99% of web-ready models (like Xenova's), it's in an 'onnx' subfolder.
-        const filePathsToCheck = [
-            'onnx/model_quantized.onnx', // Standard location for Xenova models
-            'model_quantized.onnx',      // Root location (rare but possible)
-            'onnx/model.onnx',           // Unquantized (Standard location)
-            'model.onnx'                 // Unquantized (Root)
-        ];
+        const filePathsToCheck = VALIDATION_CONSTANTS.ONNX_PATHS;
 
         let hasOnnx = false;
         for (const path of filePathsToCheck) {
