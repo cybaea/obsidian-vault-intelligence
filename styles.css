@@ -32,7 +32,7 @@
     padding: 8px 12px;
     border-radius: 8px;
     max-width: 80%;
-    line-height: 1.5;
+    line-height: var(--line-height-normal);
 }
 
 .research-chat-view .chat-message.model {
@@ -84,9 +84,6 @@
     margin-left: 0;
     font-family: var(--font-interface);
     line-height: var(--line-height-normal);
-}
-
-.similar-notes-list {
     padding-top: var(--size-2-1);
     padding-bottom: var(--size-2-1);
 }
@@ -153,41 +150,26 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 /* The container for our settings info box */
 
-.vault-intelligence-settings-info {
+/* Shared styles for settings info/warning boxes */
+.vault-intelligence-settings-info,
+.vault-intelligence-settings-warning {
     display: flex;
     align-items: start;
     gap: var(--size-4-2);
     margin-top: var(--size-4-2);
-
-    /* Theming: Transparent background + dashed border */
     background-color: transparent;
-    border: var(--border-width) dashed var(--background-modifier-border);
-    /* Replaced 1px */
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-
-    /* Typography */
     font-size: var(--font-ui-smaller) !important;
     color: var(--text-muted);
 }
 
+.vault-intelligence-settings-info {
+    border: var(--border-width) dashed var(--background-modifier-border);
+}
+
 .vault-intelligence-settings-warning {
-    /* Reuse layout logic */
-    display: flex;
-    align-items: start;
-    gap: var(--size-4-2);
-    margin-top: var(--size-4-2);
-
-    /* Warning Visuals */
-    background-color: transparent;
     border: var(--border-width) solid var(--text-warning);
-    /* Replaced 1px */
-    border-radius: var(--radius-s);
-    padding: var(--size-4-2);
-
-    /* Typography */
-    font-size: var(--font-ui-smaller) !important;
-    color: var(--text-muted);
 }
 
 .vault-intelligence-settings-info .lucide-info,
@@ -272,7 +254,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     font-size: 0.95rem;
     color: var(--text-muted);
     margin-bottom: 1.25rem;
-    line-height: 1.5;
+    line-height: var(--line-height-normal);
 }
 
 .gardener-actions-list {
@@ -346,10 +328,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     border-radius: 3px;
 }
 
-.change-value.invalid-tag {
-    color: var(--text-error);
-    background: rgba(var(--color-red-rgb), 0.1);
-}
+
 
 .tag-warning {
     color: var(--text-error);
