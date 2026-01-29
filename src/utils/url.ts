@@ -6,16 +6,15 @@
  * @param url The URL to check
  * @returns true if the URL is from a public whitelist
  */
-export function isPublicUrl(url: string): boolean {
+import { URL_CONSTANTS } from "../constants";
+
+export function isSafeUrl(url: string): boolean {
     try {
         const parsedUrl = new URL(url);
         const host = parsedUrl.hostname;
 
-        return (
-            host === 'huggingface.co' ||
-            host.endsWith('.huggingface.co') ||
-            host === 'jsdelivr.net' ||
-            host.endsWith('.jsdelivr.net')
+        return URL_CONSTANTS.TRUSTED_DOMAINS.some(domain =>
+            host === domain || host.endsWith(`.${domain}`)
         );
     } catch {
         // If the URL is invalid, it's certainly not a known public one.

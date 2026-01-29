@@ -1,4 +1,5 @@
 import { TFile, App } from "obsidian";
+
 import { logger } from "../utils/logger";
 
 /**

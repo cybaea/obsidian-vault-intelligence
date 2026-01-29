@@ -1,11 +1,12 @@
 import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
+
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
 export interface EmbedOptions {
+    outputDimensionality?: number;
     taskType?: string;
     title?: string;
-    outputDimensionality?: number;
 }
 
 export class GeminiService {
@@ -49,8 +50,8 @@ export class GeminiService {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
             const response = await this.client.models.generateContent({
-                model: this.settings.chatModel,
-                contents: prompt
+                contents: prompt,
+                model: this.settings.chatModel
             });
 
             return response.text || "";
@@ -74,13 +75,13 @@ export class GeminiService {
             const modelId = options.model || this.settings.chatModel;
 
             const response = await this.client.models.generateContent({
-                model: modelId,
-                contents: prompt,
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: schema,
                     systemInstruction: options.systemInstruction
-                }
+                },
+                contents: prompt,
+                model: modelId
             });
 
             return response.text || "";
@@ -101,11 +102,11 @@ export class GeminiService {
             const groundingModel = this.settings.groundingModel;
 
             const response = await this.client.models.generateContent({
-                model: groundingModel,
-                contents: prompt,
                 config: {
                     tools: [{ googleSearch: {} }]
-                }
+                },
+                contents: prompt,
+                model: groundingModel
             });
 
             return response.text || "No search results could be generated.";
@@ -130,11 +131,11 @@ export class GeminiService {
             const codeModel = this.settings.codeModel;
 
             const response = await this.client.models.generateContent({
-                model: codeModel,
-                contents: query,
                 config: {
                     tools: [{ codeExecution: {} }]
-                }
+                },
+                contents: query,
+                model: codeModel
             });
 
             // FIX: Manually parse parts to avoid SDK warning about non-text parts.
@@ -177,12 +178,12 @@ export class GeminiService {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
             const chat = this.client.chats.create({
-                model: this.settings.chatModel,
-                history: history,
                 config: {
-                    tools: tools,
-                    systemInstruction: systemInstruction
-                }
+                    systemInstruction: systemInstruction,
+                    tools: tools
+                },
+                history: history,
+                model: this.settings.chatModel
             });
             return await Promise.resolve(chat);
         });
@@ -204,9 +205,9 @@ export class GeminiService {
             if (options.title) config.title = options.title;
 
             const result = await this.client.models.embedContent({
-                model: this.settings.embeddingModel,
+                config: config,
                 contents: text,
-                config: config
+                model: this.settings.embeddingModel
             });
 
             const embeddings = result.embeddings;

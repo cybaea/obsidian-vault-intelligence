@@ -1,6 +1,7 @@
 import { App, requestUrl } from "obsidian";
-import { logger } from "../utils/logger";
+
 import { MODEL_REGISTRY_CONSTANTS } from "../constants";
+import { logger } from "../utils/logger";
 
 interface InternalApp {
     loadLocalStorage?(key: string): string | null;
@@ -13,29 +14,29 @@ interface InternalApp {
  */
 
 export interface ModelDefinition {
-    id: string;
-    label: string;
-    dimensions?: number;
-    provider: 'gemini' | 'local';
     description?: string;
-    isDefault?: boolean;
-    quantized?: boolean;
+    dimensions?: number;
+    id: string;
     inputTokenLimit?: number;
+    isDefault?: boolean;
+    label: string;
     outputTokenLimit?: number;
+    provider: 'gemini' | 'local';
+    quantized?: boolean;
     supportedMethods?: string[];
 }
 
 export interface ModelCache {
-    timestamp: number;
     models: ModelDefinition[];
     rawResponse?: GeminiApiResponse;
+    timestamp: number;
 }
 
 interface GeminiModel {
-    name: string;
-    displayName: string;
     description: string;
+    displayName: string;
     inputTokenLimit: number;
+    name: string;
     outputTokenLimit: number;
     supportedGenerationMethods: string[];
 }
@@ -46,64 +47,64 @@ interface GeminiApiResponse {
 
 export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
-        id: 'gemini-3-flash-preview',
-        label: 'Gemini 3 Flash (Default)',
-        provider: 'gemini',
-        isDefault: true,
         description: 'Fast, efficient, and great for most tasks.',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
+        id: 'gemini-3-flash-preview',
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        isDefault: true,
+        label: 'Gemini 3 Flash (Default)',
+        provider: 'gemini'
     },
     {
-        id: 'gemini-3-pro-preview',
-        label: 'Gemini 3 Pro',
-        provider: 'gemini',
         description: 'Maximum intelligence for complex reasoning.',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
+        id: 'gemini-3-pro-preview',
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        label: 'Gemini 3 Pro',
+        provider: 'gemini'
     }
 ];
 
 export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
     {
         id: 'gemini-2.5-flash-lite',
-        label: 'Gemini 2.5 Flash Lite (Default)',
-        provider: 'gemini',
+        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT
+        label: 'Gemini 2.5 Flash Lite (Default)',
+        provider: 'gemini'
     }
 ];
 
 export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     {
-        id: 'MinishLab/potion-base-8M',
-        label: 'Small (Potion-8M) - 256d [~15MB]',
         dimensions: 256,
-        provider: 'local',
+        id: 'MinishLab/potion-base-8M',
         isDefault: false,
+        label: 'Small (Potion-8M) - 256d [~15MB]',
+        provider: 'local',
         quantized: false
     },
     {
-        id: 'Xenova/bge-small-en-v1.5',
-        label: 'Balanced (BGE-Small) - 384d [~30MB]',
         dimensions: 384,
-        provider: 'local',
-        isDefault: true
+        id: 'Xenova/bge-small-en-v1.5',
+        isDefault: true,
+        label: 'Balanced (BGE-Small) - 384d [~30MB]',
+        provider: 'local'
     },
     {
-        id: 'Xenova/nomic-embed-text-v1',
-        label: 'Advanced (Nomic-Embed) - 768d [~130MB]',
         dimensions: 768,
-        provider: 'local',
-        isDefault: false
+        id: 'Xenova/nomic-embed-text-v1',
+        isDefault: false,
+        label: 'Advanced (Nomic-Embed) - 768d [~130MB]',
+        provider: 'local'
     }
 ];
 
 export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
-        id: 'gemini-embedding-001',
-        label: 'Gemini Embedding (Standard) - 768d',
         dimensions: 768,
-        provider: 'gemini',
-        isDefault: true
+        id: 'gemini-embedding-001',
+        isDefault: true,
+        label: 'Gemini Embedding (Standard) - 768d',
+        provider: 'gemini'
     }
 ];
 
@@ -156,8 +157,8 @@ export class ModelRegistry {
         this.isFetching = true;
         try {
             const response = await requestUrl({
-                url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-                method: 'GET'
+                method: 'GET',
+                url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
             });
 
             if (response.status !== 200) {
@@ -173,12 +174,12 @@ export class ModelRegistry {
 
             this.rawApiResponse = data;
             const fetchedModels: ModelDefinition[] = data.models.map((m: GeminiModel) => ({
-                id: m.name.replace('models/', ''),
-                label: m.displayName,
-                provider: 'gemini',
                 description: m.description,
+                id: m.name.replace('models/', ''),
                 inputTokenLimit: m.inputTokenLimit,
+                label: m.displayName,
                 outputTokenLimit: m.outputTokenLimit,
+                provider: 'gemini',
                 supportedMethods: m.supportedGenerationMethods || []
             }));
 
@@ -188,9 +189,9 @@ export class ModelRegistry {
 
             if (cacheDurationDays > 0) {
                 const cacheData: ModelCache = {
-                    timestamp: this.lastFetchTime,
                     models: this.dynamicModels,
-                    rawResponse: this.rawApiResponse || undefined
+                    rawResponse: this.rawApiResponse || undefined,
+                    timestamp: this.lastFetchTime
                 };
                 (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
             }

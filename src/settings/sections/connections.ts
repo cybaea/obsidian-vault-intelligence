@@ -1,8 +1,9 @@
 import { Setting, TextComponent, App, setIcon, Notice } from "obsidian";
+
+import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { BANNER_BASE64 } from "./banner-data";
-import { DOCUMENTATION_URLS } from "../../constants";
 
 interface InternalApp extends App {
     setting: {
@@ -23,20 +24,20 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
     // --- 0. Banner ---
     const bannerLink = containerEl.createEl('a', {
-        cls: 'vi-settings-banner-link',
         attr: {
             href: DOCUMENTATION_URLS.BASE,
-            target: '_blank',
-            rel: 'noopener'
-        }
+            rel: 'noopener',
+            target: '_blank'
+        },
+        cls: 'vi-settings-banner-link'
     });
 
     bannerLink.createEl('img', {
-        cls: 'vi-settings-banner',
         attr: {
-            src: `data:image/webp;base64,${BANNER_BASE64}`,
-            alt: 'Vault Intelligence Banner'
-        }
+            alt: 'Vault Intelligence Banner',
+            src: `data:image/webp;base64,${BANNER_BASE64}`
+        },
+        cls: 'vi-settings-banner'
     });
 
     // --- 1. Documentation Setting ---

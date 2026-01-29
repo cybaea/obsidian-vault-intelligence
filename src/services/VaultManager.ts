@@ -68,9 +68,9 @@ export class VaultManager {
      */
     public getFileStat(file: TFile) {
         return {
+            basename: file.basename,
             mtime: file.stat.mtime,
-            size: file.stat.size,
-            basename: file.basename
+            size: file.stat.size
         };
     }
 }

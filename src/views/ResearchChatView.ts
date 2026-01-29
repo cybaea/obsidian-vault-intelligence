@@ -1,12 +1,12 @@
 import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon } from "obsidian";
+
+import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
+import { AgentService, ChatMessage } from "../services/AgentService";
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
 import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
-import { AgentService, ChatMessage } from "../services/AgentService";
 import { FileSuggest } from "./FileSuggest";
-
-import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
@@ -62,7 +62,7 @@ export class ResearchChatView extends ItemView {
         container.addClass("research-chat-view");
 
         const header = container.createDiv({ cls: "chat-header" });
-        header.createEl("h4", { text: "Researcher: chat with vault", cls: "chat-title" });
+        header.createEl("h4", { cls: "chat-title", text: "Researcher: chat with vault" });
 
         new ButtonComponent(header)
             .setIcon("trash")
@@ -231,7 +231,7 @@ export class ResearchChatView extends ItemView {
     }
 
     private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[]) {
-        this.messages.push({ role, text, thought, contextFiles });
+        this.messages.push({ contextFiles, role, text, thought });
         void this.renderMessages();
     }
 

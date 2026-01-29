@@ -1,4 +1,5 @@
 import { App, Modal, Plugin, MarkdownRenderer, ButtonComponent, setIcon } from "obsidian";
+
 import { UI_STRINGS, DOCUMENTATION_URLS } from "../constants";
 
 export class ReleaseNotesModal extends Modal {

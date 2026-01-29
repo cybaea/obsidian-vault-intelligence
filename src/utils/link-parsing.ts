@@ -51,9 +51,9 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>): strin
 export function splitFrontmatter(text: string): { frontmatter: string, body: string } {
     const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
     if (match) {
-        return { frontmatter: match[1] || "", body: match[2] || "" };
+        return { body: match[2] || "", frontmatter: match[1] || "" };
     }
-    return { frontmatter: "", body: text };
+    return { body: text, frontmatter: "" };
 }
 
 /**

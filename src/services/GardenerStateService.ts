@@ -1,11 +1,12 @@
 import { App, Plugin, TFile } from "obsidian";
+
 import { logger } from "../utils/logger";
 
 export interface FileState {
-    path: string;
     lastChecked: number;        // Timestamp of last analysis (whether actioned or not)
     lastGardenerUpdate: number; // Timestamp of last applied Gardener change
     lastSkipped: number;        // Timestamp of last user rejection
+    path: string;
 }
 
 export interface GardenerState {
@@ -132,10 +133,10 @@ export class GardenerStateService {
     private ensureFileState(path: string): void {
         if (!this.state.files[path]) {
             this.state.files[path] = {
-                path,
                 lastChecked: 0,
                 lastGardenerUpdate: 0,
-                lastSkipped: 0
+                lastSkipped: 0,
+                path
             };
         }
     }

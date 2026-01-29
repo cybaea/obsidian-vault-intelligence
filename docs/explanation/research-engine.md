@@ -38,14 +38,14 @@ graph TD
 
 Most RAG (Retrieval-Augmented Generation) systems only look at similarity (text matching). Vault Intelligence adds two critical dimensions:
 
-1.  Similarity: Does the note text match the query?
-2.  Centrality: Is this note a "hub" or "authority" in your vault structure?
-3.  Activation: Is this note connected to other relevant notes?
+1. Similarity: Does the note text match the query?
+2. Centrality: Is this note a "hub" or "authority" in your vault structure?
+3. Activation: Is this note connected to other relevant notes?
 
 This ensures that a core definition note (e.g., "Project Alpha MOC") ranks higher than a random daily log mentioning "Project Alpha", even if the daily log has more keyword matches.
 
 ## Privacy and processing
 
--   Local Indexing: Your vault's search index is built and stored entirely on your device (`data/` folder).
--   Cloud Reasoning: When you chat, only the relevant snippets of text (found by the local index) are sent to the Google Gemini API for answer generation.
--   No Training: Data sent to the API is used strictly for generating the response and is not used to train Google's models.
+- Local Indexing: Your vault's search index is built and stored entirely on your device (`data/` folder).
+- Cloud Reasoning: When you chat, only the relevant snippets of text (found by the local index) are sent to the Google Gemini API for answer generation.
+- No Training: Data sent to the API is used strictly for generating the response and is not used to train Google's models.

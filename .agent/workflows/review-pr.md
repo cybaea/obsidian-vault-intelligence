@@ -15,7 +15,7 @@ description: Carefully review, research, and verify a Renovate dependency pull r
    > This rebase is for local verification only. **DO NOT PUSH** the rebased branch to origin unless you intend to "take over" the PR and stop Renovate updates.
    > If rebase fails due to conflicts, we abort immediately to keep the workspace clean.
    > [!TIP]
-   > If this step fails with a "*Merge Conflict detected!*", you should go to the Renovate Dependency Dashboard in GitHub and tick the checkbox to rebase/retry the PR.
+   > If this step fails with a "_Merge Conflict detected!_", you should go to the Renovate Dependency Dashboard in GitHub and tick the checkbox to rebase/retry the PR.
 
    // turbo
    `git fetch origin main && (git rebase origin/main || (echo "❌ Merge Conflict detected! Aborting rebase to clean up..." && git rebase --abort && exit 1))`

@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 1.0.0
+**Version**: 4.2.0
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -44,12 +44,12 @@ C4Context
 
 ### Core responsibilities
 
-*   **Indexing and retrieval**: Converting markdown notes into vector embeddings and maintaining a searchable index.
-*   **Semantic search**: Finding relevant notes based on meaning, not just keywords.
-*   **Agentic reasoning**: An AI agent that uses "tools" (Search, Code, Read) to answer user questions using vault data.
-*   **Vault hygiene (Gardener)**: A specialized agent that proposes metadata and structural improvements to the vault based on a shared ontology.
-*   **Knowledge graph**: Maintaining a formal graph structure of note connections (wikilinks) and metadata.
-*   **Ontology management**: Defining and enforcing a consistent vocabulary (concepts, entities) across the vault.
+* **Indexing and retrieval**: Converting markdown notes into vector embeddings and maintaining a searchable index.
+* **Semantic search**: Finding relevant notes based on meaning, not just keywords.
+* **Agentic reasoning**: An AI agent that uses "tools" (Search, Code, Read) to answer user questions using vault data.
+* **Vault hygiene (Gardener)**: A specialized agent that proposes metadata and structural improvements to the vault based on a shared ontology.
+* **Knowledge graph**: Maintaining a formal graph structure of note connections (wikilinks) and metadata.
+* **Ontology management**: Defining and enforcing a consistent vocabulary (concepts, entities) across the vault.
 
 ---
 
@@ -59,18 +59,19 @@ C4Context
 
 The system follows a **Service-Oriented Architecture (SOA)** adapted for a monolithic client-side application.
 
-*   **Services** (e.g., `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
-*   **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
-*   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
-*   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`.
-*   **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
+* **Services** (e.g., `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
+* **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
+* **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
+* **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`.
+* **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
 
 ### Brain vs. Body
 
-*   **The body (views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the view.
-*   **The brain (services)**: All heavy lifting happens in services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
+* **The body (views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the view.
+* **The brain (services)**: All heavy lifting happens in services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
 
 ### Dependency injection
+
 Manual Dependency Injection is used in `main.ts`. Services are instantiated in a specific order and passed via constructor injection to dependent services.
 
 ```typescript
@@ -88,12 +89,13 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 
 > #### Indexing pipeline architecture
 >
-> 1.  **Intent**: Converts raw markdown edits into searchable vector embeddings and graph relationships.
-> 2.  **Trigger mechanism**: `Event: vault.on('modify')` (Debounced).
-> 3.  **The "black box" contract**:
->     -   **Input**: `TFile`
->     -   **Output**: `OramaDocument` + `GraphNode`
-> 4.  **Stages**:
+> 1. **Intent**: Converts raw markdown edits into searchable vector embeddings and graph relationships.
+> 2. **Trigger mechanism**: `Event: vault.on('modify')` (Debounced).
+> 3. **The "black box" contract**:
+>     * **Input**: `TFile`
+>     * **Output**: `OramaDocument` + `GraphNode`
+> 4. **Stages**:
+>
 >     ```mermaid
 >     flowchart LR
 >       A[File modified] --> B(VaultManager)
@@ -105,14 +107,16 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >       F --> H(Orama: upsert vector)
 >       H --> I[Serialize to MessagePack]
 >     ```
-> 5.  **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
+>
+> 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
 
 ### 3.2. Search and Answer loop (Data Flow)
 
 > #### The RAG cycle
 >
-> 1.  **Intent**: User asks a question in the chat.
-> 2.  **Mechanics**:
+> 1. **Intent**: User asks a question in the chat.
+> 2. **Mechanics**:
+>
 >     ```mermaid
 >     sequenceDiagram
 >         participant U as User
@@ -139,8 +143,9 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >         V-->>U: Read Answer
 >     ```
 >
-> 3.  **Tool calling loop (Control Flow)**:
+> 3. **Tool calling loop (Control Flow)**:
 >     The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer.
+>
 >     ```mermaid
 >     flowchart TD
 >         Start[User Prompt] --> Agent[AgentService: chat]
@@ -178,25 +183,24 @@ To maximise the utility of the context window while staying within token budgets
 
 This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
-
 ### 3.4. Dynamic Model Ranking & Fetching
 
 The `ModelRegistry` synchronises available Gemini models and ranks them to ensure the user always has access to the most capable stable versions.
 
-1.  **Fetch**: Models are fetched from the Google AI API and cached locally.
-2.  **Scoring**: A weighted scoring system (`ModelRegistry.sortModels`) ranks models based on:
-    -   **Tier**: Gemini 3 > Gemini 2.5 > Gemini 2 > Gemini 1.5.
-    -   **Capability**: Pro > Flash > Lite.
-    -   **Stability**: Preview or Experimental versions receive a penalty.
-3.  **Budget Scaling**: When switching models, `calculateAdjustedBudget` ensures the user's context configuration scales proportionally (eg if a user sets a 10% budget on a 1M model, it scales to 10% on a 32k model).
-
+1. **Fetch**: Models are fetched from the Google AI API and cached locally.
+2. **Scoring**: A weighted scoring system (`ModelRegistry.sortModels`) ranks models based on:
+    * **Tier**: Gemini 3 > Gemini 2.5 > Gemini 2 > Gemini 1.5.
+    * **Capability**: Pro > Flash > Lite.
+    * **Stability**: Preview or Experimental versions receive a penalty.
+3. **Budget Scaling**: When switching models, `calculateAdjustedBudget` ensures the user's context configuration scales proportionally (eg if a user sets a 10% budget on a 1M model, it scales to 10% on a 32k model).
 
 ### 3.5. Model fetching and budget scaling (metadata flow)
 
 > #### Dynamic model reconfiguration
 >
-> 1.  **Intent**: Synchronize available Gemini models and ensure context budgets are scaled proportionally to model limits.
-> 2.  **Mechanics**:
+> 1. **Intent**: Synchronize available Gemini models and ensure context budgets are scaled proportionally to model limits.
+> 2. **Mechanics**:
+>
 >     ```mermaid
 >     sequenceDiagram
 >         participant S as SettingsView
@@ -212,30 +216,31 @@ The `ModelRegistry` synchronises available Gemini models and ranks them to ensur
 >         S->>R: calculateAdjustedBudget(oldId, newId)
 >         R-->>S: New scaled budget value
 >     ```
-> 2.  **Model Selection Logic**:
+>
+> 3. **Model Selection Logic**:
 >     Models are ranked based on their capabilities (Flash vs Pro) and version (Gemini 3 > 2 > 1.5). Preview and experimental models receive a slight penalty in ranking to prefer stable releases for the main user interface.
-
 
 ### 3.6. System mechanics and orchestration
 
-*   **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
-*   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
+* **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
+* **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
 
-*   **The event bus**:
+* **The event bus**:
     The plugin relies on Obsidian's global `app.metadataCache` and `app.vault` events.
-    *   `UI Events`: Handled by Views.
-    *   `System Events`: Handled by `VaultManager`.
+    * `UI Events`: Handled by Views.
+    * `System Events`: Handled by `VaultManager`.
 
 ### 3.4. The "Gardening" cycle (vault hygiene)
 
 > #### Gardener plan-act cycle
 >
-> 1.  **Intent**: Systematic improvement of vault metadata and structure.
-> 2.  **Trigger mechanism**: Manual command or periodic background scan.
-> 3.  **The "black box" contract**:
->     -   **Input**: Vault subset + Ontology context.
->     -   **Output**: Interactive Gardener Plan (JSON-in-Markdown).
-> 4.  **Stages**:
+> 1. **Intent**: Systematic improvement of vault metadata and structure.
+> 2. **Trigger mechanism**: Manual command or periodic background scan.
+> 3. **The "black box" contract**:
+>     * **Input**: Vault subset + Ontology context.
+>     * **Output**: Interactive Gardener Plan (JSON-in-Markdown).
+> 4. **Stages**:
+>
 >     ```mermaid
 >     flowchart TD
 >       A[Start Analysis] --> B(Consult Ontology)
@@ -384,33 +389,38 @@ export class ModelRegistry {
 
 ### Anti-pattern watchlist
 
-1.  **Direct `app.vault` access in views**: NEVER access the vault directly in a View for write operations. Use `VaultManager` or `MetadataManager`.
-2.  **Blocking the main thread**: NEVER perform synchronous heavy math or huge JSON parsing on the main thread. Use the indexer worker.
-3.  **Local state in services**: Services should remain stateless where possible, deferring state to `settings` or the `GardenerStateService`.
+1. **Direct `app.vault` access in views**: NEVER access the vault directly in a View for write operations. Use `VaultManager` or `MetadataManager`.
+2. **Blocking the main thread**: NEVER perform synchronous heavy math or huge JSON parsing on the main thread. Use the indexer worker.
+3. **Local state in services**: Services should remain stateless where possible, deferring state to `settings` or the `GardenerStateService`.
 
 ---
 
 ### 6. External integrations
 
 ### LLM provider abstraction
+
 Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`), but abstraction covers the Embeddings layer.
-*   **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
+
+* **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
 
 ### Failover & retry logic
-*   **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
-*   **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (Threads -> 1, SIMD -> Off).
+
+* **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
+* **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (Threads -> 1, SIMD -> Off).
 
 ---
 
 ## 7. Developer onboarding guide
 
 ### Build pipeline
-*   **Tool**: `esbuild`.
-*   **Config**: `esbuild.config.mjs`.
-*   **Worker bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
+
+* **Tool**: `esbuild`.
+* **Config**: `esbuild.config.mjs`.
+* **Worker bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
 
 ### Testing strategy
-*   **Unit tests**: Not fully established.
-*   **Manual testing**:
-    *   Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
-    *   Use `npm run dev` to watch for changes and hot-reload.
+
+* **Unit tests**: Not fully established.
+* **Manual testing**:
+    * Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
+    * Use `npm run dev` to watch for changes and hot-reload.

@@ -4,64 +4,34 @@
  */
 
 export const SEARCH_CONSTANTS = {
+    /** Absolute minimum score for a seed to trigger neighbor expansion */
+    ABSOLUTE_MIN_EXPANSION_SCORE: 0.40,
+
+    ACCORDION_THRESHOLDS: {
+        HIGH: 1.2,
+        MED: 0.6
+    },
+
     /** Estimated characters per token for context calculations (Standard approximation for English) */
     CHARS_PER_TOKEN_ESTIMATE: 4,
 
     /** Safety margin for context window (e.g. 0.8 = 80%) */
     CONTEXT_SAFETY_MARGIN: 0.8,
 
-    /** Max % of the budget a single document can consume if others are present */
-    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
+    /** Default cap for nodes considered in centrality calculation */
+    DEFAULT_CENTRALITY_LIMIT: 50,
 
-    /** Minimum characters required to bother adding a document snippet */
-    MIN_DOC_CONTEXT_CHARS: 500,
+    /** Default safety cap for total documents in context */
+    DEFAULT_CONTEXT_MAX_FILES: 100,
 
-    /** Default character limit for tool responses (truncation) */
-    TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
+    /** Default relative threshold for full-file context inclusion */
+    DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
 
-    /** Scoring: Boost for exact title match */
-    SCORE_TITLE_MATCH: 1.2,
+    /** Default relative threshold for structural (headers) context inclusion */
+    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.35,
 
-    /** Scoring: Score for exact body match */
-    SCORE_BODY_MATCH: 0.85,
-
-    /** Scoring: Base fuzzy match score for short queries */
-    FUZZY_SHORT_BASE_SCORE: 0.4,
-
-    /** Scoring: Match ratio threshold for short queries (< 4 tokens) */
-    FUZZY_SHORT_THRESHOLD: 0.6,
-
-    /** Scoring: Match ratio threshold for long queries (>= 4 tokens) */
-    FUZZY_LONG_THRESHOLD: 0.3,
-
-    /** Scoring: Multiplier for hits in long queries */
-    FUZZY_LONG_HIT_MULTIPLIER: 0.08,
-
-    /** Scoring: Cap for fuzzy match score */
-    FUZZY_SCORE_CAP: 0.75,
-
-    /** Search: Minimum threshold for vector results to be considered relevant */
-    VECTOR_MIN_RELEVANCE: 0.35,
-
-    /** Search: Boosting score if result has both vector and keyword matches */
-    HYBRID_BOOST_SCORE: 0.3,
-
-    /** Search: Extra boost if keyword match is specifically in title */
-    HYBRID_TITLE_BOOST: 0.5,
-
-    /** Scoring: Threshold for query length to be considered "long" (tokens) */
-    FUZZY_LONG_QUERY_THRESHOLD: 4,
-
-    /** Scoring: Minimum hits required in a long query to consider relevant */
-    FUZZY_MIN_HITS_FOR_LONG_QUERY: 2,
-
-    /** Max number of keyword matches to find before stopping */
-    MAX_KEYWORD_MATCHES: 100,
-
-    ACCORDION_THRESHOLDS: {
-        HIGH: 1.2,
-        MED: 0.6
-    },
+    /** Default relative threshold for snippet context inclusion */
+    DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.70,
 
     /** Default number of nodes to trigger graph expansion */
     DEFAULT_EXPANSION_SEEDS_LIMIT: 5,
@@ -69,69 +39,90 @@ export const SEARCH_CONSTANTS = {
     /** Default threshold for expansion seeds (relative to top score) */
     DEFAULT_EXPANSION_THRESHOLD: 0.7,
 
-    /** Default cap for nodes considered in centrality calculation */
-    DEFAULT_CENTRALITY_LIMIT: 50,
+    /** Scoring: Multiplier for hits in long queries */
+    FUZZY_LONG_HIT_MULTIPLIER: 0.08,
 
-    /** Default relative threshold for full-file context inclusion */
-    DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
+    /** Scoring: Threshold for query length to be considered "long" (tokens) */
+    FUZZY_LONG_QUERY_THRESHOLD: 4,
 
-    /** Default relative threshold for snippet context inclusion */
-    DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.70,
+    /** Scoring: Match ratio threshold for long queries (>= 4 tokens) */
+    FUZZY_LONG_THRESHOLD: 0.3,
 
-    /** Default relative threshold for structural (headers) context inclusion */
-    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.35,
+    /** Scoring: Minimum hits required in a long query to consider relevant */
+    FUZZY_MIN_HITS_FOR_LONG_QUERY: 2,
 
-    /** Default safety cap for total documents in context */
-    DEFAULT_CONTEXT_MAX_FILES: 100,
+    /** Scoring: Cap for fuzzy match score */
+    FUZZY_SCORE_CAP: 0.75,
+
+    /** Scoring: Base fuzzy match score for short queries */
+    FUZZY_SHORT_BASE_SCORE: 0.4,
+
+    /** Scoring: Match ratio threshold for short queries (< 4 tokens) */
+    FUZZY_SHORT_THRESHOLD: 0.6,
+
+    /** Search: Boosting score if result has both vector and keyword matches */
+    HYBRID_BOOST_SCORE: 0.3,
+
+    /** Search: Extra boost if keyword match is specifically in title */
+    HYBRID_TITLE_BOOST: 0.5,
+
+    /** Max number of keyword matches to find before stopping */
+    MAX_KEYWORD_MATCHES: 100,
 
     /** Max number of structural (header-only) documents allowed in context */
     MAX_STRUCTURAL_DOCS: 10,
 
-    /** Absolute minimum score for a seed to trigger neighbor expansion */
-    ABSOLUTE_MIN_EXPANSION_SCORE: 0.40,
+    /** Minimum characters required to bother adding a document snippet */
+    MIN_DOC_CONTEXT_CHARS: 500,
+
+    /** Default decay for neighbor expansion */
+    NEIGHBOR_DECAY: 0.3,
+
+    /** Scoring: Score for exact body match */
+    SCORE_BODY_MATCH: 0.85,
+
+    /** Scoring: Boost for exact title match */
+    SCORE_TITLE_MATCH: 1.2,
+
+    /** Max % of the budget a single document can consume if others are present */
+    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
 
     /** Default weight for spreading activation */
     SPREADING_ACTIVATION_WEIGHT: 0.25,
 
-    /** Default decay for neighbor expansion */
-    NEIGHBOR_DECAY: 0.3
+    /** Default character limit for tool responses (truncation) */
+    TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
+
+    /** Search: Minimum threshold for vector results to be considered relevant */
+    VECTOR_MIN_RELEVANCE: 0.35
 };
 
 export const EMBEDDING_CONSTANTS = {
-    /** Max consecutive errors before triggering a global queue backoff */
-    MAX_ERRORS_BEFORE_BACKOFF: 5,
-
-    /** Max concurrent requests to embedding APIs (usually 1 for rate limit safety) */
-    MAX_CONCURRENT_REQUESTS: 1,
-
-    /** Default delay between embedding requests (ms) */
-    DEFAULT_QUEUE_DELAY_MS: 300,
-
-    /** Floating point precision for normalization checks */
-    NORMALIZATION_PRECISION: 1e-6,
+    /** Backoff delay duration when hitting rate limits (ms) */
+    BACKOFF_DELAY_MS: 30000,
 
     /** Default indexing delay after typing stops (ms) */
     DEFAULT_INDEXING_DELAY_MS: 5000,
 
-    /** Backoff delay duration when hitting rate limits (ms) */
-    BACKOFF_DELAY_MS: 30000,
+    /** Default delay between embedding requests (ms) */
+    DEFAULT_QUEUE_DELAY_MS: 300,
+
+    /** Max concurrent requests to embedding APIs (usually 1 for rate limit safety) */
+    MAX_CONCURRENT_REQUESTS: 1,
+
+    /** Max consecutive errors before triggering a global queue backoff */
+    MAX_ERRORS_BEFORE_BACKOFF: 5,
+
+    /** Floating point precision for normalization checks */
+    NORMALIZATION_PRECISION: 1e-6,
 
     /** Full backoff timeout before resuming queue (ms) */
     RESUME_TIMEOUT_MS: 60000
 };
 
 export const WORKER_CONSTANTS = {
-    /** Standard version for Xenova Transformers CDN */
-    WASM_VERSION: '2.17.2',
-
-    /** Base URL for JS Delivr CDN for Transformers.js assets */
-    WASM_CDN_URL: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/',
-
-    /** Token limit for most local models (standard BERT/MiniLM) */
-    MAX_TOKENS: 512,
-
-    /** Size of character blocks to process to avoid WASM heap exhaustion */
-    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000,
+    /** Stability: Threshold for "early crash" immediately after boot (10s) */
+    BOOT_CRASH_THRESHOLD_MS: 10000,
 
     /** Circuit Breaker: Reset after 5 minutes of no crashes */
     CIRCUIT_BREAKER_RESET_MS: 300000,
@@ -139,58 +130,73 @@ export const WORKER_CONSTANTS = {
     /** Circuit Breaker: Window to detect crash loops (1 min) */
     CRASH_LOOP_WINDOW_MS: 60000,
 
-    /** Stability: Threshold for "early crash" immediately after boot (10s) */
-    BOOT_CRASH_THRESHOLD_MS: 10000,
+    /** Size of character blocks to process to avoid WASM heap exhaustion */
+    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000,
 
     /** Circuit Breaker: Max crashes before giving up */
-    MAX_CRASH_RETRY: 4
+    MAX_CRASH_RETRY: 4,
+
+    /** Token limit for most local models (standard BERT/MiniLM) */
+    MAX_TOKENS: 512,
+
+    /** Base URL for JS Delivr CDN for Transformers.js assets */
+    WASM_CDN_URL: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/',
+
+    /** Standard version for Xenova Transformers CDN */
+    WASM_VERSION: '2.17.2'
 };
 
 export const WORKER_INDEXER_CONSTANTS = {
+    /** Length of content snippet to store in Orama for previews */
+    CONTENT_PREVIEW_LENGTH: 500,
+
     /** Default delay between index updates (ms) */
     DEFAULT_INDEXING_DELAY: 2000,
 
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
 
-    /** Strict similarity threshold for Orama (bypass default 0.8) */
-    SIMILARITY_THRESHOLD_STRICT: 0.001,
+    /** Deep search limit for vector candidates before scoring */
+    SEARCH_LIMIT_DEEP: 500,
 
     /** Default limit for simple keyword searches */
     SEARCH_LIMIT_DEFAULT: 5,
 
-    /** Deep search limit for vector candidates before scoring */
-    SEARCH_LIMIT_DEEP: 500,
-
-    /** Length of content snippet to store in Orama for previews */
-    CONTENT_PREVIEW_LENGTH: 500
+    /** Strict similarity threshold for Orama (bypass default 0.8) */
+    SIMILARITY_THRESHOLD_STRICT: 0.001
 };
 
 export const GRAPH_CONSTANTS = {
-    /** Scoring Weights (alpha, beta, gamma) */
-    WEIGHTS: {
-        /** Vector Similarity weight */
-        SIMILARITY: 0.6,
-        /** Graph Centrality (structural) weight */
-        CENTRALITY: 0.2,
-        /** Spreading Activation (connectedness) weight */
-        ACTIVATION: 0.2
-    },
-    /** Max neighbors to fetch per node to avoid state explosion */
-    MAX_NEIGHBORS_PER_NODE: 5,
-    /** Max hops to traverse (currently limited to 1 for performance) */
-    MAX_EXPANSION_DEPTH: 1,
     /** Default directory for index storage */
     DATA_DIR: "data",
+    /** Throttle/Idle time before auto-saving graph state (ms) */
+    IDLE_SAVE_TIMEOUT_MS: 30000,
+    legacy_STATE_FILE: "graph-state.json",
+    /** Max hops to traverse (currently limited to 1 for performance) */
+    MAX_EXPANSION_DEPTH: 1,
+    /** Max neighbors to fetch per node to avoid state explosion */
+    MAX_NEIGHBORS_PER_NODE: 5,
     /** Default filename for graph state */
     /** Default filename for graph state */
     STATE_FILE: "graph-state.msgpack",
-    legacy_STATE_FILE: "graph-state.json",
-    /** Throttle/Idle time before auto-saving graph state (ms) */
-    IDLE_SAVE_TIMEOUT_MS: 30000
+    /** Scoring Weights (alpha, beta, gamma) */
+    WEIGHTS: {
+        /** Spreading Activation (connectedness) weight */
+        ACTIVATION: 0.2,
+        /** Graph Centrality (structural) weight */
+        CENTRALITY: 0.2,
+        /** Vector Similarity weight */
+        SIMILARITY: 0.6
+    }
 };
 
 export const ONTOLOGY_CONSTANTS = {
+    /** Weights for edge sources */
+    EDGE_WEIGHTS: {
+        BODY: 1.0,
+        FRONTMATTER: 1.5
+    },
+
     /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
     HUB_MIN_DEGREE: 5,
 
@@ -198,22 +204,10 @@ export const ONTOLOGY_CONSTANTS = {
     HUB_PENALTY_ENABLED: true,
 
     /** Dampening factor for 2-hop (Sibling) relevance */
-    SIBLING_DECAY: 0.25,
-
-    /** Weights for edge sources */
-    EDGE_WEIGHTS: {
-        FRONTMATTER: 1.5,
-        BODY: 1.0
-    }
+    SIBLING_DECAY: 0.25
 };
 
 export const UI_CONSTANTS = {
-    /** Duration for basic notices (ms) */
-    NOTICE_DURATION_MS: 5000,
-
-    /** Duration for model validation notices (ms) */
-    VALIDATION_NOTICE_MS: 5000,
-
     /** Default ratio of model capacity to use for Chat context budget (0.2 = 20%) */
     DEFAULT_CHAT_CONTEXT_RATIO: 0.2,
 
@@ -221,7 +215,13 @@ export const UI_CONSTANTS = {
     DEFAULT_GARDENER_CONTEXT_RATIO: 0.1,
 
     /** Minimum tokens to bother with for tokenization blocks */
-    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000
+    MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000,
+
+    /** Duration for basic notices (ms) */
+    NOTICE_DURATION_MS: 5000,
+
+    /** Duration for model validation notices (ms) */
+    VALIDATION_NOTICE_MS: 5000
 };
 
 export const VIEW_TYPES = {
@@ -231,82 +231,82 @@ export const VIEW_TYPES = {
 
 export const AGENT_CONSTANTS = {
     TOOLS: {
-        VAULT_SEARCH: "vault_search",
-        URL_READER: "read_url",
-        GOOGLE_SEARCH: "google_search",
         CALCULATOR: "computational_solver",
-        GET_CONNECTED_NOTES: "get_connected_notes"
+        GET_CONNECTED_NOTES: "get_connected_notes",
+        GOOGLE_SEARCH: "google_search",
+        URL_READER: "read_url",
+        VAULT_SEARCH: "vault_search"
     }
 };
 
 export const GARDENER_CONSTANTS = {
-    PLAN_PREFIX: "Gardener Plan",
-    PLAN_DATE_FORMAT: "YYYY-MM-DD HH-mm", // Conceptual format, implementation uses manual string building
-    DEFAULT_AGENT_STEPS: 5,
     ACTIONS: {
         UPDATE_TOPICS: "update_topics"
-    }
+    },
+    DEFAULT_AGENT_STEPS: 5,
+    PLAN_DATE_FORMAT: "YYYY-MM-DD HH-mm", // Conceptual format, implementation uses manual string building
+    PLAN_PREFIX: "Gardener Plan"
 };
 
 export const MODEL_REGISTRY_CONSTANTS = {
-    /** Score boost for standard (non-preview/non-experimental) models */
-    PRODUCTION_BOOST: 50,
-
     /** Minimum context floor in tokens after budget adjustment */
     CONTEXT_ADJUSTMENT_FLOOR: 1024,
 
     /** Default cache duration for fetched models (days) */
     DEFAULT_CACHE_DURATION_DAYS: 7,
 
+    /** Default input token limit if unknown */
+    DEFAULT_TOKEN_LIMIT: 1048576,
+
+    /** Score boost for standard (non-preview/non-experimental) models */
+    PRODUCTION_BOOST: 50,
     /** Weighted scores for model sorting */
     SCORES: {
-        GEMINI_3: 4000,
-        GEMINI_2_5: 3000,
-        GEMINI_2: 2500,
-        GEMINI_1_5: 2000,
-        GEMINI_1_0: 1000,
-        PRO_BOOST: 500,
-        FLASH_BOOST: 300,
-        LITE_BOOST: 100,
         EMBEDDING_BOOST: 10,
         EXPERIMENTAL_PENALTY: -50,
-        PREVIEW_PENALTY: -20
-    },
-    /** Default input token limit if unknown */
-    DEFAULT_TOKEN_LIMIT: 1048576
+        FLASH_BOOST: 300,
+        GEMINI_1_0: 1000,
+        GEMINI_1_5: 2000,
+        GEMINI_2: 2500,
+        GEMINI_2_5: 3000,
+        GEMINI_3: 4000,
+        LITE_BOOST: 100,
+        PREVIEW_PENALTY: -20,
+        PRO_BOOST: 500
+    }
 };
 
 export const SANITIZATION_CONSTANTS = {
-    /** Minimum context tokens floor */
-    MIN_TOKEN_LIMIT: 1024,
-
     /** Default embedding dimension */
     DEFAULT_EMBEDDING_DIMENSION: 768,
+
     /** Absolute maximum token limit used for sanity checks */
-    MAX_TOKEN_LIMIT_SANITY: 1048576
+    MAX_TOKEN_LIMIT_SANITY: 1048576,
+    /** Minimum context tokens floor */
+    MIN_TOKEN_LIMIT: 1024
 };
 
 export const UI_STRINGS = {
-    PLUGIN_NAME: "Vault Intelligence",
-    RIBBON_ICON: "brain-circuit",
-    RIBBON_TOOLTIP: "Vault intelligence",
-    RESEARCHER_TITLE: "Researcher: chat with vault",
+    ERROR_GARDENER_PLAN_RENDER: "Failed to render Gardener Plan",
+    ERROR_GRAPH_INIT_FAILED: "Failed to initialize vault intelligence graph",
     EXPLORER_TITLE: "Explorer: view similar notes",
-    GARDENER_TITLE_TIDY: "Gardener: organize vault concepts",
     GARDENER_TITLE_PURGE: "Gardener: purge old plans",
+    GARDENER_TITLE_TIDY: "Gardener: organize vault concepts",
+    MODAL_RELEASE_NOTES_BUTTON: "Cool!",
+    MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})",
+    MODAL_RELEASE_NOTES_ERROR_HEADER: "### Update Successful!",
+    MODAL_RELEASE_NOTES_SPONSOR: "Sponsor",
+    MODAL_RELEASE_NOTES_TITLE: "What's New in",
     NOTICE_GARDENER_FAILED: "Gardener failed: ",
     NOTICE_GARDENER_PURGED: "Gardener: old plans purged.",
-    NOTICE_PURGE_FAILED: "Purge failed: ",
     NOTICE_PLUGIN_LOADED: "Vault Intelligence Plugin Loaded",
     NOTICE_PLUGIN_UNLOADED: "Vault Intelligence Plugin Unloaded",
+    NOTICE_PURGE_FAILED: "Purge failed: ",
     NOTICE_SANITISED_BUDGETS: "Sanitised context budgets to safe bounds",
-    ERROR_GRAPH_INIT_FAILED: "Failed to initialize vault intelligence graph",
-    ERROR_GARDENER_PLAN_RENDER: "Failed to render Gardener Plan",
-    MODAL_RELEASE_NOTES_TITLE: "What's New in",
-    MODAL_RELEASE_NOTES_BUTTON: "Cool!",
-    MODAL_RELEASE_NOTES_ERROR_HEADER: "### Update Successful!",
-    MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})",
-    MODAL_RELEASE_NOTES_SPONSOR: "Sponsor"
+    PLUGIN_NAME: "Vault Intelligence",
+    RESEARCHER_TITLE: "Researcher: chat with vault",
+    RIBBON_ICON: "brain-circuit",
+    RIBBON_TOOLTIP: "Vault intelligence"
 };
 
 const DOCS_BASE = "https://cybaea.github.io/obsidian-vault-intelligence/";
@@ -315,12 +315,40 @@ const DOCS_CONFIG = `${DOCS_BASE}docs/reference/configuration.html`;
 export const DOCUMENTATION_URLS = {
     BASE: DOCS_BASE,
     CONFIGURATION: DOCS_CONFIG,
-    SPONSOR: "https://github.com/sponsors/cybaea",
     SECTIONS: {
         CONNECTION: `${DOCS_CONFIG}#connection`,
-        RESEARCHER: `${DOCS_CONFIG}#researcher`,
         EXPLORER: `${DOCS_CONFIG}#explorer`,
         GARDENER: `${DOCS_CONFIG}#gardener`,
         PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
-    }
+        RESEARCHER: `${DOCS_CONFIG}#researcher`,
+    },
+    SPONSOR: "https://github.com/sponsors/cybaea"
+};
+
+export const VALIDATION_CONSTANTS = {
+    /** Standard paths to check for ONNX weights */
+    ONNX_PATHS: [
+        'onnx/model_quantized.onnx', // Standard location for Xenova models
+        'model_quantized.onnx',      // Root location (rare but possible)
+        'onnx/model.onnx',           // Unquantized (Standard location)
+        'model.onnx'                 // Unquantized (Root)
+    ],
+    /** Common supported architectures in Transformers.js */
+    SUPPORTED_ARCHITECTURES: [
+        'BertModel',
+        'NomicBertModel',
+        'MPNetModel',
+        'RobertaModel',
+        'DistilBertModel',
+        'XLM_RoBERTaModel'
+    ]
+};
+
+export const URL_CONSTANTS = {
+    /** Allowed domains for downloading models or assets */
+    TRUSTED_DOMAINS: [
+        'huggingface.co',
+        'jsdelivr.net',
+        'raw.githubusercontent.com' // Often used for config but less common in this specific logic
+    ]
 };

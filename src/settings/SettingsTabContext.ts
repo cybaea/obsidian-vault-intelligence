@@ -1,4 +1,5 @@
 import { App } from "obsidian";
+
 import { IVaultIntelligencePlugin } from "./types";
 
 /**
@@ -7,6 +8,6 @@ import { IVaultIntelligencePlugin } from "./types";
  */
 export interface SettingsTabContext {
     app: App;
-    plugin: IVaultIntelligencePlugin;
     containerEl: HTMLElement;
+    plugin: IVaultIntelligencePlugin;
 }

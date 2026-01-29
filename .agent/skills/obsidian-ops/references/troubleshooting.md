@@ -21,6 +21,7 @@ Update frequency: Update as common issues are identified
 **Problem**: AI agent can't find `.ref` folder when searching.
 
 **Solution**:
+
 - The `.ref` folder is gitignored and may be hidden
 - Use `list_dir` with the project root to see hidden directories
 - Use `glob_file_search` with pattern `.ref/**` to search recursively
@@ -54,6 +55,7 @@ Update frequency: Update as common issues are identified
 ### Browser Console
 
 Open browser console (Help → Toggle Developer Tools) to check for:
+
 - CSS parsing errors
 - Missing CSS variables
 - Conflicting styles
@@ -61,6 +63,7 @@ Open browser console (Help → Toggle Developer Tools) to check for:
 ### Inspect Theme CSS
 
 In browser console, inspect the theme's CSS:
+
 ```javascript
 // Check if theme CSS is loaded
 document.querySelector('style[data-theme="your-theme-name"]')
@@ -69,6 +72,7 @@ document.querySelector('style[data-theme="your-theme-name"]')
 ### Verify CSS Variables
 
 Check that Obsidian CSS variables are being used correctly:
+
 ```css
 /* Use Obsidian's built-in variables */
 color: var(--text-normal);
@@ -84,11 +88,13 @@ Verify `manifest.json` has correct `name` field matching the theme folder name.
 ### SCSS Not Compiling
 
 **Causes**:
+
 1. Build command not run
 2. Build tool not installed
 3. Incorrect build configuration
 
 **Solution**: 
+
 1. Run build command (`npx grunt build` or `npm run build`)
 2. Verify `Gruntfile.js` or `package.json` scripts are correct
 3. Check that `theme.css` is generated in root directory
@@ -98,6 +104,7 @@ Verify `manifest.json` has correct `name` field matching the theme folder name.
 **Problem**: `@import` statements fail.
 
 **Solution**: 
+
 1. Check file paths are correct relative to importing file
 2. Verify all imported files exist
 3. Use relative paths: `@import "../variables.scss";`
@@ -107,8 +114,7 @@ Verify `manifest.json` has correct `name` field matching the theme folder name.
 **Problem**: Compiled CSS doesn't match expected output.
 
 **Solution**:
+
 1. Check SCSS source files for syntax errors
 2. Verify build process completes without errors
 3. Inspect generated `theme.css` for issues
-
-

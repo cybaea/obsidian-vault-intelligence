@@ -1,9 +1,9 @@
+import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
+import { logger } from "../utils/logger";
+import { GeminiEmbeddingService } from "./GeminiEmbeddingService";
+import { GeminiService } from "./GeminiService";
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
-import { GeminiEmbeddingService } from "./GeminiEmbeddingService";
-import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
-import { GeminiService } from "./GeminiService";
-import { logger } from "../utils/logger";
 
 export class RoutingEmbeddingService implements IEmbeddingService {
     private localService: LocalEmbeddingService;

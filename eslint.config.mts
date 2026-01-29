@@ -3,6 +3,7 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import { globalIgnores } from "eslint/config";
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
+import perfectionist from "eslint-plugin-perfectionist";
 
 export default tseslint.config(
 	{
@@ -33,6 +34,7 @@ export default tseslint.config(
 		plugins: {
 			'eslint-comments': eslintComments,
 			'obsidianmd': obsidianmd,
+			'perfectionist': perfectionist,
 		},
 		rules: {
 			"@typescript-eslint/require-await": "error",
@@ -45,6 +47,9 @@ export default tseslint.config(
 			"eslint-comments/require-description": "error",
 			"eslint-comments/disable-enable-pair": "error",
 			"eslint-comments/no-unused-disable": "error",
+			"perfectionist/sort-imports": "error",
+			"perfectionist/sort-interfaces": "error",
+			"perfectionist/sort-objects": "error",
 		}
 	},
 	globalIgnores([

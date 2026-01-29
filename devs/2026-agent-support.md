@@ -91,7 +91,6 @@ async function validateModel(modelId: string) {
 
 We will still support the Gemini embedding model.
 
-
 ## Changes to make
 
 This is an **incomplete** list of changes to make:
@@ -130,5 +129,3 @@ We should test the following to ensure the plugin works as expected:
 
 - Do we need a warning for mobile and tablet users?
 - How do we handle memory and compute constraints and -failures gracefully?
-
-

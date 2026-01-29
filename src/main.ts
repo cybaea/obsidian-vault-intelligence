@@ -1,21 +1,22 @@
 import { Plugin, WorkspaceLeaf, Menu, Notice, requestUrl } from 'obsidian';
+
+import { VIEW_TYPES, SANITIZATION_CONSTANTS, UI_STRINGS } from "./constants";
 import { ReleaseNotesModal } from "./modals/ReleaseNotesModal";
-import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
-import { GeminiService } from "./services/GeminiService";
-import { SimilarNotesView } from "./views/SimilarNotesView";
-import { ResearchChatView } from "./views/ResearchChatView";
-import { logger } from "./utils/logger";
-import { IEmbeddingService } from "./services/IEmbeddingService";
-import { VaultManager } from "./services/VaultManager";
-import { GraphService } from "./services/GraphService";
-import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
-import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
-import { MetadataManager } from "./services/MetadataManager";
-import { OntologyService } from "./services/OntologyService";
 import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
 import { GardenerStateService } from "./services/GardenerStateService";
+import { GeminiService } from "./services/GeminiService";
+import { GraphService } from "./services/GraphService";
+import { IEmbeddingService } from "./services/IEmbeddingService";
+import { MetadataManager } from "./services/MetadataManager";
+import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
+import { OntologyService } from "./services/OntologyService";
+import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
+import { VaultManager } from "./services/VaultManager";
+import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
-import { VIEW_TYPES, SANITIZATION_CONSTANTS, UI_STRINGS } from "./constants";
+import { logger } from "./utils/logger";
+import { ResearchChatView } from "./views/ResearchChatView";
+import { SimilarNotesView } from "./views/SimilarNotesView";
 
 /**
  * Main plugin class for Obsidian Vault Intelligence.
@@ -135,24 +136,22 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// Commands
 		this.addCommand({
-			id: 'open-similar-notes-view',
-			name: 'Explorer: view similar notes',
 			callback: () => {
 				void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
-			}
+			},
+			id: 'open-similar-notes-view',
+			name: 'Explorer: view similar notes'
 		});
 
 		this.addCommand({
-			id: 'open-research-chat-view',
-			name: 'Researcher: chat with vault',
 			callback: () => {
 				void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
-			}
+			},
+			id: 'open-research-chat-view',
+			name: 'Researcher: chat with vault'
 		});
 
 		this.addCommand({
-			id: 'gardener-tidy-vault',
-			name: UI_STRINGS.GARDENER_TITLE_TIDY,
 			callback: async () => {
 				try {
 					const planFile = await this.gardenerService.tidyVault();
@@ -164,12 +163,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					const message = error instanceof Error ? error.message : String(error);
 					new Notice(`${UI_STRINGS.NOTICE_GARDENER_FAILED}${message}`);
 				}
-			}
+			},
+			id: 'gardener-tidy-vault',
+			name: UI_STRINGS.GARDENER_TITLE_TIDY
 		});
 
 		this.addCommand({
-			id: 'gardener-purge-plans',
-			name: UI_STRINGS.GARDENER_TITLE_PURGE,
 			callback: async () => {
 				try {
 					await this.gardenerService.purgeOldPlans();
@@ -177,16 +176,18 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				} catch (error: unknown) {
 					new Notice(`${UI_STRINGS.NOTICE_PURGE_FAILED}${error instanceof Error ? error.message : String(error)}`);
 				}
-			}
+			},
+			id: 'gardener-purge-plans',
+			name: UI_STRINGS.GARDENER_TITLE_PURGE
 		});
 
 		this.addCommand({
-			id: 'show-release-notes',
-			name: `Show release notes`,
 			callback: async () => {
 				const sponsorUrl = await this.getSponsorUrl();
 				void this.showReleaseNotes(this.manifest.version, sponsorUrl);
-			}
+			},
+			id: 'show-release-notes',
+			name: `Show release notes`
 		});
 
 		// Markdown Post Processors
@@ -199,12 +200,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService, this.gardenerStateService);
 					ctx.addChild(renderer);
 				} else {
-					el.createEl("pre", { text: `Invalid Gardener Plan schema: ${plan.error.message}`, cls: "gardener-error" });
+					el.createEl("pre", { cls: "gardener-error", text: `Invalid Gardener Plan schema: ${plan.error.message}` });
 				}
 			} catch (error: unknown) {
 				const message = error instanceof Error ? error.message : String(error);
 				logger.error("Failed to render Gardener Plan", message);
-				el.createEl("pre", { text: `Error parsing Gardener Plan: ${message}`, cls: "gardener-error" });
+				el.createEl("pre", { cls: "gardener-error", text: `Error parsing Gardener Plan: ${message}` });
 			}
 		});
 
@@ -293,7 +294,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			const rightLeaf = workspace.getRightLeaf(false);
 			if (rightLeaf) {
 				leaf = rightLeaf;
-				await leaf.setViewState({ type: viewType, active: true });
+				await leaf.setViewState({ active: true, type: viewType });
 			}
 		}
 

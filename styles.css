@@ -28,11 +28,10 @@
 
 .research-chat-view .chat-message {
     user-select: text !important;
-    -webkit-user-select: text !important;
     padding: 8px 12px;
     border-radius: 8px;
     max-width: 80%;
-    line-height: 1.5;
+    line-height: var(--line-height-normal);
 }
 
 .research-chat-view .chat-message.model {
@@ -72,10 +71,10 @@
 .research-chat-view .chat-message pre,
 .research-chat-view .chat-message code {
     user-select: text !important;
-    -webkit-user-select: text !important;
 }
 
 /* ++++++++++++++++++++++++++++++++++++ */
+
 /* Similar notes styles                 */
 
 .similar-notes-list {
@@ -84,9 +83,6 @@
     margin-left: 0;
     font-family: var(--font-interface);
     line-height: var(--line-height-normal);
-}
-
-.similar-notes-list {
     padding-top: var(--size-2-1);
     padding-bottom: var(--size-2-1);
 }
@@ -114,6 +110,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 /* Force the System Instruction setting to stack vertically */
 .vault-intelligence-system-instruction-setting {
     display: block !important;
+
     /* Use standard Obsidian spacing variables */
     padding-bottom: var(--size-4-4) !important;
     border-bottom: 1px solid var(--background-modifier-border);
@@ -153,47 +150,31 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 /* The container for our settings info box */
 
-.vault-intelligence-settings-info {
+/* Shared styles for settings info/warning boxes */
+.vault-intelligence-settings-info,
+.vault-intelligence-settings-warning {
     display: flex;
     align-items: start;
     gap: var(--size-4-2);
     margin-top: var(--size-4-2);
-
-    /* Theming: Transparent background + dashed border */
     background-color: transparent;
-    border: var(--border-width) dashed var(--background-modifier-border);
-    /* Replaced 1px */
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-
-    /* Typography */
     font-size: var(--font-ui-smaller) !important;
     color: var(--text-muted);
 }
 
+.vault-intelligence-settings-info {
+    border: var(--border-width) dashed var(--background-modifier-border);
+}
+
 .vault-intelligence-settings-warning {
-    /* Reuse layout logic */
-    display: flex;
-    align-items: start;
-    gap: var(--size-4-2);
-    margin-top: var(--size-4-2);
-
-    /* Warning Visuals */
-    background-color: transparent;
     border: var(--border-width) solid var(--text-warning);
-    /* Replaced 1px */
-    border-radius: var(--radius-s);
-    padding: var(--size-4-2);
-
-    /* Typography */
-    font-size: var(--font-ui-smaller) !important;
-    color: var(--text-muted);
 }
 
 .vault-intelligence-settings-info .lucide-info,
 .vault-intelligence-settings-warning .lucide-alert-triangle {
     flex-shrink: 0;
-
     width: 1.1em;
     height: 1.1em;
     margin-top: 0.15em;
@@ -237,7 +218,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     border: 1px solid var(--background-modifier-border);
     margin: 1.5rem 0;
     font-family: var(--font-interface);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
 }
 
 .gardener-header {
@@ -272,7 +253,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     font-size: 0.95rem;
     color: var(--text-muted);
     margin-bottom: 1.25rem;
-    line-height: 1.5;
+    line-height: var(--line-height-normal);
 }
 
 .gardener-actions-list {
@@ -292,7 +273,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 .gardener-action-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 8px rgb(0 0 0 / 5%);
 }
 
 .action-header {
@@ -341,15 +322,12 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .change-value {
     color: var(--text-success);
     font-weight: 600;
-    background: rgba(var(--mono-rgb-100), 0.05);
+    background: rgb(var(--mono-rgb-100), 0.05);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
 }
 
-.change-value.invalid-tag {
-    color: var(--text-error);
-    background: rgba(var(--color-red-rgb), 0.1);
-}
+
 
 .tag-warning {
     color: var(--text-error);
@@ -379,7 +357,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 .gardener-error {
     color: var(--text-error);
-    background: rgba(var(--color-red-rgb), 0.1);
+    background: rgb(var(--color-red-rgb), 0.1);
     padding: 1rem;
     border-radius: 8px;
     border: 1px solid var(--text-error);
@@ -406,7 +384,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 
 .change-value.invalid-topic {
     color: var(--text-error);
-    background: rgba(var(--color-red-rgb), 0.1);
+    background: rgb(var(--color-red-rgb), 0.1);
 }
 
 /* --- Progress Bar & Interactive Links --- */
@@ -635,7 +613,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     object-fit: cover;
     border-radius: var(--radius-l);
     margin-bottom: var(--size-4-6);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 20px rgb(0 0 0 / 20%);
     border: 1px solid var(--background-modifier-border);
 }
 
@@ -660,6 +638,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     align-items: center;
     gap: 4px;
     background-color: transparent;
+
     /* Or match message style */
     padding: 5px 10px;
 }

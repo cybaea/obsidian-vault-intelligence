@@ -1,20 +1,21 @@
-import { IEmbeddingService } from "./IEmbeddingService";
-import { GraphService } from "../services/GraphService";
-import { GeminiService } from "./GeminiService";
-import { TFile, App, requestUrl, MarkdownView } from "obsidian";
 import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
-import { logger } from "../utils/logger";
-import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
+import { TFile, App, requestUrl, MarkdownView } from "obsidian";
+
 import { SEARCH_CONSTANTS, AGENT_CONSTANTS } from "../constants";
-import { SearchOrchestrator } from "./SearchOrchestrator";
-import { ContextAssembler } from "./ContextAssembler";
+import { GraphService } from "../services/GraphService";
+import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 import { VaultSearchResult } from "../types/search";
+import { logger } from "../utils/logger";
+import { ContextAssembler } from "./ContextAssembler";
+import { GeminiService } from "./GeminiService";
+import { IEmbeddingService } from "./IEmbeddingService";
+import { SearchOrchestrator } from "./SearchOrchestrator";
 
 export interface ChatMessage {
+    contextFiles?: string[];
     role: "user" | "model" | "system";
     text: string;
     thought?: string;
-    contextFiles?: string[];
 }
 
 /**
@@ -57,60 +58,60 @@ export class AgentService {
     private getTools(): Tool[] {
         // 1. Vault Search
         const vaultSearch: FunctionDeclaration = {
-            name: AGENT_CONSTANTS.TOOLS.VAULT_SEARCH,
             description: "Search the user's personal Obsidian notes (vault) for information and context.",
+            name: AGENT_CONSTANTS.TOOLS.VAULT_SEARCH,
             parameters: {
-                type: Type.OBJECT,
                 properties: {
                     query: {
-                        type: Type.STRING,
-                        description: "The search query to find relevant notes."
+                        description: "The search query to find relevant notes.",
+                        type: Type.STRING
                     }
                 },
-                required: ["query"]
+                required: ["query"],
+                type: Type.OBJECT
             }
         };
 
         // 2. URL Reader
         const urlReader: FunctionDeclaration = {
-            name: AGENT_CONSTANTS.TOOLS.URL_READER,
             description: "Read the content of a specific external URL.",
+            name: AGENT_CONSTANTS.TOOLS.URL_READER,
             parameters: {
-                type: Type.OBJECT,
                 properties: {
                     url: {
-                        type: Type.STRING,
-                        description: "The full URL to read."
+                        description: "The full URL to read.",
+                        type: Type.STRING
                     }
                 },
-                required: ["url"]
+                required: ["url"],
+                type: Type.OBJECT
             }
         };
 
         // 3. Google Search (Sub-Agent)
         const googleSearch: FunctionDeclaration = {
-            name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
             description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
+            name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
             parameters: {
-                type: Type.OBJECT,
                 properties: { query: { type: Type.STRING } },
-                required: ["query"]
+                required: ["query"],
+                type: Type.OBJECT
             }
         };
 
         // 4. Graph Explorer
         const graphExplorer: FunctionDeclaration = {
-            name: AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES,
             description: "Find notes linked to or from a specific note. Use this to discover context not immediately visible in search results.",
+            name: AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES,
             parameters: {
-                type: Type.OBJECT,
                 properties: {
                     path: {
-                        type: Type.STRING,
-                        description: "The path of the note to find connections for."
+                        description: "The path of the note to find connections for.",
+                        type: Type.STRING
                     }
                 },
-                required: ["path"]
+                required: ["path"],
+                type: Type.OBJECT
             }
         };
 
@@ -119,17 +120,17 @@ export class AgentService {
         // 5. Computational Solver (Conditional)
         if (this.settings.enableCodeExecution && this.settings.codeModel.trim().length > 0) {
             const computationalSolver: FunctionDeclaration = {
-                name: AGENT_CONSTANTS.TOOLS.CALCULATOR,
                 description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
+                name: AGENT_CONSTANTS.TOOLS.CALCULATOR,
                 parameters: {
-                    type: Type.OBJECT,
                     properties: {
                         task: {
-                            type: Type.STRING,
-                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number')."
+                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number').",
+                            type: Type.STRING
                         }
                     },
-                    required: ["task"]
+                    required: ["task"],
+                    type: Type.OBJECT
                 }
             };
             toolsList.push(computationalSolver);
@@ -280,17 +281,17 @@ export class AgentService {
         contextFiles.forEach(f => usedFiles.add(f.path));
 
         const formattedHistory = history.map(h => ({
-            role: h.role as "user" | "model",
-            parts: [{ text: h.text }]
+            parts: [{ text: h.text }],
+            role: h.role as "user" | "model"
         })) as Content[];
 
         if (contextFiles.length > 0) {
             // Map files to VaultSearchResult format for assembler
             // We treat explicit/open files with a perfect score (1.0) to prioritize them
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
+                isKeywordMatch: true,
                 path: f.path,
-                score: 1.0,
-                isKeywordMatch: true
+                score: 1.0
             }));
 
             // Assemble intelligently respecting budget
@@ -352,12 +353,12 @@ export class AgentService {
             if (result.functionCalls && result.functionCalls.length > 0) {
                 logger.warn("Agent hit max steps limit with pending tool calls.");
                 return {
-                    text: "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting.",
-                    files: Array.from(usedFiles)
+                    files: Array.from(usedFiles),
+                    text: "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting."
                 };
             }
 
-            return { text: result.text || "", files: Array.from(usedFiles) };
+            return { files: Array.from(usedFiles), text: result.text || "" };
 
         } catch (e: unknown) {
             logger.error("Error in chat loop", e);
@@ -366,12 +367,12 @@ export class AgentService {
             // Check for common 400 errors (API key, etc)
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
                 return {
-                    text: `I encountered an error connecting to Gemini (Status 400). Please check that your API key is valid and has not expired.\n\nError details: ${errorMessage}`,
-                    files: []
+                    files: [],
+                    text: `I encountered an error connecting to Gemini (Status 400). Please check that your API key is valid and has not expired.\n\nError details: ${errorMessage}`
                 };
             }
 
-            return { text: `Sorry, I encountered an error processing your request: ${errorMessage}`, files: [] };
+            return { files: [], text: `Sorry, I encountered an error processing your request: ${errorMessage}` };
         }
     }
 }

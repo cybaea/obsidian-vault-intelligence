@@ -1,24 +1,25 @@
+import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { z } from "zod";
+
+import { SEARCH_CONSTANTS, GARDENER_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
+import { logger } from "../utils/logger";
+import { GardenerStateService } from "./GardenerStateService";
 import { GeminiService } from "./GeminiService";
 import { OntologyService } from "./OntologyService";
-import { App, TFile, TFolder, normalizePath } from "obsidian";
-import { logger } from "../utils/logger";
-import { VaultIntelligenceSettings } from "../settings/types";
-import { GardenerStateService } from "./GardenerStateService";
-import { SEARCH_CONSTANTS, GARDENER_CONSTANTS } from "../constants";
 
 /**
  * Zod Schema for a single refactoring action.
  */
 export const RefactoringActionSchema = z.object({
-    filePath: z.string(),
     action: z.enum([GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS]),
-    description: z.string(),
     changes: z.object({
         field: z.string(),
-        oldValue: z.unknown().optional(),
-        newValue: z.unknown()
+        newValue: z.unknown(),
+        oldValue: z.unknown().optional()
     }).array(),
+    description: z.string(),
+    filePath: z.string(),
     rationale: z.string()
 });
 
@@ -26,12 +27,12 @@ export const RefactoringActionSchema = z.object({
  * Zod Schema for the entire Gardener Plan.
  */
 export const GardenerPlanSchema = z.object({
-    date: z.string(),
-    summary: z.string(),
     actions: RefactoringActionSchema.array(),
-    newTopicDefinitions: z.array(z.object({ topicLink: z.string(), definition: z.string() })).optional(),
+    date: z.string(),
+    error: z.string().optional(),
     loading: z.boolean().optional(),
-    error: z.string().optional()
+    newTopicDefinitions: z.array(z.object({ definition: z.string(), topicLink: z.string() })).optional(),
+    summary: z.string()
 });
 
 export type GardenerPlan = z.infer<typeof GardenerPlanSchema>;
@@ -196,52 +197,52 @@ ${JSON.stringify(context, null, 2)}
 `.trim();
 
             const jsonPlan = await this.gemini.generateStructuredContent(prompt, {
-                type: "object",
                 properties: {
-                    date: { type: "string" },
-                    summary: { type: "string" },
                     actions: {
-                        type: "array",
                         items: {
-                            type: "object",
                             properties: {
-                                filePath: { type: "string" },
-                                action: { type: "string", enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS] },
-                                description: { type: "string" },
+                                action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS], type: "string" },
                                 changes: {
-                                    type: "array",
                                     items: {
-                                        type: "object",
                                         properties: {
                                             field: { type: "string" },
                                             newValue: {
                                                 oneOf: [
                                                     { type: "string" },
-                                                    { type: "array", items: { type: "string" } }
+                                                    { items: { type: "string" }, type: "array" }
                                                 ]
                                             }
                                         },
-                                        required: ["field", "newValue"]
-                                    }
+                                        required: ["field", "newValue"],
+                                        type: "object"
+                                    },
+                                    type: "array"
                                 },
+                                description: { type: "string" },
+                                filePath: { type: "string" },
                                 rationale: { type: "string" }
                             },
-                            required: ["filePath", "action", "description", "changes", "rationale"]
-                        }
+                            required: ["filePath", "action", "description", "changes", "rationale"],
+                            type: "object"
+                        },
+                        type: "array"
                     },
+                    date: { type: "string" },
                     newTopicDefinitions: {
-                        type: "array",
                         items: {
-                            type: "object",
                             properties: {
-                                topicLink: { type: "string" },
-                                definition: { type: "string" }
+                                definition: { type: "string" },
+                                topicLink: { type: "string" }
                             },
-                            required: ["topicLink", "definition"]
-                        }
-                    }
+                            required: ["topicLink", "definition"],
+                            type: "object"
+                        },
+                        type: "array"
+                    },
+                    summary: { type: "string" }
                 },
-                required: ["date", "summary", "actions"]
+                required: ["date", "summary", "actions"],
+                type: "object"
             }, {
                 model: this.settings.gardenerModel,
                 systemInstruction: systemInstruction
@@ -292,10 +293,10 @@ ${JSON.stringify(parsedPlan, null, 2)}
 
         } catch (error) {
             const errorObj = {
-                date: new Date().toISOString().split('T')[0],
-                summary: "Gardener analysis failed.",
                 actions: [],
-                error: error instanceof Error ? error.message : String(error)
+                date: new Date().toISOString().split('T')[0],
+                error: error instanceof Error ? error.message : String(error),
+                summary: "Gardener analysis failed."
             };
 
             const errorContent = `

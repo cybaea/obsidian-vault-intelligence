@@ -26,15 +26,16 @@ To start the development build in watch mode:
 ```bash
 npm run dev
 ```
-*This uses `esbuild` to compile changes instantly.*
+
+*This uses `esbuild` to compile changes instantly._
 
 ### Hot reload (recommended)
 
 To test your changes in Obsidian:
 
-1.  Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in a test vault.
-2.  Symlink this repository into your vault's `.obsidian/plugins/` directory.
-3.  Add an empty `.hotreload` file to the root of this repo.
+1. Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in a test vault.
+2. Symlink this repository into your vault's `.obsidian/plugins/` directory.
+3. Add an empty `.hotreload` file to the root of this repo.
 
 ## Linting and testing
 
@@ -47,7 +48,8 @@ We use **ESLint** with a flat config (`eslint.config.mts`).
 ```bash
 npm run lint
 ```
-*Fixes can often be applied automatically with `--fix`.*
+
+*Fixes can often be applied automatically with `--fix`._
 
 ### Testing
 
@@ -74,6 +76,7 @@ npm run test:ui
 We use a "Zero Memory" automated workflow. **Do not manually tag releases.**
 
 To prepare a release:
+
 ```bash
 npm run release:prep <patch|minor|major>
 ```
@@ -83,6 +86,7 @@ See [devs/RELEASE_WORKFLOW.md](devs/RELEASE_WORKFLOW.md) for the complete guide.
 ## Agentic architecture
 
 This plugin uses sophisticated agent patterns. If you are modifying the agents (Gardener, Researcher, etc.), please refer to:
+
 - `AGENTS.md` (Root)
 - `devs/ARCHITECTURE.md`
 

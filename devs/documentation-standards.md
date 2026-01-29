@@ -149,4 +149,3 @@ Focus on How-To Guides and Explanation. Power users stay because they find new w
 **When writing for Self-Service (Objective 3):**
 
 Focus on Reference and Error Handling. When a user gets an error, they will Google the error message. Your Reference docs must contain that error message and the solution.
-

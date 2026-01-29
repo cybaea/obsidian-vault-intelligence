@@ -31,15 +31,16 @@ This means you are hitting Google's rate limit (Tokens Per Minute or Requests Pe
 ### "The agent answers from general knowledge, not my notes."
 
 * **Cause:** The agent might feel "confident" enough to answer without checking your vault.
-* **Fix:** Be explicit. Ask *"Based on my notes..."* or use the `@` mention feature to point it to specific folders.
+* **Fix:** Be explicit. Ask _"Based on my notes..."_ or use the `@` mention feature to point it to specific folders.
 
 ---
 
 ## Debugging
 
 If you are reporting a bug on GitHub, please provide logs:
-1.  Go to **Settings > Advanced**.
-2.  Set **Log level** to `Debug`.
-3.  Open the Developer Console (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Opt+I` on Mac).
-4.  Perform the action that fails.
-5.  Copy the logs starting with `[VaultIntelligence]`.
+
+1. Go to **Settings > Advanced**.
+2. Set **Log level** to `Debug`.
+3. Open the Developer Console (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Opt+I` on Mac).
+4. Perform the action that fails.
+5. Copy the logs starting with `[VaultIntelligence]`.

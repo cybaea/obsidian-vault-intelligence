@@ -1,8 +1,9 @@
 import { Setting, App, Plugin } from "obsidian";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { ModelRegistry } from "../../services/ModelRegistry";
+
 import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
+import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -16,8 +17,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: 'Personalise your research assistant’s intelligence and capabilities. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.RESEARCHER, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.RESEARCHER, target: '_blank' },
+            text: 'View documentation'
         });
     });
 

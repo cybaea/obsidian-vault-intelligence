@@ -1,54 +1,55 @@
 import { App, Platform } from "obsidian";
-import { LogLevel } from "../utils/logger";
-import { IEmbeddingService } from "../services/IEmbeddingService";
+
 import { GRAPH_CONSTANTS } from "../constants";
+import { IEmbeddingService } from "../services/IEmbeddingService";
+import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
-    googleApiKey: string;
-    previousVersion: string;
+    chatModel: string;
+    codeModel: string;
+    contextMaxFiles: number;
+    contextPrimaryThreshold: number;
+    contextStructuralThreshold: number;
+    contextSupportingThreshold: number;
+    contextWindowTokens: number;
+    embeddingDimension: number;
+    embeddingModel: string;
     // New: Provider Selector
     embeddingProvider: EmbeddingProvider;
-    embeddingModel: string;
-    embeddingDimension: number;
-    chatModel: string;
-    gardenerModel: string;
-    groundingModel: string;
-    codeModel: string;
-    enableCodeExecution: boolean;
-    contextWindowTokens: number;
-    indexingDelayMs: number;
-    queueDelayMs: number;
-    minSimilarityScore: number;
-    similarNotesLimit: number;
-    vaultSearchResultsLimit: number;
-    maxAgentSteps: number;
-    systemInstruction: string;
-    gardenerSystemInstruction: string;
-    geminiRetries: number;
-    embeddingThreads: number;
     embeddingSimd: boolean;
-    logLevel: LogLevel;
-    ontologyPath: string;
-    gardenerPlansPath: string;
-    plansRetentionDays: number;
-    gardenerNoteLimit: number;
+    embeddingThreads: number;
+    enableCodeExecution: boolean;
+    excludedFolders: string[];
     gardenerContextBudget: number;
+    gardenerModel: string;
+    gardenerNoteLimit: number;
+    gardenerPlansPath: string;
     gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
-    excludedFolders: string[];
-    modelCacheDurationDays: number;
-    garsSimilarityWeight: number;
-    garsCentralityWeight: number;
+    gardenerSystemInstruction: string;
     garsActivationWeight: number;
+    garsCentralityWeight: number;
+    garsSimilarityWeight: number;
+    geminiRetries: number;
+    googleApiKey: string;
+    groundingModel: string;
+    indexingDelayMs: number;
+    logLevel: LogLevel;
+    maxAgentSteps: number;
+    minSimilarityScore: number;
+    modelCacheDurationDays: number;
+    ontologyPath: string;
+    plansRetentionDays: number;
+    previousVersion: string;
+    queueDelayMs: number;
+    searchCentralityLimit: number;
     searchExpansionSeedsLimit: number;
     searchExpansionThreshold: number;
-    searchCentralityLimit: number;
-    contextPrimaryThreshold: number;
-    contextSupportingThreshold: number;
-    contextStructuralThreshold: number;
-    contextMaxFiles: number;
+    similarNotesLimit: number;
+    systemInstruction: string;
+    vaultSearchResultsLimit: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -104,57 +105,57 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 `.trim();
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
-    googleApiKey: '',
+    chatModel: 'gemini-3-flash-preview',
+    codeModel: 'gemini-3-flash-preview',
+    contextMaxFiles: 100,
+    contextPrimaryThreshold: 0.9,
+    contextStructuralThreshold: 0.35,
+    contextSupportingThreshold: 0.70,
+    contextWindowTokens: 200000,
+    embeddingDimension: 768,
+    embeddingModel: 'gemini-embedding-001',
     // Default to Gemini for now to preserve existing behavior
     embeddingProvider: 'gemini',
-    embeddingModel: 'gemini-embedding-001',
-    embeddingDimension: 768,
-    chatModel: 'gemini-3-flash-preview',
-    gardenerModel: 'gemini-3-flash-preview',
-    groundingModel: 'gemini-2.5-flash-lite',
-    codeModel: 'gemini-3-flash-preview',
-    enableCodeExecution: true,
-    contextWindowTokens: 200000,
-    indexingDelayMs: 5000,
-    queueDelayMs: 100,
-    minSimilarityScore: 0.5,
-    similarNotesLimit: 20,
-    vaultSearchResultsLimit: 25,
-    maxAgentSteps: 5,
-    systemInstruction: DEFAULT_SYSTEM_PROMPT,
-    gardenerSystemInstruction: DEFAULT_GARDENER_SYSTEM_PROMPT,
-    geminiRetries: 10,
-    embeddingThreads: Platform.isMobile ? 1 : 2,
     embeddingSimd: !Platform.isMobile,
-    logLevel: LogLevel.WARN,
-    ontologyPath: 'Ontology',
-    gardenerPlansPath: 'Gardener/Plans',
-    plansRetentionDays: 7,
-    gardenerNoteLimit: 10,
+    embeddingThreads: Platform.isMobile ? 1 : 2,
+    enableCodeExecution: true,
+    excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
+    gardenerModel: 'gemini-3-flash-preview',
+    gardenerNoteLimit: 10,
+    gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
-    excludedFolders: ['Ontology', 'Gardener/Plans'],
-    modelCacheDurationDays: 7,
-    garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
-    garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
+    gardenerSystemInstruction: DEFAULT_GARDENER_SYSTEM_PROMPT,
     garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION,
+    garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
+    garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
+    geminiRetries: 10,
+    googleApiKey: '',
+    groundingModel: 'gemini-2.5-flash-lite',
+    indexingDelayMs: 5000,
+    logLevel: LogLevel.WARN,
+    maxAgentSteps: 5,
+    minSimilarityScore: 0.5,
+    modelCacheDurationDays: 7,
+    ontologyPath: 'Ontology',
+    plansRetentionDays: 7,
+    previousVersion: '0.0.0',
+    queueDelayMs: 100,
+    searchCentralityLimit: 50,
     searchExpansionSeedsLimit: 5,
     searchExpansionThreshold: 0.7,
-    searchCentralityLimit: 50,
-    contextPrimaryThreshold: 0.9,
-    contextSupportingThreshold: 0.70,
-    contextStructuralThreshold: 0.35,
-    contextMaxFiles: 100,
-    previousVersion: '0.0.0'
+    similarNotesLimit: 20,
+    systemInstruction: DEFAULT_SYSTEM_PROMPT,
+    vaultSearchResultsLimit: 25
 };
 
 export interface IVaultIntelligencePlugin {
     app: App;
-    settings: VaultIntelligenceSettings;
     embeddingService: IEmbeddingService;
-    saveSettings(): Promise<void>;
     graphService: {
         scanAll(forceWipe?: boolean): Promise<void>;
     };
+    saveSettings(): Promise<void>;
+    settings: VaultIntelligenceSettings;
 }

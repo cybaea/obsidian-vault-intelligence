@@ -1,10 +1,11 @@
 import { Setting, Notice, App, Plugin, setIcon } from "obsidian";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
-import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
+
+import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
+import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { DOCUMENTATION_URLS } from "../../constants";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -18,8 +19,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
+            text: 'View documentation'
         });
     });
 

@@ -21,6 +21,7 @@ globs: *.md
 - Use 'eg', 'ie' and 'etc' sparingly and when needed note that we have no periods in `ie' and 'eg' and no comma after them, "ie like this".
 - Keep a blank line after block elements such as paragraphs, headers, lists, tables, etc. Examples:
     - Headers as in the blank line after `## Subsection` in the example here:
+
         ```markdown
         Some text from the previous section.
     
@@ -28,7 +29,9 @@ globs: *.md
     
         This is the first line of this subsection.
         ```
+
     - Keep a blank line before the first and after the last list item:
+
         ```markdown
         This is an important list:
         

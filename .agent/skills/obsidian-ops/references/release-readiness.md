@@ -23,8 +23,8 @@ These checks can be performed automatically by reading files and scanning code:
 ### File Requirements
 
 - [ ] **`theme.css`** exists in project root (or compiled from SCSS/Sass)
-  - For themes with build tools: Check that `theme.css` is generated correctly
-  - For simple themes: Check that `theme.css` exists and is valid CSS
+    - For themes with build tools: Check that `theme.css` is generated correctly
+    - For simple themes: Check that `theme.css` exists and is valid CSS
 - [ ] **`manifest.json`** exists in project root with valid JSON structure
 - [ ] **`LICENSE`** file exists in project root
 - [ ] **`README.md`** exists in project root
@@ -41,8 +41,8 @@ These checks can be performed automatically by reading files and scanning code:
 ### Version Consistency
 
 - [ ] **GitHub release tag**: Matches `manifest.json` version exactly (no "v" prefix)
-  - If checking before release: Verify version format is ready
-  - If checking after release: Verify tag matches manifest version
+    - If checking before release: Verify version format is ready
+    - If checking after release: Verify tag matches manifest version
 
 ### CSS Quality Checks
 
@@ -86,13 +86,13 @@ These checks require user input or confirmation:
 - [ ] **Light mode**: Theme includes light mode styles and they work correctly (or theme is dark-only and this is documented)
 - [ ] **Mode switching**: Theme correctly switches between dark and light modes
 - [ ] **All Obsidian views**: Theme tested in:
-  - [ ] Editor (Live Preview, Source Mode, Reading Mode)
-  - [ ] File explorer
-  - [ ] Settings pages
-  - [ ] Command palette
-  - [ ] Graph view
-  - [ ] Canvas view (if applicable)
-  - [ ] Other views used by the theme
+    - [ ] Editor (Live Preview, Source Mode, Reading Mode)
+    - [ ] File explorer
+    - [ ] Settings pages
+    - [ ] Command palette
+    - [ ] Graph view
+    - [ ] Canvas view (if applicable)
+    - [ ] Other views used by the theme
 
 ### GitHub Release
 
@@ -114,12 +114,12 @@ These checks require user input or confirmation:
 
 - [ ] **Read Developer Policies**: User confirms they have read [Developer Policies](https://docs.obsidian.md/Developer+policies)
 - [ ] **No prohibited features**:
-  - [ ] No tracking or analytics
-  - [ ] No remote code execution
-  - [ ] No self-updating mechanisms
+    - [ ] No tracking or analytics
+    - [ ] No remote code execution
+    - [ ] No self-updating mechanisms
 - [ ] **Mandatory disclosures** (if applicable):
-  - [ ] Remote resources: Disclosed in README if using `@import` for external stylesheets
-  - [ ] Network usage: Disclosed in README and settings (if any)
+    - [ ] Remote resources: Disclosed in README if using `@import` for external stylesheets
+    - [ ] Network usage: Disclosed in README and settings (if any)
 - [ ] **Licensing**: LICENSE file present and compliant with any third-party code/licenses
 
 ### Theme Guidelines Adherence
@@ -149,6 +149,7 @@ For reference, key points from [Developer Policies](https://docs.obsidian.md/Dev
 ### Mandatory Disclosures
 
 If your theme requires any of the following, you **must** disclose it clearly:
+
 - Remote resources (external stylesheets via `@import`)
 - Network usage (if any)
 
@@ -207,4 +208,3 @@ When user asks "is my theme ready for release?" or similar:
 - [ux-copy.md](ux-copy.md) - UI text conventions (for theme names and descriptions)
 - [build-workflow.md](build-workflow.md) - Build commands (if using build tools)
 - [performance.md](performance.md) - Performance optimization best practices
-

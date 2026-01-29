@@ -11,5 +11,3 @@ Update frequency: Check Obsidian style guide for updates
 - Use **bold** to indicate literal UI labels. Prefer "select" for interactions.
 - Use arrow notation for navigation: **Settings → Appearance → Themes**.
 - Keep in-app strings short, consistent, and free of jargon.
-
-

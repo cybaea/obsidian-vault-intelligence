@@ -1,9 +1,10 @@
 import { Setting, App, Plugin, TextComponent } from "obsidian";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+
+import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
-import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { SettingsTabContext } from "../SettingsTabContext";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -17,8 +18,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: 'Configure the gardener to maintain your vault’s ontology and hygiene. ' });
         div.createEl('a', {
-            text: 'View documentation',
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' }
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' },
+            text: 'View documentation'
         });
     });
 

@@ -1,7 +1,8 @@
 import { App, TFolder, TFile, normalizePath } from "obsidian";
+
 import { VaultIntelligenceSettings } from "../settings";
-import { logger } from "../utils/logger";
 import { ONTOLOGY_TEMPLATES } from "../templates/ontology-en-GB";
+import { logger } from "../utils/logger";
 
 /**
  * Service to manage the vault's ontology and classification rules.
