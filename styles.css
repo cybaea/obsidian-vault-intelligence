@@ -727,6 +727,24 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     gap: var(--size-4-2);
 }
 
+.release-notes-modal .modal-button-container .sponsor-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    margin-right: auto;
+    border-color: #bf3989 !important;
+    color: #bf3989 !important;
+}
+
+.release-notes-modal .modal-button-container .sponsor-button:hover {
+    background-color: #bf3989 !important;
+    color: white !important;
+}
+
+.release-notes-modal .modal-button-container .sponsor-button svg {
+    color: inherit;
+}
+
 .release-notes-modal .release-notes-container img {
     width: 100%;
     height: auto;

@@ -52,7 +52,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			await this.saveSettings();
 
 			// Trigger fetch/display - fire and forget
-			void this.showReleaseNotes(currentVersion);
+			void (async () => {
+				const sponsorUrl = await this.getSponsorUrl();
+				void this.showReleaseNotes(currentVersion, sponsorUrl);
+			})();
 		}
 
 		// Initialize Logger
@@ -180,8 +183,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.addCommand({
 			id: 'show-release-notes',
 			name: `Show release notes`,
-			callback: () => {
-				void this.showReleaseNotes(this.manifest.version);
+			callback: async () => {
+				const sponsorUrl = await this.getSponsorUrl();
+				void this.showReleaseNotes(this.manifest.version, sponsorUrl);
 			}
 		});
 
@@ -343,7 +347,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		}
 	}
 
-	async showReleaseNotes(version: string) {
+	async showReleaseNotes(version: string, sponsorUrl?: string) {
 		const repo = "cybaea/obsidian-vault-intelligence";
 		const apiUrl = `https://api.github.com/repos/${repo}/releases/tags/${version}`;
 		const webUrl = `https://github.com/${repo}/releases/tag/${version}`;
@@ -354,7 +358,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			if (response.status === 200) {
 				const data = response.json as { body: string };
 				if (data.body) {
-					new ReleaseNotesModal(this.app, this, version, data.body).open();
+					new ReleaseNotesModal(this.app, this, version, data.body, sponsorUrl).open();
 				} else {
 					throw new Error("Release body empty or not found");
 				}
@@ -372,7 +376,27 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 			const fallbackMarkdown = `${errorTitle}\n\n${errorBody}`;
 
-			new ReleaseNotesModal(this.app, this, version, fallbackMarkdown).open();
+			new ReleaseNotesModal(this.app, this, version, fallbackMarkdown, sponsorUrl).open();
 		}
+	}
+
+	private async getSponsorUrl(): Promise<string | undefined> {
+		try {
+			const fundingFile = ".github/FUNDING.yml";
+			if (await this.app.vault.adapter.exists(fundingFile)) {
+				const content = await this.app.vault.adapter.read(fundingFile);
+				const githubLine = content.split("\n").find(line => line.trim().startsWith("github:"));
+				if (githubLine) {
+					const parts = githubLine.split(":");
+					const user = parts[1]?.trim();
+					if (user) {
+						return `https://github.com/sponsors/${user}`;
+					}
+				}
+			}
+		} catch (error) {
+			logger.warn("Failed to read FUNDING.yml dynamically", error);
+		}
+		return undefined;
 	}
 }

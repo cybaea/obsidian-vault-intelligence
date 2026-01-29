@@ -12,11 +12,18 @@ New features are added in the "Unreleased" section.
 ### User features
 
 - **Integrated documentation**: Added direct links to the official VitePress documentation across all settings sections. Each tab now includes section-specific anchors to help users find relevant help articles instantly.
+- **"What's New" splash screen**: A beautiful new walkthrough modal that automatically displays release notes after a plugin update, keeping you informed of the latest capabilities.
+- **"Fetch or Fallback" release notes**: Implemented a resilient fetching system that retrieves rich release notes (including images) directly from the GitHub API, with a graceful fallback to a manual link if you are offline.
+- **Sponsor button**: Added a prominent Sponsor button to the release notes modal, styled with GitHub's signature pink outline and dynamically linked to the project's funding configuration.
+- **"Show release notes" command**: A new command to manually open the release notes modal at any time if you want to revisit the latest changes.
 - **Improved settings visibility**: Refined the placement of documentation links, moving them into subheadings and under section headers for better accessibility and a cleaner UI.
 - **Improved documentation clarity**: Clarified API key storage security and ensured consistent British English usage throughout the configuration guide.
 
 ### Developer features
 
+- **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronises the sponsor link without requiring manual code updates.
+- **Version upgrade tracking**: Added a `previousVersion` field to the plugin settings to reliably detect and trigger update-specific UI workflows.
+- **Responsive walkthrough UI**: Developed a dedicated `ReleaseNotesModal` using Obsidian's `MarkdownRenderer` and future-proofed it with responsive sizing units and native design tokens.
 - **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.
 - **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
 - **Enhanced API documentation**: Fully synchronised the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.

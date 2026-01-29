@@ -305,7 +305,8 @@ export const UI_STRINGS = {
     MODAL_RELEASE_NOTES_TITLE: "What's New in",
     MODAL_RELEASE_NOTES_BUTTON: "Cool!",
     MODAL_RELEASE_NOTES_ERROR_HEADER: "### Update Successful!",
-    MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})"
+    MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})",
+    MODAL_RELEASE_NOTES_SPONSOR: "Sponsor"
 };
 
 const DOCS_BASE = "https://cybaea.github.io/obsidian-vault-intelligence/";
@@ -314,6 +315,7 @@ const DOCS_CONFIG = `${DOCS_BASE}docs/reference/configuration.html`;
 export const DOCUMENTATION_URLS = {
     BASE: DOCS_BASE,
     CONFIGURATION: DOCS_CONFIG,
+    SPONSOR: "https://github.com/sponsors/cybaea",
     SECTIONS: {
         CONNECTION: `${DOCS_CONFIG}#connection`,
         RESEARCHER: `${DOCS_CONFIG}#researcher`,

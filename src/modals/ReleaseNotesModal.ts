@@ -1,16 +1,18 @@
-import { App, Modal, Plugin, MarkdownRenderer, ButtonComponent } from "obsidian";
-import { UI_STRINGS } from "../constants";
+import { App, Modal, Plugin, MarkdownRenderer, ButtonComponent, setIcon } from "obsidian";
+import { UI_STRINGS, DOCUMENTATION_URLS } from "../constants";
 
 export class ReleaseNotesModal extends Modal {
     plugin: Plugin;
     version: string;
     markdownContent: string;
+    sponsorUrl?: string;
 
-    constructor(app: App, plugin: Plugin, version: string, markdownContent: string) {
+    constructor(app: App, plugin: Plugin, version: string, markdownContent: string, sponsorUrl?: string) {
         super(app);
         this.plugin = plugin;
         this.version = version;
         this.markdownContent = markdownContent;
+        this.sponsorUrl = sponsorUrl;
     }
 
     onOpen() {
@@ -39,6 +41,15 @@ export class ReleaseNotesModal extends Modal {
         // Footer / Close
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
 
+        const sponsorUrl = this.sponsorUrl || DOCUMENTATION_URLS.SPONSOR;
+        const sponsorBtn = new ButtonComponent(buttonContainer)
+            .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_SPONSOR)
+            .onClick(() => {
+                window.open(sponsorUrl, "_blank");
+            });
+
+        sponsorBtn.buttonEl.addClass("sponsor-button");
+        setIcon(sponsorBtn.buttonEl, "heart");
 
         new ButtonComponent(buttonContainer)
             .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_BUTTON)
