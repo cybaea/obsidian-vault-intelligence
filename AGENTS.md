@@ -13,7 +13,7 @@
 
 - **Name**: Vault Intelligence (AI-powered Research Agent & Hybrid Search).
 - **Architecture Source of Truth**: Read `devs/ARCHITECTURE.md` before suggesting core changes.
-- **Critical constraints**: 
+- **Critical constraints**:
     - Service-Oriented Architecture (GeminiService, GraphService).
     - No direct vault access in UI Views.
 
@@ -48,7 +48,9 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 ## Available Skills
 
 <!-- SKILLS_TABLE_START -->
+
 <usage>
+
 When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
 
 How to use skills:
