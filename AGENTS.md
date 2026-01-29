@@ -57,7 +57,7 @@ How to use skills:
 - The skill content will load with detailed instructions on how to complete the task
 - Skills are stored locally in ./.agent/skills/ directory
 
-Usage notes:
+**Usage notes**:
 
 - Only use skills listed in <available_skills> below
 - Do not invoke a skill that is already loaded in your context
