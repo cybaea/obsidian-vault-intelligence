@@ -1,4 +1,5 @@
-import { Plugin, WorkspaceLeaf, Menu, Notice } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Menu, Notice, requestUrl } from 'obsidian';
+import { ReleaseNotesModal } from "./modals/ReleaseNotesModal";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GeminiService } from "./services/GeminiService";
 import { SimilarNotesView } from "./views/SimilarNotesView";
@@ -42,6 +43,17 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 */
 	async onload() {
 		await this.loadSettings();
+
+		// Check for upgrade and show release notes
+		const currentVersion = this.manifest.version;
+		if (this.settings.previousVersion !== currentVersion) {
+			// Update setting immediately to prevent loop if fetch fails/crashes
+			this.settings.previousVersion = currentVersion;
+			await this.saveSettings();
+
+			// Trigger fetch/display - fire and forget
+			void this.showReleaseNotes(currentVersion);
+		}
 
 		// Initialize Logger
 		logger.setLevel(this.settings.logLevel);
@@ -162,6 +174,14 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				} catch (error: unknown) {
 					new Notice(`${UI_STRINGS.NOTICE_PURGE_FAILED}${error instanceof Error ? error.message : String(error)}`);
 				}
+			}
+		});
+
+		this.addCommand({
+			id: 'show-release-notes',
+			name: `Show release notes`,
+			callback: () => {
+				void this.showReleaseNotes(this.manifest.version);
 			}
 		});
 
@@ -320,6 +340,39 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (changed) {
 			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);
 			await this.saveData(this.settings);
+		}
+	}
+
+	async showReleaseNotes(version: string) {
+		const repo = "cybaea/obsidian-vault-intelligence";
+		const apiUrl = `https://api.github.com/repos/${repo}/releases/tags/${version}`;
+		const webUrl = `https://github.com/${repo}/releases/tag/${version}`;
+
+		try {
+			const response = await requestUrl({ url: apiUrl });
+
+			if (response.status === 200) {
+				const data = response.json as { body: string };
+				if (data.body) {
+					new ReleaseNotesModal(this.app, this, version, data.body).open();
+				} else {
+					throw new Error("Release body empty or not found");
+				}
+			} else {
+				throw new Error("Release body empty or not found");
+			}
+		} catch (error) {
+			logger.error(`Failed to fetch release notes for v${version}`, error);
+
+			// Fallback content with string formatting
+			const errorTitle = UI_STRINGS.MODAL_RELEASE_NOTES_ERROR_HEADER;
+			const errorBody = UI_STRINGS.MODAL_RELEASE_NOTES_ERROR_BODY
+				.replace("{0}", version)
+				.replace("{1}", webUrl);
+
+			const fallbackMarkdown = `${errorTitle}\n\n${errorBody}`;
+
+			new ReleaseNotesModal(this.app, this, version, fallbackMarkdown).open();
 		}
 	}
 }

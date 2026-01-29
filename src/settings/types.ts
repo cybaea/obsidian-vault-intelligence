@@ -7,6 +7,7 @@ export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
     googleApiKey: string;
+    previousVersion: string;
     // New: Provider Selector
     embeddingProvider: EmbeddingProvider;
     embeddingModel: string;
@@ -144,7 +145,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     contextPrimaryThreshold: 0.9,
     contextSupportingThreshold: 0.70,
     contextStructuralThreshold: 0.35,
-    contextMaxFiles: 100
+    contextMaxFiles: 100,
+    previousVersion: '0.0.0'
 };
 
 export interface IVaultIntelligencePlugin {

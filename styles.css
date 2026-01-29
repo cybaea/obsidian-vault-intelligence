@@ -700,3 +700,18 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     0% { background-color: var(--text-muted); }
     50%, 100% { background-color: var(--text-accent); }
 }
+
+/* Release Notes Modal Styles */
+.release-notes-modal .release-notes-container {
+    padding: 1em;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-m);
+    margin-bottom: 1em;
+}
+
+.release-notes-modal .modal-button-container {
+    display: flex;
+    justify-content: flex-end;
+}
