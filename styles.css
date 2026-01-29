@@ -626,6 +626,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 .vi-settings-tab.is-active {
     display: block;
 }
+
 /* --- Settings Banner --- */
 .vi-settings-banner {
     width: 100%;
@@ -658,7 +659,8 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     display: flex;
     align-items: center;
     gap: 4px;
-    background-color: transparent; /* Or match message style */
+    background-color: transparent;
+    /* Or match message style */
     padding: 5px 10px;
 }
 
@@ -674,7 +676,8 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     margin-left: 10px;
 }
 
-.thinking-dots::before, .thinking-dots::after {
+.thinking-dots::before,
+.thinking-dots::after {
     content: '';
     display: inline-block;
     position: absolute;
@@ -697,21 +700,39 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 }
 
 @keyframes dot-flashing {
-    0% { background-color: var(--text-muted); }
-    50%, 100% { background-color: var(--text-accent); }
+    0% {
+        background-color: var(--text-muted);
+    }
+
+    50%,
+    100% {
+        background-color: var(--text-accent);
+    }
 }
 
 /* Release Notes Modal Styles */
 .release-notes-modal .release-notes-container {
-    padding: 1em;
-    max-height: 400px;
+    padding: var(--size-4-4);
+    max-height: 60vh;
     overflow-y: auto;
     background-color: var(--background-secondary);
     border-radius: var(--radius-m);
-    margin-bottom: 1em;
+    margin-bottom: var(--size-4-4);
+    border: 1px solid var(--background-modifier-border);
 }
 
 .release-notes-modal .modal-button-container {
     display: flex;
     justify-content: flex-end;
+    gap: var(--size-4-2);
+}
+
+.release-notes-modal .release-notes-container img {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-s);
+    display: block;
+    margin: var(--size-4-4) auto;
 }
