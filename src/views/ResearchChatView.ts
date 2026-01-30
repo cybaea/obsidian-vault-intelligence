@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon, DropdownComponent, ToggleComponent } from "obsidian";
 
 import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
@@ -6,6 +6,7 @@ import { AgentService, ChatMessage } from "../services/AgentService";
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
 import { IEmbeddingService } from "../services/IEmbeddingService"; // Import Interface
+import { ModelRegistry } from "../services/ModelRegistry";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
@@ -16,6 +17,8 @@ export class ResearchChatView extends ItemView {
     agent: AgentService;
     private messages: ChatMessage[] = [];
     private isThinking = false;
+    private temporaryModelId: string | null = null;
+    private temporaryCodeExecution: boolean | null = null;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -62,14 +65,61 @@ export class ResearchChatView extends ItemView {
         container.addClass("research-chat-view");
 
         const header = container.createDiv({ cls: "chat-header" });
-        header.createEl("h4", { cls: "chat-title", text: "Researcher: chat with vault" });
+        header.createEl("h4", { cls: "chat-title", text: "Researcher" });
 
-        new ButtonComponent(header)
+        const controls = header.createDiv({ cls: "chat-controls" });
+
+        // Computational Solver Toggle
+        const solverContainer = controls.createDiv({ cls: "control-item" });
+        solverContainer.createSpan({ cls: "control-label", text: "Code" });
+        new ToggleComponent(solverContainer)
+            .setValue(this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution)
+            .setTooltip("Enable computational solver for this chat")
+            .onChange((val) => {
+                this.temporaryCodeExecution = val;
+            });
+
+        // Model Dropdown
+        const modelContainer = controls.createDiv({ cls: "control-item" });
+        const modelDropdown = new DropdownComponent(modelContainer);
+        const chatModels = ModelRegistry.getChatModels();
+        for (const m of chatModels) {
+            modelDropdown.addOption(m.id, m.label);
+        }
+        modelDropdown.addOption("custom", "Custom...");
+
+        const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
+        const isPreset = chatModels.some(m => m.id === currentModel);
+        modelDropdown.setValue(isPreset ? currentModel : "custom");
+
+        modelDropdown.onChange((val) => {
+            if (val === "custom") {
+                new Notice("Custom models should be configured in settings.");
+                modelDropdown.setValue(this.temporaryModelId ?? (isPreset ? currentModel : "custom"));
+                return;
+            }
+            this.temporaryModelId = val;
+        });
+
+        // Reset Button
+        new ButtonComponent(controls)
+            .setIcon("rotate-ccw")
+            .setTooltip("Reset to default settings")
+            .onClick(() => {
+                this.temporaryModelId = null;
+                this.temporaryCodeExecution = null;
+                void this.onOpen(); // Re-render header
+                new Notice("Research settings reset to defaults");
+            });
+
+        new ButtonComponent(controls)
             .setIcon("trash")
             .setTooltip("Clear chat")
             .onClick(() => {
                 this.messages = [];
-                void this.renderMessages();
+                this.temporaryModelId = null;
+                this.temporaryCodeExecution = null;
+                void this.onOpen();
                 new Notice("Chat cleared");
             });
 
@@ -219,7 +269,10 @@ export class ResearchChatView extends ItemView {
         try {
             this.isThinking = true;
             void this.renderMessages();
-            const response = await this.agent.chat(this.messages, text, files);
+            const response = await this.agent.chat(this.messages, text, files, {
+                enableCodeExecution: this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution,
+                modelId: this.temporaryModelId ?? this.plugin.settings.chatModel
+            });
             this.isThinking = false;
             this.addMessage("model", response.text, undefined, response.files);
         } catch (e: unknown) {

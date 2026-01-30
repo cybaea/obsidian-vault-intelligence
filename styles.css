@@ -7,10 +7,29 @@
 }
 
 .research-chat-view .chat-header {
-    padding: 10px;
+    padding: 8px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.research-chat-view .chat-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-3);
+}
+
+.research-chat-view .control-item {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+.research-chat-view .control-label {
+    white-space: nowrap;
 }
 
 .research-chat-view .chat-title {

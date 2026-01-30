@@ -53,9 +53,13 @@ export class AgentService {
     /**
      * Constructs the list of tools available to the agent.
      * Includes vault search, URL reading, Google search, and optionally code execution.
+     * @param enableCodeExecution - Optional override for code execution enablement.
      * @returns Array of Tool definitions compatible with Google GenAI.
      */
-    private getTools(): Tool[] {
+    private getTools(enableCodeExecution?: boolean): Tool[] {
+        // Use override if provided, otherwise fallback to settings
+        const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
+
         // 1. Vault Search
         const vaultSearch: FunctionDeclaration = {
             description: "Search the user's personal Obsidian notes (vault) for information and context.",
@@ -118,7 +122,7 @@ export class AgentService {
         const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch, graphExplorer];
 
         // 5. Computational Solver (Conditional)
-        if (this.settings.enableCodeExecution && this.settings.codeModel.trim().length > 0) {
+        if (isCodeEnabled && this.settings.codeModel.trim().length > 0) {
             const computationalSolver: FunctionDeclaration = {
                 description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
                 name: AGENT_CONSTANTS.TOOLS.CALCULATOR,
@@ -146,12 +150,14 @@ export class AgentService {
      * @param name - The name/ID of the tool (function) to execute.
      * @param args - The arguments provided by the AI model for the tool.
      * @param usedFiles - A set to track files that were read during tool execution for context.
+     * @param enableCodeExecution - Optional override for code execution enablement.
      * @returns A result object (JSON) to be returned to the model.
      * @private
      */
-    private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>): Promise<Record<string, unknown>> {
+    private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>, enableCodeExecution?: boolean): Promise<Record<string, unknown>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
+        const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
         let result: Record<string, unknown>;
 
         if (name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH) {
@@ -226,8 +232,8 @@ export class AgentService {
         } else if (name === AGENT_CONSTANTS.TOOLS.CALCULATOR) {
             try {
                 // Double check settings at runtime
-                if (!this.settings.enableCodeExecution) {
-                    result = { error: "Code execution tool is disabled in settings." };
+                if (!isCodeEnabled) {
+                    result = { error: "Code execution tool is disabled." };
                 } else {
                     const task = args.task as string;
                     logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
@@ -253,9 +259,15 @@ export class AgentService {
      * @param history - The chat history.
      * @param message - The user's latest message.
      * @param contextFiles - Optional list of files to inject into context (e.g. active file).
+     * @param options - Optional overrides for model and capabilities.
      * @returns The final response from the agent.
      */
-    public async chat(history: ChatMessage[], message: string, contextFiles: TFile[] = []): Promise<{ text: string; files: string[] }> {
+    public async chat(
+        history: ChatMessage[],
+        message: string,
+        contextFiles: TFile[] = [],
+        options: { modelId?: string; enableCodeExecution?: boolean } = {}
+    ): Promise<{ text: string; files: string[] }> {
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
@@ -311,7 +323,7 @@ export class AgentService {
         // Replace {{DATE}} placeholder
         const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
 
-        const chat = await this.gemini.startChat(formattedHistory, this.getTools(), systemInstruction);
+        const chat = await this.gemini.startChat(formattedHistory, this.getTools(options.enableCodeExecution), systemInstruction, options.modelId);
 
         try {
             let result = await chat.sendMessage({ message: message });
@@ -327,7 +339,7 @@ export class AgentService {
                         if (!call.name) return null;
 
                         const args = call.args || {};
-                        const functionResponse = await this.executeFunction(call.name, args, usedFiles);
+                        const functionResponse = await this.executeFunction(call.name, args, usedFiles, options.enableCodeExecution);
 
                         return {
                             functionResponse: {
