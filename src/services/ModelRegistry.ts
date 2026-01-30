@@ -48,7 +48,7 @@ interface GeminiApiResponse {
 export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
         description: 'Fast, efficient, and great for most tasks.',
-        id: 'gemini-3-flash-preview',
+        id: 'gemini-flash-latest',
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
@@ -56,7 +56,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     },
     {
         description: 'Maximum intelligence for complex reasoning.',
-        id: 'gemini-3-pro-preview',
+        id: 'gemini-pro-latest',
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         label: 'Gemini 3 Pro',
         provider: 'gemini'
