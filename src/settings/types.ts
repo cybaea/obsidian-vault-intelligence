@@ -105,8 +105,8 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 `.trim();
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
-    chatModel: 'gemini-3-flash-preview',
-    codeModel: 'gemini-3-flash-preview',
+    chatModel: 'gemini-flash-latest',
+    codeModel: 'gemini-flash-latest',
     contextMaxFiles: 100,
     contextPrimaryThreshold: 0.9,
     contextStructuralThreshold: 0.35,
@@ -121,7 +121,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableCodeExecution: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
-    gardenerModel: 'gemini-3-flash-preview',
+    gardenerModel: 'gemini-flash-latest',
     gardenerNoteLimit: 10,
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckHours: 24,
@@ -132,7 +132,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
     geminiRetries: 10,
     googleApiKey: '',
-    groundingModel: 'gemini-2.5-flash-lite',
+    groundingModel: 'gemini-flash-lite-latest',
     indexingDelayMs: 5000,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,

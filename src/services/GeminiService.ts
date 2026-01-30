@@ -171,9 +171,10 @@ export class GeminiService {
      * @param history - The conversation history.
      * @param tools - Optional list of tools to enable for this session.
      * @param systemInstruction - System prompt.
+     * @param modelId - Optional model ID override.
      * @returns A GenAI ChatSession object.
      */
-    public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "") {
+    public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "", modelId?: string) {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -183,7 +184,7 @@ export class GeminiService {
                     tools: tools
                 },
                 history: history,
-                model: this.settings.chatModel
+                model: modelId || this.settings.chatModel
             });
             return await Promise.resolve(chat);
         });
