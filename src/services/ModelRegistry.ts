@@ -65,10 +65,10 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
 
 export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
     {
-        id: 'gemini-2.5-flash-lite',
+        id: 'gemini-flash-lite-latest',
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
-        label: 'Gemini 2.5 Flash Lite (Default)',
+        label: 'Latest release of Gemini Flash-Lite (Default)',
         provider: 'gemini'
     }
 ];
