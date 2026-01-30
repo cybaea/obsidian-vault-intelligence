@@ -12,6 +12,11 @@ New features are added in the "Unreleased" section.
 ### User features
 
 - **Integrated documentation**: Added direct links to the official VitePress documentation across all settings sections. Each tab now includes section-specific anchors to help users find relevant help articles instantly.
+- **Transient model switching**: Added a model selection dropdown to the Research Chat header, allowing you to temporarily switch models for specific queries without changing global settings.
+- **On-the-fly capability toggling**: Added a toggle to the Research Chat header to enable or disable the computational solver for the current session.
+- **Session reset**: New reset button in the Research Chat header to quickly revert session settings to your global defaults.
+- **Responsive chat header**: The Research Chat controls now wrap gracefully to ensure usability even in narrow sidebars.
+- **Stable model aliases**: Updated all default model IDs to use the newest latest aliases (ie gemini-flash-latest), ensuring the plugin always points to the frontier versions.
 - **"What's New" splash screen**: A beautiful new walkthrough modal that automatically displays release notes after a plugin update, keeping you informed of the latest capabilities.
 - **"Fetch or Fallback" release notes**: Implemented a resilient fetching system that retrieves rich release notes (including images) directly from the GitHub API, with a graceful fallback to a manual link if you are offline.
 - **Sponsor button**: Added a prominent Sponsor button to the release notes modal, styled with GitHub's signature pink outline and dynamically linked to the project's funding configuration.
@@ -22,7 +27,9 @@ New features are added in the "Unreleased" section.
 ### Developer features
 
 - **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronises the sponsor link without requiring manual code updates.
-- **Version upgrade tracking**: Added a `previousVersion` field to the plugin settings to reliably detect and trigger update-specific UI workflows.
+- **Per-request agent overrides**: Refactored the AgentService and GeminiService to support optional overrides for model selection and tool enablement inside the Research Chat.
+- **Interactive model ID tooltips**: Restored tooltips in the Research Chat model selection dropdown to match the behavior in the main settings.
+- **Version upgrade tracking**: Added a previousVersion field to the plugin settings to reliably detect and trigger update-specific UI workflows.
 - **Responsive walkthrough UI**: Developed a dedicated `ReleaseNotesModal` using Obsidian's `MarkdownRenderer` and future-proofed it with responsive sizing units and native design tokens.
 - **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.
 - **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
