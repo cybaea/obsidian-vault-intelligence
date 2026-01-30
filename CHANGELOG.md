@@ -28,6 +28,9 @@ New features are added in the "Unreleased" section.
 - **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
 - **Enhanced API documentation**: Fully synchronised the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.
 - **Improved JSDoc coverage**: Added detailed inline documentation for core lifecycle methods and service orchestrators to improve developer experience and code readability.
+- **Expanded linting suite**: Integrated `stylelint`, `secretlint`, and `markdownlint-cli2` into the CI workflow to ensure high standards for CSS, security, and documentation.
+- **Code organisation enforcement**: Added `eslint-plugin-perfectionist` to maintain consistent import sorting and object key ordering.
+- **Robust utility refactoring**: Improved the `isSafeUrl` utility with stricter domain validation to prevent potential security regressions in external requests.
 
 ## [4.2.0] - 2026-01-27
 
