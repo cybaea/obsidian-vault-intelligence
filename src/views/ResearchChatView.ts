@@ -88,6 +88,12 @@ export class ResearchChatView extends ItemView {
         }
         modelDropdown.addOption("custom", "Custom...");
 
+        // Add tooltips to each option (model ID)
+        for (let i = 0; i < modelDropdown.selectEl.options.length; i++) {
+            const opt = modelDropdown.selectEl.options.item(i);
+            if (opt && opt.value !== "custom") opt.title = opt.value;
+        }
+
         const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
         const isPreset = chatModels.some(m => m.id === currentModel);
         modelDropdown.setValue(isPreset ? currentModel : "custom");
