@@ -18,7 +18,7 @@ export class ResearchChatView extends ItemView {
     private messages: ChatMessage[] = [];
     private isThinking = false;
     private temporaryModelId: string | null = null;
-    private temporaryCodeExecution: boolean | null = null;
+    private temporaryWriteAccess: boolean | null = null;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -69,14 +69,14 @@ export class ResearchChatView extends ItemView {
 
         const controls = header.createDiv({ cls: "chat-controls" });
 
-        // Computational Solver Toggle
-        const solverContainer = controls.createDiv({ cls: "control-item" });
-        solverContainer.createSpan({ cls: "control-label", text: "Code" });
-        new ToggleComponent(solverContainer)
-            .setValue(this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution)
-            .setTooltip("Enable computational solver for this chat")
+        // Write Access Toggle
+        const writeContainer = controls.createDiv({ cls: "control-item" });
+        writeContainer.createSpan({ cls: "control-label", text: "Write" });
+        new ToggleComponent(writeContainer)
+            .setValue(this.temporaryWriteAccess ?? this.plugin.settings.enableAgentWriteAccess)
+            .setTooltip("Enable agent write access for this chat")
             .onChange((val) => {
-                this.temporaryCodeExecution = val;
+                this.temporaryWriteAccess = val;
             });
 
         // Model Dropdown
@@ -113,7 +113,7 @@ export class ResearchChatView extends ItemView {
             .setTooltip("Reset to default settings")
             .onClick(() => {
                 this.temporaryModelId = null;
-                this.temporaryCodeExecution = null;
+                this.temporaryWriteAccess = null;
                 void this.onOpen(); // Re-render header
                 new Notice("Research settings reset to defaults");
             });
@@ -124,7 +124,7 @@ export class ResearchChatView extends ItemView {
             .onClick(() => {
                 this.messages = [];
                 this.temporaryModelId = null;
-                this.temporaryCodeExecution = null;
+                this.temporaryWriteAccess = null;
                 void this.onOpen();
                 new Notice("Chat cleared");
             });
@@ -276,7 +276,8 @@ export class ResearchChatView extends ItemView {
             this.isThinking = true;
             void this.renderMessages();
             const response = await this.agent.chat(this.messages, text, files, {
-                enableCodeExecution: this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution,
+                enableAgentWriteAccess: this.temporaryWriteAccess ?? undefined,
+                enableCodeExecution: this.plugin.settings.enableCodeExecution,
                 modelId: this.temporaryModelId ?? this.plugin.settings.chatModel
             });
             this.isThinking = false;

@@ -229,6 +229,19 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 })();
             }));
 
+    new Setting(containerEl)
+        .setName('Enable agent write access')
+        .setDesc('Allows the agent to create and update notes in your vault. Always requires manual confirmation.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableAgentWriteAccess)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.enableAgentWriteAccess = value;
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
+            }));
+
     if (plugin.settings.enableCodeExecution) {
         const codeModelCurrent = plugin.settings.codeModel;
         const isCodePreset = chatModels.some(m => m.id === codeModelCurrent);

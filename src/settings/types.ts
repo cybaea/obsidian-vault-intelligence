@@ -20,6 +20,7 @@ export interface VaultIntelligenceSettings {
     embeddingProvider: EmbeddingProvider;
     embeddingSimd: boolean;
     embeddingThreads: number;
+    enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
@@ -70,6 +71,13 @@ Core Guidelines:
    - If the user asks "what is this?", they are referring to the currently open notes.
 5. **Efficiency**: Aim to solve the user's request with as few tool calls as possible. Use parallel tool calling for independent searches. If the answer is clear, stop early.
 6. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
+7. **Strict Metadata Policy**:
+   - **NO FRONTMATTER**: Do NOT generate YAML frontmatter (content between --- delimiters) for any reason.
+   - **Body Only**: Generate ONLY the Markdown body content. Use a single H1 header (# Title) at the top instead of metadata titles.
+8. **Vault Writing Rules**:
+   - **Check First**: Before creating a note, check if a similar one exists using 'vault_search'.
+   - **File Extensions**: Always append .md to file paths.
+   - **Safety**: Do not overwrite existing notes unless explicitly instructed to refactor them. Prefer appending.
 `.trim();
 
 const DEFAULT_GARDENER_SYSTEM_PROMPT = `
@@ -118,6 +126,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingProvider: 'gemini',
     embeddingSimd: !Platform.isMobile,
     embeddingThreads: Platform.isMobile ? 1 : 2,
+    enableAgentWriteAccess: false,
     enableCodeExecution: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,

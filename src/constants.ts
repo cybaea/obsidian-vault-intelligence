@@ -232,8 +232,14 @@ export const VIEW_TYPES = {
 export const AGENT_CONSTANTS = {
     TOOLS: {
         CALCULATOR: "computational_solver",
+        CREATE_FOLDER: "create_folder",
+        CREATE_NOTE: "create_note",
         GET_CONNECTED_NOTES: "get_connected_notes",
         GOOGLE_SEARCH: "google_search",
+        LIST_FOLDER: "list_folder",
+        READ_NOTE: "read_note",
+        RENAME_NOTE: "rename_note",
+        UPDATE_NOTE: "update_note",
         URL_READER: "read_url",
         VAULT_SEARCH: "vault_search"
     }
