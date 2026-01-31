@@ -1,4 +1,4 @@
-import { App, Modal, ButtonComponent, MarkdownRenderer, TextComponent } from "obsidian";
+import { App, Modal, ButtonComponent, MarkdownRenderer, TextComponent, Component } from "obsidian";
 
 import { FolderSuggest } from "../views/FolderSuggest";
 
@@ -91,8 +91,7 @@ export class ToolConfirmationModal extends Modal {
                 ? this.details.content.substring(0, 2000) + "\n\n... (truncated)"
                 : this.details.content;
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- MarkdownRenderer requires a Component; this.app.workspace.activeLeaf?.view is used as a fallback but needs casting due to deprecated/unsafe access in this context.
-            void MarkdownRenderer.render(this.app, previewText, previewContainer, "", (this.app.workspace as any).activeLeaf?.view);
+            void MarkdownRenderer.render(this.app, previewText, previewContainer, "", this as unknown as Component);
         }
 
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });

@@ -70,7 +70,7 @@ export class GraphService {
                 embeddingDimension: this.settings.embeddingDimension,
                 embeddingModel: this.settings.embeddingModel,
                 googleApiKey: this.settings.googleApiKey,
-                indexingDelayMs: this.settings.indexingDelayMs || 2000,
+                indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
                 minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
                 ontologyPath: this.settings.ontologyPath
             };
@@ -466,7 +466,7 @@ export class GraphService {
                     await this.api.updateFile(file.path, content, mtime, size, basename);
                     count++;
 
-                    if (count % 50 === 0) {
+                    if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
                         logger.debug(`[GraphService] Processed ${count} files...`);
                     }
                 } catch (error) {
