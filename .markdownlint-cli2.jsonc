@@ -28,6 +28,7 @@
         ".tmp",
         "README_DOC.md",
         "AGENTS.md",
-        ".agent/**"
+        ".agent/**",
+        "releases"
     ]
 }
