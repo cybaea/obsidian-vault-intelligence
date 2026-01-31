@@ -4,7 +4,7 @@ I am excited to share **Vault Intelligence**, a plugin that turns your static no
 
 ## What is Vault Intelligence?
 
-Vault Intelligence allows you to chat with your vault using Google's Gemini models. Unlike generic chatbots, the **Researcher** agent is grounded in your actual files. It doesn't just answer questions; it cites your work, linking you directly to the paragraphs where your ideas live.
+Vault Intelligence turns your Obsidian vault from a passive archive into an active partner. It connects the dots between your ideas, finding relationships and insights that you might have missed. Unlike generic chatbots, the **Researcher** agent lives inside your notes, citing your specific files and helping you build on your own groundwork.
 
 ![The Obsidian Sidebar highlighting the Vault Intelligence brain circuit icon](https://raw.githubusercontent.com/cybaea/obsidian-vault-intelligence/main/public/images/screenshots/obsidian-sidebar-icon.png)
 
@@ -30,7 +30,7 @@ It has search grounding, so it can verify your information with Google Search. F
 
 ### 2. The Gardener: Scalable Structure
 
-The Gardener agent helps keep your vault tidy. It uses sophisticated cloud models to suggest the best ontology for your notes, ensuring your structure scales as your knowledge grows, while keeping you firmly in control.
+The Gardener agent helps keep your vault tidy. It uses advanced reasoning to suggest the best ontology for your notes, ensuring your structure scales as your knowledge grows, while keeping you firmly in control.
 
 ![The Gardener agent planning a vault reorganization](https://raw.githubusercontent.com/cybaea/obsidian-vault-intelligence/main/public/images/screenshots/gardener-plan-ui.png)
 
