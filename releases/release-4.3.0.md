@@ -1,6 +1,6 @@
 # 4.3.0 — The Agentic Update
 
-The Research Assistant has evolved. It is no longer just a passive observer—it can now actively help you organise your vault, create notes, and update files, all while keeping you in complete control with rigorous security checks. We are also breaking down language barriers with native multilingual support and breaking down barriers to entry with a beautiful new "What's New" experience.
+The Research Assistant has evolved. It is no longer just a passive observer—it can now actively help you organise your vault, create notes, and update files, all while keeping you in complete control with rigorous security checks. We are also breaking down language barriers with native multilingual support and breaking down barriers to entry with a new "What's New" experience.
 
 ## New Features
 
@@ -26,7 +26,7 @@ Need a smarter model for just one question? You can now use the new dropdown in 
 
 ### "What's New" walkthrough
 
-We have added a beautiful new walkthrough modal that automatically displays release notes after a plugin update. It features a "Fetch or Fallback" system that retrieves rich content directly from GitHub, ensuring you are always up to speed with the latest capabilities.
+We have added a new walkthrough modal that automatically displays release notes after a plugin update. It features a "Fetch or Fallback" system that retrieves rich content directly from GitHub, ensuring you are always up to speed with the latest capabilities.
 
 ## Improvements & Fixes
 

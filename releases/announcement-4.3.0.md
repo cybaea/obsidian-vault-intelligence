@@ -10,7 +10,6 @@ Vault Intelligence is an AI research agent for Obsidian that connects the dots i
 - Human-in-the-Loop: "Trust but Verify" modals with diff views ensure you approve every single change.
 - Multilingual Support: Chat in French, German, Spanish, or any native language.
 - Transient Models: Switch models on the fly for a single tough question without changing global settings.
-- What's New: A beautiful new in-app changelog to keep you up to speed with every update.
 
 ## Install
 
