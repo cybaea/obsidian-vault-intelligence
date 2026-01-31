@@ -3,7 +3,7 @@ import { Setting, App, Plugin } from "obsidian";
 import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -156,7 +156,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             }))
         .addTextArea(text => {
             text
-                .setPlaceholder(DEFAULT_SETTINGS.systemInstruction!)
+                .setPlaceholder(DEFAULT_SYSTEM_PROMPT)
                 .setValue(plugin.settings.systemInstruction || "")
                 .onChange((value) => {
                     void (async () => {

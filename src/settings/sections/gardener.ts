@@ -4,7 +4,7 @@ import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -141,7 +141,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 })();
             }))
         .addTextArea(text => {
-            text.setPlaceholder(DEFAULT_SETTINGS.gardenerSystemInstruction!)
+            text.setPlaceholder(DEFAULT_GARDENER_SYSTEM_PROMPT)
                 .setValue(plugin.settings.gardenerSystemInstruction || "")
                 .onChange((value) => {
                     void (async () => {
