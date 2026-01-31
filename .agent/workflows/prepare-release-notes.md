@@ -87,6 +87,7 @@ Translate technical changes into compelling narratives. You are not just listing
 4.  **Final Post**: 
     - Gratitude: Pick ONE of {sponsors, users, testers, people who raised bug reports, people who submitted feature requests, people who starred our GitHub repository} and express gratitude. Keep it brief.
     - **Mandatory**: CTA to install via BRAT.
+    - Optional: up to five additional hashtags if relevant. Zero is fine.
 
 ---
 
