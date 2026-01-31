@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [4.3.0] - 2026-01-31
+
+### User features
+
 - **Language support**: The Research Assistant now speaks your language! Choose from a list of presets or enter any custom IETF BCP 47 language code (eg `fr-FR`). The `{{LANGUAGE}}` placeholder in system prompts is automatically replaced with your choice.
 - **Transient model switching**: Added a model selection dropdown to the Research Chat header, allowing you to temporarily switch models for specific queries without changing global settings.
 - **On-the-fly capability toggling**: Added a toggle to the Research Chat header to enable or disable the computational solver for the current session.
