@@ -74,7 +74,7 @@ export class ResearchChatView extends ItemView {
         writeContainer.createSpan({ cls: "control-label", text: "Write" });
         new ToggleComponent(writeContainer)
             .setValue(this.temporaryWriteAccess ?? this.plugin.settings.enableAgentWriteAccess)
-            .setTooltip("Enable agent write access for this chat")
+            .setTooltip("Enable agent write access for this chat. Allows the agent to create and modify notes (requires manual confirmation).")
             .onChange((val) => {
                 this.temporaryWriteAccess = val;
             });
@@ -281,7 +281,7 @@ export class ResearchChatView extends ItemView {
                 modelId: this.temporaryModelId ?? this.plugin.settings.chatModel
             });
             this.isThinking = false;
-            this.addMessage("model", response.text, undefined, response.files);
+            this.addMessage("model", response.text, undefined, response.files, response.createdFiles);
         } catch (e: unknown) {
             this.isThinking = false;
             const message = e instanceof Error ? e.message : String(e);
@@ -290,8 +290,8 @@ export class ResearchChatView extends ItemView {
         }
     }
 
-    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[]) {
-        this.messages.push({ contextFiles, role, text, thought });
+    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[], createdFiles?: string[]) {
+        this.messages.push({ contextFiles, createdFiles, role, text, thought });
         void this.renderMessages();
     }
 
@@ -366,6 +366,45 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv();
             if (msg.role === "model") {
                 await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+
+                if (msg.createdFiles && msg.createdFiles.length > 0) {
+                    const createdDetails = msgDiv.createEl("details", { cls: "context-details created-files" });
+                    createdDetails.createEl("summary", { text: `Created ${msg.createdFiles.length} ${msg.createdFiles.length === 1 ? "document" : "documents"}` });
+
+                    const list = createdDetails.createDiv({ cls: "context-file-list" });
+
+                    for (const filePath of msg.createdFiles) {
+                        const fileItem = list.createDiv({ cls: "context-file-item" });
+
+                        // Icon
+                        const iconSpan = fileItem.createSpan({ cls: "context-file-icon" });
+                        setIcon(iconSpan, "file-plus");
+
+                        // Name
+                        fileItem.createSpan({ cls: "context-file-name", text: filePath });
+
+                        // Click to open
+                        fileItem.addEventListener("click", () => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            if (file instanceof TFile) {
+                                void this.plugin.app.workspace.getLeaf("tab").openFile(file);
+                            } else {
+                                new Notice(`File not found: ${filePath}`);
+                            }
+                        });
+
+                        // Drag to link
+                        fileItem.setAttribute("draggable", "true");
+                        fileItem.addEventListener("dragstart", (e) => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            if (file instanceof TFile && e.dataTransfer) {
+                                e.dataTransfer.setData("text/plain", `[[${file.name}]]`);
+                                e.dataTransfer.setData("obsidian/app-link", `obsidian://open?vault=${encodeURIComponent(this.plugin.app.vault.getName())}&file=${encodeURIComponent(file.path)}`);
+                                e.dataTransfer.effectAllowed = "copyLink";
+                            }
+                        });
+                    }
+                }
 
                 if (msg.contextFiles && msg.contextFiles.length > 0) {
                     const details = msgDiv.createEl("details", { cls: "context-details" });

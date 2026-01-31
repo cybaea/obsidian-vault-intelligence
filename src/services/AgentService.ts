@@ -15,6 +15,7 @@ import { SearchOrchestrator } from "./SearchOrchestrator";
 
 export interface ChatMessage {
     contextFiles?: string[];
+    createdFiles?: string[];
     role: "user" | "model" | "system";
     text: string;
     thought?: string;
@@ -241,7 +242,14 @@ export class AgentService {
      * @returns A result object (JSON) to be returned to the model.
      * @private
      */
-    private async executeFunction(name: string, args: Record<string, unknown>, usedFiles: Set<string>, enableCodeExecution?: boolean, enableAgentWriteAccess?: boolean): Promise<Record<string, unknown>> {
+    private async executeFunction(
+        name: string,
+        args: Record<string, unknown>,
+        usedFiles: Set<string>,
+        createdFiles: Set<string>,
+        enableCodeExecution?: boolean,
+        enableAgentWriteAccess?: boolean
+    ): Promise<Record<string, unknown>> {
         logger.info(`Executing tool ${name} with args:`, args);
 
         const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
@@ -370,15 +378,30 @@ export class AgentService {
             try {
                 let successMessage: string;
                 switch (name) {
-                    case AGENT_CONSTANTS.TOOLS.CREATE_NOTE:
+                    case AGENT_CONSTANTS.TOOLS.CREATE_NOTE: {
                         successMessage = await this.fileTools.createNote(args.path as string, args.content as string);
+                        const normalizedPath = (args.path as string).endsWith(".md") ? (args.path as string) : (args.path as string) + ".md";
+                        createdFiles.add(normalizedPath);
+
+                        // Automatically open new note in a new tab
+                        const file = this.app.vault.getAbstractFileByPath(normalizedPath);
+                        if (file instanceof TFile) {
+                            await this.app.workspace.getLeaf("tab").openFile(file);
+                        }
                         break;
-                    case AGENT_CONSTANTS.TOOLS.UPDATE_NOTE:
+                    }
+                    case AGENT_CONSTANTS.TOOLS.UPDATE_NOTE: {
                         successMessage = await this.fileTools.updateNote(args.path as string, args.content as string, args.mode as "append" | "prepend" | "overwrite");
+                        const normalizedPath = (args.path as string).endsWith(".md") ? (args.path as string) : (args.path as string) + ".md";
+                        createdFiles.add(normalizedPath);
                         break;
-                    case AGENT_CONSTANTS.TOOLS.RENAME_NOTE:
+                    }
+                    case AGENT_CONSTANTS.TOOLS.RENAME_NOTE: {
                         successMessage = await this.fileTools.renameNote(args.path as string, args.newPath as string);
+                        const normalizedPath = (args.newPath as string).endsWith(".md") ? (args.newPath as string) : (args.newPath as string) + ".md";
+                        createdFiles.add(normalizedPath);
                         break;
+                    }
                     case AGENT_CONSTANTS.TOOLS.CREATE_FOLDER:
                         successMessage = await this.fileTools.createFolder(args.path as string);
                         break;
@@ -426,7 +449,7 @@ export class AgentService {
         message: string,
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean } = {}
-    ): Promise<{ text: string; files: string[] }> {
+    ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
@@ -447,8 +470,9 @@ export class AgentService {
             }
         }
 
-        // Initialize used files tracker with explicit context files
+        // Initialize files trackers
         const usedFiles = new Set<string>();
+        const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(f.path));
 
         const formattedHistory = history.map(h => ({
@@ -497,7 +521,7 @@ export class AgentService {
                         if (!call.name) return null;
 
                         const args = call.args || {};
-                        const functionResponse = await this.executeFunction(call.name, args, usedFiles, options.enableCodeExecution, options.enableAgentWriteAccess);
+                        const functionResponse = await this.executeFunction(call.name, args, usedFiles, createdFiles, options.enableCodeExecution, options.enableAgentWriteAccess);
 
                         return {
                             functionResponse: {
@@ -523,12 +547,13 @@ export class AgentService {
             if (result.functionCalls && result.functionCalls.length > 0) {
                 logger.warn("Agent hit max steps limit with pending tool calls.");
                 return {
+                    createdFiles: Array.from(createdFiles),
                     files: Array.from(usedFiles),
                     text: "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting."
                 };
             }
 
-            return { files: Array.from(usedFiles), text: result.text || "" };
+            return { createdFiles: Array.from(createdFiles), files: Array.from(usedFiles), text: result.text || "" };
 
         } catch (e: unknown) {
             logger.error("Error in chat loop", e);
@@ -537,12 +562,17 @@ export class AgentService {
             // Check for common 400 errors (API key, etc)
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
                 return {
+                    createdFiles: [],
                     files: [],
                     text: `I encountered an error connecting to Gemini (Status 400). Please check that your API key is valid and has not expired.\n\nError details: ${errorMessage}`
                 };
             }
 
-            return { files: [], text: `Sorry, I encountered an error processing your request: ${errorMessage}` };
+            return {
+                createdFiles: [],
+                files: [],
+                text: `Sorry, I encountered an error processing your request: ${errorMessage}`
+            };
         }
     }
 }
