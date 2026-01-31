@@ -108,7 +108,9 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >       H --> I[Serialize to MessagePack]
 >     ```
 >
-> 5. **Failure strategy**: Silent fail with logging. No retry queue to prevent infinite loops.
+> 5. **Failure strategy**: Silent fail with logging. 
+>     * **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
+>     * **No Retry**: Failed tasks are logged but not automatically retried to prevent infinite correction loops.
 
 ### 3.2. Search and Answer loop (Data Flow)
 
@@ -230,7 +232,7 @@ The `ModelRegistry` synchronises available Gemini models and ranks them to ensur
     * `UI Events`: Handled by Views.
     * `System Events`: Handled by `VaultManager`.
 
-### 3.4. The "Gardening" cycle (vault hygiene)
+### 3.7. The "Gardening" cycle (vault hygiene)
 
 > #### Gardener plan-act cycle
 >
@@ -369,6 +371,32 @@ export class ModelRegistry {
     public static getEmbeddingModels(provider?: 'gemini' | 'local'): ModelDefinition[];
     public static getGroundingModels(): ModelDefinition[];
     public static calculateAdjustedBudget(current: number, oldId: string, newId: string): number;
+}
+```
+
+#### `GraphService` (Facade)
+
+Manages the semantic graph and vector index worker.
+
+```typescript
+export class GraphService {
+    public initialize(): Promise<void>;
+    public search(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    public keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    public getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    public getNeighbors(path: string, options?: any): Promise<GraphSearchResult[]>;
+    public scanAll(forceWipe?: boolean): Promise<void>;
+    public forceSave(): Promise<void>;
+}
+```
+
+#### `SearchOrchestrator`
+
+Orchestrates hybrid search strategies.
+
+```typescript
+export class SearchOrchestrator {
+    public search(query: string, limit: number): Promise<VaultSearchResult[]>;
 }
 ```
 

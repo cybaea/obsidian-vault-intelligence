@@ -169,6 +169,8 @@ export const WORKER_INDEXER_CONSTANTS = {
 export const GRAPH_CONSTANTS = {
     /** Default directory for index storage */
     DATA_DIR: "data",
+    /** Default indexing delay if not configured (2s) */
+    DEFAULT_INDEXING_DELAY_MS: 2000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
     IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",
@@ -176,7 +178,8 @@ export const GRAPH_CONSTANTS = {
     MAX_EXPANSION_DEPTH: 1,
     /** Max neighbors to fetch per node to avoid state explosion */
     MAX_NEIGHBORS_PER_NODE: 5,
-    /** Default filename for graph state */
+    /** Number of files to process before logging progress during scan */
+    SCAN_LOG_BATCH_SIZE: 50,
     /** Default filename for graph state */
     STATE_FILE: "graph-state.msgpack",
     /** Scoring Weights (alpha, beta, gamma) */
