@@ -31,6 +31,17 @@ The Researcher speaks your language. Examples of how to use this effectively:
 
 <!-- SCREENSHOT: Show the agent replying in a non-English language (e.g. French or Spanish) to a query about an English note. Name: multilingual-reply.png -->
 
+<!-- SCREENSHOT: Show the agent replying in a non-English language (e.g. French or Spanish) to a query about an English note. Name: multilingual-reply.png -->
+
+## Chat Controls
+
+The Research Chat header includes powerful tools for managing your session on the fly:
+
+- **Model Switching**: Use the dropdown in the header to temporarily switch models (eg from Flash to Pro) for a single difficult query without changing your global defaults.
+- **Capability Toggles**: Click the "Code" or "Web" icons to enable/disable tools for the current session. For example, if you don't need the agent to search the web, turn it off to save tokens and speed up responses.
+
+<!-- SCREENSHOT: Close-up of the Research Chat header showing the model dropdown and the tool toggle icons (Code/Web). Name: chat-controls.png -->
+
 ## Effective Querying
 
 The Researcher uses a hybrid search (Keywords + Meaning + Connections).
