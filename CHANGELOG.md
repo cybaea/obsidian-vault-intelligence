@@ -11,6 +11,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+- **Language support**: The Research Assistant now speaks your language! Choose from a list of presets or enter any custom IETF BCP 47 language code (eg `fr-FR`). The `{{LANGUAGE}}` placeholder in system prompts is automatically replaced with your choice.
+- **Improved UI stability**: Fixed a race condition in the chat interface that caused duplicated messages during rapid "Thinking" updates. The "Thinking" indicator now appears instantly for better feedback.
+- **Auto-updating prompts**: System instructions now default to a "managed" state, allowing you to automatically receive improvements to the default persona while still retaining the ability to override them with custom prompts.
+- **"Other" language input**: Selecting "Other" in the language dropdown now immediately reveals a text input for custom language codes, ensuring you can use any language supported by the model.
+- **System prompt reset**: Added a specific "Reset" button for system instructions to easily revert to the default managed prompt.
 - **Transient model switching**: Added a model selection dropdown to the Research Chat header, allowing you to temporarily switch models for specific queries without changing global settings.
 - **On-the-fly capability toggling**: Added a toggle to the Research Chat header to enable or disable the computational solver for the current session.
 - **"What's New" splash screen**: A beautiful new walkthrough modal that automatically displays release notes after a plugin update, keeping you informed of the latest capabilities.

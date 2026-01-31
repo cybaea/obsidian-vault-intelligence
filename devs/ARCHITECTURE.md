@@ -46,7 +46,7 @@ C4Context
 
 * **Indexing and retrieval**: Converting markdown notes into vector embeddings and maintaining a searchable index.
 * **Semantic search**: Finding relevant notes based on meaning, not just keywords.
-* **Agentic reasoning**: An AI agent that uses "tools" (Search, Code, Read) to answer user questions using vault data.
+* **Agentic reasoning**: An AI agent that uses "tools" (Search, Code, Read) to answer user questions using vault data. Supports multilingual system prompts.
 * **Vault hygiene (Gardener)**: A specialized agent that proposes metadata and structural improvements to the vault based on a shared ontology.
 * **Knowledge graph**: Maintaining a formal graph structure of note connections (wikilinks) and metadata.
 * **Ontology management**: Defining and enforcing a consistent vocabulary (concepts, entities) across the vault.

@@ -22,6 +22,15 @@ Type `@` and select a folder path.
 - _Use case:_ "List all open tasks in @Projects/Alpha"
 - _Benefit:_ Adds all notes in that folder to the context (up to the token limit).
 
+## Multilingual Interactions
+
+The Researcher speaks your language. Examples of how to use this effectively:
+
+- **Set your language**: Go to settings and choose your preferred language (eg "French"). The agent will now reply in French by default, even if you ask in English.
+- **Cross-lingual search**: You can ask questions in your native language about notes written in English. The agent will translate and synthesize the answer for you.
+
+<!-- SCREENSHOT: Show the agent replying in a non-English language (e.g. French or Spanish) to a query about an English note. Name: multilingual-reply.png -->
+
 ## Effective Querying
 
 The Researcher uses a hybrid search (Keywords + Meaning + Connections).
