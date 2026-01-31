@@ -19,6 +19,7 @@ export class ResearchChatView extends ItemView {
     private isThinking = false;
     private temporaryModelId: string | null = null;
     private temporaryWriteAccess: boolean | null = null;
+    private lastRenderId = 0;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -198,6 +199,7 @@ export class ResearchChatView extends ItemView {
         this.currentDraft = "";
 
         this.inputComponent.setValue("");
+        this.isThinking = true;
         this.addMessage("user", text);
 
         // Parse @-sign references
@@ -273,8 +275,6 @@ export class ResearchChatView extends ItemView {
         }
 
         try {
-            this.isThinking = true;
-            void this.renderMessages();
             const response = await this.agent.chat(this.messages, text, files, {
                 enableAgentWriteAccess: this.temporaryWriteAccess ?? undefined,
                 enableCodeExecution: this.plugin.settings.enableCodeExecution,
@@ -297,6 +297,8 @@ export class ResearchChatView extends ItemView {
 
     private async renderMessages() {
         if (!this.chatContainer) return;
+
+        const renderId = ++this.lastRenderId;
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
@@ -366,6 +368,7 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv();
             if (msg.role === "model") {
                 await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                if (renderId !== this.lastRenderId) return;
 
                 if (msg.createdFiles && msg.createdFiles.length > 0) {
                     const createdDetails = msgDiv.createEl("details", { cls: "context-details created-files" });
