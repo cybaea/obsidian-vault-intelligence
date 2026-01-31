@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon, DropdownComponent, ToggleComponent } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon, DropdownComponent, ToggleComponent, normalizePath } from "obsidian";
 
 import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
@@ -385,7 +385,7 @@ export class ResearchChatView extends ItemView {
 
                         // Click to open
                         fileItem.addEventListener("click", () => {
-                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            const file = this.plugin.app.vault.getAbstractFileByPath(normalizePath(filePath));
                             if (file instanceof TFile) {
                                 void this.plugin.app.workspace.getLeaf("tab").openFile(file);
                             } else {

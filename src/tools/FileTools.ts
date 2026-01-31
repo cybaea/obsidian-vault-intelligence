@@ -110,7 +110,7 @@ export class FileTools {
     }
 
     async createNote(path: string, content: string): Promise<string> {
-        const normalizedPath = normalizePath(path.endsWith(".md") ? path : path + ".md");
+        const normalizedPath = normalizePath(path.replace(/^\/+/, "") + (path.endsWith(".md") ? "" : ".md"));
         const sanitized = this.sanitizeContent(content);
 
         const existing = this.app.vault.getAbstractFileByPath(normalizedPath);
@@ -126,7 +126,7 @@ export class FileTools {
     }
 
     async updateNote(path: string, content: string, mode: "append" | "prepend" | "overwrite"): Promise<string> {
-        const normalizedPath = normalizePath(path.endsWith(".md") ? path : path + ".md");
+        const normalizedPath = normalizePath(path.replace(/^\/+/, "") + (path.endsWith(".md") ? "" : ".md"));
         const file = this.app.vault.getAbstractFileByPath(normalizedPath);
 
         if (!(file instanceof TFile)) {
@@ -163,8 +163,8 @@ export class FileTools {
     }
 
     async renameNote(path: string, newPath: string): Promise<string> {
-        const normalizedOld = normalizePath(path.endsWith(".md") ? path : path + ".md");
-        const normalizedNew = normalizePath(newPath.endsWith(".md") ? newPath : newPath + ".md");
+        const normalizedOld = normalizePath(path.replace(/^\/+/, "") + (path.endsWith(".md") ? "" : ".md"));
+        const normalizedNew = normalizePath(newPath.replace(/^\/+/, "") + (newPath.endsWith(".md") ? "" : ".md"));
 
         const file = this.app.vault.getAbstractFileByPath(normalizedOld);
         if (!(file instanceof TFile)) {
@@ -182,7 +182,7 @@ export class FileTools {
     }
 
     async createFolder(path: string): Promise<string> {
-        const normalizedPath = normalizePath(path);
+        const normalizedPath = normalizePath(path.replace(/^\/+/, ""));
         const segments = normalizedPath.split("/").filter(s => s.length > 0);
 
         let currentPath = "";
@@ -199,7 +199,7 @@ export class FileTools {
     }
 
     listFolder(folderPath: string): string {
-        const normalizedPath = normalizePath(folderPath);
+        const normalizedPath = normalizePath(folderPath.replace(/^\/+/, ""));
         const folder = this.app.vault.getAbstractFileByPath(normalizedPath);
 
         if (!(folder instanceof TFolder)) {
@@ -213,7 +213,7 @@ export class FileTools {
     }
 
     async readNote(path: string): Promise<string> {
-        const normalizedPath = normalizePath(path.endsWith(".md") ? path : path + ".md");
+        const normalizedPath = normalizePath(path.replace(/^\/+/, "") + (path.endsWith(".md") ? "" : ".md"));
         const file = this.app.vault.getAbstractFileByPath(normalizedPath);
 
         if (!(file instanceof TFile)) {
