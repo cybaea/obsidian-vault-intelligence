@@ -456,13 +456,24 @@ export class AgentService {
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
         // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) {
+                contextFiles.push(activeFile);
+            }
+
             this.app.workspace.iterateRootLeaves((leaf) => {
+                // Background tabs in a tab group are not 'visible' or 'active' in their leaf
+                // We only want files that are actually showing to the user
                 const view = leaf.view;
                 if (view instanceof MarkdownView) {
                     const file = view.file;
-                    if (file) {
-                        // Check if already added to avoid duplicates from split views of same file
-                        if (!contextFiles.some(f => f.path === file.path)) {
+                    if (file && (!activeFile || file.path !== activeFile.path)) {
+                        // Check if this leaf is actually the active one in its container (tab group)
+                        // This prevents pulling in 'hidden' tabs from the same group as the active tab
+                        // @ts-ignore - internal API but common in Obsidian plugins for visibility check
+                        const isVisible = leaf.parent?.type === "tabs" ? leaf.parent.activeLeaf === leaf : true;
+
+                        if (isVisible && !contextFiles.some(f => f.path === file.path)) {
                             contextFiles.push(file);
                         }
                     }
@@ -470,7 +481,7 @@ export class AgentService {
             });
 
             if (contextFiles.length > 0) {
-                logger.info(`[Agent] Auto-injected ${contextFiles.length} visible files into context.`);
+                logger.info(`[Agent] Auto-injected ${contextFiles.length} visible files (Active: ${activeFile?.path ?? "None"}).`);
             }
         }
 
