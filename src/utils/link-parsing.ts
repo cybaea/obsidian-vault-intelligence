@@ -49,11 +49,29 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>): strin
  * @returns An object containing the frontmatter string and the body string.
  */
 export function splitFrontmatter(text: string): { frontmatter: string, body: string } {
-    const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*([\s\S]*)$/);
-    if (match) {
-        return { body: match[2] || "", frontmatter: match[1] || "" };
+    if (!text.startsWith("---")) {
+        return { body: text, frontmatter: "" };
     }
-    return { body: text, frontmatter: "" };
+
+    const firstLineEnd = text.indexOf("\n");
+    if (firstLineEnd === -1) return { body: text, frontmatter: "" };
+
+    const secondSeparator = text.indexOf("\n---", firstLineEnd);
+    if (secondSeparator === -1) return { body: text, frontmatter: "" };
+
+    // Find the end of the second separator line
+    let bodyStart = secondSeparator + 4; // Length of "\n---"
+    while (bodyStart < text.length && (text[bodyStart] === "-" || text[bodyStart] === " " || text[bodyStart] === "\r" || text[bodyStart] === "\t")) {
+        bodyStart++;
+    }
+    if (bodyStart < text.length && text[bodyStart] === "\n") {
+        bodyStart++;
+    }
+
+    return {
+        body: text.substring(bodyStart),
+        frontmatter: text.substring(0, bodyStart).trim()
+    };
 }
 
 /**

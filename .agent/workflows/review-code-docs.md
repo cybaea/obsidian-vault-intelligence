@@ -12,6 +12,7 @@ In addition to the broad review, consider carefully these points:
 - Does the code adhere to the don’t-repeat-yourself (DRY) principles? Are there any duplicated code that could usefully be refactored?
 - Does the code have any “magic numbers”, “magic strings”, or other constants in the code that could and should be replaced with a named constant (e.g. in `src/constants.ts`) or, perhaps better, replace with a user setting (in the existing files or a new file in `src/settings/`)?
    	- A _magic number_ is a unique value with unexplained meaning or multiple occurrences which could (and should) be replaced with a named constant.
+- Does the code use regular expressions? Regular expressions are **fragile** and should largely be considered an anti-pattern for production code. Rarely, a regular expression may be the correct solution, but more often a more robust implementation, for example a formal parser or a state machine, will be a better solution.
 - Review the code for other common anti-patterns, e.g.:
    	- The `any` abuse. We don’t permit the use of `any`. Ideally, find or define the interface type; if you truly don’t know it, use `unknown`.
    	- The "Bang" (`!`) operator overuse: forcing a type to exist rather than handling the null case. Consider using optional chaining (`?.`) or nullish coalescing (`??`).

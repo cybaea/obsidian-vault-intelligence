@@ -22,6 +22,24 @@ Type `@` and select a folder path.
 - _Use case:_ "List all open tasks in @Projects/Alpha"
 - _Benefit:_ Adds all notes in that folder to the context (up to the token limit).
 
+## Multilingual Interactions
+
+The Researcher speaks your language. Examples of how to use this effectively:
+
+- **Set your language**: Go to settings and choose your preferred language (eg "French"). The agent will now reply in French by default, even if you ask in English.
+- **Cross-lingual search**: You can ask questions in your native language about notes written in English. The agent will translate and synthesize the answer for you.
+
+    ![With the language set to German, the agent replies in German to a query about an English note and with an English prompt](/images/screenshots/multilingual-reply.png)
+
+## Chat Controls
+
+The Research Chat header includes powerful tools for managing your session on the fly:
+
+- **Model Switching**: Use the dropdown in the header to temporarily switch models (eg from Flash to Pro) for a single difficult query without changing your global defaults.
+- **Capability Toggles**: Click the **Write** toggle to enable/disable agentic write access for the current session. When enabled, the agent can create or modify notes (it will always ask for your confirmation before applying changes).
+
+    ![Close-up of the Research Chat header showing the model dropdown and the Write toggle](/images/screenshots/chat-controls.png)
+
 ## Effective Querying
 
 The Researcher uses a hybrid search (Keywords + Meaning + Connections).

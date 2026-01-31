@@ -7,6 +7,8 @@ import { LogLevel } from "../utils/logger";
 export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
+    // New: Language Support
+    agentLanguage: string;
     chatModel: string;
     codeModel: string;
     contextMaxFiles: number;
@@ -20,6 +22,7 @@ export interface VaultIntelligenceSettings {
     embeddingProvider: EmbeddingProvider;
     embeddingSimd: boolean;
     embeddingThreads: number;
+    enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
@@ -28,7 +31,7 @@ export interface VaultIntelligenceSettings {
     gardenerPlansPath: string;
     gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
-    gardenerSystemInstruction: string;
+    gardenerSystemInstruction: string | null;
     garsActivationWeight: number;
     garsCentralityWeight: number;
     garsSimilarityWeight: number;
@@ -48,20 +51,21 @@ export interface VaultIntelligenceSettings {
     searchExpansionSeedsLimit: number;
     searchExpansionThreshold: number;
     similarNotesLimit: number;
-    systemInstruction: string;
+    systemInstruction: string | null;
     vaultSearchResultsLimit: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
-const DEFAULT_SYSTEM_PROMPT = `
+export const DEFAULT_SYSTEM_PROMPT = `
 Role: You are an intelligent research assistant embedded within the user's Obsidian vault.
 Current Date: {{DATE}}
+Language: Respond in {{LANGUAGE}}.
 
 Core Guidelines:
 1. **Grounding**: You have access to the user's personal notes. Prioritize their content for questions of the type "What do I know about...".
 2. **Verification**: When users ask for facts, ALWAYS verify them against real-world data using 'google_search' unless explicitly told to rely only on notes.
 3. **Tool Usage**:
-   - Use 'vault_search' to find notes, concepts, and connections.
+   - Use 'vault_search' to find notes, concepts, and connections. If 'vault_search' returns no results, state this clearly. Do not invent facts about the user's notes.
    - Use 'google_search' for live news, dates, and external fact-checking.
    - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
@@ -70,9 +74,16 @@ Core Guidelines:
    - If the user asks "what is this?", they are referring to the currently open notes.
 5. **Efficiency**: Aim to solve the user's request with as few tool calls as possible. Use parallel tool calling for independent searches. If the answer is clear, stop early.
 6. **Style**: Be concise, professional, and use Markdown formatting (bolding, lists) for readability.
+7. **Strict Metadata Policy**:
+   - **NO FRONTMATTER**: Do NOT generate YAML frontmatter. The system handles metadata programmatically; generating it manually will cause data corruption.
+   - **Body Only**: Generate ONLY the Markdown body content. Use a single H1 header (# Title) at the top instead of metadata titles.
+8. **Vault Writing Rules**:
+   - **Reason First**: Before creating a note, explicitly plan your action. Check if a similar note exists using 'vault_search' to avoid duplicates.
+   - **File Extensions**: Always append .md to file paths.
+    - **Safety**: Do not overwrite existing notes unless explicitly instructed to refactor them. Prefer appending.
 `.trim();
 
-const DEFAULT_GARDENER_SYSTEM_PROMPT = `
+export const DEFAULT_GARDENER_SYSTEM_PROMPT = `
 You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improvements for the vault's fluid ontology (represented by the 'topics' frontmatter field).
 
 ## YOUR ROLE:
@@ -105,6 +116,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 `.trim();
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
+    agentLanguage: 'English (US)',
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',
     contextMaxFiles: 100,
@@ -118,6 +130,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingProvider: 'gemini',
     embeddingSimd: !Platform.isMobile,
     embeddingThreads: Platform.isMobile ? 1 : 2,
+    enableAgentWriteAccess: false,
     enableCodeExecution: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
@@ -126,7 +139,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
-    gardenerSystemInstruction: DEFAULT_GARDENER_SYSTEM_PROMPT,
+    gardenerSystemInstruction: null, // Use default by reference
     garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION,
     garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
@@ -146,7 +159,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     searchExpansionSeedsLimit: 5,
     searchExpansionThreshold: 0.7,
     similarNotesLimit: 20,
-    systemInstruction: DEFAULT_SYSTEM_PROMPT,
+    systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25
 };
 

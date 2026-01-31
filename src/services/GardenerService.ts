@@ -2,7 +2,7 @@ import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { z } from "zod";
 
 import { SEARCH_CONSTANTS, GARDENER_CONSTANTS } from "../constants";
-import { VaultIntelligenceSettings } from "../settings/types";
+import { VaultIntelligenceSettings, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../settings/types";
 import { logger } from "../utils/logger";
 import { GardenerStateService } from "./GardenerStateService";
 import { GeminiService } from "./GeminiService";
@@ -173,11 +173,12 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             logger.info(`Gardener: analyzing ${context.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
 
             // 2b. Prepare System Instruction
-            let systemInstruction = this.settings.gardenerSystemInstruction;
+            let systemInstruction = this.settings.gardenerSystemInstruction ?? DEFAULT_GARDENER_SYSTEM_PROMPT;
 
             // Replace placeholders
             systemInstruction = systemInstruction.replace("{{ONTOLOGY_FOLDERS}}", ontologyFolders);
             systemInstruction = systemInstruction.replace("{{NOTE_COUNT}}", String(notes.length));
+            systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
             // Merge with Instructions.md if exists
             if (ontologyContext.instructions) {

@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon, DropdownComponent, ToggleComponent } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, TFolder, setIcon, DropdownComponent, ToggleComponent, normalizePath } from "obsidian";
 
 import { SEARCH_CONSTANTS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
@@ -18,7 +18,8 @@ export class ResearchChatView extends ItemView {
     private messages: ChatMessage[] = [];
     private isThinking = false;
     private temporaryModelId: string | null = null;
-    private temporaryCodeExecution: boolean | null = null;
+    private temporaryWriteAccess: boolean | null = null;
+    private lastRenderId = 0;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -69,14 +70,14 @@ export class ResearchChatView extends ItemView {
 
         const controls = header.createDiv({ cls: "chat-controls" });
 
-        // Computational Solver Toggle
-        const solverContainer = controls.createDiv({ cls: "control-item" });
-        solverContainer.createSpan({ cls: "control-label", text: "Code" });
-        new ToggleComponent(solverContainer)
-            .setValue(this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution)
-            .setTooltip("Enable computational solver for this chat")
+        // Write Access Toggle
+        const writeContainer = controls.createDiv({ cls: "control-item" });
+        writeContainer.createSpan({ cls: "control-label", text: "Write" });
+        new ToggleComponent(writeContainer)
+            .setValue(this.temporaryWriteAccess ?? this.plugin.settings.enableAgentWriteAccess)
+            .setTooltip("Enable agent write access for this chat. Allows the agent to create and modify notes (requires manual confirmation).")
             .onChange((val) => {
-                this.temporaryCodeExecution = val;
+                this.temporaryWriteAccess = val;
             });
 
         // Model Dropdown
@@ -113,7 +114,7 @@ export class ResearchChatView extends ItemView {
             .setTooltip("Reset to default settings")
             .onClick(() => {
                 this.temporaryModelId = null;
-                this.temporaryCodeExecution = null;
+                this.temporaryWriteAccess = null;
                 void this.onOpen(); // Re-render header
                 new Notice("Research settings reset to defaults");
             });
@@ -124,7 +125,7 @@ export class ResearchChatView extends ItemView {
             .onClick(() => {
                 this.messages = [];
                 this.temporaryModelId = null;
-                this.temporaryCodeExecution = null;
+                this.temporaryWriteAccess = null;
                 void this.onOpen();
                 new Notice("Chat cleared");
             });
@@ -198,6 +199,7 @@ export class ResearchChatView extends ItemView {
         this.currentDraft = "";
 
         this.inputComponent.setValue("");
+        this.isThinking = true;
         this.addMessage("user", text);
 
         // Parse @-sign references
@@ -273,14 +275,13 @@ export class ResearchChatView extends ItemView {
         }
 
         try {
-            this.isThinking = true;
-            void this.renderMessages();
             const response = await this.agent.chat(this.messages, text, files, {
-                enableCodeExecution: this.temporaryCodeExecution ?? this.plugin.settings.enableCodeExecution,
+                enableAgentWriteAccess: this.temporaryWriteAccess ?? undefined,
+                enableCodeExecution: this.plugin.settings.enableCodeExecution,
                 modelId: this.temporaryModelId ?? this.plugin.settings.chatModel
             });
             this.isThinking = false;
-            this.addMessage("model", response.text, undefined, response.files);
+            this.addMessage("model", response.text, undefined, response.files, response.createdFiles);
         } catch (e: unknown) {
             this.isThinking = false;
             const message = e instanceof Error ? e.message : String(e);
@@ -289,13 +290,15 @@ export class ResearchChatView extends ItemView {
         }
     }
 
-    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[]) {
-        this.messages.push({ contextFiles, role, text, thought });
+    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[], createdFiles?: string[]) {
+        this.messages.push({ contextFiles, createdFiles, role, text, thought });
         void this.renderMessages();
     }
 
     private async renderMessages() {
         if (!this.chatContainer) return;
+
+        const renderId = ++this.lastRenderId;
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
@@ -365,6 +368,46 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv();
             if (msg.role === "model") {
                 await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                if (renderId !== this.lastRenderId) return;
+
+                if (msg.createdFiles && msg.createdFiles.length > 0) {
+                    const createdDetails = msgDiv.createEl("details", { cls: "context-details created-files" });
+                    createdDetails.createEl("summary", { text: `Created ${msg.createdFiles.length} ${msg.createdFiles.length === 1 ? "document" : "documents"}` });
+
+                    const list = createdDetails.createDiv({ cls: "context-file-list" });
+
+                    for (const filePath of msg.createdFiles) {
+                        const fileItem = list.createDiv({ cls: "context-file-item" });
+
+                        // Icon
+                        const iconSpan = fileItem.createSpan({ cls: "context-file-icon" });
+                        setIcon(iconSpan, "file-plus");
+
+                        // Name
+                        fileItem.createSpan({ cls: "context-file-name", text: filePath });
+
+                        // Click to open
+                        fileItem.addEventListener("click", () => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(normalizePath(filePath));
+                            if (file instanceof TFile) {
+                                void this.plugin.app.workspace.getLeaf("tab").openFile(file);
+                            } else {
+                                new Notice(`File not found: ${filePath}`);
+                            }
+                        });
+
+                        // Drag to link
+                        fileItem.setAttribute("draggable", "true");
+                        fileItem.addEventListener("dragstart", (e) => {
+                            const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+                            if (file instanceof TFile && e.dataTransfer) {
+                                e.dataTransfer.setData("text/plain", `[[${file.name}]]`);
+                                e.dataTransfer.setData("obsidian/app-link", `obsidian://open?vault=${encodeURIComponent(this.plugin.app.vault.getName())}&file=${encodeURIComponent(file.path)}`);
+                                e.dataTransfer.effectAllowed = "copyLink";
+                            }
+                        });
+                    }
+                }
 
                 if (msg.contextFiles && msg.contextFiles.length > 0) {
                     const details = msgDiv.createEl("details", { cls: "context-details" });

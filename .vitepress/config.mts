@@ -92,7 +92,7 @@ export default withMermaid(defineConfig({
                 items: [
                     { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
                     { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
-                    { text: 'Gardener: Vault Hygiene', link: '/docs/how-to/maintain-vault' },
+                    { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
                     { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' }
                 ]
             },
@@ -121,6 +121,7 @@ export default withMermaid(defineConfig({
                     { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
                     { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
                     { text: 'Documentation Standards', link: '/devs/documentation-standards' },
+                    { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
                     { text: 'Internal Agents Guide', link: '/AGENTS' }
                 ]
             }

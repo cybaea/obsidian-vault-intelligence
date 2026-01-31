@@ -3,7 +3,7 @@ import { Setting, App, Plugin } from "obsidian";
 import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
 interface InternalApp extends App {
     setting: {
@@ -87,31 +87,88 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 }));
     }
 
-    // --- 2. System Instruction ---
+    // --- 2. Language ---
+    const commonLanguages = [
+        'English (US)', 'English (GB)', 'German', 'French', 'Japanese',
+        'Spanish', 'Chinese (Simplified)', 'Chinese (Traditional)',
+        'Russian', 'Portuguese (Brazil)'
+    ];
+    const currentLang = plugin.settings.agentLanguage || "English (US)";
+    const isCustomLang = !commonLanguages.includes(currentLang);
+
+    new Setting(containerEl)
+        .setName('Language')
+        .setDesc('The language the agent should respond in.')
+        .addDropdown(dropdown => {
+            commonLanguages.forEach(lang => {
+                dropdown.addOption(lang, lang);
+            });
+            dropdown.addOption('custom', 'Other');
+
+            dropdown.setValue(isCustomLang ? 'custom' : currentLang);
+
+            dropdown.onChange((val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        plugin.settings.agentLanguage = val;
+                        await plugin.saveSettings();
+                        refreshSettings(plugin); // Hide text box if picking preset
+                    } else {
+                        plugin.settings.agentLanguage = 'custom';
+                        await plugin.saveSettings();
+                        refreshSettings(plugin); // Show text box
+                    }
+                })();
+            });
+        });
+
+    if (isCustomLang) {
+        new Setting(containerEl)
+            .setName('Custom language code')
+            .setDesc('Enter a specific language name or code.')
+            .addText(text => text
+                .setPlaceholder('en-US')
+                .setValue(currentLang === 'custom' ? '' : currentLang)
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.agentLanguage = value;
+                        await plugin.saveSettings();
+                    })();
+                }));
+    }
+
+    // --- 3. System Instruction ---
     new Setting(containerEl)
         .setName('System instruction')
-        .setDesc('Defines the behavior and persona of the agent. Use {{DATE}} to insert the current date.')
+        .setDesc('Defines the behavior and persona of the agent. Use {{DATE}} to insert the current date and {{LANGUAGE}} for the selected language.')
         .setClass('vault-intelligence-system-instruction-setting')
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip("Restore the original system instruction")
-            .onClick(async () => {
-                plugin.settings.systemInstruction = DEFAULT_SETTINGS.systemInstruction;
-                await plugin.saveSettings();
-                refreshSettings(plugin);
+            .setTooltip("Restore the default system instruction")
+            .setDisabled(plugin.settings.systemInstruction === null)
+            .setDisabled(plugin.settings.systemInstruction === null)
+            .onClick(() => {
+                void (async () => {
+                    plugin.settings.systemInstruction = null; // Set to null (reference mode)
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
             }))
         .addTextArea(text => {
             text
-                .setPlaceholder(DEFAULT_SETTINGS.systemInstruction)
-                .setValue(plugin.settings.systemInstruction)
-                .onChange(async (value) => {
-                    plugin.settings.systemInstruction = value;
-                    await plugin.saveSettings();
+                .setPlaceholder(DEFAULT_SYSTEM_PROMPT)
+                .setValue(plugin.settings.systemInstruction || "")
+                .onChange((value) => {
+                    void (async () => {
+                        // treating empty string as null/default is cleaner for UX
+                        plugin.settings.systemInstruction = value.trim() === "" ? null : value;
+                        await plugin.saveSettings();
+                    })();
                 });
             text.inputEl.rows = 10;
         });
 
-    // --- 3. Context & Reasoning Limits ---
+    // --- 4. Context & Reasoning Limits ---
     const chatModelLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
     new Setting(containerEl)
         .setName('Context window budget (tokens)')
@@ -119,11 +176,13 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         .addExtraButton(btn => btn
             .setIcon('reset')
             .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO * 100}% of model limit)`)
-            .onClick(async () => {
-                const refreshedLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
-                plugin.settings.contextWindowTokens = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO);
-                await plugin.saveSettings();
-                refreshSettings(plugin);
+            .onClick(() => {
+                void (async () => {
+                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
+                    plugin.settings.contextWindowTokens = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO);
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
             }))
         .addText(text => {
             text.setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
@@ -150,12 +209,14 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.maxAgentSteps))
             .setValue(String(plugin.settings.maxAgentSteps))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 1) {
-                    plugin.settings.maxAgentSteps = num;
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 1) {
+                        plugin.settings.maxAgentSteps = num;
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     // --- 4. Specialised Capabilities ---
@@ -229,6 +290,19 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 })();
             }));
 
+    new Setting(containerEl)
+        .setName('Enable agent write access')
+        .setDesc('Allows the agent to create and update notes in your vault. Always requires manual confirmation.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableAgentWriteAccess)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.enableAgentWriteAccess = value;
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
+            }));
+
     if (plugin.settings.enableCodeExecution) {
         const codeModelCurrent = plugin.settings.codeModel;
         const isCodePreset = chatModels.some(m => m.id === codeModelCurrent);
@@ -289,12 +363,14 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder(String(DEFAULT_SETTINGS.vaultSearchResultsLimit))
             .setValue(String(plugin.settings.vaultSearchResultsLimit))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 0) {
-                    plugin.settings.vaultSearchResultsLimit = num;
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 0) {
+                        plugin.settings.vaultSearchResultsLimit = num;
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 }
 

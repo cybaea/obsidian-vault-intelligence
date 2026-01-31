@@ -28,7 +28,7 @@ features:
       alt: Gardener Icon
     title: "Gardener: Scale your Ontology"
     details: Banish inconsistent tagging. The Gardener proactively suggests structure and links based on your personal knowledge standards.
-    link: /docs/how-to/maintain-vault
+    link: /docs/how-to/gardener-workflows
     linkText: Learn more
   - icon:
       light: /images/icon-explorer-light.png

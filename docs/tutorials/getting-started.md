@@ -49,4 +49,4 @@ Now that you are connected, try a specific workflow:
 
 - [Chat with specific documents](../how-to/researcher-workflows.md)
 - [Analyse data with Python](../how-to/data-analysis.md)
-- [Clean up your vault structure](../how-to/maintain-vault.md)
+- [Clean up your vault structure](../how-to/gardener-workflows.md)

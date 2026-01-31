@@ -755,3 +755,66 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     display: block;
     margin: var(--size-4-4) auto;
 }
+
+/* Tool Confirmation Modal Styles */
+
+.tool-confirmation-modal h2 {
+    margin-top: 0;
+    margin-bottom: var(--size-4-4);
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: var(--size-4-2);
+}
+
+.tool-confirmation-modal h4 {
+    margin-top: var(--size-4-6);
+    margin-bottom: var(--size-4-2);
+}
+
+.tool-confirmation-modal .confirmation-info {
+    margin-bottom: var(--size-4-4);
+}
+
+.tool-confirmation-modal .confirmation-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tool-confirmation-modal .confirmation-table td {
+    padding: var(--size-4-1) var(--size-4-2);
+    vertical-align: middle;
+}
+
+.tool-confirmation-modal .confirmation-table td.label {
+    width: 120px;
+    font-weight: var(--font-semibold);
+    color: var(--text-muted);
+}
+
+.tool-confirmation-modal .confirmation-table td.value {
+    color: var(--text-normal);
+}
+
+.tool-confirmation-modal .confirmation-input {
+    width: 100%;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+}
+
+.tool-confirmation-modal .confirmation-warning-box {
+    margin-top: var(--size-4-2);
+    padding: var(--size-4-2);
+    background-color: var(--background-modifier-error);
+    border: 1px solid var(--text-error);
+    border-radius: var(--radius-s);
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+}
+
+.tool-confirmation-modal .confirmation-preview {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: var(--size-4-4);
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+}
