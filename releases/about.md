@@ -48,9 +48,9 @@ The Research Assistant is no longer just a passive observer. It can now **create
 
 We spend years collecting notes, but rarely do we synthesise them into something new. **Vault Intelligence** bridges that gap.
 
--   **From Archive to Agent**: Your vault shouldn't just be a storage box. It should be an active partner that suggests connections, organizes your mess, and helps you write.
--   **Grounded Truth**: Unlike a web chat, this agent knows _you_. It cites your specific files, respecting the context of your years of work.
--   **Vault-Native Design**: We didn't just wrap a chatbot. We engineered a system that understands the unique structure of an Obsidian vault—your links, tags, and hierarchy. It respects the way you organize, treating your knowledge base as a connected web rather than just a pile of files.
+- **From Archive to Agent**: Your vault shouldn't just be a storage box. It should be an active partner that suggests connections, organizes your mess, and helps you write.
+- **Grounded Truth**: Unlike a web chat, this agent knows _you_. It cites your specific files, respecting the context of your years of work.
+- **Vault-Native Design**: We didn't just wrap a chatbot. We engineered a system that understands the unique structure of an Obsidian vault—your links, tags, and hierarchy. It respects the way you organize, treating your knowledge base as a connected web rather than just a pile of files.
 
 ## Getting Started
 
