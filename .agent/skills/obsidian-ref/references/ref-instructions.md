@@ -11,7 +11,6 @@ Update frequency: Update as reference management strategy evolves
 The `.ref` folder is a **gitignored directory** that uses **symlinks** to reference materials, documentation, and repositories. It acts as a "portal" to other locations on your computer, not a storage location itself.
 
 **Key Concept**: The `.ref` folder should contain **symlinks** (not actual files) pointing to:
-
 - **Global references** (like `obsidian-api`) → symlink to a central location (e.g., `C:\Users\david\Development\.ref\obsidian-dev`)
 - **Local projects** you're developing → symlink to your working copy (e.g., `../my-other-plugin`)
 - **External repos** → clone to central location first, then symlink
@@ -37,24 +36,24 @@ The `.ref` folder structure (via symlinks) should be organized as follows:
 These 6 projects are **always relevant** for any Obsidian plugin or theme project. They should be symlinked in **every** project's `.ref` folder:
 
 - **Root level**: Base Obsidian repositories (API, official docs, sample projects, linting)
-    - `obsidian-api/` → symlink to central location
-    - `obsidian-sample-plugin/` → symlink to central location
-    - `obsidian-developer-docs/` → symlink to central location
-    - `obsidian-plugin-docs/` → symlink to central location
-    - `obsidian-sample-theme/` → symlink to central location
-    - `eslint-plugin/` → symlink to central location (ESLint rules for Obsidian plugins)
+  - `obsidian-api/` → symlink to central location
+  - `obsidian-sample-plugin/` → symlink to central location
+  - `obsidian-developer-docs/` → symlink to central location
+  - `obsidian-plugin-docs/` → symlink to central location
+  - `obsidian-sample-theme/` → symlink to central location
+  - `eslint-plugin/` → symlink to central location (ESLint rules for Obsidian plugins)
 
 ### Project-Specific References (Optional, Project-Dependent)
 
 These are **only relevant** to specific projects. They should be documented in `project-context.md` for each project that uses them:
 
 - **`plugins/`**: Community plugins relevant to this specific project
-    - Example: `.ref/plugins/some-community-plugin/` → symlink to central location or working copy
-    - **Note**: Only add plugins that are specifically relevant to this project's development
+  - Example: `.ref/plugins/some-community-plugin/` → symlink to central location or working copy
+  - **Note**: Only add plugins that are specifically relevant to this project's development
 
 - **`themes/`**: Community themes relevant to this specific project
-    - Example: `.ref/themes/some-community-theme/` → symlink to central location or working copy
-    - **Note**: Only add themes that are specifically relevant to this project's development
+  - Example: `.ref/themes/some-community-theme/` → symlink to central location or working copy
+  - **Note**: Only add themes that are specifically relevant to this project's development
 
 **Important**: The general `.agents` documentation focuses on the 6 core Obsidian projects. Project-specific plugins and themes should be documented in `project-context.md` for each project.
 
@@ -63,18 +62,15 @@ These are **only relevant** to specific projects. They should be documented in `
 **IMPORTANT**: When the user asks you to reference something in `.ref`, actively search for it. The `.ref` folder may be hidden by default in some file explorers, but it exists in the project root. Use tools like `list_dir`, `glob_file_search`, or `read_file` to access `.ref` contents.
 
 **Organization to remember**:
-
 - **Core Obsidian repos** (always relevant) are in `.ref/` root (e.g., `.ref/obsidian-api/`)
 - **Project-specific plugins** (only if relevant to this project) are in `.ref/plugins/` (e.g., `.ref/plugins/plugin-name/`)
 - **Project-specific themes** (only if relevant to this project) are in `.ref/themes/` (e.g., `.ref/themes/theme-name/`)
 
 **When adding references**:
-
 - **External repos** (GitHub, GitLab, etc.) → Clone to `../.ref/obsidian-dev/` (global location), then create symlink in project's `.ref/`
 - **Local projects** (projects you're developing) → Create symlink directly in project's `.ref/` pointing to the local project (don't clone to global)
 
 If you cannot find `.ref` initially, try:
-
 - Listing the root directory with hidden files enabled
 - Using `glob_file_search` with pattern `.ref/**`
 - Directly reading files with paths like `.ref/obsidian-api/README.md` or `.ref/plugins/plugin-name/main.ts`
@@ -89,7 +85,6 @@ If you cannot find `.ref` initially, try:
    - For base Obsidian repos: Check `.ref/` root (obsidian-api, obsidian-sample-plugin, etc.)
 
 2. **Check for updates** (read-only operations are safe):
-
    ```bash
    # Navigate to the repo
    cd .ref/plugins/hider-plugin  # or whatever the actual folder name is
@@ -120,7 +115,6 @@ The goal is to have **one central `.ref/obsidian-dev` directory** on your comput
 ### Step 1: Set Up Central Reference Location (One-Time, Per Computer)
 
 **Choose a central location** for all your Obsidian reference repos. This should be **outside** of any individual project folder. Common locations:
-
 - Windows: `C:\Users\YourName\Development\.ref\obsidian-dev` or `C:\Development\.ref\obsidian-dev`
 - macOS/Linux: `~/Development/.ref/obsidian-dev` or `/opt/ref/obsidian-dev`
 
@@ -180,12 +174,10 @@ ln -s ../.ref/obsidian-dev/eslint-plugin .ref/eslint-plugin
 **Important**: Adjust the relative path (`../.ref/obsidian-dev`) based on where your project is relative to your central `.ref/obsidian-dev` location. If they're in different directory structures, use absolute paths.
 
 **Easiest method**: Use the setup scripts in the `scripts/` folder:
-
 - **Windows**: `scripts\setup-ref-links.bat` or `.\scripts\setup-ref-links.ps1`
 - **macOS/Linux**: `./scripts/setup-ref-links.sh`
 
 These scripts will automatically:
-
 - Detect your central `.ref/obsidian-dev` location
 - Clone the 6 core Obsidian projects if they don't exist
 - Pull the latest changes if the repos already exist
@@ -198,7 +190,6 @@ You can run the setup script anytime to keep your reference repos up to date.
 **Note**: Updates are **optional**. The reference materials work fine with whatever version was cloned initially. Most users never need to update. Only update if you want the latest documentation.
 
 **Easiest way to update**: Simply re-run the setup script from any project:
-
 - **Windows**: `scripts\setup-ref-links.bat` or `.\scripts\setup-ref-links.ps1`
 - **macOS/Linux**: `./scripts/setup-ref-links.sh`
 
@@ -233,7 +224,6 @@ All plugin projects using symlinks will immediately see the updated content.
 
 **Core Obsidian Repositories (Always Relevant - Root Level)**:
 These 6 projects should be symlinked in **every** Obsidian plugin/theme project:
-
 - `obsidian-api`: Official Obsidian API documentation and type definitions
 - `obsidian-sample-plugin`: Template plugin with best practices (contains `AGENTS.md` to sync from)
 - `obsidian-developer-docs`: Source vault for docs.obsidian.md (official documentation)
@@ -243,14 +233,12 @@ These 6 projects should be symlinked in **every** Obsidian plugin/theme project:
 
 **Project-Specific References (Optional - Organized in Subfolders)**:
 These are only relevant to specific projects and should be documented in `project-context.md`:
-
 - `plugins/`: Add community plugins here **only if they're relevant to this specific project**
 - `themes/`: Add community themes here **only if they're relevant to this specific project**
 
 **To add a community plugin or theme** (maintains single source of truth):
 
 **Step 1**: Clone to central location:
-
 ```bash
 # Navigate to central .ref location (adjust path as needed)
 cd ../.ref/obsidian-dev/plugins  # or cd ~/Development/.ref/obsidian-dev/plugins
@@ -262,7 +250,6 @@ git clone https://github.com/username/theme-name.git theme-name
 ```
 
 **Step 2**: Create symlink in your project:
-
 ```bash
 # From your project root
 # Create subdirectories if needed
@@ -288,12 +275,10 @@ When you want to add more references (plugins, themes, or other projects), choos
 **Use when**: Referencing an external repository (GitHub, GitLab, etc.) that you want to check for updates periodically. 
 
 **Important distinction**:
-
 - **Core Obsidian projects** (the 6 always-relevant ones) → Always add to global `.ref/obsidian-dev` and symlink in **every** project
 - **Project-specific plugins/themes** → Add to global `.ref/obsidian-dev` but **only symlink in projects that need them**. Document in `project-context.md`.
 
 **Workflow**: 
-
 1. **Check if already exists**: If the repo is already in `../.ref/obsidian-dev/`, skip to step 2
 2. **Clone to global location**: Clone to `../.ref/obsidian-dev/` (or `../.ref/obsidian-dev/plugins/` or `../.ref/obsidian-dev/themes/` as appropriate)
 3. **Create symlink in project**: Create symlink in this project's `.ref/` folder pointing to the global location
@@ -324,7 +309,6 @@ git clone https://github.com/username/repo-name.git repo-name
 ```
 
 **Step 2: Create symlink in this project**
-
 ```bash
 # From your project root
 # Create subdirectories if needed
@@ -342,7 +326,6 @@ ln -s ../.ref/obsidian-dev/repo-name .ref/repo-name
 ```
 
 **Benefits**: 
-
 - Single source of truth - one clone in central location
 - Can check for updates with `git pull` in central location
 - All projects using symlinks see updates immediately
@@ -350,7 +333,6 @@ ln -s ../.ref/obsidian-dev/repo-name .ref/repo-name
 - Disk space efficient
 
 **To check for updates later**:
-
 ```bash
 # Update in central location (adjust path as needed)
 cd ../.ref/obsidian-dev/plugins/plugin-name  # or cd ~/Development/.ref/obsidian-dev/plugins/plugin-name
@@ -364,7 +346,6 @@ git pull
 **Use when**: You're actively developing another project alongside this one and want to see changes in real-time. This should **NOT** be added to your global `.ref/obsidian-dev` - it should symlink directly to your working copy.
 
 **Workflow**: 
-
 1. **Create symlink directly**: Create a symlink directly from this project's `.ref/` folder to your working copy (e.g., `../my-other-plugin`)
 2. **Do NOT clone**: Do not clone this to the global `.ref/` location - it's project-specific
 3. **Document**: Document it in `project-context.md` if it's relevant to this project
@@ -389,19 +370,18 @@ ln -s ../project-name .ref/project-name
 ```
 
 **Note**: 
-
 - Adjust the relative path (`../`) based on your directory structure
 - If your projects are in `Development/`, and you're in `Development/my-plugin`, use `../` to go up one level
 - For absolute paths: `cmd /c mklink /J .ref\project-name C:\Users\david\Development\project-name` (Windows) or `ln -s ~/Development/project-name .ref/project-name` (Unix)
 
 **Benefits**:
-
 - References your active working copy (not a duplicate)
 - Changes in your working copy are immediately visible
 - Perfect for projects you're actively developing alongside this one
 - No need to clone or copy - just symlink to where you're already working
 
 **Note**: With symlinks, any changes you make to the original project are immediately visible in `.ref/project-name/` - no need to pull or sync. This is different from Option A, which clones to the central `.ref/obsidian-dev` location first.
+
 
 ### Quick Decision Guide
 
@@ -466,24 +446,20 @@ C:\Users\david\Development\
 ### Notes
 
 **Windows**:
-
 - Directory junctions (`mklink /J`) are preferred over symbolic links (`mklink /D`) for directories
 - Junctions require administrator privileges or Developer Mode enabled in Windows 10/11
 - Use forward slashes in paths when possible, or backslashes for Windows-specific commands
 
 **macOS/Linux**:
-
 - Use `ln -s` to create symbolic links
 - Ensure you have write permissions in the target directory
 
 **Path Tips**:
-
 - Use relative paths (e.g., `../.ref/obsidian-dev`) when possible for portability
 - Adjust paths based on your directory structure
 - If your central `.ref/obsidian-dev` is at a different location, use absolute paths (e.g., `~/Development/.ref/obsidian-dev` on Unix, or adjust relative paths accordingly)
 
 **General**:
-
 - The `.ref` folder should be added to `.gitignore` (see project `.gitignore`)
 
 ## .agents Folder (Symlink Architecture)
@@ -510,13 +486,11 @@ Plugin Project
 ### First Time Setup
 
 **For the central repository** (where `.agents` files are maintained):
-
 1. Run the setup script: `.\scripts\setup-agents-link.ps1` (Windows) or `./scripts/setup-agents-link.sh` (Unix)
 2. This creates a symlink from `../.ref/obsidian-dev/.agents/` → your repo's `.agents/` directory
 3. This allows you to edit `.agents` files in your dev repo and have them available centrally
 
 **For plugin projects** (using the shared `.agents` files):
-
 1. Run the setup script: `.\scripts\setup-agents-link.ps1` (Windows) or `./scripts/setup-agents-link.sh` (Unix)
 2. The script detects you're in a plugin project (not the central repo)
 3. It creates a symlink from `.agents/` → `../.ref/obsidian-dev/.agents/`
@@ -525,7 +499,6 @@ Plugin Project
 ### Setup Scripts
 
 The setup scripts automatically:
-
 - Detect if you're in the central repo (has actual `.agents/` directory) vs a plugin project
 - Create appropriate symlinks based on context
 - Handle Windows vs Unix symlink creation
@@ -560,17 +533,16 @@ The setup scripts automatically:
 ### Troubleshooting
 
 **If `.agents/` is missing or not a symlink**:
-
 - Run the setup script: `scripts\setup-agents-link.bat` (Windows), `.\scripts\setup-agents-link.ps1` (PowerShell), or `./scripts/setup-agents-link.sh` (macOS/Linux)
 - The script will create the symlink to `../.ref/obsidian-dev/.agents/`
 
 **If symlink is broken**:
-
 - Re-run the setup script - it will recreate the symlink
 
 **If central location doesn't exist**:
-
 - Run the setup script from the central repository first to create the central location
 - Then run it from plugin projects to create the symlinks
 
 **Note**: The `.agents/` folder may be hidden by default in some file explorers, but it exists in the project root. Use tools like `list_dir`, `glob_file_search`, or `read_file` to access `.agents` contents.
+
+

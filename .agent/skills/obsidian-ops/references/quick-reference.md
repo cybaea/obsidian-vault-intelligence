@@ -25,7 +25,6 @@ One-page cheat sheet for common Obsidian theme development tasks.
 | `check API [feature]` | Look up a feature in `.ref/obsidian-api/obsidian.d.ts` |
 
 **Usage examples:**
-
 - `build` → Runs build command automatically
 - `sync` → Pulls latest from all core repos automatically
 - `bump the version` → Bumps version by 0.0.1 (patch) in manifest.json
@@ -42,7 +41,6 @@ One-page cheat sheet for common Obsidian theme development tasks.
 **Simple CSS themes**: No build step required - just edit `theme.css` directly.
 
 **Complex themes with build tools**:
-
 ```powershell
 npx grunt build  # For themes using Grunt
 npm run build    # For themes using npm scripts
@@ -54,7 +52,6 @@ npx grunt        # Watch mode (auto-rebuild on changes)
 ## File Paths
 
 **Theme location** (in vault):
-
 ```
 <Vault>/.obsidian/themes/<theme-name>/
   ├── theme.css        # Compiled theme CSS
@@ -66,7 +63,6 @@ npx grunt        # Watch mode (auto-rebuild on changes)
 ## CSS Patterns
 
 **CSS Variables** (for theming):
-
 ```css
 :root {
   --color-base-00: #ffffff;
@@ -76,7 +72,6 @@ npx grunt        # Watch mode (auto-rebuild on changes)
 ```
 
 **Dark Mode**:
-
 ```css
 .theme-dark {
   --color-base-00: #1e1e1e;
@@ -90,7 +85,6 @@ See Obsidian's CSS variables documentation for complete variable list.
 ## Git Workflow
 
 **Commit message format** (from [summarize-commands.md](summarize-commands.md)):
-
 ```
 [Summary of changes]
 - [detailed item 1]
@@ -98,7 +92,6 @@ See Obsidian's CSS variables documentation for complete variable list.
 ```
 
 **Release notes format** (markdown):
-
 ```markdown
 ### Release v1.2.0 - Title
 
@@ -112,7 +105,6 @@ See Obsidian's CSS variables documentation for complete variable list.
 ## Release Preparation
 
 **Before releasing**:
-
 - Run release readiness check: See [release-readiness.md](release-readiness.md)
 - Verify all checklist items (platform testing, files, policies, etc.)
 - Ensure LICENSE file exists and third-party code is properly attributed
@@ -122,7 +114,6 @@ See [versioning-releases.md](versioning-releases.md) for release process.
 ## Sync Reference Repos
 
 **Quick pull all 6 core repos** (from [quick-sync-guide.md](quick-sync-guide.md)):
-
 ```bash
 # Navigate to central .ref location (adjust path as needed)
 cd ../.ref/obsidian-dev  # or cd ~/Development/.ref/obsidian-dev
@@ -145,7 +136,6 @@ cd eslint-plugin && git pull && cd ..
 ## Testing
 
 **Manual installation**:
-
 1. Build theme (if using build tools) or ensure `theme.css` is ready
 2. Copy `manifest.json` and `theme.css` to vault `.obsidian/themes/<theme-name>/`
 3. Select theme in Obsidian: **Settings → Appearance → Themes**
@@ -156,7 +146,6 @@ See [testing.md](testing.md) for details.
 ## Common File Structure
 
 **Simple CSS theme**:
-
 ```
 theme.css          # Source CSS (edit directly)
 manifest.json
@@ -164,7 +153,6 @@ package.json
 ```
 
 **Complex theme with build tools**:
-
 ```
 src/
   scss/
@@ -178,3 +166,4 @@ Gruntfile.js       # Build configuration (if using Grunt)
 ```
 
 See [file-conventions.md](file-conventions.md) for details.
+

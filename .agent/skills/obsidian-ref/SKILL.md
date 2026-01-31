@@ -14,7 +14,6 @@ To provide a central source of truth for API usage, file formats, and design sta
 ## When to Use
 
 Load this skill when:
-
 - Verifying `manifest.json` requirements.
 - Checking Obsidian API details or documentation.
 - Working with Obsidian-specific file formats (Markdown, Canvas).

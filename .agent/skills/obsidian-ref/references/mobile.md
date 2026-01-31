@@ -10,3 +10,5 @@ Update frequency: Check Obsidian community discussions for updates
 - Ensure CSS works correctly on mobile viewports.
 - Consider touch-friendly UI elements and spacing.
 - Test theme appearance in both light and dark modes on mobile.
+
+
