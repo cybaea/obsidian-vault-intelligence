@@ -76,6 +76,11 @@ Translate technical changes into compelling narratives. You are not just listing
 
 **Structure**:
 
+**Post 1: The Context**
+-   **Requirement**: First sentence MUST define what the plugin is (e.g., "Vault Intelligence brings AI to #Obsidian").
+-   **The Hook**: Then transition to the frustration that motivated this update, linking it to the solution (pain-reliever or gain-creator) and the "Soul" of this release.
+-   *Mandatory*: Link to repo. Include `@obsidian@mas.to`, and hashtags `#Obsidian #PKM` if not already used in main text.
+
 1.  **Post 1 (The Friction)**: Start with the problem or frustration that motivated this update. Then summarise the soal of this release in that context.
     * Include at least some background to Vault Intelligence as context for readers who are not yet users.
     * *Mandatory*: Link to repo, `@obsidian@mas.to`, `#Obsidian #PKM`.
