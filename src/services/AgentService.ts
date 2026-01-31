@@ -4,7 +4,7 @@ import { TFile, App, requestUrl, MarkdownView, normalizePath } from "obsidian";
 import { SEARCH_CONSTANTS, AGENT_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { GraphService } from "../services/GraphService";
-import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
+import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
@@ -504,10 +504,11 @@ export class AgentService {
         }
 
         const currentDate = new Date().toDateString();
-        const rawSystemInstruction = this.settings.systemInstruction || DEFAULT_SETTINGS.systemInstruction;
+        const rawSystemInstruction = this.settings.systemInstruction ?? DEFAULT_SYSTEM_PROMPT;
 
-        // Replace {{DATE}} placeholder
-        const systemInstruction = rawSystemInstruction.replace("{{DATE}}", currentDate);
+        // Replace placeholders
+        let systemInstruction = (rawSystemInstruction || "").replace("{{DATE}}", currentDate);
+        systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
         const chat = await this.gemini.startChat(formattedHistory, this.getTools(options.enableCodeExecution), systemInstruction, options.modelId);
 

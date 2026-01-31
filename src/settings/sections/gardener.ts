@@ -77,9 +77,11 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             .addText(text => text
                 .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
                 .setValue(gardenerModelCurrent)
-                .onChange(async (value) => {
-                    plugin.settings.gardenerModel = value;
-                    await plugin.saveSettings();
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.gardenerModel = value;
+                        await plugin.saveSettings();
+                    })();
                 }));
     }
 
@@ -90,11 +92,15 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addExtraButton(btn => btn
             .setIcon('reset')
             .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
-            .onClick(async () => {
-                const refreshedLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
-                plugin.settings.gardenerContextBudget = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO);
-                await plugin.saveSettings();
-                refreshSettings(plugin);
+            .setIcon('reset')
+            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
+            .onClick(() => {
+                void (async () => {
+                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
+                    plugin.settings.gardenerContextBudget = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO);
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
             }))
         .addText(text => {
             text.setPlaceholder('50000')
@@ -122,18 +128,26 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .setClass('vault-intelligence-system-instruction-setting')
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip("Restore original rules")
-            .onClick(async () => {
-                plugin.settings.gardenerSystemInstruction = DEFAULT_SETTINGS.gardenerSystemInstruction;
-                await plugin.saveSettings();
-                refreshSettings(plugin);
+            .setTooltip("Restore original rules (auto-updates with plugin)")
+            .setDisabled(plugin.settings.gardenerSystemInstruction === null)
+            .setIcon('reset')
+            .setTooltip("Restore original rules (auto-updates with plugin)")
+            .setDisabled(plugin.settings.gardenerSystemInstruction === null)
+            .onClick(() => {
+                void (async () => {
+                    plugin.settings.gardenerSystemInstruction = null;
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
             }))
         .addTextArea(text => {
-            text.setPlaceholder('Enter rules...')
-                .setValue(plugin.settings.gardenerSystemInstruction)
-                .onChange(async (value) => {
-                    plugin.settings.gardenerSystemInstruction = value;
-                    await plugin.saveSettings();
+            text.setPlaceholder(DEFAULT_SETTINGS.gardenerSystemInstruction!)
+                .setValue(plugin.settings.gardenerSystemInstruction || "")
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.gardenerSystemInstruction = value.trim() === "" ? null : value;
+                        await plugin.saveSettings();
+                    })();
                 });
             text.inputEl.rows = 10;
         });
@@ -147,9 +161,11 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => {
             text.setPlaceholder('Ontology')
                 .setValue(plugin.settings.ontologyPath)
-                .onChange(async (value) => {
-                    plugin.settings.ontologyPath = value;
-                    await plugin.saveSettings();
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.ontologyPath = value;
+                        await plugin.saveSettings();
+                    })();
                 });
             new FolderSuggest(plugin.app, text.inputEl);
         });
@@ -160,9 +176,11 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => {
             text.setPlaceholder('Gardener/plans')
                 .setValue(plugin.settings.gardenerPlansPath)
-                .onChange(async (value) => {
-                    plugin.settings.gardenerPlansPath = value;
-                    await plugin.saveSettings();
+                .onChange((value) => {
+                    void (async () => {
+                        plugin.settings.gardenerPlansPath = value;
+                        await plugin.saveSettings();
+                    })();
                 });
             new FolderSuggest(plugin.app, text.inputEl);
         });
@@ -173,12 +191,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder('7')
             .setValue(String(plugin.settings.plansRetentionDays))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 0) {
-                    plugin.settings.plansRetentionDays = Math.floor(num);
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 0) {
+                        plugin.settings.plansRetentionDays = Math.floor(num);
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     // --- 4. Exclusions ---
@@ -196,10 +216,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 .addExtraButton(btn => btn
                     .setIcon('trash')
                     .setTooltip('Remove')
-                    .onClick(async () => {
-                        plugin.settings.excludedFolders.splice(index, 1);
-                        await plugin.saveSettings();
-                        renderExcludedFolders();
+                    .setIcon('trash')
+                    .setTooltip('Remove')
+                    .onClick(() => {
+                        void (async () => {
+                            plugin.settings.excludedFolders.splice(index, 1);
+                            await plugin.saveSettings();
+                            renderExcludedFolders();
+                        })();
                     }));
         });
     };
@@ -229,14 +253,16 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         })
         .addExtraButton(btn => btn
             .setIcon('plus-with-circle')
-            .onClick(async () => {
-                const value = addFolderText.getValue().trim();
-                if (value && !plugin.settings.excludedFolders.includes(value)) {
-                    plugin.settings.excludedFolders.push(value);
-                    await plugin.saveSettings();
-                    addFolderText.setValue('');
-                    renderExcludedFolders();
-                }
+            .onClick(() => {
+                void (async () => {
+                    const value = addFolderText.getValue().trim();
+                    if (value && !plugin.settings.excludedFolders.includes(value)) {
+                        plugin.settings.excludedFolders.push(value);
+                        await plugin.saveSettings();
+                        addFolderText.setValue('');
+                        renderExcludedFolders();
+                    }
+                })();
             }));
 
     // --- 5. Advanced Tuning ---
@@ -248,12 +274,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder('10')
             .setValue(String(plugin.settings.gardenerNoteLimit))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 0) {
-                    plugin.settings.gardenerNoteLimit = Math.floor(num);
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 0) {
+                        plugin.settings.gardenerNoteLimit = Math.floor(num);
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     new Setting(containerEl)
@@ -262,12 +290,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder('24')
             .setValue(String(plugin.settings.gardenerRecheckHours))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 0) {
-                    plugin.settings.gardenerRecheckHours = Math.floor(num);
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 0) {
+                        plugin.settings.gardenerRecheckHours = Math.floor(num);
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 
     new Setting(containerEl)
@@ -276,12 +306,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addText(text => text
             .setPlaceholder('7')
             .setValue(String(plugin.settings.gardenerSkipRetentionDays))
-            .onChange(async (value) => {
-                const num = parseInt(value);
-                if (!isNaN(num) && num >= 0) {
-                    plugin.settings.gardenerSkipRetentionDays = Math.floor(num);
-                    await plugin.saveSettings();
-                }
+            .onChange((value) => {
+                void (async () => {
+                    const num = parseInt(value);
+                    if (!isNaN(num) && num >= 0) {
+                        plugin.settings.gardenerSkipRetentionDays = Math.floor(num);
+                        await plugin.saveSettings();
+                    }
+                })();
             }));
 }
 

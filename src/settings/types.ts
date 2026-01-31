@@ -7,6 +7,8 @@ import { LogLevel } from "../utils/logger";
 export type EmbeddingProvider = 'gemini' | 'local';
 
 export interface VaultIntelligenceSettings {
+    // New: Language Support
+    agentLanguage: string;
     chatModel: string;
     codeModel: string;
     contextMaxFiles: number;
@@ -29,7 +31,7 @@ export interface VaultIntelligenceSettings {
     gardenerPlansPath: string;
     gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
-    gardenerSystemInstruction: string;
+    gardenerSystemInstruction: string | null;
     garsActivationWeight: number;
     garsCentralityWeight: number;
     garsSimilarityWeight: number;
@@ -49,14 +51,15 @@ export interface VaultIntelligenceSettings {
     searchExpansionSeedsLimit: number;
     searchExpansionThreshold: number;
     similarNotesLimit: number;
-    systemInstruction: string;
+    systemInstruction: string | null;
     vaultSearchResultsLimit: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
-const DEFAULT_SYSTEM_PROMPT = `
+export const DEFAULT_SYSTEM_PROMPT = `
 Role: You are an intelligent research assistant embedded within the user's Obsidian vault.
 Current Date: {{DATE}}
+Language: Respond in {{LANGUAGE}}.
 
 Core Guidelines:
 1. **Grounding**: You have access to the user's personal notes. Prioritize their content for questions of the type "What do I know about...".
@@ -77,10 +80,10 @@ Core Guidelines:
 8. **Vault Writing Rules**:
    - **Reason First**: Before creating a note, explicitly plan your action. Check if a similar note exists using 'vault_search' to avoid duplicates.
    - **File Extensions**: Always append .md to file paths.
-   - **Safety**: Do not overwrite existing notes unless explicitly instructed to refactor them. Prefer appending.
+    - **Safety**: Do not overwrite existing notes unless explicitly instructed to refactor them. Prefer appending.
 `.trim();
 
-const DEFAULT_GARDENER_SYSTEM_PROMPT = `
+export const DEFAULT_GARDENER_SYSTEM_PROMPT = `
 You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improvements for the vault's fluid ontology (represented by the 'topics' frontmatter field).
 
 ## YOUR ROLE:
@@ -113,6 +116,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 `.trim();
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
+    agentLanguage: 'English (US)',
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',
     contextMaxFiles: 100,
@@ -135,7 +139,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
-    gardenerSystemInstruction: DEFAULT_GARDENER_SYSTEM_PROMPT,
+    gardenerSystemInstruction: null, // Use default by reference
     garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION,
     garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
@@ -155,7 +159,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     searchExpansionSeedsLimit: 5,
     searchExpansionThreshold: 0.7,
     similarNotesLimit: 20,
-    systemInstruction: DEFAULT_SYSTEM_PROMPT,
+    systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25
 };
 
