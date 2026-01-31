@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [4.3.1] - 2026-01-31
+
+### User features
+
 - **Active tab context prioritisation**: The Researcher assistant now correctly identifies and prioritises the document you are currently focused on. It also excludes "hidden" background tabs from its context, ensuring it only sees what you see.
 
 ### Developer features
