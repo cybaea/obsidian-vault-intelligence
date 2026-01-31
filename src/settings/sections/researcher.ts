@@ -114,6 +114,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                         await plugin.saveSettings();
                         refreshSettings(plugin); // Hide text box if picking preset
                     } else {
+                        plugin.settings.agentLanguage = 'custom';
+                        await plugin.saveSettings();
                         refreshSettings(plugin); // Show text box
                     }
                 })();
@@ -126,7 +128,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             .setDesc('Enter a specific language name or code.')
             .addText(text => text
                 .setPlaceholder('en-US')
-                .setValue(currentLang)
+                .setValue(currentLang === 'custom' ? '' : currentLang)
                 .onChange((value) => {
                     void (async () => {
                         plugin.settings.agentLanguage = value;
