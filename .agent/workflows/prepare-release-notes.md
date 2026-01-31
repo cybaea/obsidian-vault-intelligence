@@ -2,73 +2,96 @@
 description: Prepare the release notes and announcements
 ---
 
-**Role**: Product Marketing Manager (Vault Intelligence)
+**Role**: Product Lead & Developer Advocate (Vault Intelligence)
 
-**Current Context**: We are preparing to release a new version of Vault Intelligence.
--   The `npm run release:prep` command has already run.
--   The `package.json` file contains the target version number.
--   The `CHANGELOG.md` file has been updated; the features for this release are listed under the header matching that version number (e.g., ## [4.3.0]).
+**Context**: 
 
-**Your Goal**: Generate the official release marketing copy based strictly on the changes listed for the current version in CHANGELOG.md. Use the git history only if you need to understand how a feature works to describe it better.
+We are releasing a new version of Vault Intelligence.
 
-**Safety Guardrails**:
+**Important*(*: The `npm run release:prep` command has run, so `package.json` and `CHANGELOG.md` are up to date.
 
--   NO EXECUTION: Do not run git commands that modify the repo (tag, push). Do not release.
--   SOURCE TRUTH: Use CHANGELOG.md as the primary list of features.
--   SCOPE: Only include changes for the current target version. Do not re-announce features from older versions.
+**Your Mission**:
+ 
+Translate technical changes into compelling narratives. You are not just listing features; you are explaining *why* this update improves the user's life.
 
-----
+**Global Constraints**:
 
-# Task 1: GitHub Release Notes
+1.  **NO EXECUTION**: Do not run git. Draft text files ONLY.
+2.  **SOURCE TRUTH**: Base all claims strictly on `CHANGELOG.md`.
 
-Create a file for these notes with a path of the form: `releases/release-{VERSION}.md` 
+---
 
-**Target Audience**: Existing users updating the plugin. 
-**Style**: Professional, exciting, clear.
+### Phase 1: Reasoning Strategy
 
-Structure:
+*Before generating any files, analyze the `CHANGELOG.md`.*
 
-1.  First line is a markdown header: # {VERSION} - {Catchy Name}
-    -   _Invent a name based on the biggest feature (e.g., "The Polyglot Update" for language support)._
+1. **Identify the Pillars**: What are the 1-3 headline features? (e.g., "Agentic Writing" AND "Multilingual Support").
+2. **The "Soul"**: How do these pillars connect? (e.g., "This release is about *autonomy* and *accessibility*").
+3. **Categorize**: Separate the "Headline" features from the "Quality of Life" improvements.
 
-2.  Intro: A 2-sentence summary of the update's theme.
+---
 
-3.  **New Features**:
-    -   List user-facing features from the Changelog.
-    -   Use bold headers and 1-2 sentences explaining the benefit.
+### 📄 Task 1: GitHub Release Notes
 
-4.  **Improvements & Fixes:**
-    -   Group UI polish and bug fixes here.
+**File**: `releases/release-{VERSION}.md`
+**Audience**: Existing users. They want to know what they can do *now* that they couldn't do *yesterday*.
 
-5.   Exclusions:
-    -   DO NOT include an "Under the Hood" or "Developer" section. Users don't need to know about refactoring or constants.
+**Guidelines**:
 
-----
+* **Header**: `# {VERSION} — {Thematic Title}`
+    * *Create a title that captures the Pillars. Compound titles are fine (e.g., "The Agentic & Polyglot Update").*
+* **The Narrative**: Start with a paragraph that weaves the **Pillars** into a coherent story. Why do they belong in the same update?
+* **Feature Deep Dives**:
+    * Use headers for each Pillar feature.
+    * Focus on *utility*. Don't say "Added X"; say "You can now do X, which lets you Y."
+* **The Polish**: Group smaller fixes/improvements at the end.
 
-# Task 2: Discord Announcement
+---
 
-Create a file for these notes with a path of the form: `releases/announcement-{VERSION}.md` 
+### Task 2: Discord Announcement
 
-**Target Channel**: Obsidian community `#updates` channel on Discord.
-**Target Audience**: People who may not use the plugin yet. 
-**Goal**: Drive clicks and installs. Sell the value proposition.
+**File**: `releases/announcement-{VERSION}.md`
+**Channel**: Obsidian Community `#updates`
+**Goal**: **Conversion**. Convince a scroller to stop, read, and click "Install".
 
-Structure:
+**Guidelines**:
 
-1.  Header: `# Vault Intelligence {VERSION}`
+* **Header**: `# Vault Intelligence {VERSION}`
+* **The Pitch**: One sentence that defines the plugin for a total stranger.
+* **The Hook**: "This update brings..." (Summarize the Pillars)
+* **The Highlights**: 3-4 bullet points covering the Pillars + 1 top "Delight" feature.
+* **Call to Action**: "Install via BRAT: [Link]"
 
-2.  The "Elevator Pitch" (Context):
-    -   _Crucial Step_: Write 1 sentence explaining what this plugin _is_ for someone who has never heard of it.
+---
 
-3.  The Hook: "This update brings..." (Mention the #1 biggest feature / selling point).
+### Task 3: Mastodon Thread
 
-4.  Highlights:
-    -   Bullet points with **key features** only. Keep it short.
+**File**: `releases/mastodon-{VERSION}.md`
+**Goal**: **Storytelling**. Share the "Developer's Journey" behind the update.
 
-5.  Call to Action:
-    1.  Install with BRAT from https://github.com/cybaea/obsidian-vault-intelligence
+**Guidelines**:
 
+* **Format**: 3-6 posts separated by `---`. Max 450 chars/post.
+* **Tone**: Authentic, transparent, "Quiet Confidence". Avoid marketing hype words ("game-changer", "unleashed").
 
-----
+**Structure**:
 
-Action: Read `package.json` to find the version. Read `CHANGELOG.md` for that version's entry (it should be the latest other than 'Unreleased'). Generate the two files now. Then run `npm run lint` and resolve any errors or warnings.
+1.  **Post 1 (The Friction)**: Start with the problem or frustration that motivated this update. Then summarise the soal of this release in that context.
+    * Include at least some background to Vault Intelligence as context for readers who are not yet users.
+    * *Mandatory*: Link to repo, `@obsidian@mas.to`, `#Obsidian #PKM`.
+2.  **Posts 2-4 (The Pillars)**: Dedicate one post to each "Pillar" feature.
+    * Explain the solution or the capability. Focus on the value to the user. If there is genuine technical innovation in how we've implemented it you MAY mention that.
+    * *If risky* (e.g. write access): Explain safety guards.
+    * *If complex*: Use a concrete example.
+3.  **Post X (The Polish)**: Briefly mention the "Delight" features (speed, UI).
+4.  **Final Post**: 
+    - Gratitude: Pick ONE of {sponsors, users, testers, people who raised bug reports, people who submitted feature requests, people who starred our GitHub repository} and express gratitude. Keep it brief.
+    - **Mandatory**: CTA to install via BRAT.
+
+---
+
+**Action**: 
+1. Read `package.json` for the version.
+2. Read `CHANGELOG.md`.
+3. Apply your reasoning to find the Pillars.
+4. Generate the three files.
