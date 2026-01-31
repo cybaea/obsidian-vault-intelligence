@@ -17,6 +17,9 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+- **Agentic file modification**: The Researcher is no longer read-only! It can now create notes, update existing files, and organize folders upon request (e.g., "Create a summary of this chat in a new note").
+- **Human-in-the-loop security**: All write operations trigger a "Trust but Verify" confirmation modal, showing you exactly what the agent wants to change (including diffs for updates) before any data is touched.
+- **Granular write control**: A global "Enable agent write access" setting (default: off) plus a per-chat toggle gives you precise control over when the agent is allowed to modify your vault.
 - **Language support**: The Research Assistant now speaks your language! Choose from a list of presets or enter any custom IETF BCP 47 language code (eg `fr-FR`). The `{{LANGUAGE}}` placeholder in system prompts is automatically replaced with your choice.
 - **Transient model switching**: Added a model selection dropdown to the Research Chat header, allowing you to temporarily switch models for specific queries without changing global settings.
 - **On-the-fly capability toggling**: Added a toggle to the Research Chat header to enable or disable the computational solver for the current session.
@@ -37,6 +40,10 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+- **FileTools architecture**: Implemented a dedicated FileTools class to encapsulate safe filesystem operations (createNote, updateNote, renameNote) with recursive folder creation and path normalization.
+- **Strict content sanitization**: Added a robust sanitization pipeline that aggressively strips YAML frontmatter from agent-generated content to prevent metadata corruption.
+- **Link-aware renaming**: The rename_note tool utilizes app.fileManager.renameFile, ensuring Obsidian automatically updates all wikilinks pointing to the moved file.
+- **Promise-based modal pattern**: Refactored ToolConfirmationModal to use a static async open() pattern, allowing the Agent's execution loop to pause and await user interaction naturally without complex event listeners.
 - **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronises the sponsor link without requiring manual code updates.
 - **Per-request agent overrides**: Refactored the AgentService and GeminiService to support optional overrides for model selection and tool enablement inside the Research Chat.
 - **Interactive model ID tooltips**: Restored tooltips in the Research Chat model selection dropdown to match the behavior in the main settings.
