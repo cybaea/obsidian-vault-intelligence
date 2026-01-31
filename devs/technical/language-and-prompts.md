@@ -22,6 +22,7 @@ Language support is implemented via a simple string injection strategy at the pr
 ### "Other" Language Support
 
 The UI provides a hybrid dropdown/text selection:
+
 - Common presets are available in a dropdown.
 - Selecting "Other" switches the internal storage to "custom" and reveals a text input.
 - Validates against standard string availability but does not enforce strict BCP 47 format to allow for creative prompts (eg "Pirate").
@@ -34,6 +35,7 @@ We have moved from "Static Default" settings to "Nullable Managed" settings to a
 
 - **Old behavior**: Settings were initialized with the full text of the default prompt. Users never received updates to the persona because their settings were "custom" from day one.
 - **New behavior**:
+
     - `systemInstruction` defaults to `null`.
     - If `null`, the plugin uses `DEFAULT_SYSTEM_PROMPT` (const) at runtime.
     - This allows us to update `DEFAULT_SYSTEM_PROMPT` in the codebase and immediately improve the experience for all users who haven't explicitly customized it.
@@ -41,7 +43,8 @@ We have moved from "Static Default" settings to "Nullable Managed" settings to a
 ### Migration Strategy
 
 On plugin load (`main.ts`), a migration runs:
-1. It compares the current saved `systemInstruction` with valid *historical* default prompts.
+
+1. It compares the current saved `systemInstruction` with valid _historical_ default prompts.
 2. If it matches a known old default, it resets the setting to `null`.
 3. This seamlessly opt-in users to the new managed system without overwriting actual custom personas.
 
