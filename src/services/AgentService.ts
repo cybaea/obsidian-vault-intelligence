@@ -362,7 +362,7 @@ export class AgentService {
                 default: action = "create";
             }
 
-            const confirmed = await ToolConfirmationModal.open(this.app, {
+            const confirmedDetails = await ToolConfirmationModal.open(this.app, {
                 action,
                 content: args.content as string,
                 mode: args.mode as string,
@@ -371,7 +371,7 @@ export class AgentService {
                 tool: name
             });
 
-            if (!confirmed) {
+            if (!confirmedDetails) {
                 return { error: "User cancelled the action." };
             }
 
@@ -379,8 +379,8 @@ export class AgentService {
                 let successMessage: string;
                 switch (name) {
                     case AGENT_CONSTANTS.TOOLS.CREATE_NOTE: {
-                        successMessage = await this.fileTools.createNote(args.path as string, args.content as string);
-                        const normalizedPath = (args.path as string).endsWith(".md") ? (args.path as string) : (args.path as string) + ".md";
+                        successMessage = await this.fileTools.createNote(confirmedDetails.path, confirmedDetails.content || "");
+                        const normalizedPath = confirmedDetails.path.endsWith(".md") ? confirmedDetails.path : confirmedDetails.path + ".md";
                         createdFiles.add(normalizedPath);
 
                         // Automatically open new note in a new tab
@@ -391,19 +391,19 @@ export class AgentService {
                         break;
                     }
                     case AGENT_CONSTANTS.TOOLS.UPDATE_NOTE: {
-                        successMessage = await this.fileTools.updateNote(args.path as string, args.content as string, args.mode as "append" | "prepend" | "overwrite");
-                        const normalizedPath = (args.path as string).endsWith(".md") ? (args.path as string) : (args.path as string) + ".md";
+                        successMessage = await this.fileTools.updateNote(confirmedDetails.path, confirmedDetails.content || "", confirmedDetails.mode as "append" | "prepend" | "overwrite");
+                        const normalizedPath = confirmedDetails.path.endsWith(".md") ? confirmedDetails.path : confirmedDetails.path + ".md";
                         createdFiles.add(normalizedPath);
                         break;
                     }
                     case AGENT_CONSTANTS.TOOLS.RENAME_NOTE: {
-                        successMessage = await this.fileTools.renameNote(args.path as string, args.newPath as string);
-                        const normalizedPath = (args.newPath as string).endsWith(".md") ? (args.newPath as string) : (args.newPath as string) + ".md";
+                        successMessage = await this.fileTools.renameNote(confirmedDetails.path, confirmedDetails.newPath || "");
+                        const normalizedPath = (confirmedDetails.newPath || "").endsWith(".md") ? (confirmedDetails.newPath || "") : (confirmedDetails.newPath || "") + ".md";
                         createdFiles.add(normalizedPath);
                         break;
                     }
                     case AGENT_CONSTANTS.TOOLS.CREATE_FOLDER:
-                        successMessage = await this.fileTools.createFolder(args.path as string);
+                        successMessage = await this.fileTools.createFolder(confirmedDetails.path);
                         break;
                     default:
                         throw new Error("Invalid write tool");

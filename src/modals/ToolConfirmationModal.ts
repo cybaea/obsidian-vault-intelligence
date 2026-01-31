@@ -1,4 +1,6 @@
-import { App, Modal, ButtonComponent, MarkdownRenderer } from "obsidian";
+import { App, Modal, ButtonComponent, MarkdownRenderer, TextComponent } from "obsidian";
+
+import { FolderSuggest } from "../views/FolderSuggest";
 
 export interface ToolConfirmationDetails {
     action: "create" | "update" | "rename" | "delete" | "folder";
@@ -11,15 +13,15 @@ export interface ToolConfirmationDetails {
 
 export class ToolConfirmationModal extends Modal {
     private details: ToolConfirmationDetails;
-    private resolve: (value: boolean) => void;
+    private resolve: (value: ToolConfirmationDetails | null) => void;
 
-    constructor(app: App, details: ToolConfirmationDetails, resolve: (value: boolean) => void) {
+    constructor(app: App, details: ToolConfirmationDetails, resolve: (value: ToolConfirmationDetails | null) => void) {
         super(app);
         this.details = details;
         this.resolve = resolve;
     }
 
-    static async open(app: App, details: ToolConfirmationDetails): Promise<boolean> {
+    static async open(app: App, details: ToolConfirmationDetails): Promise<ToolConfirmationDetails | null> {
         return new Promise((resolve) => {
             const modal = new ToolConfirmationModal(app, details, resolve);
             modal.open();
@@ -41,16 +43,34 @@ export class ToolConfirmationModal extends Modal {
         const addRow = (label: string, value: string, isWarning = false) => {
             const row = table.createEl("tr");
             row.createEl("td", { cls: "label", text: label });
-            const valTd = row.createEl("td", { cls: "value", text: value });
+            const valTd = row.createEl("td", { cls: "value" });
             if (isWarning) valTd.addClass("warning-text");
+            return valTd;
         };
 
         addRow("Tool", this.details.tool);
         addRow("Action", this.details.action.toUpperCase());
-        addRow("Path", this.details.path);
+
+        const pathTd = addRow("Path", "");
+        const pathInput = new TextComponent(pathTd)
+            .setValue(this.details.path)
+            .setPlaceholder("Enter path...")
+            .onChange((val) => {
+                this.details.path = val;
+            });
+        pathInput.inputEl.addClass("confirmation-input");
+        new FolderSuggest(this.app, pathInput.inputEl);
 
         if (this.details.newPath) {
-            addRow("New path", this.details.newPath);
+            const newPathTd = addRow("New path", "");
+            const newPathInput = new TextComponent(newPathTd)
+                .setValue(this.details.newPath)
+                .setPlaceholder("Enter new path...")
+                .onChange((val) => {
+                    this.details.newPath = val;
+                });
+            newPathInput.inputEl.addClass("confirmation-input");
+            new FolderSuggest(this.app, newPathInput.inputEl);
         }
 
         if (this.details.mode) {
@@ -81,20 +101,20 @@ export class ToolConfirmationModal extends Modal {
             .setButtonText("Confirm")
             .setCta()
             .onClick(() => {
-                this.resolve(true);
+                this.resolve(this.details);
                 this.close();
             });
 
         new ButtonComponent(buttonContainer)
             .setButtonText("Cancel")
             .onClick(() => {
-                this.resolve(false);
+                this.resolve(null);
                 this.close();
             });
     }
 
     onClose() {
-        this.resolve(false);
+        this.resolve(null);
         this.contentEl.empty();
     }
 }
