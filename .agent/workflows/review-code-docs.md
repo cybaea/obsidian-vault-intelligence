@@ -23,6 +23,8 @@ In addition to the broad review, consider carefully these points:
 - Review the code for unnessesary abstractions.
    	- Quote: "Abstractions are not your enemy but they are a dangerous temptation".
 
+Ensure `npm run lint` and `npm run build` completes without warnings or errors.
+
 # 2. Review developer documentation
 
 Adopt roles as systems architect and systems analyst. Carefully analyse the code to **update** the markdown document `devs/ARCHITECTURE.md` as a detailed reference of the system architecture. This document is complemented by `devs/adr/`.
@@ -39,6 +41,8 @@ In addition to the detailed descriptions, be sure to include:
 
 Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
 
+Ensure `npm run lint` and `npm run docs:build` completes without warnings or errors.
+
 # 3. Review user documentation
 
 Adopt role as an expert in user experience and documentation. Carefully review the user documentation in `README.md` and `docs/` to assess:
@@ -46,8 +50,11 @@ Adopt role as an expert in user experience and documentation. Carefully review t
 - if anything needs updating due to our recent changes
 - if the documentation is still clear and helpful
 - if the documentation serves our ambition of gaining more users.
+- carefully check for broken links in the generated VitePress site (refer to `.vitepress/config.mts`)
 
 **Target Audience:** New and exsisting users. Content creators for Obsidian who want to showcase our plugin.
 **Format:** GitHub Markdown with linked images in `public/images/` and, where useful, embedded Mermaid.js diagrams.
 
 Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
+
+Ensure `npm run lint` and `npm run docs:build` completes without warnings or errors.

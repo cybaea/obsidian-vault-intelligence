@@ -71,4 +71,4 @@ Structure:
 
 ----
 
-Action: Read `package.json` to find the version. Read `CHANGELOG.md` for that version's entry (it should be the latest other than 'Unreleased'). Generate the two files now.
+Action: Read `package.json` to find the version. Read `CHANGELOG.md` for that version's entry (it should be the latest other than 'Unreleased'). Generate the two files now. Then run `npm run lint` and resolve any errors or warnings.

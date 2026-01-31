@@ -1,4 +1,4 @@
-import { App, Modal, Plugin, MarkdownRenderer, ButtonComponent, setIcon } from "obsidian";
+import { App, Modal, Plugin, MarkdownRenderer, ButtonComponent, setIcon, Component } from "obsidian";
 
 import { UI_STRINGS, DOCUMENTATION_URLS } from "../constants";
 
@@ -35,8 +35,7 @@ export class ReleaseNotesModal extends Modal {
             this.markdownContent,
             markdownContainer,
             "/",
-            // eslint-disable-next-line obsidianmd/no-plugin-as-component -- Modal lifetime is managed by user interaction, plugin instance is safe enough here
-            this.plugin
+            this as unknown as Component
         );
 
         // Footer / Close
