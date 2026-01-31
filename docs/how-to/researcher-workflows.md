@@ -29,18 +29,16 @@ The Researcher speaks your language. Examples of how to use this effectively:
 - **Set your language**: Go to settings and choose your preferred language (eg "French"). The agent will now reply in French by default, even if you ask in English.
 - **Cross-lingual search**: You can ask questions in your native language about notes written in English. The agent will translate and synthesize the answer for you.
 
-<!-- SCREENSHOT: Show the agent replying in a non-English language (e.g. French or Spanish) to a query about an English note. Name: multilingual-reply.png -->
-
-<!-- SCREENSHOT: Show the agent replying in a non-English language (e.g. French or Spanish) to a query about an English note. Name: multilingual-reply.png -->
+    ![With the language set to German, the agent replies in German to a query about an English note and with an English prompt](/images/screenshots/multilingual-reply.png)
 
 ## Chat Controls
 
 The Research Chat header includes powerful tools for managing your session on the fly:
 
 - **Model Switching**: Use the dropdown in the header to temporarily switch models (eg from Flash to Pro) for a single difficult query without changing your global defaults.
-- **Capability Toggles**: Click the "Code" or "Web" icons to enable/disable tools for the current session. For example, if you don't need the agent to search the web, turn it off to save tokens and speed up responses.
+- **Capability Toggles**: Click the **Write** toggle to enable/disable agentic write access for the current session. When enabled, the agent can create or modify notes (it will always ask for your confirmation before applying changes).
 
-<!-- SCREENSHOT: Close-up of the Research Chat header showing the model dropdown and the tool toggle icons (Code/Web). Name: chat-controls.png -->
+    ![Close-up of the Research Chat header showing the model dropdown and the Write toggle](/images/screenshots/chat-controls.png)
 
 ## Effective Querying
 
