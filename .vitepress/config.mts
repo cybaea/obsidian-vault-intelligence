@@ -92,7 +92,7 @@ export default withMermaid(defineConfig({
                 items: [
                     { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
                     { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
-                    { text: 'Gardener: Vault Hygiene', link: '/docs/how-to/maintain-vault' },
+                    { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
                     { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' }
                 ]
             },
