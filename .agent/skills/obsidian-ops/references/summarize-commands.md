@@ -15,7 +15,6 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
 **Workflow**:
 
 1. **Get all changed files**:
-
    ```bash
    git status
    git diff --cached  # For staged changes
@@ -28,7 +27,6 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    - Get the overall picture of the changes
 
 3. **Generate commit message** in this format:
-
    ```
    [Summary of changes]
    - [more detailed item 1]
@@ -37,7 +35,6 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    ```
 
 4. **Present as a code block** so the user can easily copy it:
-
    ````
    ```
    [Summary of changes]
@@ -47,7 +44,6 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
    ````
 
 **Important**:
-
 - Look at actual file changes, not just chat context
 - Be succinct but descriptive
 - Focus on what changed, not how it was changed
@@ -55,7 +51,6 @@ When the user requests "Summarize" or "Summarize for release", use these workflo
 - Group related changes together
 
 **Example**:
-
 ```
 Reorganize agent instructions into structured directory
 - Split AGENTS.md into topic-based files in .agents/
@@ -71,7 +66,6 @@ Reorganize agent instructions into structured directory
 **Workflow**:
 
 1. **Check the version**:
-
    ```bash
    # Check manifest.json for version
    # Or check package.json
@@ -79,7 +73,6 @@ Reorganize agent instructions into structured directory
    ```
 
 2. **Get all changes since last release**:
-
    ```bash
    git log --oneline  # See recent commits
    git diff <last-release-tag>..HEAD  # See all changes
@@ -91,7 +84,6 @@ Reorganize agent instructions into structured directory
    - Categorize changes by type (Features, Fixes, Improvements, etc.)
 
 4. **Generate release notes** in markdown format:
-
    ```markdown
    ### Features
    - [Feature description 1]
@@ -106,7 +98,6 @@ Reorganize agent instructions into structured directory
    ```
 
 5. **Present as a code block** with the version clearly indicated:
-
    ````
    ```markdown
    ## Version X.Y.Z
@@ -124,7 +115,6 @@ Reorganize agent instructions into structured directory
    ````
 
 **Important**:
-
 - Start with `###` headings (third-level markdown)
 - Use bullet points under each heading
 - Be succinct and punchy
@@ -134,7 +124,6 @@ Reorganize agent instructions into structured directory
 - Look at actual changes, not just chat history
 
 **Example**:
-
 ```markdown
 ## Version 1.2.0
 
@@ -161,3 +150,4 @@ Reorganize agent instructions into structured directory
 - **Group logically**: Related changes should be grouped together
 - **User perspective**: Focus on what users/developers will notice
 - **Version awareness**: For releases, always check and include the version number
+

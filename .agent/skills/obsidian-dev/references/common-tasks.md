@@ -9,7 +9,6 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 **Note**: The examples below are for plugin development (TypeScript).
 
 **When to use this vs [code-patterns.md](code-patterns.md)**: 
-
 - **common-tasks.md**: Quick snippets and basic patterns for common operations
 - **code-patterns.md**: Complete, production-ready examples with full context and error handling
 
@@ -18,7 +17,6 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 ## Organize code across multiple files
 
 **main.ts** (minimal, lifecycle only):
-
 ```ts
 import { Plugin } from "obsidian";
 import { MySettings, DEFAULT_SETTINGS } from "./settings";
@@ -35,7 +33,6 @@ export default class MyPlugin extends Plugin {
 ```
 
 **settings.ts**:
-
 ```ts
 export interface MySettings {
   enabled: boolean;
@@ -49,7 +46,6 @@ export const DEFAULT_SETTINGS: MySettings = {
 ```
 
 **commands/index.ts**:
-
 ```ts
 import { Plugin } from "obsidian";
 import { doSomething } from "./my-command";
@@ -136,7 +132,6 @@ this.addSettingTab(new MySettingTab(this.app, this));
 **Note**: For settings groups (available since API 1.11.0), use `SettingGroup` from the API. Plugin docs may not yet document this feature - always check `.ref/obsidian-api/obsidian.d.ts` for the latest API.
 
 **SettingGroup Methods** (available since 1.11.0):
-
 - `setHeading(heading: string)` - Set the group heading
 - `addSetting(cb: (setting: Setting) => void)` - Add a setting to the group
 - `addSearch(cb: (component: SearchComponent) => any)` - Add a search input at the beginning of the group (useful for filtering)
@@ -152,7 +147,7 @@ this.addSettingTab(new MySettingTab(this.app, this));
 
 ### Using SecretComponent in Settings
 
-Store only the secret _name_ (ID) in your settings, not the actual secret value:
+Store only the secret *name* (ID) in your settings, not the actual secret value:
 
 ```ts
 import { App, PluginSettingTab, SecretComponent, Setting } from "obsidian";
@@ -428,6 +423,7 @@ this.addCommand({
 ```
 
 The `checkCallback` receives a `checking` boolean:
-
 - When `true`: Only check if command can run (don't execute)
 - When `false`: Actually execute the command
+
+

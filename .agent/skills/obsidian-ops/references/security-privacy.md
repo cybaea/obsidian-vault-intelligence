@@ -6,7 +6,7 @@ Update frequency: Check Obsidian Developer Policies for updates
 
 # Security, privacy, and compliance
 
-Follow Obsidian's **Developer Policies** (<https://docs.obsidian.md/Developer+policies>) and **Theme Guidelines** (<https://docs.obsidian.md/Themes/Releasing/Theme+guidelines>). See [release-readiness.md](release-readiness.md) for a comprehensive release checklist.
+Follow Obsidian's **Developer Policies** (https://docs.obsidian.md/Developer+policies) and **Theme Guidelines** (https://docs.obsidian.md/Themes/Releasing/Theme+guidelines). See [release-readiness.md](release-readiness.md) for a comprehensive release checklist.
 
 ## Developer Policies Requirements
 
@@ -57,3 +57,5 @@ Themes are CSS-only and have minimal security surface area, but still follow pri
 - [manifest.md](manifest.md) - Manifest requirements (includes security-related fields)
 - [Developer Policies](https://docs.obsidian.md/Developer+policies) - Official Obsidian Developer Policies
 - [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines) - Official Theme Guidelines
+
+

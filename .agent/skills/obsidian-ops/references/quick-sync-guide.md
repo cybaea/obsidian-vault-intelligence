@@ -13,7 +13,6 @@ This is a quick reference for pulling the latest changes from reference reposito
 **IMPORTANT**: Before syncing, check if `.ref` contains symlinks or actual repos. Git operations must be performed on the **actual target location**, not on symlinks.
 
 **Windows (PowerShell)**:
-
 ```powershell
 Get-Item .ref/obsidian-api | Select-Object LinkType, Target
 # If LinkType shows "Junction" or "SymbolicLink", you're using symlinks
@@ -21,7 +20,6 @@ Get-Item .ref/obsidian-api | Select-Object LinkType, Target
 ```
 
 **macOS/Linux**:
-
 ```bash
 ls -la .ref/obsidian-api
 # If it shows "->" with a path, it's a symlink
@@ -35,7 +33,6 @@ ls -la .ref/obsidian-api
 ## What Does `git pull` Do?
 
 When you run `git pull` in a reference repository:
-
 1. **Fetches** the latest commits from the remote repository (GitHub)
 2. **Merges** those changes into your local copy
 3. **Updates** all files in that repository to the latest version
@@ -60,7 +57,6 @@ cd eslint-plugin && git pull && cd ..
 ```
 
 Or use a simple loop (bash/zsh):
-
 ```bash
 cd ../.ref/obsidian-dev  # or cd ~/Development/.ref/obsidian-dev
 for repo in obsidian-api obsidian-sample-plugin obsidian-developer-docs obsidian-plugin-docs obsidian-sample-theme eslint-plugin; do
@@ -70,7 +66,6 @@ done
 ```
 
 Or PowerShell (Windows):
-
 ```powershell
 cd ..\.ref\obsidian-dev  # Adjust path as needed
 foreach ($repo in @('obsidian-api', 'obsidian-sample-plugin', 'obsidian-developer-docs', 'obsidian-plugin-docs', 'obsidian-sample-theme', 'eslint-plugin')) {
@@ -156,7 +151,6 @@ git diff HEAD~1 HEAD -- AGENTS.md
 ```
 
 **PowerShell version (Windows)**:
-
 ```powershell
 # 1. Pull all repos (using symlinks - adjust path as needed)
 cd ..\.ref\obsidian-dev
@@ -168,3 +162,5 @@ foreach ($repo in @('obsidian-api', 'obsidian-sample-plugin', 'obsidian-develope
 
 # 2-4. Same as above
 ```
+
+

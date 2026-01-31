@@ -14,7 +14,6 @@ To ensure consistent development across plugins and themes, proper code organiza
 ## When to Use
 
 Load this skill when:
-
 - Implementing new features
 - Following coding conventions
 - Debugging issues

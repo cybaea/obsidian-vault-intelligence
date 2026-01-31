@@ -25,7 +25,6 @@ If your theme is simple with just `theme.css` in the root and no build tools:
 If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has `src/scss/` directory:
 
 1. **Run the build** (assume npm is already installed):
-
    ```powershell
    # For themes using Grunt (like obsidian-oxygen)
    npx grunt build
@@ -40,11 +39,9 @@ If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has
    ```
 
 2. **If the build fails with npm/node errors**, then check if npm is installed:
-
    ```powershell
    npm --version
    ```
-
    - If npm is not found, inform the user that Node.js (which includes npm) needs to be installed
    - Do not automatically install npm - let the user handle installation
 
@@ -55,7 +52,6 @@ If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has
 **How to detect**: If you have a `src/scss/` directory, you have a complex theme with build tools. Check for `Gruntfile.js`, `package.json` scripts, or other build configuration files.
 
 **Common build tools**:
-
 - **Grunt**: Look for `Gruntfile.js` → Run `npx grunt build` or `npx grunt` (watch mode)
 - **npm scripts**: Check `package.json` for `build` script → Run `npm run build`
 - **Sass CLI**: Some themes use `sass` directly → Check `package.json` scripts
@@ -70,9 +66,10 @@ If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has
 ## Automated Workflow
 
 When making changes:
-
 1. Make the code change
 2. **Immediately run the build command**
 3. If build fails, fix errors
 4. Repeat until build succeeds
 5. Then proceed with testing or other tasks
+
+
