@@ -49,7 +49,7 @@
 		"eslint": "^9.39.2",
 		"eslint-plugin-obsidianmd": "^0.1.9",
 		"eslint-plugin-perfectionist": "^5.4.0",
-		"globals": "17.2.0",
+		"globals": "17.3.0",
 		"jiti": "2.6.1",
 		"markdownlint-cli2": "^0.20.0",
 		"mermaid": "^11.12.2",
