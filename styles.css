@@ -728,13 +728,25 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     gap: var(--size-4-2);
 }
 
-.release-notes-modal .modal-button-container .sponsor-button {
+.release-notes-modal .modal-button-container .sponsor-button,
+.release-notes-modal .modal-button-container .github-button {
     display: inline-flex;
     align-items: center;
     gap: var(--size-4-1);
-    margin-right: auto;
+}
+
+.release-notes-modal .modal-button-container .sponsor-button {
     border-color: #bf3989 !important;
     color: #bf3989 !important;
+}
+
+.release-notes-modal .modal-button-container .github-button {
+    margin-right: auto;
+    color: var(--text-muted);
+}
+
+.release-notes-modal .modal-button-container .github-button:hover {
+    color: var(--text-normal);
 }
 
 .release-notes-modal .modal-button-container .sponsor-button:hover {
@@ -742,7 +754,8 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     color: white !important;
 }
 
-.release-notes-modal .modal-button-container .sponsor-button svg {
+.release-notes-modal .modal-button-container .sponsor-button svg,
+.release-notes-modal .modal-button-container .github-button svg {
     color: inherit;
 }
 

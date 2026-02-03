@@ -51,6 +51,15 @@ export class ReleaseNotesModal extends Modal {
         sponsorBtn.buttonEl.addClass("sponsor-button");
         setIcon(sponsorBtn.buttonEl, "heart");
 
+        const githubBtn = new ButtonComponent(buttonContainer)
+            .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_GITHUB)
+            .onClick(() => {
+                window.open(DOCUMENTATION_URLS.GITHUB, "_blank");
+            });
+
+        githubBtn.buttonEl.addClass("github-button");
+        setIcon(githubBtn.buttonEl, "github");
+
         new ButtonComponent(buttonContainer)
             .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_BUTTON)
             .setCta()

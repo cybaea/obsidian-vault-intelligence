@@ -304,6 +304,7 @@ export const UI_STRINGS = {
     MODAL_RELEASE_NOTES_BUTTON: "Cool!",
     MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})",
     MODAL_RELEASE_NOTES_ERROR_HEADER: "### Update Successful!",
+    MODAL_RELEASE_NOTES_GITHUB: "GitHub",
     MODAL_RELEASE_NOTES_SPONSOR: "Sponsor",
     MODAL_RELEASE_NOTES_TITLE: "What's New in",
     NOTICE_GARDENER_FAILED: "Gardener failed: ",
@@ -324,6 +325,7 @@ const DOCS_CONFIG = `${DOCS_BASE}docs/reference/configuration.html`;
 export const DOCUMENTATION_URLS = {
     BASE: DOCS_BASE,
     CONFIGURATION: DOCS_CONFIG,
+    GITHUB: "https://github.com/cybaea/obsidian-vault-intelligence",
     SECTIONS: {
         CONNECTION: `${DOCS_CONFIG}#connection`,
         EXPLORER: `${DOCS_CONFIG}#explorer`,
