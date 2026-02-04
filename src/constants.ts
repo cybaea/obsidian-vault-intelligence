@@ -28,7 +28,7 @@ export const SEARCH_CONSTANTS = {
     DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
 
     /** Default relative threshold for structural (headers) context inclusion */
-    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.35,
+    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.20,
 
     /** Default relative threshold for snippet context inclusion */
     DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.70,
@@ -76,7 +76,7 @@ export const SEARCH_CONSTANTS = {
     MIN_DOC_CONTEXT_CHARS: 500,
 
     /** Default decay for neighbor expansion */
-    NEIGHBOR_DECAY: 0.3,
+    NEIGHBOR_DECAY: 0.5,
 
     /** Scoring: Score for exact body match */
     SCORE_BODY_MATCH: 2.0,
