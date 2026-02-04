@@ -66,7 +66,9 @@ export class GraphService {
 
             // 2. Configure worker
             const config: WorkerConfig = {
+                authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
+                contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
                 embeddingDimension: this.settings.embeddingDimension,
                 embeddingModel: this.settings.embeddingModel,
                 googleApiKey: this.settings.googleApiKey,
@@ -90,15 +92,16 @@ export class GraphService {
                 return await this.embeddingService.embedQuery(text);
             });
 
+            // Initialize worker
             await this.api.initialize(config, fetcher, embedder);
 
             // 3. Ensure gitignore exists for data folder
             await this.ensureGitignore();
 
-            // 4. Load existing state if any
+            // 4. Load or Migrate
             await this.loadState();
 
-            // 4. Register event listeners
+            // 5. Register event listeners
             this.registerEvents();
 
             this.isInitialized = true;
@@ -240,9 +243,13 @@ export class GraphService {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
                 // Transfer buffer to worker
-                await this.api.loadIndex(new Uint8Array(stateBuffer));
-                logger.info("[GraphService] State loaded (MessagePack).");
-                return;
+                const success = await this.api.loadIndex(new Uint8Array(stateBuffer));
+                if (success) {
+                    logger.info("[GraphService] State loaded (MessagePack).");
+                    return;
+                }
+                // Fallthrough implies incompatibility check failed in worker
+                logger.warn("[GraphService] State incompatible. Triggering migration.");
             } catch (error) {
                 logger.error("[GraphService] Load failed (MessagePack):", error);
             }
@@ -252,11 +259,24 @@ export class GraphService {
         if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
             try {
                 const stateJson = await this.plugin.app.vault.adapter.read(legacyPath);
-                await this.api.loadIndex(stateJson);
-                logger.info("[GraphService] State loaded (Legacy JSON).");
+                // Legacy always implies migration needed for this update, but let's try generic load
+                const success = await this.api.loadIndex(stateJson);
+                if (success) {
+                    logger.info("[GraphService] State loaded (Legacy JSON).");
+                    // We successfully loaded legacy, but we might want to schedule a save to convert to msgpack eventually.
+                    // For now, treat as success.
+                    return;
+                }
             } catch (error) {
                 logger.error("[GraphService] Load failed (Legacy JSON):", error);
             }
+        }
+
+        // If we reached here, either no state exists OR loading failed/was incompatible.
+        // If files exist but failed to load, we should wipe.
+        if (await this.plugin.app.vault.adapter.exists(dataPath) || await this.plugin.app.vault.adapter.exists(legacyPath)) {
+            new Notice("Vault intelligence: upgrading index to new format...");
+            this.scanAll(true).catch(err => logger.error("Migration scan failed", err));
         }
     }
 
@@ -498,7 +518,9 @@ export class GraphService {
         this.settings = settings;
         if (this.api) {
             await this.api.updateConfig({
+                authorName: settings.authorName,
                 chatModel: settings.chatModel,
+                contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
                 embeddingDimension: settings.embeddingDimension,
                 embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,

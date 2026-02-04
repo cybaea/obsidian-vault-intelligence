@@ -9,8 +9,10 @@ export type EmbeddingProvider = 'gemini' | 'local';
 export interface VaultIntelligenceSettings {
     // New: Language Support
     agentLanguage: string;
+    authorName: string;
     chatModel: string;
     codeModel: string;
+    contextAwareHeaderProperties: string[];
     contextMaxFiles: number;
     contextPrimaryThreshold: number;
     contextStructuralThreshold: number;
@@ -117,8 +119,10 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
+    authorName: 'Me',
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',
+    contextAwareHeaderProperties: ['title', 'topics', 'tags', 'type', 'author', 'status'],
     contextMaxFiles: 100,
     contextPrimaryThreshold: 0.9,
     contextStructuralThreshold: 0.35,
