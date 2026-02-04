@@ -70,6 +70,7 @@ export interface WorkerAPI {
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;
+    pruneOrphans(paths: string[]): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
     saveIndex(): Promise<Uint8Array>; // Returns serialized graph/index
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;

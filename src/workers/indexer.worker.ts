@@ -168,6 +168,7 @@ const IndexerWorker: WorkerAPI = {
         return states;
     },
 
+
     /**
      * Gets neighbors in the graph, with optional ontology-based expansion.
      * @param path - Source file path.
@@ -393,6 +394,29 @@ const IndexerWorker: WorkerAPI = {
     },
 
     /**
+     * Removes nodes from the graph and Orama that are not in the provided list of valid paths.
+     * @param validPaths - Array of current vault file paths.
+     */
+    async pruneOrphans(validPaths: string[]) {
+        const validSet = new Set(validPaths.map(p => workerNormalizePath(p)));
+        const orphans: string[] = [];
+        graph.forEachNode((node, attr) => {
+            const a = attr as GraphNodeData;
+            if (a.type === 'file' && !validSet.has(node)) {
+                orphans.push(node);
+            }
+        });
+
+        if (orphans.length > 0) {
+            workerLogger.info(`[pruneOrphans] Found ${orphans.length} orphan nodes. Cleaning up...`);
+            for (const orphan of orphans) {
+                // deleteFile handles Orama chunk removal as well
+                await IndexerWorker.deleteFile(orphan);
+            }
+        }
+    },
+
+    /**
      * Handles file renames by updating the graph node ID and Orama index.
      */
     async renameFile(oldPath: string, newPath: string) {
@@ -426,6 +450,9 @@ const IndexerWorker: WorkerAPI = {
             graph: graph.export(),
             orama: oramaRaw
         };
+
+        workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
+        workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
 
         workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
 

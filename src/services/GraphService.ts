@@ -514,6 +514,10 @@ export class GraphService {
         // Wait for the entire queue to flush before saving/marking done
         await this.processingQueue;
 
+        // Cleanup orphans (nodes in graph not in vault)
+        const paths = files.map(f => f.path);
+        await this.api.pruneOrphans(paths);
+
         await this.saveState();
         if (count > 0) {
             logger.info(`[GraphService] Scan complete. Total indexed: ${count}`);
