@@ -178,6 +178,7 @@ export const GRAPH_CONSTANTS = {
     MAX_EXPANSION_DEPTH: 1,
     /** Max neighbors to fetch per node to avoid state explosion */
     MAX_NEIGHBORS_PER_NODE: 5,
+    MAX_SERIALIZATION_DEPTH: 1000,
     /** Number of files to process before logging progress during scan */
     SCAN_LOG_BATCH_SIZE: 50,
     /** Default filename for graph state */

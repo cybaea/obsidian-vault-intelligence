@@ -3,7 +3,7 @@ import { search, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS } from '../constants';
+import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
@@ -333,10 +333,13 @@ const IndexerWorker: WorkerAPI = {
         let parsed: SerializedIndexState;
         try {
             if (typeof data === 'string') {
+                workerLogger.debug(`[loadIndex] Received string data: ${data.length} chars`);
                 parsed = JSON.parse(data) as SerializedIndexState;
             } else {
+                workerLogger.debug(`[loadIndex] Received binary data: ${data.byteLength} bytes`);
                 parsed = decode(data) as SerializedIndexState;
             }
+            workerLogger.debug(`[loadIndex] Decoded: graph=${!!parsed.graph}, orama=${!!parsed.orama}, dim=${parsed.embeddingDimension}, model=${parsed.embeddingModel}`);
         } catch (e) {
             workerLogger.error("Failed to decode index state", e);
             return false;
@@ -354,12 +357,7 @@ const IndexerWorker: WorkerAPI = {
             const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
 
             if (modelMismatch || dimMismatch || loadedDimension === undefined) {
-                // The original code had `await recreateOrama(); return false;` here.
-                // The user's provided snippet seems to be from a different context (e.g., a class method in the main thread).
-                // To maintain syntactic correctness and avoid undefined references in this worker file,
-                // we will keep the original worker-specific logic for handling schema mismatch.
-                // If the intent was to trigger a full re-scan from the main thread, that logic
-                // would need to be handled by the caller of this worker method based on its return value.
+                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), loadedDimensionUndef=${loadedDimension === undefined}`);
                 await recreateOrama();
                 return false; // Signal migration
             }
@@ -412,6 +410,13 @@ const IndexerWorker: WorkerAPI = {
         const { save } = await import('@orama/orama');
         const oramaRaw = save(orama);
 
+        // Architectural Fix: Check for circularity to ensure we aren't masking a structural bug.
+        // Orama and Graphology exports should be DAGs.
+        if (isCircular(oramaRaw)) {
+            workerLogger.error("Circularity detected in Orama state! Serialization aborted.");
+            throw new Error("Circularity detected in Orama state");
+        }
+
         const serialized: SerializedIndexState = {
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
@@ -419,7 +424,8 @@ const IndexerWorker: WorkerAPI = {
             orama: oramaRaw
         };
 
-        return encode(serialized);
+        workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
+        return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
     },
 
     /**
@@ -771,6 +777,29 @@ function ensureArray(val: unknown): unknown[] {
     if (Array.isArray(val)) return val as unknown[];
     return [val];
 }
+
+/**
+ * Detects circular references in an object to prevent infinite recursion during serialization.
+ * Orama and Graphology exports should be Directed Acyclic Graphs (DAGs).
+ */
+function isCircular(obj: unknown): boolean {
+    const stack = new WeakSet<object>();
+    function check(val: unknown): boolean {
+        if (val && typeof val === 'object' && val !== null) {
+            if (stack.has(val)) return true;
+            stack.add(val);
+            // Process keys
+            const keys = Object.keys(val);
+            for (const key of keys) {
+                if (check((val as Record<string, unknown>)[key])) return true;
+            }
+            stack.delete(val);
+        }
+        return false;
+    }
+    return check(obj);
+}
+
 
 /**
  * Removes `compressed-json` code blocks to prevent context poisoning from Excalidraw drawings.

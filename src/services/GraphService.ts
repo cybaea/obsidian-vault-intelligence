@@ -241,6 +241,7 @@ export class GraphService {
         if (await this.plugin.app.vault.adapter.exists(dataPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
+                logger.debug(`[GraphService] Reading index: ${stateBuffer.byteLength} bytes`);
                 // Transfer buffer to worker
                 const success = await this.api.loadIndex(new Uint8Array(stateBuffer));
                 if (success) {
