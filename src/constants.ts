@@ -88,7 +88,7 @@ export const SEARCH_CONSTANTS = {
     SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
 
     /** Default weight for spreading activation */
-    SPREADING_ACTIVATION_WEIGHT: 0.25,
+    SPREADING_ACTIVATION_WEIGHT: 0.6,
 
     /** Default character limit for tool responses (truncation) */
     TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
@@ -205,7 +205,7 @@ export const ONTOLOGY_CONSTANTS = {
     HUB_MIN_DEGREE: 2,
 
     /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
-    HUB_PENALTY_ENABLED: true,
+    HUB_PENALTY_ENABLED: false,
 
     /** Dampening factor for 2-hop (Sibling) relevance */
     SIBLING_DECAY: 0.25
