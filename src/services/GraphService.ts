@@ -383,18 +383,22 @@ export class GraphService {
         const ontologyService = plugin.ontologyService;
 
         if (ontologyService && typeof ontologyService.getValidTopics === 'function') {
-            const topics = await ontologyService.getValidTopics();
             const map: Record<string, string> = {};
 
+            // 1. Add all Markdown files by basename (support [[Basename]] links)
+            const allFiles = this.vaultManager.getMarkdownFiles();
+            for (const file of allFiles) {
+                map[file.basename.toLowerCase()] = file.path;
+            }
+
+            // 2. Add Ontology Topics and Aliases (overwrites basenames if specific aliases exist)
+            const topics = await ontologyService.getValidTopics();
             for (const t of topics) {
-                // Map the topic name/alias to its canonical path
-                // "Project FooBar" -> "Ontology/Project FooBar.md"
-                // Match resolution logic in worker (lowercase keys)
                 map[t.name.toLowerCase()] = t.path;
             }
 
             await this.api.updateAliasMap(map);
-            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker (lowercased).`);
+            logger.debug(`[GraphService] Synced aliases to worker: ${topics.length} topics + ${allFiles.length} files.`);
         }
     }
 
