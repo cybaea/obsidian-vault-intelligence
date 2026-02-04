@@ -13,6 +13,7 @@ New features are added in the "Unreleased" section.
 - **Flawless vault-wide connectivity**: Restored full support for relative Wikilinks (`../`). Notes organized in complex folder hierarchies now connect perfectly in the semantic graph, ensuring the Researcher never misses a related idea just because it lives in a different folder.
 - **Zero-noise Excalidraw integration**: Visual thinkers will notice a massive improvement in search quality. We've overhauled how drawing files are indexed, stripping away megabytes of internal JSON metadata while preserving actual text labels. This makes the index up to 99% smaller and eliminates "false positive" search results from drawing files.
 - **Reliability at scale**: Fixed a persistent "reindexing loop" that caused some vaults to scan all files on every startup. The plugin now tracks changes with 100% accuracy, ensuring your semantic graph is always ready instantly without the wait.
+- **Tuning control**: Added granular reset buttons to the Advanced Settings panel. You can now restore individual Search and Context thresholds to their default values or reset the entire section with a single click.
 
 ### Developer features
 

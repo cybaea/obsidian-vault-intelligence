@@ -159,7 +159,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.garsSimilarityWeight = DEFAULT_SETTINGS.garsSimilarityWeight;
                 await plugin.saveSettings();
-                renderAdvancedSettings(context); // Refresh
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -179,7 +180,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.garsCentralityWeight = DEFAULT_SETTINGS.garsCentralityWeight;
                 await plugin.saveSettings();
-                renderAdvancedSettings(context); // Refresh
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -199,7 +201,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.garsActivationWeight = DEFAULT_SETTINGS.garsActivationWeight;
                 await plugin.saveSettings();
-                renderAdvancedSettings(context); // Refresh
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -210,7 +213,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 garsReset();
                 await plugin.saveSettings();
-                renderAdvancedSettings(context); // Refresh
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     // --- 4. Search and Context Tuning ---
@@ -231,6 +235,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         text: 'Adjust search result expansion and context assembly.'
     });
 
+    const tuningReset = () => {
+        plugin.settings.searchExpansionSeedsLimit = DEFAULT_SETTINGS.searchExpansionSeedsLimit;
+        plugin.settings.searchExpansionThreshold = DEFAULT_SETTINGS.searchExpansionThreshold;
+        plugin.settings.contextPrimaryThreshold = DEFAULT_SETTINGS.contextPrimaryThreshold;
+        plugin.settings.contextSupportingThreshold = DEFAULT_SETTINGS.contextSupportingThreshold;
+        plugin.settings.contextStructuralThreshold = DEFAULT_SETTINGS.contextStructuralThreshold;
+        plugin.settings.contextMaxFiles = DEFAULT_SETTINGS.contextMaxFiles;
+    };
+
     new Setting(containerEl)
         .setName('Max expansion seeds')
         .setDesc('Capped number of results that trigger graph neighbor expansion. Prevents performance lag.')
@@ -241,6 +254,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.searchExpansionSeedsLimit = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.searchExpansionSeedsLimit})`)
+            .onClick(async () => {
+                plugin.settings.searchExpansionSeedsLimit = DEFAULT_SETTINGS.searchExpansionSeedsLimit;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -253,6 +275,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.searchExpansionThreshold = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.searchExpansionThreshold.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.searchExpansionThreshold = DEFAULT_SETTINGS.searchExpansionThreshold;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -265,6 +296,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.contextPrimaryThreshold = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.contextPrimaryThreshold.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.contextPrimaryThreshold = DEFAULT_SETTINGS.contextPrimaryThreshold;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -277,6 +317,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.contextSupportingThreshold = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.contextSupportingThreshold.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.contextSupportingThreshold = DEFAULT_SETTINGS.contextSupportingThreshold;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -289,6 +338,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.contextStructuralThreshold = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.contextStructuralThreshold.toFixed(2)})`)
+            .onClick(async () => {
+                plugin.settings.contextStructuralThreshold = DEFAULT_SETTINGS.contextStructuralThreshold;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     new Setting(containerEl)
@@ -301,6 +359,27 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.contextMaxFiles = value;
                 await plugin.saveSettings();
+            }))
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.contextMaxFiles})`)
+            .onClick(async () => {
+                plugin.settings.contextMaxFiles = DEFAULT_SETTINGS.contextMaxFiles;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
+            }));
+
+    new Setting(containerEl)
+        .setName('Reset tuning')
+        .setDesc('Restore all search and context tuning values to their defaults.')
+        .addButton(btn => btn
+            .setButtonText('Restore defaults')
+            .onClick(async () => {
+                tuningReset();
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
             }));
 
     // --- 5. Developer and Debugging ---

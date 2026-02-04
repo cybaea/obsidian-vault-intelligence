@@ -1,6 +1,6 @@
 import { App, Platform } from "obsidian";
 
-import { GRAPH_CONSTANTS } from "../constants";
+import { GRAPH_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { IEmbeddingService } from "../services/IEmbeddingService";
 import { LogLevel } from "../utils/logger";
 
@@ -123,10 +123,10 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',
     contextAwareHeaderProperties: ['title', 'topics', 'tags', 'type', 'author', 'status'],
-    contextMaxFiles: 100,
-    contextPrimaryThreshold: 0.9,
-    contextStructuralThreshold: 0.35,
-    contextSupportingThreshold: 0.70,
+    contextMaxFiles: SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES,
+    contextPrimaryThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD,
+    contextStructuralThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD,
+    contextSupportingThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_SUPPORTING_THRESHOLD,
     contextWindowTokens: 200000,
     embeddingDimension: 768,
     embeddingModel: 'gemini-embedding-001',
@@ -160,8 +160,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     previousVersion: '0.0.0',
     queueDelayMs: 100,
     searchCentralityLimit: 50,
-    searchExpansionSeedsLimit: 5,
-    searchExpansionThreshold: 0.7,
+    searchExpansionSeedsLimit: SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT,
+    searchExpansionThreshold: SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD,
     similarNotesLimit: 20,
     systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25
