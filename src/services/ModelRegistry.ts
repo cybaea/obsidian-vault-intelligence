@@ -108,7 +108,12 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     }
 ];
 
+/**
+ * Central registry and manager for AI models.
+ * Handles fetching, sorting, and default selection of models.
+ */
 export class ModelRegistry {
+
     private static dynamicModels: ModelDefinition[] = [];
     private static rawApiResponse: GeminiApiResponse | null = null;
     private static lastFetchTime: number = 0;
