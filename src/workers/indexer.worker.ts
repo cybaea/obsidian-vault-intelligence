@@ -61,15 +61,16 @@ const IndexerWorker: WorkerAPI = {
      * @param path - File path to delete.
      */
     async deleteFile(path: string) {
-        if (graph.hasNode(path)) {
-            graph.dropNode(path);
+        const normalizedPath = workerNormalizePath(path);
+        if (graph.hasNode(normalizedPath)) {
+            graph.dropNode(normalizedPath);
         }
         try {
             // Updated: Delete all chunks for this path
             const { remove, search } = await import('@orama/orama');
             const chunks = await search(orama, {
                 limit: 1000,
-                where: { path: { eq: path } }
+                where: { path: { eq: normalizedPath } }
             });
 
             const ids = chunks.hits.map(h => h.id);
@@ -79,9 +80,8 @@ const IndexerWorker: WorkerAPI = {
                 }
             }
         } catch (e) {
-            workerLogger.warn(`Failed to remove ${path} from Orama:`, e);
+            workerLogger.warn(`Failed to remove ${normalizedPath} from Orama:`, e);
         }
-        return Promise.resolve();
     },
 
     /**
@@ -420,13 +420,16 @@ const IndexerWorker: WorkerAPI = {
      * Handles file renames by updating the graph node ID and Orama index.
      */
     async renameFile(oldPath: string, newPath: string) {
-        if (graph.hasNode(oldPath)) {
-            const attr = graph.getNodeAttributes(oldPath);
-            graph.dropNode(oldPath);
-            graph.addNode(newPath, { ...(attr as GraphNodeData), path: newPath });
+        const normalizedOld = workerNormalizePath(oldPath);
+        const normalizedNew = workerNormalizePath(newPath);
+
+        if (graph.hasNode(normalizedOld)) {
+            const attr = graph.getNodeAttributes(normalizedOld);
+            graph.dropNode(normalizedOld);
+            graph.addNode(normalizedNew, { ...(attr as GraphNodeData), path: normalizedNew });
         }
         // Query-Delete old chunks
-        await IndexerWorker.deleteFile(oldPath);
+        await IndexerWorker.deleteFile(normalizedOld);
         // Note: New content will be added by a subsequent updateFile call from main thread
     },
 
@@ -452,10 +455,6 @@ const IndexerWorker: WorkerAPI = {
         };
 
         workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
-        workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
-
-        workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
-
         workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
     },
@@ -530,26 +529,15 @@ const IndexerWorker: WorkerAPI = {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
-        // 1. Graphology Update (unchanged logic for structure)
+        // Architectural Fix: Delete old data BEFORE adding new node/edges
+        // This prevents the "delete-after-add" bug where we dropped the node we just created.
+        await IndexerWorker.deleteFile(normalizedPath);
+
+        // 1. Graphology Update
         updateGraphNode(normalizedPath, content, mtime, size, title, hash);
         updateGraphEdges(normalizedPath, content);
 
         if (content.trim().length === 0) return;
-
-        // 2. Orama Update (Chunking)
-        // Check if file changed (hash check).
-        // Since chunks have different IDs, we can't easily check "existingOramaDoc" by path.
-        // We rely on Hash. If hash matches graph, we assume index is good?
-        // CAUTION: If we updated settings (context headers), hash might match but we WANT re-index.
-        // For now, rely on hash. If user changes settings, they might need to force re-index or edit file.
-        // BUT, we can store the "config hash" in the graph node?
-        // Let's stick to content hash for now.
-        // The `updateGraphNode` updates the hash.
-        // The calling `GraphService` usually checks mtime before calling updateFile.
-        // So we assume if updateFile is called, we MUST update.
-
-        // Delete all existing chunks first (Query-Delete)
-        await IndexerWorker.deleteFile(path);
 
         // 3. Prepare Context
         // NEW: Sanitize Content (Excalidraw)
