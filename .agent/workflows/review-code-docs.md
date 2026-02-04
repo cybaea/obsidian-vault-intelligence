@@ -6,9 +6,16 @@ description: Review code, architecture, and developer documentation
 
 Adopt roles as systems architect and senior developer. Review the code base for this Obsidian plugin. Consider best architecture and coding practices for Node.js, Electron, and Obsidian plugins to produce a comprehensive review and an implementation plan for any changes that are needed. Don’t just change things for the sake of changing them: change what is material and what will have an impact on ongoing maintenance and future developments.
 
+## 1.a. Research good practice to make a checklist
+
 1. Think hard and reseach what **good** code and architecture looks like. 
 2. Make a checklist for architectural code reviews based on your reseach.
+
+DO NOT SKIP THESE TWO STEPS. Provide the list with your plans.
+
 3. Then evaluate each point on your checklist against our code.
+
+## 1.b. Additional specific evaluation criteria
 
 In addition to the broad review, consider carefully these points:
 
