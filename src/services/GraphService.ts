@@ -16,9 +16,8 @@ export interface GraphState {
     };
 }
 
-// @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
-const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
+const IndexerWorker = IndexerWorkerModule;
 
 // Interface augmentation to support dynamic service access
 interface PluginWithOntology extends Plugin {

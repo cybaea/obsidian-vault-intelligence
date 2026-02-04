@@ -74,14 +74,8 @@ const IndexerWorker: WorkerAPI = {
 
             const ids = chunks.hits.map(h => h.id);
             if (ids.length > 0) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- Dynamic check for internal API
-                if (typeof (orama as any).removeMultiple === 'function') {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Dynamic usage of internal API
-                    await (orama as any).removeMultiple(ids);
-                } else {
-                    for (const id of ids) {
-                        await remove(orama, id);
-                    }
+                for (const id of ids) {
+                    await remove(orama, id);
                 }
             }
         } catch (e) {
@@ -416,24 +410,12 @@ const IndexerWorker: WorkerAPI = {
      */
     async saveIndex(): Promise<Uint8Array> {
         const { save } = await import('@orama/orama');
-        const oramaRaw = save(orama) as unknown as { docs: { docs: Record<string, OramaDocument> } };
-
-        // Optimization: In-place conversion of standard arrays to Float32Array for 'embedding' property
-        if (oramaRaw && oramaRaw.docs && oramaRaw.docs.docs) {
-            for (const docId in oramaRaw.docs.docs) {
-                const doc = oramaRaw.docs.docs[docId];
-                if (doc && Array.isArray(doc.embedding)) {
-                    // @ts-expect-error
-                    doc.embedding = new Float32Array(doc.embedding);
-                }
-            }
-        }
+        const oramaRaw = save(orama);
 
         const serialized: SerializedIndexState = {
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            // @ts-expect-error
             orama: oramaRaw
         };
 
@@ -578,9 +560,9 @@ const IndexerWorker: WorkerAPI = {
 
             // Metadata Extraction
             const status = sanitizeProperty(fm.status || 'active');
-            const tags = (fm.tags || []).map((t: unknown) => sanitizeProperty(t));
-            const topics = (fm.topics || []).map((t: unknown) => sanitizeProperty(t));
-            const types = (fm.type || []).map((t: unknown) => sanitizeProperty(t));
+            const tags = ensureArray(fm.tags).map((t: unknown) => sanitizeProperty(t));
+            const topics = ensureArray(fm.topics).map((t: unknown) => sanitizeProperty(t));
+            const types = ensureArray(fm.type).map((t: unknown) => sanitizeProperty(t));
 
             // Collect all params for broad filtering
             const params = [...new Set([...tags, ...topics, ...types])];
@@ -782,6 +764,15 @@ function sanitizeProperty(value: unknown): string {
 }
 
 /**
+ * Ensures a value is an array, wrapping it if it is a single value, and returning an empty array if null/undefined.
+ */
+function ensureArray(val: unknown): unknown[] {
+    if (val === null || val === undefined) return [];
+    if (Array.isArray(val)) return val as unknown[];
+    return [val];
+}
+
+/**
  * Removes `compressed-json` code blocks to prevent context poisoning from Excalidraw drawings.
  * Preserves the rest of the file (including "Text Elements" headers and content).
  */
@@ -932,4 +923,12 @@ function parseYaml(text: string): Record<string, unknown> {
 
 if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined') {
     Comlink.expose(IndexerWorker);
+}
+
+// Export a dummy class to satisfy the main thread import type check.
+// This allows 'import Worker from ...' to see a Worker constructor.
+export default class IndexerWorkerHelper extends Worker {
+    constructor() {
+        super('worker');
+    }
 }
