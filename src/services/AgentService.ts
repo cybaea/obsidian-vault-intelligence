@@ -1,11 +1,11 @@
-import { Type, Part, Tool, Content, FunctionDeclaration } from "@google/genai";
-import { TFile, App, requestUrl, MarkdownView, normalizePath } from "obsidian";
+import { Part, Content } from "@google/genai";
+import { TFile, TFolder, App, MarkdownView } from "obsidian";
 
-import { SEARCH_CONSTANTS, AGENT_CONSTANTS } from "../constants";
-import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
+import { SEARCH_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
+import { ToolRegistry } from "../tools/ToolRegistry";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
@@ -34,7 +34,7 @@ export class AgentService {
 
     private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
-    private fileTools: FileTools;
+    private toolRegistry: ToolRegistry;
 
     constructor(
         app: App,
@@ -52,392 +52,17 @@ export class AgentService {
         // Initialize delegates
         this.searchOrchestrator = new SearchOrchestrator(app, graphService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
-        this.fileTools = new FileTools(app);
-    }
 
-    /**
-     * Constructs the list of tools available to the agent.
-     * Includes vault search, URL reading, Google search, and optionally code execution.
-     * @param enableCodeExecution - Optional override for code execution enablement.
-     * @returns Array of Tool definitions compatible with Google GenAI.
-     */
-    private getTools(enableCodeExecution?: boolean): Tool[] {
-        const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
-
-        // 1. Vault Search
-        const vaultSearch: FunctionDeclaration = {
-            description: "Search the user's personal Obsidian notes (vault) for information and context.",
-            name: AGENT_CONSTANTS.TOOLS.VAULT_SEARCH,
-            parameters: {
-                properties: {
-                    query: {
-                        description: "The search query to find relevant notes.",
-                        type: Type.STRING
-                    }
-                },
-                required: ["query"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 2. URL Reader
-        const urlReader: FunctionDeclaration = {
-            description: "Read the content of a specific external URL.",
-            name: AGENT_CONSTANTS.TOOLS.URL_READER,
-            parameters: {
-                properties: {
-                    url: {
-                        description: "The full URL to read.",
-                        type: Type.STRING
-                    }
-                },
-                required: ["url"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 3. Google Search (Sub-Agent)
-        const googleSearch: FunctionDeclaration = {
-            description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
-            name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
-            parameters: {
-                properties: { query: { type: Type.STRING } },
-                required: ["query"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 4. Graph Explorer
-        const graphExplorer: FunctionDeclaration = {
-            description: "Find notes linked to or from a specific note. Use this to discover context not immediately visible in search results.",
-            name: AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES,
-            parameters: {
-                properties: {
-                    path: {
-                        description: "The path of the note to find connections for.",
-                        type: Type.STRING
-                    }
-                },
-                required: ["path"],
-                type: Type.OBJECT
-            }
-        };
-
-        const toolsList: FunctionDeclaration[] = [vaultSearch, urlReader, googleSearch, graphExplorer];
-
-        // 5. Computational Solver (Conditional)
-        if (isCodeEnabled && this.settings.codeModel.trim().length > 0) {
-            const computationalSolver: FunctionDeclaration = {
-                description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
-                name: AGENT_CONSTANTS.TOOLS.CALCULATOR,
-                parameters: {
-                    properties: {
-                        task: {
-                            description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number').",
-                            type: Type.STRING
-                        }
-                    },
-                    required: ["task"],
-                    type: Type.OBJECT
-                }
-            };
-            toolsList.push(computationalSolver);
-        }
-
-        // 6. Create Note
-        const createNote: FunctionDeclaration = {
-            description: "Create a new note in the vault. Will create parent folders recursively if they don't exist.",
-            name: AGENT_CONSTANTS.TOOLS.CREATE_NOTE,
-            parameters: {
-                properties: {
-                    content: { description: "The markdown content of the note. Do NOT include frontmatter.", type: Type.STRING },
-                    path: { description: "The vault-absolute path where the note should be created (e.g., 'Projects/Project A/Meeting.md').", type: Type.STRING }
-                },
-                required: ["path", "content"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 7. Update Note
-        const updateNote: FunctionDeclaration = {
-            description: "Update an existing note in the vault.",
-            name: AGENT_CONSTANTS.TOOLS.UPDATE_NOTE,
-            parameters: {
-                properties: {
-                    content: { description: "The new content or text to add.", type: Type.STRING },
-                    mode: { description: "How to update: 'append' (add to end), 'prepend' (add to start), or 'overwrite' (replace entirely).", enum: ["append", "prepend", "overwrite"], type: Type.STRING },
-                    path: { description: "The vault-absolute path of the note.", type: Type.STRING }
-                },
-                required: ["path", "content", "mode"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 8. Rename/Move Note
-        const renameNote: FunctionDeclaration = {
-            description: "Rename or move a note. Updates all internal links automatically.",
-            name: AGENT_CONSTANTS.TOOLS.RENAME_NOTE,
-            parameters: {
-                properties: {
-                    newPath: { description: "The new vault-absolute path.", type: Type.STRING },
-                    path: { description: "The current vault-absolute path.", type: Type.STRING }
-                },
-                required: ["path", "newPath"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 9. Create Folder
-        const createFolder: FunctionDeclaration = {
-            description: "Create a new folder path recursively.",
-            name: AGENT_CONSTANTS.TOOLS.CREATE_FOLDER,
-            parameters: {
-                properties: {
-                    path: { description: "The folder path to create.", type: Type.STRING }
-                },
-                required: ["path"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 10. List Folder
-        const listFolder: FunctionDeclaration = {
-            description: "List the contents of a folder.",
-            name: AGENT_CONSTANTS.TOOLS.LIST_FOLDER,
-            parameters: {
-                properties: {
-                    folderPath: { description: "The folder path to list.", type: Type.STRING }
-                },
-                required: ["folderPath"],
-                type: Type.OBJECT
-            }
-        };
-
-        // 11. Read Note
-        const readNote: FunctionDeclaration = {
-            description: "Read the full raw content of a note. Use this if you need to refactor or see the complete text of a file.",
-            name: AGENT_CONSTANTS.TOOLS.READ_NOTE,
-            parameters: {
-                properties: {
-                    path: { description: "The vault-absolute path of the note.", type: Type.STRING }
-                },
-                required: ["path"],
-                type: Type.OBJECT
-            }
-        };
-
-        toolsList.push(createNote, updateNote, renameNote, createFolder, listFolder, readNote);
-
-        return [{
-            functionDeclarations: toolsList
-        }];
-    }
-
-    /**
-     * Executes a specific tool called by the AI model.
-     * @param name - The name/ID of the tool (function) to execute.
-     * @param args - The arguments provided by the AI model for the tool.
-     * @param usedFiles - A set to track files that were read during tool execution for context.
-     * @param enableCodeExecution - Optional override for code execution enablement.
-     * @returns A result object (JSON) to be returned to the model.
-     * @private
-     */
-    private async executeFunction(
-        name: string,
-        args: Record<string, unknown>,
-        usedFiles: Set<string>,
-        createdFiles: Set<string>,
-        enableCodeExecution?: boolean,
-        enableAgentWriteAccess?: boolean
-    ): Promise<Record<string, unknown>> {
-        logger.info(`Executing tool ${name} with args:`, args);
-
-        const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
-        const isWriteEnabled = enableAgentWriteAccess !== undefined ? enableAgentWriteAccess : this.settings.enableAgentWriteAccess;
-        let result: Record<string, unknown>;
-
-        if (name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH) {
-            try {
-                const rawQuery = args.query;
-                const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
-
-                logger.info(`Delegating search to sub-agent for: ${query}`);
-                const searchResult = await this.gemini.searchWithGrounding(query);
-                result = { result: searchResult };
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                logger.error("Search sub-agent failed", e);
-                result = { error: `Search failed: ${message}` };
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.VAULT_SEARCH) {
-            const rawQuery = args.query;
-            const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
-
-            if (!query || query.trim().length === 0) {
-                result = { result: "Error: Search query was empty." };
-            } else {
-                const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
-                const limit = Math.max(0, Math.trunc(rawLimit));
-
-                const results = await this.searchOrchestrator.search(query, limit);
-
-                if (results.length === 0) {
-                    result = { result: "No relevant notes found." };
-                } else {
-                    const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-                    const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
-
-                    const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, totalCharBudget);
-
-                    if (!context) {
-                        result = { result: "No relevant notes found or context budget exceeded." };
-                    } else {
-                        resultFiles.forEach(f => usedFiles.add(f));
-                        result = { result: context };
-                    }
-                }
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES) {
-            const path = (args.path as string) || '';
-            if (!path) {
-                result = { error: "Path argument is required." };
-            } else {
-                const neighbors = await this.graphService.getNeighbors(path);
-                if (neighbors.length === 0) {
-                    result = { result: `No connected notes found for: ${path}` };
-                } else {
-                    const list = neighbors.map(n => `- ${n.path} (Title: ${n.title})`).join('\n');
-                    result = { result: `The following notes are directly connected to ${path}:\n${list}\n\nYou can use vault_search or read their content to explore further.` };
-                }
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.URL_READER) {
-            try {
-                const url = args.url as string;
-                const res = await requestUrl({ url });
-                result = { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                result = { error: `Failed to read URL: ${message}` };
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.CALCULATOR) {
-            try {
-                if (!isCodeEnabled) {
-                    result = { error: "Code execution tool is disabled." };
-                } else {
-                    const task = args.task as string;
-                    logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-                    const codeResult = await this.gemini.solveWithCode(task);
-                    result = { result: codeResult };
-                }
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                logger.error("Code sub-agent failed", e);
-                result = { error: `Calculation failed: ${message}` };
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.CREATE_NOTE ||
-            name === AGENT_CONSTANTS.TOOLS.UPDATE_NOTE ||
-            name === AGENT_CONSTANTS.TOOLS.RENAME_NOTE ||
-            name === AGENT_CONSTANTS.TOOLS.CREATE_FOLDER) {
-
-            if (!isWriteEnabled) {
-                return { error: "Agent write access is disabled. The user must enable 'Write' in the chat view or globally in plugin settings." };
-            }
-
-            const targetPath = (args.path as string || args.newPath as string || "").toLowerCase();
-            const isExcluded = this.settings.excludedFolders.some(folder => {
-                const normalizedFolder = folder.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
-                return targetPath.startsWith(normalizedFolder + "/") || targetPath === normalizedFolder;
-            });
-
-            if (isExcluded) {
-                return { error: `Permission Denied: Agent is not allowed to write to excluded folder: ${targetPath}` };
-            }
-
-            let action: "create" | "update" | "rename" | "folder";
-            switch (name) {
-                case AGENT_CONSTANTS.TOOLS.CREATE_NOTE: action = "create"; break;
-                case AGENT_CONSTANTS.TOOLS.UPDATE_NOTE: action = "update"; break;
-                case AGENT_CONSTANTS.TOOLS.RENAME_NOTE: action = "rename"; break;
-                case AGENT_CONSTANTS.TOOLS.CREATE_FOLDER: action = "folder"; break;
-                default: action = "create";
-            }
-
-            const confirmedDetails = await ToolConfirmationModal.open(this.app, {
-                action,
-                content: args.content as string,
-                mode: args.mode as string,
-                newPath: args.newPath as string,
-                path: args.path as string,
-                tool: name
-            });
-
-            if (!confirmedDetails) {
-                return { error: "User cancelled the action." };
-            }
-
-            // Normalize paths immediately after confirmation to handle leading slashes
-            const confirmedPath = normalizePath(confirmedDetails.path);
-            const confirmedNewPath = confirmedDetails.newPath ? normalizePath(confirmedDetails.newPath) : "";
-
-            try {
-                let successMessage: string;
-                switch (name) {
-                    case AGENT_CONSTANTS.TOOLS.CREATE_NOTE: {
-                        successMessage = await this.fileTools.createNote(confirmedPath, confirmedDetails.content || "");
-                        const normalizedPath = confirmedPath.endsWith(".md") ? confirmedPath : confirmedPath + ".md";
-                        createdFiles.add(normalizedPath);
-
-                        // Automatically open new note in a new tab
-                        const file = this.app.vault.getAbstractFileByPath(normalizedPath);
-                        if (file instanceof TFile) {
-                            await this.app.workspace.getLeaf("tab").openFile(file);
-                        }
-                        break;
-                    }
-                    case AGENT_CONSTANTS.TOOLS.UPDATE_NOTE: {
-                        successMessage = await this.fileTools.updateNote(confirmedPath, confirmedDetails.content || "", confirmedDetails.mode as "append" | "prepend" | "overwrite");
-                        const normalizedPath = confirmedPath.endsWith(".md") ? confirmedPath : confirmedPath + ".md";
-                        createdFiles.add(normalizedPath);
-                        break;
-                    }
-                    case AGENT_CONSTANTS.TOOLS.RENAME_NOTE: {
-                        successMessage = await this.fileTools.renameNote(confirmedPath, confirmedNewPath);
-                        const normalizedPath = confirmedNewPath.endsWith(".md") ? confirmedNewPath : confirmedNewPath + ".md";
-                        createdFiles.add(normalizedPath);
-                        break;
-                    }
-                    case AGENT_CONSTANTS.TOOLS.CREATE_FOLDER:
-                        successMessage = await this.fileTools.createFolder(confirmedPath);
-                        break;
-                    default:
-                        throw new Error("Invalid write tool");
-                }
-                result = { result: successMessage };
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                result = { error: `Failed to execute ${name}: ${message}` };
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.LIST_FOLDER) {
-            try {
-                const message = this.fileTools.listFolder(args.folderPath as string);
-                result = { result: message };
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                result = { error: `Failed to list folder: ${message}` };
-            }
-        } else if (name === AGENT_CONSTANTS.TOOLS.READ_NOTE) {
-            try {
-                const content = await this.fileTools.readNote(args.path as string);
-                result = { result: content };
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : String(e);
-                result = { error: `Failed to read note: ${message}` };
-            }
-        } else {
-            result = { error: "Tool not found." };
-        }
-
-        return result;
+        const fileTools = new FileTools(app);
+        this.toolRegistry = new ToolRegistry(
+            app,
+            settings,
+            gemini,
+            graphService,
+            this.searchOrchestrator,
+            this.contextAssembler,
+            fileTools
+        );
     }
 
     /**
@@ -521,7 +146,8 @@ export class AgentService {
         let systemInstruction = (rawSystemInstruction || "").replace("{{DATE}}", currentDate);
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
-        const chat = await this.gemini.startChat(formattedHistory, this.getTools(options.enableCodeExecution), systemInstruction, options.modelId);
+        const tools = this.toolRegistry.getTools(options.enableCodeExecution);
+        const chat = await this.gemini.startChat(formattedHistory, tools, systemInstruction, options.modelId);
 
         try {
             let result = await chat.sendMessage({ message: message });
@@ -537,7 +163,14 @@ export class AgentService {
                         if (!call.name) return null;
 
                         const args = call.args || {};
-                        const functionResponse = await this.executeFunction(call.name, args, usedFiles, createdFiles, options.enableCodeExecution, options.enableAgentWriteAccess);
+                        const functionResponse = await this.toolRegistry.execute({
+                            args: args,
+                            createdFiles: createdFiles,
+                            enableAgentWriteAccess: options.enableAgentWriteAccess,
+                            enableCodeExecution: options.enableCodeExecution,
+                            name: call.name,
+                            usedFiles: usedFiles
+                        });
 
                         return {
                             functionResponse: {
@@ -590,5 +223,111 @@ export class AgentService {
                 text: `Sorry, I encountered an error processing your request: ${errorMessage}`
             };
         }
+    }
+
+    /**
+     * Prepares the context for a chat message by resolving file references (`@Filename`).
+     * This separates the view logic from the business logic.
+     * @param inputMessage - The raw message from the user.
+     * @returns Object containing resolved context files, the clean message, and any warnings.
+     */
+    public async prepareContext(inputMessage: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
+        const resultFiles: TFile[] = [];
+        const warnings: string[] = [];
+        let message = inputMessage;
+
+        // Regex for @[["Filename"]] or @[[Filename|Alias]] or @Filename 
+        // Updated regex to be more lenient with characters and handle quoted strings better
+        const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        const matches = Array.from(inputMessage.matchAll(mentionRegex));
+
+        // We will collect all potential files
+        const allPotentialFiles: TFile[] = [];
+
+        // We don't remove the mentions from the message, as the model might need them to understand "Look at @File"
+        // But we could optionally clean them. ResearchChatView didn't clean them, so we won't either.
+
+        for (const match of matches) {
+            const pathOrName = match[1] || match[2];
+            if (pathOrName) {
+                // First try direct path
+                let abstractFile = this.app.vault.getAbstractFileByPath(pathOrName);
+
+                // If not found, try resolving as a link (for files)
+                if (!abstractFile) {
+                    abstractFile = this.app.metadataCache.getFirstLinkpathDest(pathOrName, "");
+                }
+
+                if (abstractFile instanceof TFile) {
+                    if (!allPotentialFiles.some(f => f.path === abstractFile.path)) {
+                        allPotentialFiles.push(abstractFile);
+                    }
+                } else if (abstractFile instanceof TFolder) {
+                    // Expand folder into files recursively
+                    await this.processFolderContext(abstractFile, message, allPotentialFiles, warnings);
+                }
+            }
+        }
+
+        resultFiles.push(...allPotentialFiles);
+
+        return { cleanMessage: message, contextFiles: resultFiles, warnings };
+    }
+
+    private async processFolderContext(folder: TFolder, query: string, collector: TFile[], warnings: string[]) {
+        // TFolder is a type from 'obsidian', assuming it's imported at the top of the file.
+
+        const folderPath = folder.path;
+        const folderFiles = this.app.vault.getMarkdownFiles().filter(f =>
+            f.path.startsWith(folderPath + "/") || f.path === folderPath
+        );
+
+        // Try similarity search within the folder first
+        const folderPaths = folderFiles.map(f => f.path);
+        const similarityResults = await this.graphService.searchInPaths(query, folderPaths, 100);
+
+        let sortedFiles: TFile[];
+        if (similarityResults.length > 0) {
+            const resultPathMap = new Map(similarityResults.map((r, i) => [r.path, i]));
+            const matchedFiles = folderFiles.filter(f => resultPathMap.has(f.path));
+            matchedFiles.sort((a, b) => (resultPathMap.get(a.path) ?? 0) - (resultPathMap.get(b.path) ?? 0));
+
+            // Include unmatched files (not indexed yet) by recency at the end
+            const unmatchedFiles = folderFiles.filter(f => !resultPathMap.has(f.path));
+            unmatchedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+            sortedFiles = [...matchedFiles, ...unmatchedFiles];
+        } else {
+            // Fallback to recency if no similarity results (e.g. index not ready)
+            sortedFiles = [...folderFiles];
+            sortedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+        }
+
+        // Calculate budget
+        // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
+        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+        const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
+
+        let currentSize = 0;
+        const filesToInclude: TFile[] = [];
+
+        for (const file of sortedFiles) {
+            const size = file.stat.size;
+            if (currentSize + size > charBudget) break;
+
+            filesToInclude.push(file);
+            currentSize += size;
+        }
+
+        if (filesToInclude.length < folderFiles.length) {
+            const method = similarityResults.length > 0 ? "similarity-ranked" : "most recent";
+            warnings.push(`Context limit reached for folder "${folder.name}". Included ${filesToInclude.length} ${method} files.`);
+        }
+
+        filesToInclude.forEach(f => {
+            if (!collector.some(existing => existing.path === f.path)) {
+                collector.push(f);
+            }
+        });
     }
 }

@@ -43,7 +43,9 @@ export interface GraphSearchResult {
  * Configuration passed to the Indexer Worker.
  */
 export interface WorkerConfig {
+    authorName: string;
     chatModel: string;
+    contextAwareHeaderProperties: string[];
     embeddingDimension: number;
     embeddingModel: string;
     googleApiKey: string;
@@ -65,9 +67,10 @@ export interface WorkerAPI {
     getFileStates(): Promise<Record<string, { mtime: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
-    initialize(config: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>): Promise<void>;
+    initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
-    loadIndex(data: string | Uint8Array): Promise<void>;
+    loadIndex(data: string | Uint8Array): Promise<boolean>;
+    pruneOrphans(paths: string[]): Promise<void>;
     renameFile(oldPath: string, newPath: string): Promise<void>;
     saveIndex(): Promise<Uint8Array>; // Returns serialized graph/index
     search(query: string, limit?: number): Promise<GraphSearchResult[]>;

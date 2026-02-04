@@ -1,10 +1,14 @@
 import { SEARCH_CONSTANTS } from "../constants";
 
+/**
+ * Represents the components of a search score.
+ */
 export interface ScoringResult {
     isKeywordMatch: boolean;
     isTitleMatch: boolean;
     score: number;
 }
+
 
 /**
  * Encapsulates the heuristic scoring logic for search results.

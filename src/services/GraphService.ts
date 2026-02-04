@@ -16,9 +16,8 @@ export interface GraphState {
     };
 }
 
-// @ts-expect-error - Inline worker import is handled by esbuild plugin
 import IndexerWorkerModule from "../workers/indexer.worker";
-const IndexerWorker = IndexerWorkerModule as unknown as { new(): Worker };
+const IndexerWorker = IndexerWorkerModule;
 
 // Interface augmentation to support dynamic service access
 interface PluginWithOntology extends Plugin {
@@ -66,7 +65,9 @@ export class GraphService {
 
             // 2. Configure worker
             const config: WorkerConfig = {
+                authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
+                contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
                 embeddingDimension: this.settings.embeddingDimension,
                 embeddingModel: this.settings.embeddingModel,
                 googleApiKey: this.settings.googleApiKey,
@@ -90,15 +91,16 @@ export class GraphService {
                 return await this.embeddingService.embedQuery(text);
             });
 
+            // Initialize worker
             await this.api.initialize(config, fetcher, embedder);
 
             // 3. Ensure gitignore exists for data folder
             await this.ensureGitignore();
 
-            // 4. Load existing state if any
+            // 4. Load or Migrate
             await this.loadState();
 
-            // 4. Register event listeners
+            // 5. Register event listeners
             this.registerEvents();
 
             this.isInitialized = true;
@@ -239,10 +241,15 @@ export class GraphService {
         if (await this.plugin.app.vault.adapter.exists(dataPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
+                logger.debug(`[GraphService] Reading index: ${stateBuffer.byteLength} bytes`);
                 // Transfer buffer to worker
-                await this.api.loadIndex(new Uint8Array(stateBuffer));
-                logger.info("[GraphService] State loaded (MessagePack).");
-                return;
+                const success = await this.api.loadIndex(new Uint8Array(stateBuffer));
+                if (success) {
+                    logger.info("[GraphService] State loaded (MessagePack).");
+                    return;
+                }
+                // Fallthrough implies incompatibility check failed in worker
+                logger.warn("[GraphService] State incompatible. Triggering migration.");
             } catch (error) {
                 logger.error("[GraphService] Load failed (MessagePack):", error);
             }
@@ -252,11 +259,24 @@ export class GraphService {
         if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
             try {
                 const stateJson = await this.plugin.app.vault.adapter.read(legacyPath);
-                await this.api.loadIndex(stateJson);
-                logger.info("[GraphService] State loaded (Legacy JSON).");
+                // Legacy always implies migration needed for this update, but let's try generic load
+                const success = await this.api.loadIndex(stateJson);
+                if (success) {
+                    logger.info("[GraphService] State loaded (Legacy JSON).");
+                    // We successfully loaded legacy, but we might want to schedule a save to convert to msgpack eventually.
+                    // For now, treat as success.
+                    return;
+                }
             } catch (error) {
                 logger.error("[GraphService] Load failed (Legacy JSON):", error);
             }
+        }
+
+        // If we reached here, either no state exists OR loading failed/was incompatible.
+        // If files exist but failed to load, we should wipe.
+        if (await this.plugin.app.vault.adapter.exists(dataPath) || await this.plugin.app.vault.adapter.exists(legacyPath)) {
+            new Notice("Vault intelligence: upgrading index to new format...");
+            this.scanAll(true).catch(err => logger.error("Migration scan failed", err));
         }
     }
 
@@ -363,17 +383,22 @@ export class GraphService {
         const ontologyService = plugin.ontologyService;
 
         if (ontologyService && typeof ontologyService.getValidTopics === 'function') {
-            const topics = await ontologyService.getValidTopics();
             const map: Record<string, string> = {};
 
+            // 1. Add all Markdown files by basename (support [[Basename]] links)
+            const allFiles = this.vaultManager.getMarkdownFiles();
+            for (const file of allFiles) {
+                map[file.basename.toLowerCase()] = file.path;
+            }
+
+            // 2. Add Ontology Topics and Aliases (overwrites basenames if specific aliases exist)
+            const topics = await ontologyService.getValidTopics();
             for (const t of topics) {
-                // Map the topic name/alias to its canonical path
-                // "Project FooBar" -> "Ontology/Project FooBar.md"
-                map[t.name] = t.path;
+                map[t.name.toLowerCase()] = t.path;
             }
 
             await this.api.updateAliasMap(map);
-            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker.`);
+            logger.debug(`[GraphService] Synced aliases to worker: ${topics.length} topics + ${allFiles.length} files.`);
         }
     }
 
@@ -447,9 +472,20 @@ export class GraphService {
         let count = 0;
         let skipCount = 0;
 
+        const stateKeys = Object.keys(states);
+        logger.debug(`[GraphService] Index has ${stateKeys.length} files. First 5 keys: ${stateKeys.slice(0, 5).join(', ')}`);
+
         for (const file of files) {
             const state = states[file.path];
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+
+            // Diagnostic: Why is it not skipping?
+            if (!forceWipe && (!state || state.mtime !== mtime)) {
+                if (count < 5) {
+                    const reason = !state ? "missing in index" : `mtime mismatch (${state.mtime} vs ${mtime})`;
+                    logger.debug(`[GraphService] Re-indexing ${file.path}: ${reason}`);
+                }
+            }
 
             // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
             if (!forceWipe && state && state.mtime === mtime) {
@@ -483,6 +519,10 @@ export class GraphService {
         // Wait for the entire queue to flush before saving/marking done
         await this.processingQueue;
 
+        // Cleanup orphans (nodes in graph not in vault)
+        const paths = files.map(f => f.path);
+        await this.api.pruneOrphans(paths);
+
         await this.saveState();
         if (count > 0) {
             logger.info(`[GraphService] Scan complete. Total indexed: ${count}`);
@@ -498,7 +538,9 @@ export class GraphService {
         this.settings = settings;
         if (this.api) {
             await this.api.updateConfig({
+                authorName: settings.authorName,
                 chatModel: settings.chatModel,
+                contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
                 embeddingDimension: settings.embeddingDimension,
                 embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,

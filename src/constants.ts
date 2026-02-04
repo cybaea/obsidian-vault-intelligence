@@ -28,7 +28,7 @@ export const SEARCH_CONSTANTS = {
     DEFAULT_CONTEXT_PRIMARY_THRESHOLD: 0.9,
 
     /** Default relative threshold for structural (headers) context inclusion */
-    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.35,
+    DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD: 0.20,
 
     /** Default relative threshold for snippet context inclusion */
     DEFAULT_CONTEXT_SUPPORTING_THRESHOLD: 0.70,
@@ -61,7 +61,7 @@ export const SEARCH_CONSTANTS = {
     FUZZY_SHORT_THRESHOLD: 0.6,
 
     /** Search: Boosting score if result has both vector and keyword matches */
-    HYBRID_BOOST_SCORE: 0.3,
+    HYBRID_BOOST_SCORE: 1.0,
 
     /** Search: Extra boost if keyword match is specifically in title */
     HYBRID_TITLE_BOOST: 0.5,
@@ -76,19 +76,19 @@ export const SEARCH_CONSTANTS = {
     MIN_DOC_CONTEXT_CHARS: 500,
 
     /** Default decay for neighbor expansion */
-    NEIGHBOR_DECAY: 0.3,
+    NEIGHBOR_DECAY: 0.5,
 
     /** Scoring: Score for exact body match */
-    SCORE_BODY_MATCH: 0.85,
+    SCORE_BODY_MATCH: 2.0,
 
     /** Scoring: Boost for exact title match */
-    SCORE_TITLE_MATCH: 1.2,
+    SCORE_TITLE_MATCH: 3.0,
 
     /** Max % of the budget a single document can consume if others are present */
     SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
 
     /** Default weight for spreading activation */
-    SPREADING_ACTIVATION_WEIGHT: 0.25,
+    SPREADING_ACTIVATION_WEIGHT: 0.6,
 
     /** Default character limit for tool responses (truncation) */
     TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
@@ -150,17 +150,29 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
     CONTENT_PREVIEW_LENGTH: 25000,
 
+    /** Default token size for chunks (512 tokens) */
+    DEFAULT_CHUNK_TOKENS: 512,
+
     /** Default delay between index updates (ms) */
     DEFAULT_INDEXING_DELAY: 2000,
 
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
 
+    /** Default overlap ratio (0.1 = 10%) */
+    DEFAULT_OVERLAP_RATIO: 0.1,
+
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
 
     /** Default limit for simple keyword searches */
     SEARCH_LIMIT_DEFAULT: 5,
+
+    /** Overshoot factor for keyword search pooling */
+    SEARCH_OVERSHOOT_FACTOR_KEYWORD: 3,
+
+    /** Overshoot factor for vector search pooling */
+    SEARCH_OVERSHOOT_FACTOR_VECTOR: 4,
 
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
@@ -178,6 +190,7 @@ export const GRAPH_CONSTANTS = {
     MAX_EXPANSION_DEPTH: 1,
     /** Max neighbors to fetch per node to avoid state explosion */
     MAX_NEIGHBORS_PER_NODE: 5,
+    MAX_SERIALIZATION_DEPTH: 1000,
     /** Number of files to process before logging progress during scan */
     SCAN_LOG_BATCH_SIZE: 50,
     /** Default filename for graph state */
@@ -185,7 +198,7 @@ export const GRAPH_CONSTANTS = {
     /** Scoring Weights (alpha, beta, gamma) */
     WEIGHTS: {
         /** Spreading Activation (connectedness) weight */
-        ACTIVATION: 0.2,
+        ACTIVATION: 0.5,
         /** Graph Centrality (structural) weight */
         CENTRALITY: 0.2,
         /** Vector Similarity weight */
@@ -201,10 +214,10 @@ export const ONTOLOGY_CONSTANTS = {
     },
 
     /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
-    HUB_MIN_DEGREE: 5,
+    HUB_MIN_DEGREE: 2,
 
     /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
-    HUB_PENALTY_ENABLED: true,
+    HUB_PENALTY_ENABLED: false,
 
     /** Dampening factor for 2-hop (Sibling) relevance */
     SIBLING_DECAY: 0.25

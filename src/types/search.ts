@@ -1,5 +1,6 @@
 
 export interface VaultSearchResult {
+    excerpt?: string;
     isGraphNeighbor?: boolean;
     isKeywordMatch?: boolean;
     isTitleMatch?: boolean;

@@ -219,6 +219,35 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 })();
             }));
 
+    new Setting(containerEl).setName('Context configuration').setHeading();
+
+    new Setting(containerEl)
+        .setName('Author name')
+        .setDesc('Name used for queries referring to self. Fallback for missing author frontmatter.')
+        .addText(text => text
+            .setPlaceholder(DEFAULT_SETTINGS.authorName)
+            .setValue(plugin.settings.authorName)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.authorName = value;
+                    await plugin.saveSettings();
+                })();
+            }));
+
+    new Setting(containerEl)
+        .setName('Context aware headers')
+        .setDesc('Comma-separated list of frontmatter properties to include in the semantic context of each chunk.')
+        .addTextArea(text => text
+            .setPlaceholder(DEFAULT_SETTINGS.contextAwareHeaderProperties.join(', '))
+            .setValue(plugin.settings.contextAwareHeaderProperties.join(', '))
+            .onChange((value) => {
+                void (async () => {
+                    const props = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    plugin.settings.contextAwareHeaderProperties = props;
+                    await plugin.saveSettings();
+                })();
+            }));
+
     // --- 4. Specialised Capabilities ---
     new Setting(containerEl).setName('Capabilities').setHeading();
 

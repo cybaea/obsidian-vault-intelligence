@@ -47,6 +47,7 @@ export class SearchOrchestrator {
 
         // Map Results to internal VaultSearchResult format
         const vResults: VaultSearchResult[] = vectorResults.map(r => ({
+            excerpt: r.excerpt,
             isKeywordMatch: false,
             isTitleMatch: false,
             path: r.path,
@@ -54,6 +55,7 @@ export class SearchOrchestrator {
         }));
 
         const kResults: VaultSearchResult[] = keywordResults.map(r => ({
+            excerpt: r.excerpt,
             isKeywordMatch: true,
             isTitleMatch: false,
             path: r.path,
@@ -106,7 +108,7 @@ export class SearchOrchestrator {
                     candidates.set(n.path, {
                         isGraphNeighbor: true,
                         path: n.path,
-                        score: 0
+                        score: n.score
                     });
                 }
 

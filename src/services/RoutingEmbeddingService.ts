@@ -5,7 +5,11 @@ import { GeminiService } from "./GeminiService";
 import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 
+/**
+ * Handles routing of embedding requests to either local (WASM) or remote (Gemini) providers.
+ */
 export class RoutingEmbeddingService implements IEmbeddingService {
+
     private localService: LocalEmbeddingService;
     private geminiService: GeminiEmbeddingService;
     private settings: VaultIntelligenceSettings;

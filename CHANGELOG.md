@@ -9,12 +9,28 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
-### User features
-
-- **Improved search recall**: Increased the keyword search index limit from 500 to 25,000 characters. The Research Agent can now discover relevant content deep within long notes that was previously invisible to search.
-- **Metadata footer buttons**: Added GitHub and Documentation buttons (with tooltips) to the Release Notes footer for easier project access.
+- **Deep semantic intelligence**: The Researcher now understands the "hidden threads" between your notes. By automatically treating frontmatter properties like `topics`, `tags`, and `author` as semantic bridges, the agent can discover relevant context across your vault even when you haven't used explicit Wikilinks.
+- **Flawless vault-wide connectivity**: Restored full support for relative Wikilinks (`../`). Notes organized in complex folder hierarchies now connect perfectly in the semantic graph, ensuring the Researcher never misses a related idea just because it lives in a different folder.
+- **Zero-noise Excalidraw integration**: Visual thinkers will notice a massive improvement in search quality. We've overhauled how drawing files are indexed, stripping away megabytes of internal JSON metadata while preserving actual text labels. This makes the index up to 99% smaller and eliminates "false positive" search results from drawing files.
+- **Reliability at scale**: Fixed a persistent "reindexing loop" that caused some vaults to scan all files on every startup. The plugin now tracks changes with 100% accuracy, ensuring your semantic graph is always ready instantly without the wait.
+- **Tuning control**: Added granular reset buttons to the Advanced Settings panel. You can now restore individual Search and Context thresholds to their default values or reset the entire section with a single click.
 
 ### Developer features
+
+- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
+- **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
+- **Architectural Refactoring**: Decomposed `AgentService` by delegating tool logic to a dedicated `ToolRegistry` and context preparation to `AgentService.prepareContext`.
+- **Humble View Pattern**: Refactored `ResearchChatView` to separate UI logic from business logic, improving testability and code organization.
+- **Magic Number Elimination**: Extracted indexing and search constants into `src/constants.ts` for better maintainability.
+
+- **Fixed index rebuild loop**: Resolved a persistent "Delete-after-Add" race condition where mismatching paths caused the index to rebuild on every startup.
+- **Strict path normalization**: Enforced consistent path canonicalization across all worker operations (`deleteFile`, `renameFile`, `pruneOrphans`).
+- **Orphan node pruning**: Automatically cleans up stale graph nodes during scans to match the vault state precisely.
+- **Alias map casing resolution**: Fixed a critical bug in alias resolution by ensuring case-insensitive mapping between topics and files.
+- **MessagePack serialization safety**: Hardened index persistence with a circularity-aware diagnostic suite and increased recursion depth for complex Orama trees.
+- **Chunking performance**: Implemented `maxPoolResults` and `recursiveCharacterSplitter` to improve semantic search granularity without polluting results with redundant fragments.
+- **Systemic Path Resolution**: Implemented global basename aliasing in `GraphService` to resolve "Ghost Nodes". Short-form file links (e.g. `[[Note]]`) now correctly resolve to their canonical full paths across the entire vault graph.
+- **Hybrid Explorer Search**: Updated the "Similar Notes" view to merge Vector Similarity (Content) with Graph Neighbors (Topics). This ensures conceptually related notes are displayed even if they don't share similar text.
 
 ## [4.3.1] - 2026-01-31
 

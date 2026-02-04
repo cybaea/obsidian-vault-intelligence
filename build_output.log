@@ -1,0 +1,26 @@
+
+> obsidian-vault-intelligence@4.3.1 docs:build
+> vitepress build
+
+
+  vitepress v1.6.4
+
+- building client + server bundles...
+
+
+(!) Found dead link /Work/Ontology/index in file docs/My ontology system.md
+
+If this is expected, you can disable this check via config. Refer: https://vitepress.dev/reference/site-config#ignoredeadlinks
+
+x Build failed in 8.40s
+[31m✖[0m building client + server bundles...
+build error:
+[vitepress] 1 dead link(s) found.
+[vitepress] 1 dead link(s) found.
+    at Object.renderStart (file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/vitepress/dist/node/chunk-D3CUZ4fa.js:45027:15)
+    at file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/rollup/dist/es/shared/node-entry.js:22527:40
+    at async Promise.all (index 0)
+    at async PluginDriver.hookParallel (file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/rollup/dist/es/shared/node-entry.js:22437:9)
+    at async Bundle.generate (file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/rollup/dist/es/shared/node-entry.js:20599:13)
+    at async file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/rollup/dist/es/shared/node-entry.js:23514:27
+    at async catchUnfinishedHookActions (file:///home/allane/Code/GitHub/obsidian-vault-intelligence/node_modules/rollup/dist/es/shared/node-entry.js:22881:16)

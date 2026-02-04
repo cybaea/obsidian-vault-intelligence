@@ -79,6 +79,10 @@ export class ContextAssembler {
                     if (isNotTooHuge && fitsInBudget) {
                         contentToAdd = content;
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path}`);
+                    } else if (doc.excerpt) {
+                        // Fallback: Use the relevant chunk found by the worker
+                        contentToAdd = doc.excerpt;
+                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
                         const availableSpace = Math.min(singleDocSoftLimit, budgetChars - currentUsage);
                         contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
@@ -86,12 +90,17 @@ export class ContextAssembler {
                     }
                 } else if (relativeRelevance >= supportingThreshold) {
                     // Scenario: Supporting relevance.
-                    const supportWindow = Math.floor(singleDocSoftLimit / 2);
-                    const availableSpace = Math.min(supportWindow, budgetChars - currentUsage);
+                    if (doc.excerpt) {
+                        contentToAdd = doc.excerpt;
+                        logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (from worker): ${file.path}`);
+                    } else {
+                        const supportWindow = Math.floor(singleDocSoftLimit / 2);
+                        const availableSpace = Math.min(supportWindow, budgetChars - currentUsage);
 
-                    if (availableSpace > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
-                        contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
-                        logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet: ${file.path}`);
+                        if (availableSpace > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
+                            contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
+                            logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (clipped): ${file.path}`);
+                        }
                     }
                 } else if (relativeRelevance >= structuralThreshold) {
                     // Scenario: Structural context.

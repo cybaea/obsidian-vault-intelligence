@@ -19,21 +19,38 @@ export function workerNormalizePath(path: string): string {
 }
 
 /**
- * Resolves a link to a canonical path using an optional alias map.
+ * Resolves a link to a canonical path using an optional alias map and base path.
  * @param link - The link to resolve.
  * @param aliasMap - Map of lower-case aliases to canonical paths.
+ * @param basePath - Optional base path (directory of the file containing the link) for relative resolution.
  * @returns The resolved canonical path.
  */
-export function resolvePath(link: string, aliasMap?: Map<string, string>): string {
-    const normalizedLink = workerNormalizePath(link);
+export function resolvePath(link: string, aliasMap?: Map<string, string>, basePath?: string): string {
+    let normalizedLink = workerNormalizePath(link);
 
-    // 1. Check alias map if provided
+    // 1. Handle Relative Paths (./ or ../)
+    if (basePath && (normalizedLink.startsWith('./') || normalizedLink.startsWith('../'))) {
+        const segments = basePath.split('/').filter(s => s.length > 0);
+        const linkSegments = normalizedLink.split('/');
+
+        for (const segment of linkSegments) {
+            if (segment === '.') continue;
+            if (segment === '..') {
+                segments.pop();
+            } else {
+                segments.push(segment);
+            }
+        }
+        normalizedLink = segments.join('/');
+    }
+
+    // 2. Check alias map if provided
     if (aliasMap) {
         const aliasResolved = aliasMap.get(normalizedLink.toLowerCase());
         if (aliasResolved) return aliasResolved;
     }
 
-    // 2. Handle potential missing .md extension
+    // 3. Handle potential missing .md extension
     if (!normalizedLink.endsWith('.md')) {
         // Only append .md if it doesn't look like an external URL (already handled in extractLinks but safety first)
         if (!normalizedLink.match(/^(https?|mailto):/i)) {
