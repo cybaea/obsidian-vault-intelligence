@@ -62,7 +62,7 @@ The system follows a **Service-Oriented Architecture (SOA)** adapted for a monol
 * **Services** (e.g., `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
 * **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
 * **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
-* **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`.
+* **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`, and tool execution to `ToolRegistry`.
 * **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
 
 ### Brain vs. Body
