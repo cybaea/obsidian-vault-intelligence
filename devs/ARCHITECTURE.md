@@ -273,7 +273,11 @@ The `ModelRegistry` synchronises available Gemini models and ranks them to ensur
 classDiagram
     class AgentService {
         +chat(history, msg)
-        -executeFunction(tool)
+        +prepareContext(msg)
+    }
+    class ToolRegistry {
+        +getTools()
+        +execute(tool)
     }
     class SearchOrchestrator {
         +search(query)
@@ -294,9 +298,12 @@ classDiagram
         +generateContent()
     }
 
+    AgentService --> ToolRegistry : executes tools
     AgentService --> SearchOrchestrator : delegates search
     AgentService --> ContextAssembler : delegates RAG
     AgentService --> GeminiService : calls generic LLM
+    ToolRegistry --> GraphService : uses for graph tools
+    ToolRegistry --> SearchOrchestrator : uses for search tool
     SearchOrchestrator --> GraphService : uses index
     GraphService ..> IndexerWorker : via Comlink
 ```

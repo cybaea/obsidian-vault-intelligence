@@ -316,7 +316,7 @@ const IndexerWorker: WorkerAPI = {
      */
     async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const results = await search(orama, {
-            limit: limit * 3, // Overshoot
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
             term: query
         });
@@ -465,7 +465,7 @@ const IndexerWorker: WorkerAPI = {
      */
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const results = await search(orama, {
-            limit: limit * 4, // Higher limit for pooling
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR, // Higher limit for pooling
             mode: 'vector',
             vector: {
                 property: 'embedding',
@@ -482,7 +482,7 @@ const IndexerWorker: WorkerAPI = {
     async searchInPaths(query: string, paths: string[], limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const normalizedPaths = paths.map(p => workerNormalizePath(p));
         const results = await search(orama, {
-            limit: limit * 4,
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
             vector: {
                 property: 'embedding',
@@ -548,10 +548,10 @@ const IndexerWorker: WorkerAPI = {
         const contextString = generateContextString(title, parsedFrontmatter, config);
 
         // 4. Split
-        const tokensPerChunk = 512; // Approx
+        const tokensPerChunk = WORKER_INDEXER_CONSTANTS.DEFAULT_CHUNK_TOKENS;
         const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE || 4;
         const chunkSize = tokensPerChunk * charsPerToken;
-        const overlap = Math.floor(chunkSize * 0.1);
+        const overlap = Math.floor(chunkSize * WORKER_INDEXER_CONSTANTS.DEFAULT_OVERLAP_RATIO);
 
         const chunks = recursiveCharacterSplitter(body, chunkSize, overlap);
 

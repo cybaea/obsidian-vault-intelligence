@@ -150,17 +150,29 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
     CONTENT_PREVIEW_LENGTH: 25000,
 
+    /** Default token size for chunks (512 tokens) */
+    DEFAULT_CHUNK_TOKENS: 512,
+
     /** Default delay between index updates (ms) */
     DEFAULT_INDEXING_DELAY: 2000,
 
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
 
+    /** Default overlap ratio (0.1 = 10%) */
+    DEFAULT_OVERLAP_RATIO: 0.1,
+
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
 
     /** Default limit for simple keyword searches */
     SEARCH_LIMIT_DEFAULT: 5,
+
+    /** Overshoot factor for keyword search pooling */
+    SEARCH_OVERSHOOT_FACTOR_KEYWORD: 3,
+
+    /** Overshoot factor for vector search pooling */
+    SEARCH_OVERSHOOT_FACTOR_VECTOR: 4,
 
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
