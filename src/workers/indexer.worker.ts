@@ -867,9 +867,9 @@ function updateGraphEdges(path: string, content: string) {
         });
     }
 
-    // 2. Semantic Property Link Extraction (topics, tags, topic)
+    // 2. Semantic Property Link Extraction (topics, tags, topic, tags_list, author)
     // These might be plain text that should resolve to ontology notes.
-    const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic'];
+    const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic', 'tags_list', 'author'];
     for (const key of propertyKeys) {
         const val = fm[key];
         if (!val) continue;
@@ -883,6 +883,11 @@ function updateGraphEdges(path: string, content: string) {
             if (!item || item.length === 0) continue;
 
             const resolvedPath = resolvePath(item, aliasMap, dir);
+
+            // DEBUG: Trace resolution
+            if (item.toLowerCase().includes('agentic') || item.toLowerCase().includes('cat')) {
+                console.debug(`[IndexerWorker] Resolved semantic link: "${item}" -> "${resolvedPath}" (via ${key} in ${path})`);
+            }
 
             // Check if we already have this edge via explicit links
             if (!graph.hasNode(resolvedPath)) {

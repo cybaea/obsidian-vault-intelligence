@@ -389,11 +389,12 @@ export class GraphService {
             for (const t of topics) {
                 // Map the topic name/alias to its canonical path
                 // "Project FooBar" -> "Ontology/Project FooBar.md"
-                map[t.name] = t.path;
+                // Match resolution logic in worker (lowercase keys)
+                map[t.name.toLowerCase()] = t.path;
             }
 
             await this.api.updateAliasMap(map);
-            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker.`);
+            logger.debug(`[GraphService] Synced ${topics.length} aliases to worker (lowercased).`);
         }
     }
 
