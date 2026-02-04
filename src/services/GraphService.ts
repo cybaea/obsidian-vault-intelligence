@@ -467,9 +467,20 @@ export class GraphService {
         let count = 0;
         let skipCount = 0;
 
+        const stateKeys = Object.keys(states);
+        logger.debug(`[GraphService] Index has ${stateKeys.length} files. First 5 keys: ${stateKeys.slice(0, 5).join(', ')}`);
+
         for (const file of files) {
             const state = states[file.path];
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+
+            // Diagnostic: Why is it not skipping?
+            if (!forceWipe && (!state || state.mtime !== mtime)) {
+                if (count < 5) {
+                    const reason = !state ? "missing in index" : `mtime mismatch (${state.mtime} vs ${mtime})`;
+                    logger.debug(`[GraphService] Re-indexing ${file.path}: ${reason}`);
+                }
+            }
 
             // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
             if (!forceWipe && state && state.mtime === mtime) {

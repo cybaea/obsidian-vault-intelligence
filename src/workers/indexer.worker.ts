@@ -345,7 +345,10 @@ const IndexerWorker: WorkerAPI = {
             return false;
         }
 
-        if (parsed.graph) graph.import(parsed.graph);
+        if (parsed.graph) {
+            graph.import(parsed.graph);
+            workerLogger.info(`[loadIndex] Graph loaded with ${graph.order} nodes.`);
+        }
 
         if (parsed.orama) {
             const loadedDimension = parsed.embeddingDimension;
@@ -423,6 +426,8 @@ const IndexerWorker: WorkerAPI = {
             graph: graph.export(),
             orama: oramaRaw
         };
+
+        workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
 
         workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
