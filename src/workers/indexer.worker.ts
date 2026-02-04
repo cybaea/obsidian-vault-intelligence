@@ -532,7 +532,10 @@ const IndexerWorker: WorkerAPI = {
         await IndexerWorker.deleteFile(path);
 
         // 3. Prepare Context
-        const { body, frontmatter } = splitFrontmatter(content);
+        // NEW: Sanitize Content (Excalidraw)
+        const cleanlyContent = sanitizeExcalidrawContent(content);
+
+        const { body, frontmatter } = splitFrontmatter(cleanlyContent);
         const parsedFrontmatter = parseYaml(frontmatter);
         const contextString = generateContextString(title, parsedFrontmatter, config);
 
@@ -776,6 +779,16 @@ function sanitizeProperty(value: unknown): string {
     // Clean WikiLinks: [[Page|Alias]] -> Alias, [[Page]] -> Page
     let clean = value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1');
     return clean.trim();
+}
+
+/**
+ * Removes `compressed-json` code blocks to prevent context poisoning from Excalidraw drawings.
+ * Preserves the rest of the file (including "Text Elements" headers and content).
+ */
+function sanitizeExcalidrawContent(content: string): string {
+    // Regex to remove `compressed-json` code blocks
+    // Pattern: ```compressed-json [sS]*? ```
+    return content.replace(/```compressed-json[\s\S]*?```/g, '');
 }
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string) {
