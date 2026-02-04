@@ -108,7 +108,7 @@ export class SearchOrchestrator {
                     candidates.set(n.path, {
                         isGraphNeighbor: true,
                         path: n.path,
-                        score: 0
+                        score: n.score
                     });
                 }
 

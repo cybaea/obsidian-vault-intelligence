@@ -17,6 +17,9 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
+- **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
+
 - **Fixed index rebuild loop**: Resolved a persistent "Delete-after-Add" race condition where mismatching paths caused the index to rebuild on every startup.
 - **Strict path normalization**: Enforced consistent path canonicalization across all worker operations (`deleteFile`, `renameFile`, `pruneOrphans`).
 - **Orphan node pruning**: Automatically cleans up stale graph nodes during scans to match the vault state precisely.

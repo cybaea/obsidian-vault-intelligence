@@ -186,7 +186,7 @@ export const GRAPH_CONSTANTS = {
     /** Scoring Weights (alpha, beta, gamma) */
     WEIGHTS: {
         /** Spreading Activation (connectedness) weight */
-        ACTIVATION: 0.2,
+        ACTIVATION: 0.5,
         /** Graph Centrality (structural) weight */
         CENTRALITY: 0.2,
         /** Vector Similarity weight */
