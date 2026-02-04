@@ -10,6 +10,7 @@ New features are added in the "Unreleased" section.
 ## [Unreleased]
 
 ### User features
+- **Metadata footer buttons**: Added GitHub and Documentation buttons (with tooltips) to the Release Notes footer for easier project access.
 
 ### Developer features
 

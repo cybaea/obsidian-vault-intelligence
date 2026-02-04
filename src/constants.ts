@@ -302,6 +302,7 @@ export const UI_STRINGS = {
     GARDENER_TITLE_PURGE: "Gardener: purge old plans",
     GARDENER_TITLE_TIDY: "Gardener: organize vault concepts",
     MODAL_RELEASE_NOTES_BUTTON: "Cool!",
+    MODAL_RELEASE_NOTES_DOCS: "Documentation",
     MODAL_RELEASE_NOTES_ERROR_BODY: "You have updated to **v{0}**.\n\nDepending on your network connection, we couldn't fetch the full release notes right now.\n\n[Click here to read the release notes on GitHub]({1})",
     MODAL_RELEASE_NOTES_ERROR_HEADER: "### Update Successful!",
     MODAL_RELEASE_NOTES_GITHUB: "GitHub",
