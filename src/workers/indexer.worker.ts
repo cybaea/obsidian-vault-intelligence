@@ -843,37 +843,59 @@ function updateGraphNode(path: string, content: string, mtime: number, size: num
 }
 
 function updateGraphEdges(path: string, content: string) {
-    // Basic implementation based on previous code
-    const { body, frontmatter } = splitFrontmatter(content);
-    const fmLinks = extractLinks(frontmatter);
-    const bodyLinks = extractLinks(body);
+    const { body, frontmatter: fmString } = splitFrontmatter(content);
+    const fm = parseYaml(fmString);
+    const dir = path.split('/').slice(0, -1).join('/');
 
-    for (const link of fmLinks) {
-        const resolvedPath = resolvePath(link, aliasMap);
+    // 1. Explicit Link Extraction (Wikilinks / Markdown links)
+    const bodyLinks = extractLinks(body);
+    const fmLinks = extractLinks(fmString);
+    const allExplicitLinks = new Set([...bodyLinks, ...fmLinks]);
+
+    for (const link of allExplicitLinks) {
+        const resolvedPath = resolvePath(link, aliasMap, dir);
         if (!graph.hasNode(resolvedPath)) {
             graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
         }
         if (graph.hasEdge(path, resolvedPath)) continue;
 
+        const isFM = fmLinks.includes(link);
         graph.addEdge(path, resolvedPath, {
-            source: 'frontmatter',
+            source: isFM ? 'frontmatter' : 'body',
             type: 'link',
-            weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
+            weight: isFM ? ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER : ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY
         });
     }
 
-    for (const link of bodyLinks) {
-        const resolvedPath = resolvePath(link, aliasMap);
-        if (!graph.hasNode(resolvedPath)) {
-            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
-        }
-        if (graph.hasEdge(path, resolvedPath)) continue;
+    // 2. Semantic Property Link Extraction (topics, tags, topic)
+    // These might be plain text that should resolve to ontology notes.
+    const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic'];
+    for (const key of propertyKeys) {
+        const val = fm[key];
+        if (!val) continue;
 
-        graph.addEdge(path, resolvedPath, {
-            source: 'body',
-            type: 'link',
-            weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY
-        });
+        const items = ensureArray(val);
+        for (const rawItem of items) {
+            if (typeof rawItem !== 'string') continue;
+
+            // Sanitize: "[[Topic]]" -> "Topic", "Topic|Alias" -> "Topic"
+            const item = sanitizeProperty(rawItem);
+            if (!item || item.length === 0) continue;
+
+            const resolvedPath = resolvePath(item, aliasMap, dir);
+
+            // Check if we already have this edge via explicit links
+            if (!graph.hasNode(resolvedPath)) {
+                graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
+            }
+            if (graph.hasEdge(path, resolvedPath)) continue;
+
+            graph.addEdge(path, resolvedPath, {
+                source: 'frontmatter-property',
+                type: 'link',
+                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
+            });
+        }
     }
 }
 

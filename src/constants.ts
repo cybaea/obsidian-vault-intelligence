@@ -202,7 +202,7 @@ export const ONTOLOGY_CONSTANTS = {
     },
 
     /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
-    HUB_MIN_DEGREE: 5,
+    HUB_MIN_DEGREE: 2,
 
     /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
     HUB_PENALTY_ENABLED: true,
