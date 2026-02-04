@@ -26,6 +26,8 @@ New features are added in the "Unreleased" section.
 - **Alias map casing resolution**: Fixed a critical bug in alias resolution by ensuring case-insensitive mapping between topics and files.
 - **MessagePack serialization safety**: Hardened index persistence with a circularity-aware diagnostic suite and increased recursion depth for complex Orama trees.
 - **Chunking performance**: Implemented `maxPoolResults` and `recursiveCharacterSplitter` to improve semantic search granularity without polluting results with redundant fragments.
+- **Systemic Path Resolution**: Implemented global basename aliasing in `GraphService` to resolve "Ghost Nodes". Short-form file links (e.g. `[[Note]]`) now correctly resolve to their canonical full paths across the entire vault graph.
+- **Hybrid Explorer Search**: Updated the "Similar Notes" view to merge Vector Similarity (Content) with Graph Neighbors (Topics). This ensures conceptually related notes are displayed even if they don't share similar text.
 
 ## [4.3.1] - 2026-01-31
 

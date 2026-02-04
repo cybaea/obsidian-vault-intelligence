@@ -112,6 +112,14 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >     * **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
 >     * **No Retry**: Failed tasks are logged but not automatically retried to prevent infinite correction loops.
 
+### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
+
+To support Obsidian's flexible `[[Basename]]` linking without creating "Ghost Nodes", the `GraphService` maintains a global **Alias Map**.
+
+1. **Synchronization**: `GraphService.syncAliases()` iterates all vault files and maps `basename.toLowerCase() -> fullPath`.
+2. **Worker Update**: This map is pushed to the `IndexerWorker`.
+3. **Resolution**: During indexing, `resolvePath` uses this map to canonicalize all links (e.g. `[[Agentic AI]]` -> `Ontology/Concepts/Agentic AI.md`).
+
 ### 3.2. Search and Answer loop (Data Flow)
 
 > #### The RAG cycle

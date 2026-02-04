@@ -20,7 +20,7 @@ ulid: 01KG57D3PQ613NXHQEM0T2A5BK
 - I use Obsidian’s standard `tags` header for my _structured_ taxonomy. They are about the _type_, _status_, and _workflow state_ of note.
     - The QuickAdd command `Update Type` (from [updateType.js](/Work/_SCRIPTS/updateType.js)) helps maintain
 
-- I use `topics` for my more fluid “folksonomy”, implemented as links to [Ontology/](/Work/Ontology/) folders.
+- I use `topics` for my more fluid “folksonomy”, implemented as links to `Ontology/` folders.
     - The primary categories in here are: [[../Ontology/Concepts/Concepts|Concepts]], [[../Ontology/Entities/Entities|Entities]], and [[../Ontology/MOCs/MOCs|MOCs]].
     - The [Gardener](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/maintain-vault.html) helps me maintain the entries in the categories.
 
