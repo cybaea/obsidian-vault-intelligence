@@ -15,6 +15,7 @@ const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical pat
 
 interface OramaDocument {
     [key: string]: string | number | boolean | number[] | undefined | string[];
+    author?: string; // New: Explicit author field
     content: string;
     // New Metadata
     created: number;
@@ -582,6 +583,7 @@ const IndexerWorker: WorkerAPI = {
             const params = [...new Set([...tags, ...topics, ...types])];
 
             batchedDocs.push({
+                author: fm.author || undefined,
                 content: fullContent,
                 created: mtime,
                 embedding: embedding,
@@ -736,18 +738,32 @@ function generateContextString(title: string, fm: unknown, conf: WorkerConfig): 
             if (sanitized && sanitized.length > 0) {
                 // Capitalize key
                 const label = key.charAt(0).toUpperCase() + key.slice(1);
-                parts.push(`${label}: ${sanitized}.`);
+
+                // SAFETY CAP: Limit array items to max 3
+                if (Array.isArray(val)) {
+                    const capped = (val as unknown[]).slice(0, 3).map(v => String(v));
+                    parts.push(`${label}: ${capped.join(', ')}.`);
+                } else {
+                    parts.push(`${label}: ${sanitized}.`);
+                }
             }
         }
     }
 
+    // GLOBAL CONTEXT LIMIT: 300 characters
+    // If we exceed this, we risk poisoning the vector.
+    // Title/Author are prioritized as they are first in 'parts' (usually).
+    // Let's join and truncate.
     let fullContext = parts.join(' ');
+    const MAX_CONTEXT_CHARS = 300;
 
-    // Token Cap ~256 tokens ~ 1000 chars
-    if (fullContext.length > 1000) {
-        fullContext = fullContext.slice(0, 1000) + "...";
+    if (fullContext.length > MAX_CONTEXT_CHARS) {
+        // Try to preserve whole words/sentences if possible, but hard cap is safer
+        fullContext = fullContext.substring(0, MAX_CONTEXT_CHARS) + "...";
     }
+
     return fullContext;
+
 }
 
 function sanitizeProperty(value: unknown): string {
@@ -812,8 +828,9 @@ async function recreateOrama() {
     const { create } = await import('@orama/orama');
     orama = create({
         schema: {
-            content: 'string',
             // New Metadata Fields
+            author: 'string', // New: Indexed Author
+            content: 'string',
             created: 'number',
             embedding: `vector[${config.embeddingDimension}]`,
             params: 'string[]', // For Tags/Topics

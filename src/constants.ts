@@ -61,7 +61,7 @@ export const SEARCH_CONSTANTS = {
     FUZZY_SHORT_THRESHOLD: 0.6,
 
     /** Search: Boosting score if result has both vector and keyword matches */
-    HYBRID_BOOST_SCORE: 0.3,
+    HYBRID_BOOST_SCORE: 1.0,
 
     /** Search: Extra boost if keyword match is specifically in title */
     HYBRID_TITLE_BOOST: 0.5,
@@ -79,10 +79,10 @@ export const SEARCH_CONSTANTS = {
     NEIGHBOR_DECAY: 0.3,
 
     /** Scoring: Score for exact body match */
-    SCORE_BODY_MATCH: 0.85,
+    SCORE_BODY_MATCH: 2.0,
 
     /** Scoring: Boost for exact title match */
-    SCORE_TITLE_MATCH: 1.2,
+    SCORE_TITLE_MATCH: 3.0,
 
     /** Max % of the budget a single document can consume if others are present */
     SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
