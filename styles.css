@@ -712,7 +712,7 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 }
 
 /* Release Notes Modal Styles */
-.release-notes-modal .release-notes-container {
+.vi-release-notes-modal .release-notes-container {
     padding: var(--size-4-4);
     max-height: 60vh;
     overflow-y: auto;
@@ -722,31 +722,58 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     border: 1px solid var(--background-modifier-border);
 }
 
-.release-notes-modal .modal-button-container {
+.vi-release-notes-modal .modal-button-container {
     display: flex;
     justify-content: flex-end;
     gap: var(--size-4-2);
 }
 
-.release-notes-modal .modal-button-container .sponsor-button {
+.vi-release-notes-modal .modal-button-container .sponsor-button,
+.vi-release-notes-modal .modal-button-container .github-button,
+.vi-release-notes-modal .modal-button-container .docs-button {
     display: inline-flex;
     align-items: center;
     gap: var(--size-4-1);
-    margin-right: auto;
+}
+
+.vi-release-notes-modal .modal-button-container .sponsor-button {
     border-color: #bf3989 !important;
     color: #bf3989 !important;
 }
 
-.release-notes-modal .modal-button-container .sponsor-button:hover {
+.vi-release-notes-modal .modal-button-container .github-button,
+.vi-release-notes-modal .modal-button-container .docs-button {
+    margin-right: auto;
+    color: var(--text-muted);
+}
+
+/* Ensure only the last left-aligned button pushes the others to the right */
+.vi-release-notes-modal .modal-button-container .github-button,
+.vi-release-notes-modal .modal-button-container .sponsor-button {
+    margin-right: 0;
+}
+
+.vi-release-notes-modal .modal-button-container .docs-button {
+    margin-right: auto;
+}
+
+.vi-release-notes-modal .modal-button-container .github-button:hover,
+.vi-release-notes-modal .modal-button-container .docs-button:hover {
+    color: var(--text-normal);
+}
+
+.vi-release-notes-modal .modal-button-container .sponsor-button:hover {
     background-color: #bf3989 !important;
     color: white !important;
 }
 
-.release-notes-modal .modal-button-container .sponsor-button svg {
+.vi-release-notes-modal .modal-button-container .sponsor-button svg,
+.vi-release-notes-modal .modal-button-container .github-button svg,
+.vi-release-notes-modal .modal-button-container .docs-button svg {
     color: inherit;
 }
 
-.release-notes-modal .release-notes-container img {
+.vi-release-notes-modal .release-notes-container img {
     width: 100%;
     height: auto;
     max-width: 100%;

@@ -20,6 +20,7 @@ export class ReleaseNotesModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass("release-notes-modal");
+        contentEl.addClass("vi-release-notes-modal");
 
         // Header
         contentEl.createEl("h2", { text: `${UI_STRINGS.MODAL_RELEASE_NOTES_TITLE} ${UI_STRINGS.PLUGIN_NAME} v${this.version}` });
@@ -44,12 +45,33 @@ export class ReleaseNotesModal extends Modal {
         const sponsorUrl = this.sponsorUrl || DOCUMENTATION_URLS.SPONSOR;
         const sponsorBtn = new ButtonComponent(buttonContainer)
             .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_SPONSOR)
+            .setTooltip("Support development")
             .onClick(() => {
                 window.open(sponsorUrl, "_blank");
             });
 
         sponsorBtn.buttonEl.addClass("sponsor-button");
         setIcon(sponsorBtn.buttonEl, "heart");
+
+        const githubBtn = new ButtonComponent(buttonContainer)
+            .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_GITHUB)
+            .setTooltip("View source code")
+            .onClick(() => {
+                window.open(DOCUMENTATION_URLS.GITHUB, "_blank");
+            });
+
+        githubBtn.buttonEl.addClass("github-button");
+        setIcon(githubBtn.buttonEl, "github");
+
+        const docsBtn = new ButtonComponent(buttonContainer)
+            .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_DOCS)
+            .setTooltip("Read the docs")
+            .onClick(() => {
+                window.open(DOCUMENTATION_URLS.BASE, "_blank");
+            });
+
+        docsBtn.buttonEl.addClass("docs-button");
+        setIcon(docsBtn.buttonEl, "book-open");
 
         new ButtonComponent(buttonContainer)
             .setButtonText(UI_STRINGS.MODAL_RELEASE_NOTES_BUTTON)
