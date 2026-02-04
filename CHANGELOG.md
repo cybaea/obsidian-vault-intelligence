@@ -10,6 +10,8 @@ New features are added in the "Unreleased" section.
 ## [Unreleased]
 
 ### User features
+
+- **Improved search recall**: Increased the keyword search index limit from 500 to 25,000 characters. The Research Agent can now discover relevant content deep within long notes that was previously invisible to search.
 - **Metadata footer buttons**: Added GitHub and Documentation buttons (with tooltips) to the Release Notes footer for easier project access.
 
 ### Developer features

@@ -148,7 +148,7 @@ export const WORKER_CONSTANTS = {
 
 export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
-    CONTENT_PREVIEW_LENGTH: 500,
+    CONTENT_PREVIEW_LENGTH: 25000,
 
     /** Default delay between index updates (ms) */
     DEFAULT_INDEXING_DELAY: 2000,
