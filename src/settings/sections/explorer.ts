@@ -282,6 +282,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 }
             }));
 
+    new Setting(containerEl)
+        .setName('Keyword match weight')
+        .setDesc('Calibration for keyword vs vector search. Higher values make keyword matches more conservative.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 5.0, 0.1)
+            .setValue(plugin.settings.keywordWeight)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.keywordWeight = value;
+                await plugin.saveSettings();
+            }));
+
     // --- 4. Re-index Button ---
     new Setting(containerEl)
         .setName('Re-index vault')

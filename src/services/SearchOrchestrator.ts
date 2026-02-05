@@ -133,16 +133,21 @@ export class SearchOrchestrator {
             mergedMap.set(res.path, res);
         }
 
-        // Add/Merge Keyword Results
+        // We use a Calibration Factor to map unbounded BM25 scores into 0-1 range.
+        // A sigmoid-like function: score / (score + K) allows high scores to approach 1.0 
+        // without capping, preserving ranking granularity.
+        const K = this.settings.keywordWeight;
+
         for (const res of keywordResults) {
             const existing = mergedMap.get(res.path);
+            const normalizedKeywordScore = res.score / (res.score + K);
 
             if (existing !== undefined) {
-                // Simplified boosting logic for Reflex
-                existing.score = (existing.score + res.score) / 1.5; // Simple blend
+                // Blend scores. We give vector results slightly more weight by dividing by 1.5.
+                existing.score = (existing.score + normalizedKeywordScore) / 1.5;
                 existing.isKeywordMatch = true;
             } else {
-                mergedMap.set(res.path, res);
+                mergedMap.set(res.path, { ...res, score: normalizedKeywordScore });
             }
         }
 

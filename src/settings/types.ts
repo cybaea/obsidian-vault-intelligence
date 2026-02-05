@@ -42,6 +42,8 @@ export interface VaultIntelligenceSettings {
     googleApiKey: string;
     groundingModel: string;
     indexingDelayMs: number;
+    /** Calibration constant for BM25 score normalization. Higher = more aggressive normalization. */
+    keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
     minSimilarityScore: number;
@@ -154,6 +156,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     groundingModel: 'gemini-2.5-flash-lite',
     indexingDelayMs: 5000,
+    keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,

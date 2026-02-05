@@ -43,7 +43,8 @@ Configure how connections and similar notes are discovered.
 | GARS Similarity weight | `1.0` | Importance of vector similarity in hybrid scoring. |
 | GARS Centrality weight | `0.2` | Importance of graph centrality (popularity) in hybrid scoring. |
 | GARS Activation weight | `0.4` | Importance of semantic activation (connections) in hybrid scoring. |
-| Re-index vault | `None` | Wipe and rebuild all embeddings. Required after changing models. |
+| Keyword match weight | `1.2` | Calibration for hybrid search (BM25). <br>• _Low (0.5 - 1.0):_ Keyword matches are boosted significantly. <br>• _High (2.0 - 5.0):_ Keywords are treated as secondary to vector similarity. |
+| Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now automatically triggers a re-sync if you change the model or dimension in settings. |
 
 ## Gardener
 

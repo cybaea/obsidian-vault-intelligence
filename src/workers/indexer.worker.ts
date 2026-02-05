@@ -419,6 +419,12 @@ const IndexerWorker: WorkerAPI = {
 
         for (const neighbor of initialNeighbors) {
             const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
+
+            // STRICT FILTER: Only return nodes that actually exist and have content.
+            // checking mtime > 0 and size > 0 ensures it's a real file that has been processed.
+            // This excludes tags, labels, and ghost topics.
+            if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
+
             results.set(neighbor, {
                 excerpt: "",
                 path: neighbor,
@@ -446,6 +452,10 @@ const IndexerWorker: WorkerAPI = {
                         }
 
                         const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
+
+                        // STRICT FILTER: Only return real files as siblings
+                        if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
+
                         results.set(sibling, {
                             excerpt: `(Sibling via ${neighbor})`,
                             path: sibling,
@@ -1010,9 +1020,13 @@ function sanitizeProperty(value: unknown): string {
     }
     if (typeof value !== 'string') return String(value);
 
-    // Remove [[ ]] and |alias
     // Clean WikiLinks: [[Page|Alias]] -> Alias, [[Page]] -> Page
     let clean = value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1');
+
+    // STRIP QUOTES: Properties often come in as '"Value"' or "'Value'"
+    // This ensures "Agentic AI" and Agentic AI resolve to the same node.
+    clean = clean.replace(/^["'](.+)["']$/, '$1');
+
     return clean.trim();
 }
 
@@ -1082,7 +1096,9 @@ function updateGraphEdges(path: string, content: string) {
     for (const link of allExplicitLinks) {
         const resolvedPath = resolvePath(link, aliasMap, dir);
         if (!graph.hasNode(resolvedPath)) {
-            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
+            // Tag detection for virtual nodes
+            const type = resolvedPath.startsWith('#') ? 'tag' : 'topic';
+            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type });
         }
         if (graph.hasEdge(path, resolvedPath)) continue;
 

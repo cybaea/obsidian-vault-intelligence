@@ -597,6 +597,9 @@ export class GraphService {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
+        const needsReindex = this.settings.embeddingDimension !== settings.embeddingDimension ||
+            this.settings.embeddingModel !== settings.embeddingModel;
+
         this.settings = settings;
         if (this.api) {
             await this.api.updateConfig({
@@ -610,6 +613,11 @@ export class GraphService {
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath
             });
+
+            if (needsReindex) {
+                logger.error("[GraphService] Embedding settings changed. Triggering forced re-scan.");
+                void this.scanAll(true);
+            }
         }
     }
 
