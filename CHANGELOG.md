@@ -41,6 +41,11 @@ New features are added in the "Unreleased" section.
 - **Forced Re-scan Logic**: Added automatic `scanAll(true)` trigger in `GraphService` upon critical settings changes (model/dimension) to ensure index consistency.
 - **Robust Path Resolution**: Refined wikilink resolution to correctly handle multi-extension files and prevent accidental `.md` suffixing on non-markdown assets.
 - **Property Sanitization**: Strip surrounding quotes from YAML/frontmatter values to prevent duplicate node creation for identical topics.
+- **Search Logic Overhaul**:
+    - **Asymmetric Embedding**: Implemented query-specific embedding headers (distinguishing `Query` vs `Document`) to strictly align with the embedding model's training objective. This significantly improves vector retrieval accuracy.
+    - **Fuzzy Search Integration**: Enabled Levenshtein distance matching (`tolerance: 2`) for keyword searches. The agent can now find notes even with typos (eg "storis" finds "stories") or morphological variations.
+    - **Deep Vector Recall**: Modified the vector search pipeline to bypass Orama's default strict cutoff. We now request _all_ semantic candidates (`similarity: 0.001`) and let our GARS re-ranker handle the filtering. This solves "empty result" issues for broad conceptual queries.
+    - **Permissive Hybrid Merging**: Configured keyword search to use a permissive recall threshold (`1.0`) combined with local score normalization. This ensures that a strong keyword match for one term (eg "cats") isn't discarded just because other terms in the query are missing.
 
 ## [4.3.1] - 2026-01-31
 

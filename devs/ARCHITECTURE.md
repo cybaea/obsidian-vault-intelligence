@@ -497,6 +497,8 @@ export class SearchOrchestrator {
 | :--- | :--- | :--- |
 | `WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT` | `5` | Default number of results for vector search. |
 | `WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT` | `0.001` | Minimum cosine similarity to consider a note "related". |
+| `WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE` | `2` | Levenshtein distance allowed for fuzzy keyword matching. |
+| `WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE` | `1.0` | Orama threshold setting for maximum recall (Permissive/OR logic). |
 | `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` | `4` | Heuristic for budget calculation (English). |
 | `SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO` | `0.10` | Prevent any single doc from starving others in context assembly. |
 | `GARDENER_CONSTANTS.PLAN_PREFIX` | `"Gardener Plan"` | Prefix for generated hygiene plans. |

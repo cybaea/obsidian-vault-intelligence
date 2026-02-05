@@ -151,7 +151,10 @@ export class SearchOrchestrator {
             }
         }
 
+        const minScore = this.settings.minSimilarityScore;
+
         const finalResults = Array.from(mergedMap.values())
+            .filter(r => r.score >= minScore)
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
 
