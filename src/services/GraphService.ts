@@ -7,6 +7,7 @@ import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../ty
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
+import { ModelRegistry } from "./ModelRegistry";
 import { OntologyService } from "./OntologyService";
 import { VaultManager } from "./VaultManager";
 
@@ -81,7 +82,15 @@ export class GraphService {
             this.worker = new IndexerWorker();
             this.api = Comlink.wrap<WorkerAPI>(this.worker);
 
-            // 2. Configure worker
+            // 2. Align settings with Model Registry (Architecture Restoration)
+            const model = ModelRegistry.getModelById(this.settings.embeddingModel);
+            if (model && model.dimensions && this.settings.embeddingDimension !== model.dimensions) {
+                logger.error(`[GraphService] Dimension mismatch detected: settings=${this.settings.embeddingDimension}, model=${model.dimensions}. Aligning to model.`);
+                this.settings.embeddingDimension = model.dimensions;
+                // Note: We don't save settings here to avoid side effects during init, 
+                // but we use the correct dimension for the config.
+            }
+
             const config: WorkerConfig = {
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,

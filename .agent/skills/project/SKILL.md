@@ -59,3 +59,6 @@ This skill contains the domain knowledge for the **Vault Intelligence** Obsidian
     2. Implement logic in a Service (`src/services/`).
     3. Expose via `main.ts` if needed.
     4. Build UI in `src/views/`.
+- **Accessing GitHub**:
+    1. You can use the `gh` command-line tool to access GitHub.
+

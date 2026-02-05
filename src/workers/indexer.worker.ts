@@ -55,7 +55,7 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
-const LATENCY_BUDGET_TOKENS = 4000;
+const LATENCY_BUDGET_TOKENS = 64000; // Increased to allow ~125 context documents @ 512 tokens each
 
 function calculateInheritedScore(parentScore: number, linkCount: number): number {
     const dilution = Math.max(1, Math.log2(linkCount + 1));
