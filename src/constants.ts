@@ -163,10 +163,10 @@ export const WORKER_INDEXER_CONSTANTS = {
     DEFAULT_OVERLAP_RATIO: 0.1,
 
     /** * Absolute floor for keyword recall. 
-     * Set to 0 to ensure the Analyst loop sees ALL potential matches, 
-     * including short notes with low term overlap.
+     * In Orama v3, 1.0 implies logical OR (more permissive), 
+     * while 0.0 implies logical AND (stricter).
      */
-    RECALL_THRESHOLD_PERMISSIVE: 0,
+    RECALL_THRESHOLD_PERMISSIVE: 1,
 
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
@@ -383,4 +383,20 @@ export const URL_CONSTANTS = {
         'jsdelivr.net',
         'raw.githubusercontent.com' // Often used for config but less common in this specific logic
     ]
+};
+
+export const REGEX_CONSTANTS = {
+    /** Pattern to match @[link] or @link mentions */
+    MENTION: /@(?:\[\[([^\]]+)\]\]|(\b[a-zA-Z0-9_\-./]+\b))/g
+};
+
+export const MODEL_CONSTANTS = {
+    CHAT_MODEL: "gemini-pro",
+    EMBEDDING_001: "gemini-embedding-001",
+    TEXT_EMBEDDING_004: "text-embedding-004"
+};
+
+export const WORKER_LATENCY_CONSTANTS = {
+    /** Tokens budgeted for latency overhead in worker */
+    LATENCY_BUDGET_TOKENS: 200
 };

@@ -9,7 +9,7 @@ Adopt roles as systems architect and senior developer. Review the code base for 
 ## 1.a. Research good practice to make a checklist
 
 1. Think hard and reseach what **good** code and architecture looks like. 
-2. Make a checklist for architectural code reviews based on your reseach.
+2. Make a checklist for architectural code reviews based on your research.
 
 DO NOT SKIP THESE TWO STEPS. Provide the list with your plans.
 

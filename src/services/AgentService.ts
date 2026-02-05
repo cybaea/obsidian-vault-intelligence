@@ -1,7 +1,7 @@
 import { Part, Content } from "@google/genai";
 import { TFile, TFolder, App, MarkdownView } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
@@ -245,7 +245,7 @@ export class AgentService {
 
         // Regex for @[["Filename"]] or @[[Filename|Alias]] or @Filename 
         // Updated regex to be more lenient with characters and handle quoted strings better
-        const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        const mentionRegex = REGEX_CONSTANTS.MENTION;
         const matches = Array.from(inputMessage.matchAll(mentionRegex));
 
         // We will collect all potential files

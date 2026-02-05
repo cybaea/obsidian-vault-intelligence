@@ -30,7 +30,7 @@ This skill contains the domain knowledge for the **Vault Intelligence** Obsidian
     - **Views** must call **Services** to fetch data or modify the vault.
     - **Services** must be singletons registered in the main plugin class.
 2. **No Direct Vault Access in UI**:
-    - ❌ `view.app.vault.read()` inside a React component.
+    - ❌ `view.app.vault.read()` inside a View component.
     - ✅ `plugin.graphService.getNoteContent()` called by the component.
 
 ### Core Services
@@ -42,7 +42,7 @@ This skill contains the domain knowledge for the **Vault Intelligence** Obsidian
 ## 3. Project Structure
 
 - **`src/services/`**: Core business logic (The Brains).
-- **`src/views/`**: React/Svelte UI components (The Face).
+- **`src/views/`**: Native DOM UI components (The Face).
 - **`src/utils/`**: Shared helpers (no state).
 - **`devs/`**: Documentation and Architecture Decision Records (ADRs).
 
@@ -58,7 +58,7 @@ This skill contains the domain knowledge for the **Vault Intelligence** Obsidian
     1. Define the Interface in `src/types.ts`.
     2. Implement logic in a Service (`src/services/`).
     3. Expose via `main.ts` if needed.
-    4. Build UI in `src/views/`.
+    4. Build UI in `src/views/` (Native DOM).
 - **Accessing GitHub**:
     1. You can use the `gh` command-line tool to access GitHub.
 

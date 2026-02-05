@@ -1,5 +1,6 @@
 import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
 
+import { MODEL_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
@@ -208,8 +209,8 @@ export class GeminiService {
 
             let modelId = this.settings.embeddingModel;
             // Migration/Fix: If the user has 'embedding-001' or similar without prefix
-            if (modelId === 'embedding-001') modelId = 'gemini-embedding-001';
-            if (modelId === 'embedding-004') modelId = 'text-embedding-004';
+            if (modelId === 'embedding-001') modelId = MODEL_CONSTANTS.EMBEDDING_001;
+            if (modelId === 'embedding-004') modelId = MODEL_CONSTANTS.TEXT_EMBEDDING_004;
 
             const result = await this.client.models.embedContent({
                 config: config,

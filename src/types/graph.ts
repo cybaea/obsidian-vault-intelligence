@@ -43,6 +43,7 @@ export interface GraphSearchResult {
  * Configuration passed to the Indexer Worker.
  */
 export interface WorkerConfig {
+    agentLanguage: string;
     authorName: string;
     chatModel: string;
     contextAwareHeaderProperties: string[];

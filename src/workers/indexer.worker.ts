@@ -3,7 +3,7 @@ import { search, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS } from '../constants';
+import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
@@ -12,20 +12,112 @@ let orama: AnyOrama;
 let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
+let currentStopWords: string[] = []; // Loaded dynamically
 
-const STOP_WORDS = new Set([
-    "a", "an", "the", "and", "or", "but", "is", "are", "was", "were",
-    "in", "on", "at", "to", "for", "of", "with", "by", "from", "up",
-    "about", "into", "over", "after"
-]);
+interface StopWordsModule {
+    stopwords: string[];
+}
+
+
+// Language Normalization & Stop Word Loading
+async function loadStopWords(language: string): Promise<string[]> {
+    try {
+        const normalized = language.toLowerCase().trim();
+        // 1. Try exact match mappings
+        // 2. Try prefix (en-GB -> en)
+        // 3. Map to @orama/stopwords exports
+
+        let langCode = 'english'; // Default
+
+        if (normalized.startsWith('ar')) langCode = 'arabic';
+        else if (normalized.startsWith('hy')) langCode = 'armenian';
+        else if (normalized.startsWith('bg')) langCode = 'bulgarian';
+        else if (normalized.startsWith('zh')) langCode = 'chinese';
+        else if (normalized.startsWith('da')) langCode = 'danish';
+        else if (normalized.startsWith('nl')) langCode = 'dutch';
+        else if (normalized.startsWith('en')) langCode = 'english';
+        else if (normalized.startsWith('fi')) langCode = 'finnish';
+        else if (normalized.startsWith('fr')) langCode = 'french';
+        else if (normalized.startsWith('de')) langCode = 'german';
+        else if (normalized.startsWith('el')) langCode = 'greek';
+        else if (normalized.startsWith('hi')) langCode = 'hindi';
+        else if (normalized.startsWith('hu')) langCode = 'hungarian';
+        else if (normalized.startsWith('id')) langCode = 'indonesian';
+        else if (normalized.startsWith('ga')) langCode = 'irish';
+        else if (normalized.startsWith('it')) langCode = 'italian';
+        else if (normalized.startsWith('ne')) langCode = 'nepali';
+        else if (normalized.startsWith('no')) langCode = 'norwegian';
+        else if (normalized.startsWith('pt')) langCode = 'portuguese';
+        else if (normalized.startsWith('ro')) langCode = 'romanian';
+        else if (normalized.startsWith('ru')) langCode = 'russian';
+        else if (normalized.startsWith('sa')) langCode = 'sanskrit';
+        else if (normalized.startsWith('sr')) langCode = 'serbian';
+        else if (normalized.startsWith('sl')) langCode = 'slovenian';
+        else if (normalized.startsWith('es')) langCode = 'spanish';
+        else if (normalized.startsWith('sv')) langCode = 'swedish';
+        else if (normalized.startsWith('ta')) langCode = 'tamil';
+        else if (normalized.startsWith('tr')) langCode = 'turkish';
+        else if (normalized.startsWith('uk')) langCode = 'ukrainian';
+
+        // Japanese/Chinese special handling if needed, but 'chinese' is now supported.
+        // Japanese often requires tokenizer, no stopwords for now.
+        if (normalized.startsWith('ja')) return [];
+
+        // Dynamic import to avoid bundling all languages
+        // Note: ESBuild might bundle them if path is static, but dynamic string makes it tricky.
+        // For simplicity and safety with the installed package, let's try a direct map if possible,
+        // or just use the english default + extensive map if we want to be fancy.
+        // Given the constraints, we'll try to import the specific one.
+        // Since we can't easily do dynamic template string imports in all bundlers without config:
+
+        switch (langCode) {
+            case 'arabic': return (await import('@orama/stopwords/arabic') as StopWordsModule).stopwords;
+            case 'armenian': return (await import('@orama/stopwords/armenian') as StopWordsModule).stopwords;
+            case 'bulgarian': return (await import('@orama/stopwords/bulgarian') as StopWordsModule).stopwords;
+            case 'chinese': return (await import('@orama/stopwords/chinese') as StopWordsModule).stopwords;
+            case 'danish': return (await import('@orama/stopwords/danish') as StopWordsModule).stopwords;
+            case 'dutch': return (await import('@orama/stopwords/dutch') as StopWordsModule).stopwords;
+            case 'english': return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
+            case 'finnish': return (await import('@orama/stopwords/finnish') as StopWordsModule).stopwords;
+            case 'french': return (await import('@orama/stopwords/french') as StopWordsModule).stopwords;
+            case 'german': return (await import('@orama/stopwords/german') as StopWordsModule).stopwords;
+            case 'greek': return (await import('@orama/stopwords/greek') as StopWordsModule).stopwords;
+            case 'hindi': return (await import('@orama/stopwords/hindi') as StopWordsModule).stopwords;
+            case 'hungarian': return (await import('@orama/stopwords/hungarian') as StopWordsModule).stopwords;
+            case 'indonesian': return (await import('@orama/stopwords/indonesian') as StopWordsModule).stopwords;
+            case 'irish': return (await import('@orama/stopwords/irish') as StopWordsModule).stopwords;
+            case 'italian': return (await import('@orama/stopwords/italian') as StopWordsModule).stopwords;
+            case 'nepali': return (await import('@orama/stopwords/nepali') as StopWordsModule).stopwords;
+            case 'norwegian': return (await import('@orama/stopwords/norwegian') as StopWordsModule).stopwords;
+            case 'portuguese': return (await import('@orama/stopwords/portuguese') as StopWordsModule).stopwords;
+            case 'romanian': return (await import('@orama/stopwords/romanian') as StopWordsModule).stopwords;
+            case 'russian': return (await import('@orama/stopwords/russian') as StopWordsModule).stopwords;
+            case 'sanskrit': return (await import('@orama/stopwords/sanskrit') as StopWordsModule).stopwords;
+            case 'serbian': return (await import('@orama/stopwords/serbian') as StopWordsModule).stopwords;
+            case 'slovenian': return (await import('@orama/stopwords/slovenian') as StopWordsModule).stopwords;
+            case 'spanish': return (await import('@orama/stopwords/spanish') as StopWordsModule).stopwords;
+            case 'swedish': return (await import('@orama/stopwords/swedish') as StopWordsModule).stopwords;
+            case 'tamil': return (await import('@orama/stopwords/tamil') as StopWordsModule).stopwords;
+            case 'turkish': return (await import('@orama/stopwords/turkish') as StopWordsModule).stopwords;
+            case 'ukrainian': return (await import('@orama/stopwords/ukrainian') as StopWordsModule).stopwords;
+
+            default:
+                return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
+        }
+    } catch (e) {
+        workerLogger.warn(`Failed to load stop words for ${language}, defaulting to empty.`, e);
+        return [];
+    }
+}
 
 function stripStopWords(query: string): string {
-    return query
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(word => !STOP_WORDS.has(word))
-        .join(" ");
+    if (currentStopWords.length === 0) return query;
+    const tokens = query.toLowerCase().split(/\s+/);
+    const filtered = tokens.filter(t => !currentStopWords.includes(t));
+    return filtered.length > 0 ? filtered.join(' ') : query; // Fallback to original if all stripped
 }
+
+
 
 interface OramaDocument {
     [key: string]: string | number | boolean | number[] | undefined | string[];
@@ -55,7 +147,7 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
-const LATENCY_BUDGET_TOKENS = 64000; // Increased to allow ~125 context documents @ 512 tokens each
+const LATENCY_BUDGET_TOKENS = WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_TOKENS;
 
 function calculateInheritedScore(parentScore: number, linkCount: number): number {
     const dilution = Math.max(1, Math.log2(linkCount + 1));
@@ -99,7 +191,7 @@ const IndexerWorker: WorkerAPI = {
             includeVectors: false,
             limit: 50,
             properties: ['content', 'title'],
-            term: stripStopWords(query) || query, // Fallback to original if all stopped
+            term: stripStopWords(query), // Use stripped query for keyword search
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE // Use permissive threshold to maximize Recall for the Analyst re-ranker
         });
 
@@ -543,6 +635,11 @@ const IndexerWorker: WorkerAPI = {
         await Promise.resolve();
 
         workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions and ${conf.embeddingModel}`);
+
+        // Load stop words
+        currentStopWords = await loadStopWords(conf.agentLanguage);
+        workerLogger.info(`Loaded ${currentStopWords.length} stop words for ${conf.agentLanguage}`);
+
         return true;
     },
 
@@ -554,9 +651,26 @@ const IndexerWorker: WorkerAPI = {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
-            term: stripStopWords(query) || query,
+            term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
+
+        // Hybrid Boost: If we have an embedding, we should conceptually merge, 
+        // but `keywordSearch` signature is text-only. 
+        // For true Hybrid here, we would need to run vector search too and merge.
+        // Current architecture separates them in `buildPriorityPayload` but uses `keywordSearch` for simple tools using just text.
+        // Let's Upgrade `keywordSearch` to be Hybrid if we can cheaply generate an embedding, 
+        // OR just leave it as improved Keyword search (which is now better due to stop words).
+
+        // Per User Request: "Switch to Hybrid Search".
+        // Since `keywordSearch` is used by tools that might expect purely text match, 
+        // strictly speaking `keywordSearch` should remain keyword. 
+        // However, `buildPriorityPayload` (used by the Dual Loop) ALREADY implements Hybrid (Lines 75-94).
+        // The User's specific issue was likely with `vault_search` tool which calls `graphService.search`.
+        // `GraphService.search` calls `worker.search` (Vector) or `worker.keywordSearch`?
+        // Let's check `GraphService.ts` in the next step to see which method `vault_search` uses.
+        // If it uses `search` (line 691), it is PURE VECTOR.
+        // WE NEED TO UPGRADE `search` (line 691) TO BE HYBRID.
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);
     },
@@ -701,7 +815,9 @@ const IndexerWorker: WorkerAPI = {
      * Uses Max-Pooling.
      */
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        const results = await search(orama, {
+        // HYBRID SEARCH UPGRADE
+        // 1. Vector Search
+        const vectorPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR, // Higher limit for pooling
             mode: 'vector',
             vector: {
@@ -710,7 +826,42 @@ const IndexerWorker: WorkerAPI = {
             }
         });
 
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
+        // 2. Keyword Search (for specific terms like "cats")
+        const keywordPromise = search(orama, {
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
+            properties: ['title', 'content', 'params', 'status'],
+            term: stripStopWords(query), // Clean query
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
+        });
+
+        const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
+
+        // 3. Merge Strategies
+        const hits = new Map<string, OramaHit>();
+
+        // Add Vector Hits
+        for (const hit of vectorResults.hits) {
+            hits.set(hit.id, hit as unknown as OramaHit);
+        }
+
+        // Add Keyword Hits (Boost if exists, append if not)
+        for (const hit of keywordResults.hits) {
+            const h = hit as unknown as OramaHit;
+            if (hits.has(h.id)) {
+                // Boost existing vector hit
+                const existing = hits.get(h.id)!;
+                // Simple hybrid scoring: Vector Score + (Keyword Score * Weight)
+                // Note: Orama scores are not normalized 0-1 across modes easily, but adding a boost helps rank.
+                existing.score += 0.1; // Small boost for also matching keywords
+            } else {
+                hits.set(h.id, h);
+            }
+        }
+
+        // Convert back to array
+        const mergedHits = Array.from(hits.values());
+
+        return maxPoolResults(mergedHits, limit, config.minSimilarityScore ?? 0);
     },
 
     /**
@@ -755,6 +906,13 @@ const IndexerWorker: WorkerAPI = {
         if (dimensionChanged || modelChanged) {
             await recreateOrama();
         }
+
+        // Reload stop words if language changed
+        if (newConfig.agentLanguage && newConfig.agentLanguage !== config.agentLanguage) {
+            currentStopWords = await loadStopWords(newConfig.agentLanguage);
+            workerLogger.info(`Reloaded ${currentStopWords.length} stop words for ${newConfig.agentLanguage}`);
+        }
+
         await Promise.resolve();
     },
 
@@ -1004,7 +1162,7 @@ function generateContextString(title: string, fm: unknown, conf: WorkerConfig): 
     // Title/Author are prioritized as they are first in 'parts' (usually).
     // Let's join and truncate.
     let fullContext = parts.join(' ');
-    const MAX_CONTEXT_CHARS = 300;
+    const MAX_CONTEXT_CHARS = 1000;
 
     if (fullContext.length > MAX_CONTEXT_CHARS) {
         // Try to preserve whole words/sentences if possible, but hard cap is safer
