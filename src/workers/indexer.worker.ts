@@ -219,6 +219,7 @@ const IndexerWorker: WorkerAPI = {
             includeVectors: false,
             limit: 100,
             mode: 'vector',
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: {
                 property: 'embedding',
                 value: queryVector
@@ -229,6 +230,7 @@ const IndexerWorker: WorkerAPI = {
             includeVectors: false,
             limit: 50,
             properties: ['content', 'title'],
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             term: stripStopWords(query), // Use stripped query for keyword search
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE // Use permissive threshold to maximize Recall for the Analyst re-ranker
         });
