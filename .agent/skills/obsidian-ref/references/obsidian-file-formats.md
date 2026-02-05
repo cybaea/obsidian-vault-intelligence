@@ -451,7 +451,7 @@ ___
 
 ### Properties (YAML metadata)
 
-**Important**: Obsidian uses the term "properties" (not "frontmatter" or "front-matter") when referring to YAML metadata at the top of Markdown files. All documentation, code comments, and UI text should use "properties" to align with Obsidian's official terminology.
+**Important**: Obsidian uses the term "properties" (the editable UI/metadata interface) and "frontmatter" (the YAML block serialization). While both terms are valid and complementary, this guide prefers "properties" for consistency with Obsidian's modern UI terminology.
 
 Properties use YAML metadata (properties) at the start of a note:
 

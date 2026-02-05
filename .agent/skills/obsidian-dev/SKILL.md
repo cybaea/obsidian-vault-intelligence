@@ -11,13 +11,13 @@ This skill provides patterns and rules for developing Obsidian plugins and theme
 
 To ensure consistent development across plugins and themes, proper code organization, and adherence to Obsidian's development patterns.
 
-## When to Use
+## Scope
 
-Load this skill when:
-- Implementing new features
-- Following coding conventions
-- Debugging issues
-- Managing project structure
+This skill covers:
+- Implementing new plugin features
+- TypeScript/JavaScript coding conventions
+- Plugin debugging and troubleshooting
+- Project structure and organization
 
 ## Core Rules
 
@@ -28,6 +28,7 @@ Load this skill when:
 
 ## Bundled Resources
 
+- `references/plugin-guidelines.md`: Official Obsidian plugin review guidelines
 - `references/agent-dos-donts.md`: Critical development guidelines
 - `references/code-patterns.md`: Implementation patterns and examples
 - `references/coding-conventions.md`: Code style and organization

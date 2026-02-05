@@ -11,13 +11,13 @@ This skill covers the operational aspects of maintaining an Obsidian project, in
 
 To ensure reliable builds, consistent reference materials, and safe release processes while strictly following project policies.
 
-## When to Use
+## Scope
 
-Load this skill when:
-- Running build or lint commands.
-- Syncing reference documentation from external sources.
-- Bumping project versions or preparing releases.
-- Troubleshooting build or environment issues.
+This skill covers:
+- Build and lint workflows
+- Syncing reference documentation from external sources
+- Version management and release preparation
+- Build and environment troubleshooting
 
 ## Core Rules
 

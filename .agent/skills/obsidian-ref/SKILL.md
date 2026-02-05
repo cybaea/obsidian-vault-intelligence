@@ -11,13 +11,14 @@ This skill provides comprehensive technical references and standards for the Obs
 
 To provide a central source of truth for API usage, file formats, and design standards.
 
-## When to Use
+## Scope
 
-Load this skill when:
-- Verifying `manifest.json` requirements.
-- Checking Obsidian API details or documentation.
-- Working with Obsidian-specific file formats (Markdown, Canvas).
-- Reviewing UI text or UX patterns for consistency.
+This skill covers:
+- `manifest.json` requirements and validation
+- Obsidian API details and documentation
+- Obsidian-specific file formats (Markdown, Properties, Canvas)
+- UI text conventions and UX patterns
+- Mobile and platform compatibility
 
 ## Core Rules
 
