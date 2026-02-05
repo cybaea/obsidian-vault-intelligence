@@ -152,7 +152,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
     geminiRetries: 10,
     googleApiKey: '',
-    groundingModel: 'gemini-flash-lite-latest',
+    groundingModel: 'gemini-2.5-flash-lite',
     indexingDelayMs: 5000,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,

@@ -280,7 +280,8 @@ export class GeminiService {
             1. Analyze the content of each candidate.
             2. Ignore text properties (YAML) unless relevant to the query.
             3. Prioritize "Concept" notes and strong semantic matches over loose keyword matches.
-            4. Return a JSON array of the top relevant items, sorted by relevance.
+            4. Be generous with synonyms (e.g., if query is "cat", find stories about individual cats like "Bartholomew").
+            5. Return a JSON array of the top relevant items, sorted by relevance.
             
             Schema:
             Array<{ id: string, score: number, reasoning: string }>
@@ -302,8 +303,7 @@ export class GeminiService {
 
             // CASTING: The SDK types might be strict. We pass it as unknown if needed.
             const response = await this.generateStructuredContent(prompt, schema as unknown as Record<string, unknown>, {
-                model: this.settings.reRankingModel || this.settings.chatModel,
-                tools: [{ googleSearch: {} }]
+                model: this.settings.reRankingModel || this.settings.chatModel
             });
 
             try {

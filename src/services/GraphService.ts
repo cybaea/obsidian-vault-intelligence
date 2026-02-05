@@ -52,6 +52,24 @@ export class GraphService {
     }
 
     /**
+     * Checks if a file path is excluded from indexing based on plugin settings or system rules.
+     */
+    private isPathExcluded(path: string): boolean {
+        // Architecture: Respect user-defined excluded folders
+        if (this.settings.excludedFolders && this.settings.excludedFolders.length > 0) {
+            const normalizedPath = path.toLowerCase();
+            for (const folder of this.settings.excludedFolders) {
+                const normalizedFolder = folder.toLowerCase().replace(/\/+$/, "");
+                if (normalizedPath === normalizedFolder || normalizedPath.startsWith(normalizedFolder + '/')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Initializes the Graph Service and spawns the Indexer Worker.
      * This method is idempotent and will return immediately if already initialized.
      */
@@ -116,6 +134,16 @@ export class GraphService {
      */
     private registerEvents() {
         this.vaultManager.onModify((file) => {
+            if (this.isPathExcluded(file.path)) {
+                // If it was already in the index but now excluded, we should drop it
+                void this.enqueueIndexingTask(async () => {
+                    if (!this.api) return;
+                    await this.api.deleteFile(file.path);
+                    this.requestSave();
+                });
+                return;
+            }
+
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 const content = await this.vaultManager.readFile(file);
@@ -135,6 +163,17 @@ export class GraphService {
         });
 
         this.vaultManager.onRename((oldPath, newPath) => {
+            // Case 1: Renamed TO an excluded path (delete)
+            if (this.isPathExcluded(newPath)) {
+                void this.enqueueIndexingTask(async () => {
+                    if (!this.api) return;
+                    await this.api.deleteFile(oldPath);
+                    this.requestSave();
+                });
+                return;
+            }
+
+            // Case 2: Standard rename (managed by worker updateFile subsequently)
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 await this.api.renameFile(oldPath, newPath);
@@ -487,6 +526,8 @@ export class GraphService {
         logger.debug(`[GraphService] Index has ${stateKeys.length} files. First 5 keys: ${stateKeys.slice(0, 5).join(', ')}`);
 
         for (const file of files) {
+            if (this.isPathExcluded(file.path)) continue;
+
             const state = states[file.path];
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
 
@@ -531,8 +572,8 @@ export class GraphService {
         // Wait for the entire queue to flush before saving/marking done
         await this.processingQueue;
 
-        // Cleanup orphans (nodes in graph not in vault)
-        const paths = files.map(f => f.path);
+        // Cleanup orphans (nodes in graph not in vault OR nodes now excluded)
+        const paths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
         await this.api.pruneOrphans(paths);
 
         await this.saveState();

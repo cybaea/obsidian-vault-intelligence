@@ -7,6 +7,11 @@ description: Project-specific architecture (Vault Intelligence), services, and m
 
 This skill contains the domain knowledge for the **Vault Intelligence** Obsidian plugin.
 
+## CRITICAL RULES
+
+1. Use search grounding for EVERY technology decision.
+2. Use search grounding EVERYTIME you make a decision about LLM AI models or any Typescript library.
+
 ## 1. Project Identity
 
 - **Name**: Vault Intelligence
@@ -16,7 +21,7 @@ This skill contains the domain knowledge for the **Vault Intelligence** Obsidian
 
 ## 2. Architectural Constraints
 
-**Source of Truth**: [devs/ARCHITECTURE.md](devs/ARCHITECTURE.md) (Read this for complex changes).
+**Source of Truth**: [devs/ARCHITECTURE.md](devs/ARCHITECTURE.md). (Read this for complex changes. Modify this after complex changes.)
 
 ### Critical Rules
 

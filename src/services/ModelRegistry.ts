@@ -102,14 +102,14 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
         dimensions: 3072,
         id: 'text-embedding-004',
-        isDefault: true,
+        isDefault: false,
         label: 'Gemini Embedding v4 (Advanced) - 3072d',
         provider: 'gemini'
     },
     {
         dimensions: 768,
         id: 'gemini-embedding-001',
-        isDefault: false,
+        isDefault: true,
         label: 'Gemini Embedding v1 (Standard) - 768d',
         provider: 'gemini'
     }
