@@ -15,7 +15,7 @@ Update frequency: Check Obsidian Sample Theme repo for updates
 ## Simple CSS Theme Structure
 
 **Recommended for simple themes** (like the sample theme template):
-```
+```text
 theme.css          # ✅ Source CSS file (edit directly)
 manifest.json
 package.json
@@ -28,7 +28,7 @@ package.json
 ## Complex Theme Structure (SCSS + Build Tools)
 
 **For themes using SCSS, Grunt, npm scripts, or other build tools**:
-```
+```text
 src/
   scss/            # ✅ SCSS source files
     index.scss
@@ -49,7 +49,7 @@ package.json
 
 ## Wrong Structure (Common Mistakes)
 
-```
+```text
 theme.css         # ❌ DON'T have both
 src/
   scss/          # ❌ This causes confusion about which is the source

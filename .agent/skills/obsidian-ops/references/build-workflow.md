@@ -10,7 +10,7 @@ Update frequency: Update as build process evolves
 
 After making any changes to theme code:
 
-### Simple CSS Themes
+## Simple CSS Themes
 
 If your theme is simple with just `theme.css` in the root and no build tools:
 
@@ -20,7 +20,7 @@ If your theme is simple with just `theme.css` in the root and no build tools:
 
 **How to detect**: If you have `theme.css` in root and no `src/scss/` directory, you have a simple CSS theme.
 
-### Complex Themes (SCSS + Build Tools)
+## Complex Themes (SCSS + Build Tools)
 
 If your theme uses build tools (Grunt, npm scripts, SCSS compiler, etc.) and has `src/scss/` directory:
 

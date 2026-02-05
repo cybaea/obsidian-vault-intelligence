@@ -6,7 +6,7 @@ Update frequency: Check Obsidian releases repo for validation requirements
 
 # Manifest rules (`manifest.json`)
 
-### Required Fields
+## Required Fields
 
 All themes must include these fields in `manifest.json`:
 
@@ -15,12 +15,12 @@ All themes must include these fields in `manifest.json`:
 - **`minAppVersion`** (string, required) - Minimum Obsidian version required
 - **`author`** (string, required) - Author name (required for themes)
 
-### Optional Fields
+## Optional Fields
 
 - **`authorUrl`** (string, optional) - URL to author's website or profile
 - **`fundingUrl`** (string, optional) - URL for funding/support
 
-### Important Notes
+## Important Notes
 
 - Themes do **not** use `id` or `isDesktopOnly` fields.
 - Canonical requirements: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-theme-entry.yml
