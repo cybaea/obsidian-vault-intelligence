@@ -162,6 +162,12 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Default overlap ratio (0.1 = 10%) */
     DEFAULT_OVERLAP_RATIO: 0.1,
 
+    /** * Orama Typo Tolerance:
+     * Maximum Levenshtein distance (edits) allowed for a term to match.
+     * 1-2 is standard for natural language.
+     */
+    KEYWORD_TOLERANCE: 2,
+
     /** * Absolute floor for keyword recall. 
      * In Orama v3, 1.0 implies logical OR (more permissive), 
      * while 0.0 implies logical AND (stricter).

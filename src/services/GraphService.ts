@@ -132,6 +132,10 @@ export class GraphService {
             });
 
             const embedder = Comlink.proxy(async (text: string, title: string) => {
+                if (title === 'Query') {
+                    return await this.embeddingService.embedQuery(text);
+                }
+                // Default: Embed as document (for indexing)
                 const vectors = await this.embeddingService.embedDocument(text, title);
                 return vectors[0];
             });

@@ -690,7 +690,8 @@ const IndexerWorker: WorkerAPI = {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
             term: stripStopWords(query),
-            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
+            tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
 
         // Hybrid Boost: If we have an embedding, we should conceptually merge, 
@@ -870,7 +871,8 @@ const IndexerWorker: WorkerAPI = {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
             properties: ['title', 'content', 'params', 'status'],
             term: stripStopWords(query), // Clean query
-            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
+            tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
 
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
