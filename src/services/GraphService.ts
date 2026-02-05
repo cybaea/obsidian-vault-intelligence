@@ -114,8 +114,9 @@ export class GraphService {
                 return res.json as unknown;
             });
 
-            const embedder = Comlink.proxy(async (text: string, _title: string) => {
-                return await this.embeddingService.embedQuery(text);
+            const embedder = Comlink.proxy(async (text: string, title: string) => {
+                const vectors = await this.embeddingService.embedDocument(text, title);
+                return vectors[0];
             });
 
             // Initialize worker

@@ -100,7 +100,7 @@ const IndexerWorker: WorkerAPI = {
             limit: 50,
             properties: ['content', 'title'],
             term: stripStopWords(query) || query, // Fallback to original if all stopped
-            threshold: 0 // Allow broad matches
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE // Use permissive threshold to maximize Recall for the Analyst re-ranker
         });
 
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
@@ -554,7 +554,8 @@ const IndexerWorker: WorkerAPI = {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
-            term: stripStopWords(query) || query
+            term: stripStopWords(query) || query,
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);

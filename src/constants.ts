@@ -162,6 +162,12 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Default overlap ratio (0.1 = 10%) */
     DEFAULT_OVERLAP_RATIO: 0.1,
 
+    /** * Absolute floor for keyword recall. 
+     * Set to 0 to ensure the Analyst loop sees ALL potential matches, 
+     * including short notes with low term overlap.
+     */
+    RECALL_THRESHOLD_PERMISSIVE: 0,
+
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
 
@@ -176,6 +182,7 @@ export const WORKER_INDEXER_CONSTANTS = {
 
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
+
 };
 
 export const GRAPH_CONSTANTS = {
