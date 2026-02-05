@@ -108,7 +108,9 @@ export default withMermaid(defineConfig({
                 items: [
                     { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
                     { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
-                    { text: 'Why Gemini?', link: '/docs/explanation/computing-model' }
+                    { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
+                    { text: 'Key Features', link: '/docs/explanation/key-features' },
+                    { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' }
                 ]
             },
             {
