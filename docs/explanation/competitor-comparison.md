@@ -14,7 +14,7 @@ A comparison of **Vault Intelligence** against key players in the Obsidian AI ec
 | **Local Support** | **Embeddings Only** | **Full Stack** (llama.cpp) | Embeddings (transformers.js) | LocalAI Support |
 | **Code Execution** | **Yes** (Python Solver) | No | No | No |
 | **Privacy** | Hybrid (Local Index, Cloud Reasoning) | **100% Local** | Hybrid or Local | Hybrid or Local |
-| **Multilingual** | **Native** (30+ Languages + Gemini) | Limited (Model Dependent) | AI Dependent | AI Dependent |
+| **Multilingual** | **Native** (30+ Local / 140+ Agent) | Limited (Model Dependent) | AI Dependent | AI Dependent |
 
 ## Detailed Competitor Breakdown
 
@@ -44,8 +44,8 @@ A comparison of **Vault Intelligence** against key players in the Obsidian AI ec
 We treat multilingual support as a first-class citizen, not an afterthought.
 
 - **Vault Intelligence**:
-    - **Native Indexing**: We ship with optimized stop-word lists and tokenizers for **30+ languages** (including Chinese, Russian, Arabic, and all major European languages) to ensure our local search (Reflex Loop) is accurate.
-    - **Agentic Reasoning**: Loop 2 leverages Gemini 3's state-of-the-art multilingual understanding, allowing you to query in one language (eg Japanese) and retrieve/synthesize answers from notes written in another (eg English).
+    - **Instant Local Search**: We ship with optimised stop-word lists and tokenizers for **30+ languages** (including Chinese, Russian, Arabic, and all major European languages) to ensure your primary search is accurate and fast.
+    - **Intelligent Reasoning**: The agent leverages state-of-the-art multilingual understanding across **140+ languages**, allowing you to query in one language (eg Japanese) and retrieve or synthesise answers from notes written in another (eg English).
 - **Competitors**:
     - **Sonar**: Relies on the quantization of local models (llama.cpp), which often degrades performance in non-English languages.
     - **Smart Connections/Copilot**: Heavily dependent on the underlying embedding model. While capable, they lack the specific "Hybrid Search" optimizations (native stop-words) that make retrieval precise across different languages.
