@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [5.0.0] - 2026-02-05
+
+### User features
+
 - **Deep semantic intelligence**: The Researcher now understands the "hidden threads" between your notes. By automatically treating frontmatter properties like `topics`, `tags`, and `author` as semantic bridges, the agent can discover relevant context across your vault even when you haven't used explicit Wikilinks.
 - **Zero-noise Excalidraw integration**: Visual thinkers will notice a massive improvement in search quality. We've overhauled how drawing files are indexed, stripping away megabytes of internal JSON metadata while preserving actual text labels. This makes the index up to 99% smaller and eliminates "false positive" search results from drawing files.
 - **Precision similarity intelligence**: Ghost documents and empty tags no longer clutter your "Similar Notes" view. We've refined the similarity engine to strictly only show real, indexed notes with actual content, ensuring your connections are always meaningful.
