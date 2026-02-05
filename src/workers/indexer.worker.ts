@@ -18,6 +18,41 @@ interface StopWordsModule {
     stopwords: string[];
 }
 
+// Helper to normalize language code for Orama
+function getOramaLanguage(language: string): string {
+    const normalized = language.toLowerCase().trim();
+    if (normalized.startsWith('ar')) return 'arabic';
+    if (normalized.startsWith('hy')) return 'armenian';
+    if (normalized.startsWith('bg')) return 'bulgarian';
+    if (normalized.startsWith('zh')) return 'chinese';
+    if (normalized.startsWith('da')) return 'danish';
+    if (normalized.startsWith('nl')) return 'dutch';
+    if (normalized.startsWith('en')) return 'english';
+    if (normalized.startsWith('fi')) return 'finnish';
+    if (normalized.startsWith('fr')) return 'french';
+    if (normalized.startsWith('de')) return 'german';
+    if (normalized.startsWith('el')) return 'greek';
+    if (normalized.startsWith('hi')) return 'hindi';
+    if (normalized.startsWith('hu')) return 'hungarian';
+    if (normalized.startsWith('id')) return 'indonesian';
+    if (normalized.startsWith('ga')) return 'irish';
+    if (normalized.startsWith('it')) return 'italian';
+    if (normalized.startsWith('ne')) return 'nepali';
+    if (normalized.startsWith('no')) return 'norwegian';
+    if (normalized.startsWith('pt')) return 'portuguese';
+    if (normalized.startsWith('ro')) return 'romanian';
+    if (normalized.startsWith('ru')) return 'russian';
+    if (normalized.startsWith('sa')) return 'sanskrit';
+    if (normalized.startsWith('sr')) return 'serbian';
+    if (normalized.startsWith('sl')) return 'slovenian';
+    if (normalized.startsWith('es')) return 'spanish';
+    if (normalized.startsWith('sv')) return 'swedish';
+    if (normalized.startsWith('ta')) return 'tamil';
+    if (normalized.startsWith('tr')) return 'turkish';
+    if (normalized.startsWith('uk')) return 'ukrainian';
+
+    return 'english'; // Default
+}
 
 // Language Normalization & Stop Word Loading
 async function loadStopWords(language: string): Promise<string[]> {
@@ -110,11 +145,14 @@ async function loadStopWords(language: string): Promise<string[]> {
     }
 }
 
+// Log Stopword filtering
 function stripStopWords(query: string): string {
     if (currentStopWords.length === 0) return query;
     const tokens = query.toLowerCase().split(/\s+/);
     const filtered = tokens.filter(t => !currentStopWords.includes(t));
-    return filtered.length > 0 ? filtered.join(' ') : query; // Fallback to original if all stripped
+    const result = filtered.length > 0 ? filtered.join(' ') : query;
+    workerLogger.debug(`[stripStopWords] Query: "${query}" -> "${result}" (Removed: ${tokens.length - filtered.length})`);
+    return result;
 }
 
 
@@ -820,6 +858,7 @@ const IndexerWorker: WorkerAPI = {
         const vectorPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR, // Higher limit for pooling
             mode: 'vector',
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT, // 0.001 - We want ALL vector candidates for re-ranking
             vector: {
                 property: 'embedding',
                 value: await generateEmbedding(query, 'Query')
@@ -836,27 +875,47 @@ const IndexerWorker: WorkerAPI = {
 
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
 
+        workerLogger.debug(`[search] Vector Hits: ${vectorResults.hits.length}, Keyword Hits: ${keywordResults.hits.length}`);
+        workerLogger.debug(`[search] Threshold: ${JSON.stringify(WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE)}`);
+
         // 3. Merge Strategies
         const hits = new Map<string, OramaHit>();
 
-        // Add Vector Hits
+        // Add Vector Hits (Base Score: 0-1)
         for (const hit of vectorResults.hits) {
             hits.set(hit.id, hit as unknown as OramaHit);
         }
 
+        // Calculate Max Keyword Score for Local Normalization
+        let maxKeywordScore = 0;
+        if (keywordResults.hits.length > 0) {
+            for (const h of keywordResults.hits) {
+                if (h.score > maxKeywordScore) maxKeywordScore = h.score;
+            }
+        }
+        const keywordNormFactor = Math.max(1.0, maxKeywordScore);
+
+        workerLogger.debug(`[search] Keyword Max Score: ${maxKeywordScore} -> Norm Factor: ${keywordNormFactor}`);
+
         // Add Keyword Hits (Boost if exists, append if not)
         for (const hit of keywordResults.hits) {
             const h = hit as unknown as OramaHit;
+            const normalizedScore = h.score / keywordNormFactor; // Scale to 0-1
+
             if (hits.has(h.id)) {
                 // Boost existing vector hit
                 const existing = hits.get(h.id)!;
-                // Simple hybrid scoring: Vector Score + (Keyword Score * Weight)
-                // Note: Orama scores are not normalized 0-1 across modes easily, but adding a boost helps rank.
-                existing.score += 0.1; // Small boost for also matching keywords
+                // Hybrid: Vector + (Normalized Keyword * 0.5)
+                // Result can go up to ~1.5 (normalized later globally)
+                existing.score += (normalizedScore * 0.5);
             } else {
+                // Keyword only match
+                // We give it the normalized score (0-1) scaled slightly down to favor hybrids
+                h.score = normalizedScore * 0.9;
                 hits.set(h.id, h);
             }
         }
+
 
         // Convert back to array
         const mergedHits = Array.from(hits.values());
@@ -1038,10 +1097,26 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
         }
     }
 
-    return Array.from(uniqueHits.values())
+    const finalHits = Array.from(uniqueHits.values());
+
+    // 2. Compute Global Max Score for Normalization
+    let maxScore = 0;
+    for (const h of finalHits) {
+        if (h.score > maxScore) maxScore = h.score;
+    }
+
+    // 3. Normalize (Scale 0 to 1 based on Max)
+    // Use Math.max(1.0, maxScore) to prevent upscaling small scores (e.g., max 0.6 staying 0.6)
+    // while scaling down huge scores (e.g., max 2.6 becoming 1.0)
+    const normalizationFactor = Math.max(1.0, maxScore);
+    workerLogger.debug(`[maxPoolResults] Max Score: ${maxScore}, Factor: ${normalizationFactor}, Hits: ${finalHits.length}`);
+
+    return finalHits
+        .map(h => ({ ...h, score: h.score / normalizationFactor }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 }
+
 
 function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: number): string[] {
     if (text.length <= chunkSize) return [text];
@@ -1308,7 +1383,12 @@ function updateGraphEdges(path: string, content: string) {
 
 async function recreateOrama() {
     const { create } = await import('@orama/orama');
+    const language = getOramaLanguage(config.agentLanguage || 'english');
+
+    workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
+
     orama = create({
+        language: language,
         schema: {
             // New Metadata Fields
             author: 'string', // New: Indexed Author

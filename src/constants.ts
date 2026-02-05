@@ -166,7 +166,7 @@ export const WORKER_INDEXER_CONSTANTS = {
      * In Orama v3, 1.0 implies logical OR (more permissive), 
      * while 0.0 implies logical AND (stricter).
      */
-    RECALL_THRESHOLD_PERMISSIVE: 1,
+    RECALL_THRESHOLD_PERMISSIVE: 1, /** DO NOT CHANGE **/
 
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
