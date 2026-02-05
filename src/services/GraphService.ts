@@ -452,9 +452,9 @@ export class GraphService {
      * Builds the priority payload for Dual-Loop Search (Analyst).
      * Delegates to the worker to handle parallel fetch, graph expansion, and budget packing.
      */
-    public async buildPriorityPayload(queryVector: number[]): Promise<unknown[]> {
+    public async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
         if (!this.api) return [];
-        return await this.api.buildPriorityPayload(queryVector);
+        return await this.api.buildPriorityPayload(queryVector, query);
     }
 
     /**

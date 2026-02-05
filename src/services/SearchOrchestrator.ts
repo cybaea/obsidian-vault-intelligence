@@ -33,7 +33,22 @@ export class SearchOrchestrator {
      * @returns A promise resolving to a ranked list of search results.
      */
     public async search(query: string, limit: number): Promise<VaultSearchResult[]> {
-        // For backward compatibility and immediate UI feedback (Reflex Loop)
+        // DUAL-LOOP LOGIC:
+        // If Dual Loop is enabled, we try the Analyst (Loop 2) first.
+        // It provides deeper, graph-expanded, and AI-ranked results.
+        if (this.settings.enableDualLoop) {
+            try {
+                const analystResults = await this.searchAnalyst(query);
+                if (analystResults.length > 0) {
+                    return analystResults.slice(0, limit);
+                }
+                logger.warn("[SearchOrchestrator] Analyst loop returned no results. Falling back to Reflex.");
+            } catch (error) {
+                logger.error("[SearchOrchestrator] Analyst loop failed. Falling back to Reflex.", error);
+            }
+        }
+
+        // Fallback or Default: Reflex Loop (Loop 1)
         return this.searchReflex(query, limit);
     }
 
@@ -83,8 +98,8 @@ export class SearchOrchestrator {
             // Dual-Loop: Reflex (Loop 1) is handled by UI. This is Analyst (Loop 2).
             const queryVector = await this.geminiService.embedText(query, { taskType: "RETRIEVAL_QUERY" });
 
-            // 1. Build Payload (Graph + Vector)
-            const payload = await this.graphService.buildPriorityPayload(queryVector);
+            // 1. Build Payload (Graph + Vector + Keyword)
+            const payload = await this.graphService.buildPriorityPayload(queryVector, query);
 
             // 2. Re-Rank (Gemini 3)
             const reranked = await this.geminiService.reRank(query, payload);

@@ -58,7 +58,7 @@ export interface WorkerConfig {
  * Type-safe API exposed by the indexer worker via Comlink.
  */
 export interface WorkerAPI {
-    buildPriorityPayload(queryVector: number[]): Promise<unknown[]>;
+    buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]>;
     clearIndex(): Promise<void>;
     deleteFile(path: string): Promise<void>;
     fullReset(): Promise<void>;

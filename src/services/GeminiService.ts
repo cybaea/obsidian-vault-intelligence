@@ -67,7 +67,7 @@ export class GeminiService {
     public async generateStructuredContent(
         prompt: string,
         schema: Record<string, unknown>,
-        options: { model?: string; systemInstruction?: string } = {}
+        options: { model?: string; systemInstruction?: string; tools?: Tool[] } = {}
     ): Promise<string> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
@@ -78,7 +78,8 @@ export class GeminiService {
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: schema,
-                    systemInstruction: options.systemInstruction
+                    systemInstruction: options.systemInstruction,
+                    tools: options.tools
                 },
                 contents: prompt,
                 model: modelId
@@ -205,10 +206,15 @@ export class GeminiService {
             if (options.taskType) config.taskType = options.taskType;
             if (options.title) config.title = options.title;
 
+            let modelId = this.settings.embeddingModel;
+            // Migration/Fix: If the user has 'embedding-001' or similar without prefix
+            if (modelId === 'embedding-001') modelId = 'gemini-embedding-001';
+            if (modelId === 'embedding-004') modelId = 'text-embedding-004';
+
             const result = await this.client.models.embedContent({
                 config: config,
                 contents: text,
-                model: this.settings.embeddingModel
+                model: modelId
             });
 
             const embeddings = result.embeddings;
@@ -296,7 +302,8 @@ export class GeminiService {
 
             // CASTING: The SDK types might be strict. We pass it as unknown if needed.
             const response = await this.generateStructuredContent(prompt, schema as unknown as Record<string, unknown>, {
-                model: this.settings.reRankingModel || this.settings.chatModel
+                model: this.settings.reRankingModel || this.settings.chatModel,
+                tools: [{ googleSearch: {} }]
             });
 
             try {

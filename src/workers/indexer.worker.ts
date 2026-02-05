@@ -13,6 +13,20 @@ let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
 
+const STOP_WORDS = new Set([
+    "a", "an", "the", "and", "or", "but", "is", "are", "was", "were",
+    "in", "on", "at", "to", "for", "of", "with", "by", "from", "up",
+    "about", "into", "over", "after"
+]);
+
+function stripStopWords(query: string): string {
+    return query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(word => !STOP_WORDS.has(word))
+        .join(" ");
+}
+
 interface OramaDocument {
     [key: string]: string | number | boolean | number[] | undefined | string[];
     author?: string; // New: Explicit author field
@@ -69,10 +83,10 @@ const IndexerWorker: WorkerAPI = {
      * 3. Backpack Selection (Budgeting)
      * 4. Batch Hydration (fixing I/O)
      */
-    async buildPriorityPayload(queryVector: number[]): Promise<unknown[]> {
-        // 1. Parallel Wide Fetch (Top 100)
-        const vectorResults = await search(orama, {
-            includeVectors: false, // We only need content/id
+    async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        // 1. Parallel Wide Fetch (Top 100 Vector + 50 Keyword)
+        const vectorPromise = search(orama, {
+            includeVectors: false,
             limit: 100,
             mode: 'vector',
             vector: {
@@ -81,58 +95,71 @@ const IndexerWorker: WorkerAPI = {
             }
         });
 
+        const keywordPromise = search(orama, {
+            includeVectors: false,
+            limit: 50,
+            properties: ['content', 'title'],
+            term: stripStopWords(query) || query, // Fallback to original if all stopped
+            threshold: 0 // Allow broad matches
+        });
+
+        const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
+
         const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
 
-        // 2. Sync Processing & Graph Expansion
+        // 2a. Process Vector Hits
         for (const hit of vectorResults.hits) {
             const doc = hit.document as unknown as OramaDocument;
-            const docId = hit.id; // Chunk ID
-            const path = doc.path;
+            const docId = hit.id;
 
-            // Add Vector Hit
             if (!candidates.has(docId)) {
                 candidates.set(docId, {
-                    content: doc.content, // Orama has it in memory
+                    content: doc.content,
                     id: docId,
                     score: hit.score,
                     type: 'vector'
                 });
             }
+            // ... Graph neighbors logic will handle expansion for these too
+        }
 
-            // Graph Expansion (Neighbors)
-            const normalizedPath = workerNormalizePath(path);
-            if (graph.hasNode(normalizedPath)) {
-                // Get Neighbors (Outbound usually implies reference, but we want Inbound or Both?)
-                // If A links to B, and A matches query, B might be relevant (Forward).
-                // If B links to A, and A matches query, B might be relevant (Backlink).
-                // "Context is key" -> Check incoming links to see who talks about this.
-                const neighbors = graph.neighbors(normalizedPath);
+        // 2b. Process Keyword Hits (Merge)
+        for (const hit of keywordResults.hits) {
+            const doc = hit.document as unknown as OramaDocument;
+            const docId = hit.id;
 
-                // Hub Dilution Setup
-                // We penalize based on the *source's* link count if we are traversing *out*.
-                // If we are traversing *in*, we might penalize if the *target* is a hub?
-                // Standard Hub Poisoning: Daily Note (Hub) links to everything. 
-                // If Query matches Daily Note, we typically DON'T want all 50 linked notes to show up.
-                // So if Source (Vector Hit) has high degree, we dilute its neighbors.
-                const degree = graph.degree(normalizedPath);
+            // If already exists (from vector), keep the higher score? 
+            // Vector scores are cosine (0-1ish), Keyword BM25 (>0).
+            // Orama vector scores are cosine similarity.
+            // We'll prioritize Vector hits as the "primary" reason, but ensure Keyword hits are included.
+            if (!candidates.has(docId)) {
+                candidates.set(docId, {
+                    content: doc.content,
+                    id: docId,
+                    score: hit.score, // Use keyword score directly
+                    type: 'vector' // Treat as direct retrieval
+                });
+            }
+        }
+
+        // 2c. Graph Expansion (Neighbors) - Apply to ALL candidates (Vector + Keyword)
+        // We iterate current candidates to expand.
+        const seeds = Array.from(candidates.values()); // Snapshot
+
+        for (const seed of seeds) {
+            const seedId = seed.id.split('#')[0] || seed.id;
+            const path = workerNormalizePath(seedId); // Extract file path from chunk ID
+
+            if (graph.hasNode(path)) {
+                const neighbors = graph.neighbors(path);
+                const degree = graph.degree(path);
 
                 for (const neighbor of neighbors) {
-                    // We need to resolve neighbor to chunks? 
-                    // Or just grab the main chunk (Chunk 0)?
-                    // For now, let's assume we want the *file* context.
-                    // We can't easily map File -> All Chunks without a secondary index or query.
-                    // BUT, Orama has `path` field.
-                    // Performing a search for EVERY neighbor is the "Sequential I/O" trap if not careful.
-                    // However, if we only need *existence* to score, we can defer fetching.
-                    // But we ultimately need content for the payload.
+                    const inherited = calculateInheritedScore(seed.score, degree);
+                    // Check if neighbor is just another chunk of the same file?
+                    // Graph nodes are files. We inject the *file path* as a candidate ID for hydration.
+                    const neighborId = neighbor;
 
-                    // Strategy: Score first, Fetch later (Hydration).
-                    // We generate a "Candidate ID" which is just the file path (representing Chunk 0 or Abstract).
-
-                    const inherited = calculateInheritedScore(hit.score, degree);
-                    const neighborId = neighbor; // Treat path as ID for now
-
-                    // Don't overwrite if existing score is higher (e.g. it was a vector hit itself)
                     if (!candidates.has(neighborId) || candidates.get(neighborId)!.score < inherited) {
                         candidates.set(neighborId, {
                             id: neighborId,
@@ -169,7 +196,7 @@ const IndexerWorker: WorkerAPI = {
                 const tokens = estimateTokens(candidate.content);
                 if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
                     payload.push({
-                        content: candidate.content, // Raw content (includes YAML if chunk 0?)
+                        content: candidate.content,
                         id: candidate.id,
                         score: candidate.score,
                         type: 'vector'
@@ -177,7 +204,7 @@ const IndexerWorker: WorkerAPI = {
                     currentTokens += tokens;
                 }
             } else {
-                // Needs hydration (Graph neighbor)
+                // Needs hydration (Graph neighbor OR raw file path candidate)
                 const EST_TOKENS = 200;
                 if (currentTokens + EST_TOKENS <= LATENCY_BUDGET_TOKENS) {
                     idsToHydrate.push(candidate.id);
@@ -185,7 +212,7 @@ const IndexerWorker: WorkerAPI = {
                         id: candidate.id,
                         score: candidate.score,
                         source: candidate.source,
-                        type: 'graph'
+                        type: candidate.type
                     });
                     currentTokens += EST_TOKENS;
                 }
@@ -193,7 +220,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         // 5. Batch Hydration
-        // We need to fetch content for `idsToHydrate`. These are file paths.
+        // We need to fetch content for `idsToHydrate`.
         if (idsToHydrate.length > 0) {
             const { search } = await import('@orama/orama');
             const hydrationResults = await search(orama, {
@@ -207,15 +234,23 @@ const IndexerWorker: WorkerAPI = {
             const hydrationMap = new Map<string, string>();
             for (const hit of hydrationResults.hits) {
                 const doc = hit.document as unknown as OramaDocument;
+                // If ID is chunk-0, user that. If request was for full file (graph neighbor), prefer chunk-0.
                 if (String(hit.id).endsWith('#chunk-0')) {
                     hydrationMap.set(doc.path, doc.content);
                 }
+                // Handle direct chunk request if needed?
+                hydrationMap.set(hit.id, doc.content);
             }
 
             // Fill placeholders
             for (const item of payload) {
-                if (item.type === 'graph' && !item.content) {
-                    const content = hydrationMap.get(item.id);
+                if (!item.content) {
+                    // Try exact ID match first, then path match
+                    let content = hydrationMap.get(item.id);
+                    if (!content && !item.id.includes('#')) {
+                        content = hydrationMap.get(item.id); // Try direct path
+                    }
+
                     if (content) {
                         item.content = content;
                     } else {
@@ -509,7 +544,7 @@ const IndexerWorker: WorkerAPI = {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
-            term: query
+            term: stripStopWords(query) || query
         });
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);

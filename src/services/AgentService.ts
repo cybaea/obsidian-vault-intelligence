@@ -120,10 +120,12 @@ export class AgentService {
         const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(f.path));
 
-        const formattedHistory = history.map(h => ({
-            parts: [{ text: h.text }],
-            role: h.role as "user" | "model"
-        })) as Content[];
+        const formattedHistory = history
+            .filter(h => h.role === "user" || h.role === "model")
+            .map(h => ({
+                parts: [{ text: h.text }],
+                role: h.role as "user" | "model"
+            })) as Content[];
 
         if (contextFiles.length > 0) {
             // Map files to VaultSearchResult format for assembler
