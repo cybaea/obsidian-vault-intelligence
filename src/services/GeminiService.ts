@@ -249,4 +249,65 @@ export class GeminiService {
         }
         throw new Error("Max retries reached.");
     }
+
+    // --- Dual-Loop Analyst ---
+    /**
+     * Re-ranks search candidates using the Analyst model (Loop 2).
+     */
+    public async reRank(query: string, payload: unknown[]): Promise<unknown[]> {
+        return this.retryOperation(async () => {
+            if (!this.client) throw new Error("GenAI client not initialized.");
+
+            // Truncate payload if too huge (should be handled by packer budget, but safety first)
+            const safePayload = payload.slice(0, 50);
+
+            const prompt = `
+            You are the Analyst, an AI ranking engine for a personal knowledge graph.
+            Your goal is to re-rank the provided search candidates based on their semantic relevance to the user's query.
+            
+            Query: "${query}"
+            
+            Candidates (JSON):
+            ${JSON.stringify(safePayload)}
+            
+            Instructions:
+            1. Analyze the content of each candidate.
+            2. Ignore text properties (YAML) unless relevant to the query.
+            3. Prioritize "Concept" notes and strong semantic matches over loose keyword matches.
+            4. Return a JSON array of the top relevant items, sorted by relevance.
+            
+            Schema:
+            Array<{ id: string, score: number, reasoning: string }>
+            `;
+
+            const schema = {
+                description: "List of ranked items",
+                items: {
+                    properties: {
+                        id: { type: "STRING" },
+                        reasoning: { type: "STRING" },
+                        score: { type: "NUMBER" }
+                    },
+                    required: ["id", "score"],
+                    type: "OBJECT"
+                },
+                type: "ARRAY"
+            };
+
+            // CASTING: The SDK types might be strict. We pass it as unknown if needed.
+            const response = await this.generateStructuredContent(prompt, schema as unknown as Record<string, unknown>, {
+                model: this.settings.reRankingModel || this.settings.chatModel
+            });
+
+            try {
+                const parsed = JSON.parse(response) as unknown;
+                // Validation: ensure it's an array
+                if (Array.isArray(parsed)) return parsed as unknown[];
+                return [];
+            } catch (e) {
+                logger.error("Failed to parse Analyst response", e);
+                return [];
+            }
+        });
+    }
 }

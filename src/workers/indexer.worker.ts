@@ -20,6 +20,7 @@ interface OramaDocument {
     // New Metadata
     created: number;
     embedding?: number[];
+    links?: string[];
     params: string[];
     path: string;
     status: string;
@@ -40,6 +41,19 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
+const LATENCY_BUDGET_TOKENS = 4000;
+
+function calculateInheritedScore(parentScore: number, linkCount: number): number {
+    const dilution = Math.max(1, Math.log2(linkCount + 1));
+    return parentScore * (0.8 / dilution);
+}
+
+// Helper to estimate tokens (approx 4 chars per token)
+function estimateTokens(text: string): number {
+    return text.length / 4;
+}
+
+// fileFilter removed (unused)
 const workerLogger = {
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
     error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
@@ -48,6 +62,183 @@ const workerLogger = {
 };
 
 const IndexerWorker: WorkerAPI = {
+    /**
+     * Constructs the priority payload for the Dual-Loop architecture.
+     * 1. Wide Vector Fetch
+     * 2. Graph Expansion (with Hub Dilution)
+     * 3. Backpack Selection (Budgeting)
+     * 4. Batch Hydration (fixing I/O)
+     */
+    async buildPriorityPayload(queryVector: number[]): Promise<unknown[]> {
+        // 1. Parallel Wide Fetch (Top 100)
+        const vectorResults = await search(orama, {
+            includeVectors: false, // We only need content/id
+            limit: 100,
+            mode: 'vector',
+            vector: {
+                property: 'embedding',
+                value: queryVector
+            }
+        });
+
+        const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
+
+        // 2. Sync Processing & Graph Expansion
+        for (const hit of vectorResults.hits) {
+            const doc = hit.document as unknown as OramaDocument;
+            const docId = hit.id; // Chunk ID
+            const path = doc.path;
+
+            // Add Vector Hit
+            if (!candidates.has(docId)) {
+                candidates.set(docId, {
+                    content: doc.content, // Orama has it in memory
+                    id: docId,
+                    score: hit.score,
+                    type: 'vector'
+                });
+            }
+
+            // Graph Expansion (Neighbors)
+            const normalizedPath = workerNormalizePath(path);
+            if (graph.hasNode(normalizedPath)) {
+                // Get Neighbors (Outbound usually implies reference, but we want Inbound or Both?)
+                // If A links to B, and A matches query, B might be relevant (Forward).
+                // If B links to A, and A matches query, B might be relevant (Backlink).
+                // "Context is key" -> Check incoming links to see who talks about this.
+                const neighbors = graph.neighbors(normalizedPath);
+
+                // Hub Dilution Setup
+                // We penalize based on the *source's* link count if we are traversing *out*.
+                // If we are traversing *in*, we might penalize if the *target* is a hub?
+                // Standard Hub Poisoning: Daily Note (Hub) links to everything. 
+                // If Query matches Daily Note, we typically DON'T want all 50 linked notes to show up.
+                // So if Source (Vector Hit) has high degree, we dilute its neighbors.
+                const degree = graph.degree(normalizedPath);
+
+                for (const neighbor of neighbors) {
+                    // We need to resolve neighbor to chunks? 
+                    // Or just grab the main chunk (Chunk 0)?
+                    // For now, let's assume we want the *file* context.
+                    // We can't easily map File -> All Chunks without a secondary index or query.
+                    // BUT, Orama has `path` field.
+                    // Performing a search for EVERY neighbor is the "Sequential I/O" trap if not careful.
+                    // However, if we only need *existence* to score, we can defer fetching.
+                    // But we ultimately need content for the payload.
+
+                    // Strategy: Score first, Fetch later (Hydration).
+                    // We generate a "Candidate ID" which is just the file path (representing Chunk 0 or Abstract).
+
+                    const inherited = calculateInheritedScore(hit.score, degree);
+                    const neighborId = neighbor; // Treat path as ID for now
+
+                    // Don't overwrite if existing score is higher (e.g. it was a vector hit itself)
+                    if (!candidates.has(neighborId) || candidates.get(neighborId)!.score < inherited) {
+                        candidates.set(neighborId, {
+                            id: neighborId,
+                            score: inherited,
+                            source: path,
+                            type: 'graph'
+                        });
+                    }
+                }
+            }
+        }
+
+        // 3. Sort Candidates
+        const sorted = Array.from(candidates.values()).sort((a, b) => b.score - a.score);
+
+        interface PayloadItem {
+            content?: string;
+            id: string;
+            score: number;
+            source?: string;
+            type: 'vector' | 'graph';
+        }
+
+        // 4. Backpack Selection (Budgeting)
+        const payload: PayloadItem[] = [];
+        let currentTokens = 0;
+        const idsToHydrate: string[] = [];
+
+        for (const candidate of sorted) {
+            if (currentTokens >= LATENCY_BUDGET_TOKENS) break;
+
+            if (candidate.type === 'vector' && candidate.content) {
+                // Already have content
+                const tokens = estimateTokens(candidate.content);
+                if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
+                    payload.push({
+                        content: candidate.content, // Raw content (includes YAML if chunk 0?)
+                        id: candidate.id,
+                        score: candidate.score,
+                        type: 'vector'
+                    });
+                    currentTokens += tokens;
+                }
+            } else {
+                // Needs hydration (Graph neighbor)
+                const EST_TOKENS = 200;
+                if (currentTokens + EST_TOKENS <= LATENCY_BUDGET_TOKENS) {
+                    idsToHydrate.push(candidate.id);
+                    payload.push({
+                        id: candidate.id,
+                        score: candidate.score,
+                        source: candidate.source,
+                        type: 'graph'
+                    });
+                    currentTokens += EST_TOKENS;
+                }
+            }
+        }
+
+        // 5. Batch Hydration
+        // We need to fetch content for `idsToHydrate`. These are file paths.
+        if (idsToHydrate.length > 0) {
+            const { search } = await import('@orama/orama');
+            const hydrationResults = await search(orama, {
+                limit: idsToHydrate.length * 2,
+                where: {
+                    path: { in: idsToHydrate }
+                }
+            });
+
+            // Map results back to payload
+            const hydrationMap = new Map<string, string>();
+            for (const hit of hydrationResults.hits) {
+                const doc = hit.document as unknown as OramaDocument;
+                if (String(hit.id).endsWith('#chunk-0')) {
+                    hydrationMap.set(doc.path, doc.content);
+                }
+            }
+
+            // Fill placeholders
+            for (const item of payload) {
+                if (item.type === 'graph' && !item.content) {
+                    const content = hydrationMap.get(item.id);
+                    if (content) {
+                        item.content = content;
+                    } else {
+                        item.content = "(Content unavailable)";
+                    }
+                }
+            }
+        }
+
+        // 6. Merge & Clean (YAML Stripping)
+        return payload
+            .filter(p => p.content && p.content !== "(Content unavailable)")
+            .map(p => {
+                const { body } = splitFrontmatter(p.content || "");
+                return {
+                    content: body.trim(),
+                    id: p.id,
+                    score: p.score,
+                    type: p.type
+                };
+            });
+    },
+
     /**
      * Clears the Orama index.
      */
@@ -150,6 +341,7 @@ const IndexerWorker: WorkerAPI = {
         return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
     },
 
+
     /**
      * Returns the mtime and hash for all tracked files.
      * @returns Record of file paths to their metadata.
@@ -167,7 +359,6 @@ const IndexerWorker: WorkerAPI = {
         }
         return states;
     },
-
 
     /**
      * Gets neighbors in the graph, with optional ontology-based expansion.
@@ -525,7 +716,7 @@ const IndexerWorker: WorkerAPI = {
      * Updates a file in both Orama (content/vector) and Graphology (links).
      * Chunking Strategy Implemented Here.
      */
-    async updateFile(path: string, content: string, mtime: number, size: number, title: string) {
+    async updateFile(path: string, content: string, mtime: number, size: number, title: string, links: string[] = []) {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
@@ -599,6 +790,7 @@ const IndexerWorker: WorkerAPI = {
                 created: mtime,
                 embedding: embedding,
                 id: chunkId,
+                links: links,
                 params: params,
                 path: normalizedPath,
                 status: status,

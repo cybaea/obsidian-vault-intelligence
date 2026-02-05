@@ -17,6 +17,7 @@ export interface ChatMessage {
     contextFiles?: string[];
     createdFiles?: string[];
     role: "user" | "model" | "system";
+    spotlightResults?: VaultSearchResult[];
     text: string;
     thought?: string;
 }
@@ -50,7 +51,7 @@ export class AgentService {
         this.settings = settings;
 
         // Initialize delegates
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, settings);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
@@ -63,6 +64,10 @@ export class AgentService {
             this.contextAssembler,
             fileTools
         );
+    }
+
+    public getSearchOrchestrator(): SearchOrchestrator {
+        return this.searchOrchestrator;
     }
 
     /**

@@ -26,6 +26,7 @@ export interface VaultIntelligenceSettings {
     embeddingThreads: number;
     enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
+    enableDualLoop: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
     gardenerModel: string;
@@ -49,6 +50,7 @@ export interface VaultIntelligenceSettings {
     plansRetentionDays: number;
     previousVersion: string;
     queueDelayMs: number;
+    reRankingModel: string;
     searchCentralityLimit: number;
     searchExpansionSeedsLimit: number;
     searchExpansionThreshold: number;
@@ -120,9 +122,9 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
     authorName: 'Me',
-    chatModel: 'gemini-flash-latest',
-    codeModel: 'gemini-flash-latest',
-    contextAwareHeaderProperties: ['title', 'topics', 'tags', 'type', 'author', 'status'],
+    chatModel: 'gemini-1.5-pro-latest',
+    codeModel: 'gemini-2.0-flash-thinking-exp-01-21',
+    contextAwareHeaderProperties: ['title', 'topic', 'tags', 'date', 'author', 'status'],
     contextMaxFiles: SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES,
     contextPrimaryThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD,
     contextStructuralThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD,
@@ -136,6 +138,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingThreads: Platform.isMobile ? 1 : 2,
     enableAgentWriteAccess: false,
     enableCodeExecution: true,
+    enableDualLoop: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
@@ -159,6 +162,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     plansRetentionDays: 7,
     previousVersion: '0.0.0',
     queueDelayMs: 100,
+    reRankingModel: 'gemini-2.0-flash-thinking-exp-01-21',
     searchCentralityLimit: 50,
     searchExpansionSeedsLimit: SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT,
     searchExpansionThreshold: SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD,

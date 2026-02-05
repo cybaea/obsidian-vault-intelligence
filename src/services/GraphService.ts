@@ -120,7 +120,8 @@ export class GraphService {
                 if (!this.api) return;
                 const content = await this.vaultManager.readFile(file);
                 const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-                await this.api.updateFile(file.path, content, mtime, size, basename);
+                const links = this.getResolvedLinks(file);
+                await this.api.updateFile(file.path, content, mtime, size, basename, links);
                 this.requestSave();
             });
         });
@@ -351,8 +352,9 @@ export class GraphService {
         if (file instanceof TFile) {
             const content = await this.vaultManager.readFile(file);
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+            const links = this.getResolvedLinks(file);
             if (this.api) {
-                await this.api.updateFile(path, content, mtime, size, basename);
+                await this.api.updateFile(path, content, mtime, size, basename, links);
             }
         }
 
@@ -447,6 +449,15 @@ export class GraphService {
     }
 
     /**
+     * Builds the priority payload for Dual-Loop Search (Analyst).
+     * Delegates to the worker to handle parallel fetch, graph expansion, and budget packing.
+     */
+    public async buildPriorityPayload(queryVector: number[]): Promise<unknown[]> {
+        if (!this.api) return [];
+        return await this.api.buildPriorityPayload(queryVector);
+    }
+
+    /**
      * Scans all markdown files in the vault and queues them for indexing.
      * @param forceWipe - If true, clears the existing graph and Orama index before scanning.
      */
@@ -499,7 +510,8 @@ export class GraphService {
                 if (!this.api) return;
                 try {
                     const content = await this.vaultManager.readFile(file);
-                    await this.api.updateFile(file.path, content, mtime, size, basename);
+                    const links = this.getResolvedLinks(file);
+                    await this.api.updateFile(file.path, content, mtime, size, basename, links);
                     count++;
 
                     if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
@@ -549,6 +561,23 @@ export class GraphService {
                 ontologyPath: settings.ontologyPath
             });
         }
+    }
+
+    /**
+     * Resolves all wikilinks in a file to their canonical paths.
+     */
+    private getResolvedLinks(file: TFile): string[] {
+        const cache = this.plugin.app.metadataCache.getFileCache(file);
+        if (!cache || !cache.links) return [];
+
+        const resolved: string[] = [];
+        for (const link of cache.links) {
+            const dest = this.plugin.app.metadataCache.getFirstLinkpathDest(link.link, file.path);
+            if (dest) {
+                resolved.push(dest.path);
+            }
+        }
+        return resolved;
     }
 
     /**

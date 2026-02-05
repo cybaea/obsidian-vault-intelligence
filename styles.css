@@ -95,6 +95,61 @@
     user-select: text !important;
 }
 
+/* Spotlight UI (Dual-Loop Search) */
+.research-chat-view .spotlight-container {
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    padding: var(--size-4-3);
+    margin: var(--size-4-2) 0;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+}
+
+.research-chat-view .spotlight-container h5 {
+    margin: 0 0 var(--size-4-2) 0;
+    color: var(--text-accent);
+    font-size: var(--font-ui-small);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.research-chat-view .spotlight-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.research-chat-view .spotlight-container li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-s);
+    transition: background-color 0.1s ease;
+}
+
+.research-chat-view .spotlight-container li:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.research-chat-view .spotlight-link {
+    font-weight: var(--font-medium);
+    color: var(--text-normal);
+    text-decoration: none;
+    flex-grow: 1;
+}
+
+.research-chat-view .spotlight-score {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
 /* ++++++++++++++++++++++++++++++++++++ */
 
 /* Similar notes styles                 */
@@ -798,50 +853,56 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 }
 
 .tool-confirmation-modal .confirmation-info {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
     margin-bottom: var(--size-4-4);
 }
 
-.tool-confirmation-modal .confirmation-table {
-    width: 100%;
-    border-collapse: collapse;
-}
+.tool-confirmation-modal .confirmation-diff-container {
+    max-height: 400px;
 
-.tool-confirmation-modal .confirmation-table td {
-    padding: var(--size-4-1) var(--size-4-2);
-    vertical-align: middle;
-}
-
-.tool-confirmation-modal .confirmation-table td.label {
-    width: 120px;
-    font-weight: var(--font-semibold);
-    color: var(--text-muted);
-}
-
-.tool-confirmation-modal .confirmation-table td.value {
-    color: var(--text-normal);
-}
-
-.tool-confirmation-modal .confirmation-input {
-    width: 100%;
-    font-family: var(--font-monospace);
-    font-size: var(--font-ui-small);
-}
-
-.tool-confirmation-modal .confirmation-warning-box {
-    margin-top: var(--size-4-2);
-    padding: var(--size-4-2);
-    background-color: var(--background-modifier-error);
-    border: 1px solid var(--text-error);
+    /* Limit height for large diffs */
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-s);
-    color: var(--text-error);
+    background-color: var(--background-primary);
+    padding: var(--size-4-2);
+}
+
+/* Use a monospace font for diff content */
+.tool-confirmation-modal .confirmation-diff-container pre,
+.tool-confirmation-modal .confirmation-diff-container code {
+    font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
 }
 
-.tool-confirmation-modal .confirmation-preview {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: var(--size-4-4);
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
+/* Color-code added lines (if you can inject HTML classes for diffs later) */
+.diff-added {
+    color: var(--text-success);
+    /* stylelint-disable-next-line color-function-notation */
+    background-color: rgb(var(--color-green-rgb), 10%);
+}
+
+.diff-removed {
+    color: var(--text-error);
+    /* stylelint-disable-next-line color-function-notation */
+    background-color: rgb(var(--color-red-rgb), 10%);
+}
+
+.tool-confirmation-modal .modal-button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+}
+
+/* Make the 'Execute' button prominent (e.g., CTA style) */
+.tool-confirmation-modal .modal-button-container button.mod-cta {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.tool-confirmation-modal .modal-button-container button.mod-warning {
+    background-color: var(--text-error);
+    color: white;
 }

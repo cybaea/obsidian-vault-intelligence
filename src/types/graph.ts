@@ -58,6 +58,7 @@ export interface WorkerConfig {
  * Type-safe API exposed by the indexer worker via Comlink.
  */
 export interface WorkerAPI {
+    buildPriorityPayload(queryVector: number[]): Promise<unknown[]>;
     clearIndex(): Promise<void>;
     deleteFile(path: string): Promise<void>;
     fullReset(): Promise<void>;
@@ -77,5 +78,5 @@ export interface WorkerAPI {
     searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
-    updateFile(path: string, content: string, mtime: number, size: number, title: string): Promise<void>;
+    updateFile(path: string, content: string, mtime: number, size: number, title: string, links?: string[]): Promise<void>;
 }
