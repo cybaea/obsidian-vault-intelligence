@@ -100,10 +100,17 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
 
 export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
+        dimensions: 3072,
+        id: 'text-embedding-004',
+        isDefault: false,
+        label: 'Gemini Embedding v4 (Advanced) - 3072d',
+        provider: 'gemini'
+    },
+    {
         dimensions: 768,
         id: 'gemini-embedding-001',
         isDefault: true,
-        label: 'Gemini Embedding (Standard) - 768d',
+        label: 'Gemini Embedding v1 (Standard) - 768d',
         provider: 'gemini'
     }
 ];

@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 4.2.0
+**Version**: 4.3.1
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -104,13 +104,16 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 >      C -- Yes --> E(GraphService)
 >      E --> F[Worker message]
 >      F --> G(Graphology: update edges)
->      F --> H(Orama: upsert vector)
->      H --> I[Serialize to MessagePack]
+>      F --> H(Sanitize: Excalidraw)
+>      H --> I(Prep: Semantic context)
+>      I --> J(Orama: upsert chunks)
+>      J --> K[Serialize to MessagePack]
 >    ```
 >
-> 5. **Failure strategy**: Silent fail with logging.
+> 5. **Processing details**:
+>    - **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
+>    - **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
 >    - **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
->    - **No Retry**: Failed tasks are logged but not automatically retried to prevent infinite correction loops.
 
 ### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
 
@@ -218,6 +221,15 @@ To maximise the utility of the context window while staying within token budgets
 | **Supporting** | >= 70% of top | Contextual snippets extracted around search terms. |
 | **Structural** | >= 35% of top | Note structure (headers) only. Capped at top 10 files. |
 | **Filtered** | < 35% of top | Skipped entirely to reduce prompt noise. |
+
+#### Hybrid Score Calibration
+
+To ensure keyword matches do not overwhelm semantic similarity, the `SearchOrchestrator` applies a **Sigmoid Calibration** to BM25 scores before blending.
+
+The formula used is:
+`normalizedScore = score / (score + keywordWeight)`
+
+Where `keywordWeight` (default `1.2`) is a configurable parameter in the plugin settings. This ensures that while keyword scores are unbounded, the normalized result always approaches `1.0` asymptotically, preserving ranking granularity without breaking the 0-100% scale.
 
 This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
@@ -485,6 +497,8 @@ export class SearchOrchestrator {
 | :--- | :--- | :--- |
 | `WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT` | `5` | Default number of results for vector search. |
 | `WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT` | `0.001` | Minimum cosine similarity to consider a note "related". |
+| `WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE` | `2` | Levenshtein distance allowed for fuzzy keyword matching. |
+| `WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE` | `1.0` | Orama threshold setting for maximum recall (Permissive/OR logic). |
 | `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` | `4` | Heuristic for budget calculation (English). |
 | `SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO` | `0.10` | Prevent any single doc from starving others in context assembly. |
 | `GARDENER_CONSTANTS.PLAN_PREFIX` | `"Gardener Plan"` | Prefix for generated hygiene plans. |

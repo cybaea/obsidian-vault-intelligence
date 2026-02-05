@@ -162,6 +162,18 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Default overlap ratio (0.1 = 10%) */
     DEFAULT_OVERLAP_RATIO: 0.1,
 
+    /** * Orama Typo Tolerance:
+     * Maximum Levenshtein distance (edits) allowed for a term to match.
+     * 1-2 is standard for natural language.
+     */
+    KEYWORD_TOLERANCE: 2,
+
+    /** * Absolute floor for keyword recall. 
+     * In Orama v3, 1.0 implies logical OR (more permissive), 
+     * while 0.0 implies logical AND (stricter).
+     */
+    RECALL_THRESHOLD_PERMISSIVE: 1, /** DO NOT CHANGE **/
+
     /** Deep search limit for vector candidates before scoring */
     SEARCH_LIMIT_DEEP: 500,
 
@@ -176,6 +188,7 @@ export const WORKER_INDEXER_CONSTANTS = {
 
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
+
 };
 
 export const GRAPH_CONSTANTS = {
@@ -376,4 +389,20 @@ export const URL_CONSTANTS = {
         'jsdelivr.net',
         'raw.githubusercontent.com' // Often used for config but less common in this specific logic
     ]
+};
+
+export const REGEX_CONSTANTS = {
+    /** Pattern to match @[link] or @link mentions */
+    MENTION: /@(?:\[\[([^\]]+)\]\]|(\b[a-zA-Z0-9_\-./]+\b))/g
+};
+
+export const MODEL_CONSTANTS = {
+    CHAT_MODEL: "gemini-pro",
+    EMBEDDING_001: "gemini-embedding-001",
+    TEXT_EMBEDDING_004: "text-embedding-004"
+};
+
+export const WORKER_LATENCY_CONSTANTS = {
+    /** Tokens budgeted for latency overhead in worker */
+    LATENCY_BUDGET_TOKENS: 200
 };

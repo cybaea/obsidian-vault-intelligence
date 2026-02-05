@@ -114,24 +114,34 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        // Embedding Dimension (Gemini only allows selection if Gemini is provider)
+        // Embedding Dimension
         new Setting(containerEl)
             .setName('Embedding dimension')
-            .setDesc('Gemini supports multiple output sizes. Changing this wipes your index.')
-            .addDropdown(dropdown => dropdown
-                .addOption('768', '768 (standard)')
-                .addOption('1536', '1536 (high detail)')
-                .addOption('3072', '3072 (max detail)')
-                .setValue(String(plugin.settings.embeddingDimension))
-                .onChange(async (value) => {
-                    const num = parseInt(value);
-                    if (num !== plugin.settings.embeddingDimension) {
-                        plugin.settings.embeddingDimension = num;
-                        await plugin.saveSettings();
-                        new Notice("Dimension changed. Re-scanning vault...");
-                        await plugin.graphService.scanAll();
-                    }
-                }));
+            .setDesc('Control the size of the vector. Higher dimensions mean better search but larger index. Changing this kills your local index.')
+            .addDropdown(dropdown => {
+                const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
+                const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';
+
+                dropdown.addOption('768', '768 (flash / standard)')
+                    .addOption('1536', '1536 (balanced)')
+                    .addOption('3072', '3072 (max / v4 default)')
+                    .setValue(String(plugin.settings.embeddingDimension))
+                    .onChange(async (value) => {
+                        const num = parseInt(value);
+                        if (num !== plugin.settings.embeddingDimension) {
+                            plugin.settings.embeddingDimension = num;
+
+                            // Proactive: If they select high dims but are on an old model, suggest the upgrade
+                            if (num > 768 && !isModern) {
+                                new Notice("This dimension works best with text-embedding-004. Please check your model selection.");
+                            }
+
+                            await plugin.saveSettings();
+                            new Notice("Dimension changed. You must re-index your vault for this to take effect.");
+                            refreshSettings(plugin);
+                        }
+                    });
+            });
     } else {
         // Local Provider Models
         embeddingSetting.addDropdown(dropdown => {
@@ -270,6 +280,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     plugin.settings.similarNotesLimit = num;
                     await plugin.saveSettings();
                 }
+            }));
+
+    new Setting(containerEl)
+        .setName('Keyword match weight')
+        .setDesc('Calibration for keyword vs vector search. Higher values make keyword matches more conservative.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 5.0, 0.1)
+            .setValue(plugin.settings.keywordWeight)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.keywordWeight = value;
+                await plugin.saveSettings();
             }));
 
     // --- 4. Re-index Button ---

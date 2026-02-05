@@ -9,19 +9,24 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### User features
+
 - **Deep semantic intelligence**: The Researcher now understands the "hidden threads" between your notes. By automatically treating frontmatter properties like `topics`, `tags`, and `author` as semantic bridges, the agent can discover relevant context across your vault even when you haven't used explicit Wikilinks.
-- **Flawless vault-wide connectivity**: Restored full support for relative Wikilinks (`../`). Notes organized in complex folder hierarchies now connect perfectly in the semantic graph, ensuring the Researcher never misses a related idea just because it lives in a different folder.
 - **Zero-noise Excalidraw integration**: Visual thinkers will notice a massive improvement in search quality. We've overhauled how drawing files are indexed, stripping away megabytes of internal JSON metadata while preserving actual text labels. This makes the index up to 99% smaller and eliminates "false positive" search results from drawing files.
-- **Reliability at scale**: Fixed a persistent "reindexing loop" that caused some vaults to scan all files on every startup. The plugin now tracks changes with 100% accuracy, ensuring your semantic graph is always ready instantly without the wait.
+- **Precision similarity intelligence**: Ghost documents and empty tags no longer clutter your "Similar Notes" view. We've refined the similarity engine to strictly only show real, indexed notes with actual content, ensuring your connections are always meaningful.
+- **Intelligent auto-reindexing**: Changing your embedding model or search dimension now automatically triggers a vault re-scan. You no longer need to manually click "Re-index vault" to align your settings—the plugin ensures your semantic index is always consistent with your configuration.
+- **Deep-dive search recall**: Drastically increased the search re-ranking pool, enabling the Researcher to find complex "hidden threads" and nuanced narratives across even the largest vaults.
+- **Keyword match calibration**: Added a "Keyword match weight" slider to the Explorer settings. This allows you to fine-tune how aggressively the plugin normalises and weights keyword (BM25) results when blending them with vector similarity.
 - **Tuning control**: Added granular reset buttons to the Advanced Settings panel. You can now restore individual Search and Context thresholds to their default values or reset the entire section with a single click.
 
 ### Developer features
 
+- **Accurate similarity scoring**: Fixed an issue where keyword matches could produce impossible similarity percentages (like 3333%). Scoring is now properly normalized using a sigmoidal calibration function in `SearchOrchestrator` for a reliable 0-100% scale.
 - **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
 - **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
 - **Architectural Refactoring**: Decomposed `AgentService` by delegating tool logic to a dedicated `ToolRegistry` and context preparation to `AgentService.prepareContext`.
 - **Humble View Pattern**: Refactored `ResearchChatView` to separate UI logic from business logic, improving testability and code organization.
-- **Magic Number Elimination**: Extracted indexing and search constants into `src/constants.ts` for better maintainability.
+- **Magic Number Elimination**: Extracted indexing and search constants into `src/constants.ts` and moved calibration constants to user settings for better maintainability.
 
 - **Fixed index rebuild loop**: Resolved a persistent "Delete-after-Add" race condition where mismatching paths caused the index to rebuild on every startup.
 - **Strict path normalization**: Enforced consistent path canonicalization across all worker operations (`deleteFile`, `renameFile`, `pruneOrphans`).
@@ -31,6 +36,16 @@ New features are added in the "Unreleased" section.
 - **Chunking performance**: Implemented `maxPoolResults` and `recursiveCharacterSplitter` to improve semantic search granularity without polluting results with redundant fragments.
 - **Systemic Path Resolution**: Implemented global basename aliasing in `GraphService` to resolve "Ghost Nodes". Short-form file links (e.g. `[[Note]]`) now correctly resolve to their canonical full paths across the entire vault graph.
 - **Hybrid Explorer Search**: Updated the "Similar Notes" view to merge Vector Similarity (Content) with Graph Neighbors (Topics). This ensures conceptually related notes are displayed even if they don't share similar text.
+- **BM25 Score Normalization**: Implemented normalization for keyword results in `SearchOrchestrator` to prevent impossible high-similarity scores (>100%).
+- **Strict Neighbor Filtering**: Enhanced `getNeighbors` to filter nodes by `mtime > 0` and `size > 0`, ensuring only valid, non-empty indexed notes appear in similarity results.
+- **Forced Re-scan Logic**: Added automatic `scanAll(true)` trigger in `GraphService` upon critical settings changes (model/dimension) to ensure index consistency.
+- **Robust Path Resolution**: Refined wikilink resolution to correctly handle multi-extension files and prevent accidental `.md` suffixing on non-markdown assets.
+- **Property Sanitization**: Strip surrounding quotes from YAML/frontmatter values to prevent duplicate node creation for identical topics.
+- **Search Logic Overhaul**:
+    - **Asymmetric Embedding**: Implemented query-specific embedding headers (distinguishing `Query` vs `Document`) to strictly align with the embedding model's training objective. This significantly improves vector retrieval accuracy.
+    - **Fuzzy Search Integration**: Enabled Levenshtein distance matching (`tolerance: 2`) for keyword searches. The agent can now find notes even with typos (eg "storis" finds "stories") or morphological variations.
+    - **Deep Vector Recall**: Modified the vector search pipeline to bypass Orama's default strict cutoff. We now request _all_ semantic candidates (`similarity: 0.001`) and let our GARS re-ranker handle the filtering. This solves "empty result" issues for broad conceptual queries.
+    - **Permissive Hybrid Merging**: Configured keyword search to use a permissive recall threshold (`1.0`) combined with local score normalization. This ensures that a strong keyword match for one term (eg "cats") isn't discarded just because other terms in the query are missing.
 
 ## [4.3.1] - 2026-01-31
 

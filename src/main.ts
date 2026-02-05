@@ -10,6 +10,7 @@ import { IEmbeddingService } from "./services/IEmbeddingService";
 import { MetadataManager } from "./services/MetadataManager";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
+import { PersistenceManager } from "./services/PersistenceManager";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
@@ -107,6 +108,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	embeddingService: IEmbeddingService;
 	vaultManager: VaultManager;
 	graphService: GraphService;
+	persistenceManager: PersistenceManager;
 	metadataManager: MetadataManager;
 	ontologyService: OntologyService;
 	gardenerService: GardenerService;
@@ -163,7 +165,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// 3. Initialize Graph Infrastructure
 		this.vaultManager = new VaultManager(this.app);
-		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.settings);
+		this.persistenceManager = new PersistenceManager(this);
+		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.persistenceManager, this.settings);
 		await this.graphService.initialize();
 
 		// 4. Initialize Gardener Infrastructure (Stage 2)

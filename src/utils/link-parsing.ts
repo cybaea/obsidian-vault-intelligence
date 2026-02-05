@@ -50,9 +50,9 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>, basePa
         if (aliasResolved) return aliasResolved;
     }
 
-    // 3. Handle potential missing .md extension
-    if (!normalizedLink.endsWith('.md')) {
-        // Only append .md if it doesn't look like an external URL (already handled in extractLinks but safety first)
+    // 3. Handle potential missing .md extension for internal notes
+    if (!normalizedLink.includes('.') && !normalizedLink.startsWith('#')) {
+        // Only append .md if it has no extension and doesn't look like an external URL or tag
         if (!normalizedLink.match(/^(https?|mailto):/i)) {
             return normalizedLink + '.md';
         }

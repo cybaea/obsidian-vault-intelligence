@@ -3,7 +3,7 @@ import { search, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS } from '../constants';
+import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
@@ -12,6 +12,150 @@ let orama: AnyOrama;
 let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
+let currentStopWords: string[] = []; // Loaded dynamically
+
+interface StopWordsModule {
+    stopwords: string[];
+}
+
+// Helper to normalize language code for Orama
+function getOramaLanguage(language: string): string {
+    const normalized = language.toLowerCase().trim();
+    if (normalized.startsWith('ar')) return 'arabic';
+    if (normalized.startsWith('hy')) return 'armenian';
+    if (normalized.startsWith('bg')) return 'bulgarian';
+    if (normalized.startsWith('zh')) return 'chinese';
+    if (normalized.startsWith('da')) return 'danish';
+    if (normalized.startsWith('nl')) return 'dutch';
+    if (normalized.startsWith('en')) return 'english';
+    if (normalized.startsWith('fi')) return 'finnish';
+    if (normalized.startsWith('fr')) return 'french';
+    if (normalized.startsWith('de')) return 'german';
+    if (normalized.startsWith('el')) return 'greek';
+    if (normalized.startsWith('hi')) return 'hindi';
+    if (normalized.startsWith('hu')) return 'hungarian';
+    if (normalized.startsWith('id')) return 'indonesian';
+    if (normalized.startsWith('ga')) return 'irish';
+    if (normalized.startsWith('it')) return 'italian';
+    if (normalized.startsWith('ne')) return 'nepali';
+    if (normalized.startsWith('no')) return 'norwegian';
+    if (normalized.startsWith('pt')) return 'portuguese';
+    if (normalized.startsWith('ro')) return 'romanian';
+    if (normalized.startsWith('ru')) return 'russian';
+    if (normalized.startsWith('sa')) return 'sanskrit';
+    if (normalized.startsWith('sr')) return 'serbian';
+    if (normalized.startsWith('sl')) return 'slovenian';
+    if (normalized.startsWith('es')) return 'spanish';
+    if (normalized.startsWith('sv')) return 'swedish';
+    if (normalized.startsWith('ta')) return 'tamil';
+    if (normalized.startsWith('tr')) return 'turkish';
+    if (normalized.startsWith('uk')) return 'ukrainian';
+
+    return 'english'; // Default
+}
+
+// Language Normalization & Stop Word Loading
+async function loadStopWords(language: string): Promise<string[]> {
+    try {
+        const normalized = language.toLowerCase().trim();
+        // 1. Try exact match mappings
+        // 2. Try prefix (en-GB -> en)
+        // 3. Map to @orama/stopwords exports
+
+        let langCode = 'english'; // Default
+
+        if (normalized.startsWith('ar')) langCode = 'arabic';
+        else if (normalized.startsWith('hy')) langCode = 'armenian';
+        else if (normalized.startsWith('bg')) langCode = 'bulgarian';
+        else if (normalized.startsWith('zh')) langCode = 'chinese';
+        else if (normalized.startsWith('da')) langCode = 'danish';
+        else if (normalized.startsWith('nl')) langCode = 'dutch';
+        else if (normalized.startsWith('en')) langCode = 'english';
+        else if (normalized.startsWith('fi')) langCode = 'finnish';
+        else if (normalized.startsWith('fr')) langCode = 'french';
+        else if (normalized.startsWith('de')) langCode = 'german';
+        else if (normalized.startsWith('el')) langCode = 'greek';
+        else if (normalized.startsWith('hi')) langCode = 'hindi';
+        else if (normalized.startsWith('hu')) langCode = 'hungarian';
+        else if (normalized.startsWith('id')) langCode = 'indonesian';
+        else if (normalized.startsWith('ga')) langCode = 'irish';
+        else if (normalized.startsWith('it')) langCode = 'italian';
+        else if (normalized.startsWith('ne')) langCode = 'nepali';
+        else if (normalized.startsWith('no')) langCode = 'norwegian';
+        else if (normalized.startsWith('pt')) langCode = 'portuguese';
+        else if (normalized.startsWith('ro')) langCode = 'romanian';
+        else if (normalized.startsWith('ru')) langCode = 'russian';
+        else if (normalized.startsWith('sa')) langCode = 'sanskrit';
+        else if (normalized.startsWith('sr')) langCode = 'serbian';
+        else if (normalized.startsWith('sl')) langCode = 'slovenian';
+        else if (normalized.startsWith('es')) langCode = 'spanish';
+        else if (normalized.startsWith('sv')) langCode = 'swedish';
+        else if (normalized.startsWith('ta')) langCode = 'tamil';
+        else if (normalized.startsWith('tr')) langCode = 'turkish';
+        else if (normalized.startsWith('uk')) langCode = 'ukrainian';
+
+        // Japanese/Chinese special handling if needed, but 'chinese' is now supported.
+        // Japanese often requires tokenizer, no stopwords for now.
+        if (normalized.startsWith('ja')) return [];
+
+        // Dynamic import to avoid bundling all languages
+        // Note: ESBuild might bundle them if path is static, but dynamic string makes it tricky.
+        // For simplicity and safety with the installed package, let's try a direct map if possible,
+        // or just use the english default + extensive map if we want to be fancy.
+        // Given the constraints, we'll try to import the specific one.
+        // Since we can't easily do dynamic template string imports in all bundlers without config:
+
+        switch (langCode) {
+            case 'arabic': return (await import('@orama/stopwords/arabic') as StopWordsModule).stopwords;
+            case 'armenian': return (await import('@orama/stopwords/armenian') as StopWordsModule).stopwords;
+            case 'bulgarian': return (await import('@orama/stopwords/bulgarian') as StopWordsModule).stopwords;
+            case 'chinese': return (await import('@orama/stopwords/chinese') as StopWordsModule).stopwords;
+            case 'danish': return (await import('@orama/stopwords/danish') as StopWordsModule).stopwords;
+            case 'dutch': return (await import('@orama/stopwords/dutch') as StopWordsModule).stopwords;
+            case 'english': return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
+            case 'finnish': return (await import('@orama/stopwords/finnish') as StopWordsModule).stopwords;
+            case 'french': return (await import('@orama/stopwords/french') as StopWordsModule).stopwords;
+            case 'german': return (await import('@orama/stopwords/german') as StopWordsModule).stopwords;
+            case 'greek': return (await import('@orama/stopwords/greek') as StopWordsModule).stopwords;
+            case 'hindi': return (await import('@orama/stopwords/hindi') as StopWordsModule).stopwords;
+            case 'hungarian': return (await import('@orama/stopwords/hungarian') as StopWordsModule).stopwords;
+            case 'indonesian': return (await import('@orama/stopwords/indonesian') as StopWordsModule).stopwords;
+            case 'irish': return (await import('@orama/stopwords/irish') as StopWordsModule).stopwords;
+            case 'italian': return (await import('@orama/stopwords/italian') as StopWordsModule).stopwords;
+            case 'nepali': return (await import('@orama/stopwords/nepali') as StopWordsModule).stopwords;
+            case 'norwegian': return (await import('@orama/stopwords/norwegian') as StopWordsModule).stopwords;
+            case 'portuguese': return (await import('@orama/stopwords/portuguese') as StopWordsModule).stopwords;
+            case 'romanian': return (await import('@orama/stopwords/romanian') as StopWordsModule).stopwords;
+            case 'russian': return (await import('@orama/stopwords/russian') as StopWordsModule).stopwords;
+            case 'sanskrit': return (await import('@orama/stopwords/sanskrit') as StopWordsModule).stopwords;
+            case 'serbian': return (await import('@orama/stopwords/serbian') as StopWordsModule).stopwords;
+            case 'slovenian': return (await import('@orama/stopwords/slovenian') as StopWordsModule).stopwords;
+            case 'spanish': return (await import('@orama/stopwords/spanish') as StopWordsModule).stopwords;
+            case 'swedish': return (await import('@orama/stopwords/swedish') as StopWordsModule).stopwords;
+            case 'tamil': return (await import('@orama/stopwords/tamil') as StopWordsModule).stopwords;
+            case 'turkish': return (await import('@orama/stopwords/turkish') as StopWordsModule).stopwords;
+            case 'ukrainian': return (await import('@orama/stopwords/ukrainian') as StopWordsModule).stopwords;
+
+            default:
+                return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
+        }
+    } catch (e) {
+        workerLogger.warn(`Failed to load stop words for ${language}, defaulting to empty.`, e);
+        return [];
+    }
+}
+
+// Log Stopword filtering
+function stripStopWords(query: string): string {
+    if (currentStopWords.length === 0) return query;
+    const tokens = query.toLowerCase().split(/\s+/);
+    const filtered = tokens.filter(t => !currentStopWords.includes(t));
+    const result = filtered.length > 0 ? filtered.join(' ') : query;
+    workerLogger.debug(`[stripStopWords] Query: "${query}" -> "${result}" (Removed: ${tokens.length - filtered.length})`);
+    return result;
+}
+
+
 
 interface OramaDocument {
     [key: string]: string | number | boolean | number[] | undefined | string[];
@@ -20,6 +164,7 @@ interface OramaDocument {
     // New Metadata
     created: number;
     embedding?: number[];
+    links?: string[];
     params: string[];
     path: string;
     status: string;
@@ -40,6 +185,19 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
+const LATENCY_BUDGET_TOKENS = WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_TOKENS;
+
+function calculateInheritedScore(parentScore: number, linkCount: number): number {
+    const dilution = Math.max(1, Math.log2(linkCount + 1));
+    return parentScore * (0.8 / dilution);
+}
+
+// Helper to estimate tokens (approx 4 chars per token)
+function estimateTokens(text: string): number {
+    return text.length / 4;
+}
+
+// fileFilter removed (unused)
 const workerLogger = {
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
     error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
@@ -48,6 +206,206 @@ const workerLogger = {
 };
 
 const IndexerWorker: WorkerAPI = {
+    /**
+     * Constructs the priority payload for the Dual-Loop architecture.
+     * 1. Wide Vector Fetch
+     * 2. Graph Expansion (with Hub Dilution)
+     * 3. Backpack Selection (Budgeting)
+     * 4. Batch Hydration (fixing I/O)
+     */
+    async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        // 1. Parallel Wide Fetch (Top 100 Vector + 50 Keyword)
+        const vectorPromise = search(orama, {
+            includeVectors: false,
+            limit: 100,
+            mode: 'vector',
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
+            vector: {
+                property: 'embedding',
+                value: queryVector
+            }
+        });
+
+        const keywordPromise = search(orama, {
+            includeVectors: false,
+            limit: 50,
+            properties: ['content', 'title'],
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
+            term: stripStopWords(query), // Use stripped query for keyword search
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE // Use permissive threshold to maximize Recall for the Analyst re-ranker
+        });
+
+        const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
+
+        const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
+
+        // 2a. Process Vector Hits
+        for (const hit of vectorResults.hits) {
+            const doc = hit.document as unknown as OramaDocument;
+            const docId = hit.id;
+
+            if (!candidates.has(docId)) {
+                candidates.set(docId, {
+                    content: doc.content,
+                    id: docId,
+                    score: hit.score,
+                    type: 'vector'
+                });
+            }
+            // ... Graph neighbors logic will handle expansion for these too
+        }
+
+        // 2b. Process Keyword Hits (Merge)
+        for (const hit of keywordResults.hits) {
+            const doc = hit.document as unknown as OramaDocument;
+            const docId = hit.id;
+
+            // If already exists (from vector), keep the higher score? 
+            // Vector scores are cosine (0-1ish), Keyword BM25 (>0).
+            // Orama vector scores are cosine similarity.
+            // We'll prioritize Vector hits as the "primary" reason, but ensure Keyword hits are included.
+            if (!candidates.has(docId)) {
+                candidates.set(docId, {
+                    content: doc.content,
+                    id: docId,
+                    score: hit.score, // Use keyword score directly
+                    type: 'vector' // Treat as direct retrieval
+                });
+            }
+        }
+
+        // 2c. Graph Expansion (Neighbors) - Apply to ALL candidates (Vector + Keyword)
+        // We iterate current candidates to expand.
+        const seeds = Array.from(candidates.values()); // Snapshot
+
+        for (const seed of seeds) {
+            const seedId = seed.id.split('#')[0] || seed.id;
+            const path = workerNormalizePath(seedId); // Extract file path from chunk ID
+
+            if (graph.hasNode(path)) {
+                const neighbors = graph.neighbors(path);
+                const degree = graph.degree(path);
+
+                for (const neighbor of neighbors) {
+                    const inherited = calculateInheritedScore(seed.score, degree);
+                    // Check if neighbor is just another chunk of the same file?
+                    // Graph nodes are files. We inject the *file path* as a candidate ID for hydration.
+                    const neighborId = neighbor;
+
+                    if (!candidates.has(neighborId) || candidates.get(neighborId)!.score < inherited) {
+                        candidates.set(neighborId, {
+                            id: neighborId,
+                            score: inherited,
+                            source: path,
+                            type: 'graph'
+                        });
+                    }
+                }
+            }
+        }
+
+        // 3. Sort Candidates
+        const sorted = Array.from(candidates.values()).sort((a, b) => b.score - a.score);
+
+        interface PayloadItem {
+            content?: string;
+            id: string;
+            score: number;
+            source?: string;
+            type: 'vector' | 'graph';
+        }
+
+        // 4. Backpack Selection (Budgeting)
+        const payload: PayloadItem[] = [];
+        let currentTokens = 0;
+        const idsToHydrate: string[] = [];
+
+        for (const candidate of sorted) {
+            if (currentTokens >= LATENCY_BUDGET_TOKENS) break;
+
+            if (candidate.type === 'vector' && candidate.content) {
+                // Already have content
+                const tokens = estimateTokens(candidate.content);
+                if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
+                    payload.push({
+                        content: candidate.content,
+                        id: candidate.id,
+                        score: candidate.score,
+                        type: 'vector'
+                    });
+                    currentTokens += tokens;
+                }
+            } else {
+                // Needs hydration (Graph neighbor OR raw file path candidate)
+                const EST_TOKENS = 200;
+                if (currentTokens + EST_TOKENS <= LATENCY_BUDGET_TOKENS) {
+                    idsToHydrate.push(candidate.id);
+                    payload.push({
+                        id: candidate.id,
+                        score: candidate.score,
+                        source: candidate.source,
+                        type: candidate.type
+                    });
+                    currentTokens += EST_TOKENS;
+                }
+            }
+        }
+
+        // 5. Batch Hydration
+        // We need to fetch content for `idsToHydrate`.
+        if (idsToHydrate.length > 0) {
+            const { search } = await import('@orama/orama');
+            const hydrationResults = await search(orama, {
+                limit: idsToHydrate.length * 2,
+                where: {
+                    path: { in: idsToHydrate }
+                }
+            });
+
+            // Map results back to payload
+            const hydrationMap = new Map<string, string>();
+            for (const hit of hydrationResults.hits) {
+                const doc = hit.document as unknown as OramaDocument;
+                // If ID is chunk-0, user that. If request was for full file (graph neighbor), prefer chunk-0.
+                if (String(hit.id).endsWith('#chunk-0')) {
+                    hydrationMap.set(doc.path, doc.content);
+                }
+                // Handle direct chunk request if needed?
+                hydrationMap.set(hit.id, doc.content);
+            }
+
+            // Fill placeholders
+            for (const item of payload) {
+                if (!item.content) {
+                    // Try exact ID match first, then path match
+                    let content = hydrationMap.get(item.id);
+                    if (!content && !item.id.includes('#')) {
+                        content = hydrationMap.get(item.id); // Try direct path
+                    }
+
+                    if (content) {
+                        item.content = content;
+                    } else {
+                        item.content = "(Content unavailable)";
+                    }
+                }
+            }
+        }
+
+        // 6. Merge & Clean (YAML Stripping)
+        return payload
+            .filter(p => p.content && p.content !== "(Content unavailable)")
+            .map(p => {
+                const { body } = splitFrontmatter(p.content || "");
+                return {
+                    content: body.trim(),
+                    id: p.id,
+                    score: p.score,
+                    type: p.type
+                };
+            });
+    },
+
     /**
      * Clears the Orama index.
      */
@@ -150,6 +508,7 @@ const IndexerWorker: WorkerAPI = {
         return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
     },
 
+
     /**
      * Returns the mtime and hash for all tracked files.
      * @returns Record of file paths to their metadata.
@@ -167,7 +526,6 @@ const IndexerWorker: WorkerAPI = {
         }
         return states;
     },
-
 
     /**
      * Gets neighbors in the graph, with optional ontology-based expansion.
@@ -193,6 +551,12 @@ const IndexerWorker: WorkerAPI = {
 
         for (const neighbor of initialNeighbors) {
             const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
+
+            // STRICT FILTER: Only return nodes that actually exist and have content.
+            // checking mtime > 0 and size > 0 ensures it's a real file that has been processed.
+            // This excludes tags, labels, and ghost topics.
+            if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
+
             results.set(neighbor, {
                 excerpt: "",
                 path: neighbor,
@@ -220,6 +584,10 @@ const IndexerWorker: WorkerAPI = {
                         }
 
                         const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
+
+                        // STRICT FILTER: Only return real files as siblings
+                        if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
+
                         results.set(sibling, {
                             excerpt: `(Sibling via ${neighbor})`,
                             path: sibling,
@@ -307,6 +675,11 @@ const IndexerWorker: WorkerAPI = {
         await Promise.resolve();
 
         workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions and ${conf.embeddingModel}`);
+
+        // Load stop words
+        currentStopWords = await loadStopWords(conf.agentLanguage);
+        workerLogger.info(`Loaded ${currentStopWords.length} stop words for ${conf.agentLanguage}`);
+
         return true;
     },
 
@@ -318,8 +691,27 @@ const IndexerWorker: WorkerAPI = {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
             properties: ['title', 'content', 'params', 'status'],
-            term: query
+            term: stripStopWords(query),
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
+            tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
+
+        // Hybrid Boost: If we have an embedding, we should conceptually merge, 
+        // but `keywordSearch` signature is text-only. 
+        // For true Hybrid here, we would need to run vector search too and merge.
+        // Current architecture separates them in `buildPriorityPayload` but uses `keywordSearch` for simple tools using just text.
+        // Let's Upgrade `keywordSearch` to be Hybrid if we can cheaply generate an embedding, 
+        // OR just leave it as improved Keyword search (which is now better due to stop words).
+
+        // Per User Request: "Switch to Hybrid Search".
+        // Since `keywordSearch` is used by tools that might expect purely text match, 
+        // strictly speaking `keywordSearch` should remain keyword. 
+        // However, `buildPriorityPayload` (used by the Dual Loop) ALREADY implements Hybrid (Lines 75-94).
+        // The User's specific issue was likely with `vault_search` tool which calls `graphService.search`.
+        // `GraphService.search` calls `worker.search` (Vector) or `worker.keywordSearch`?
+        // Let's check `GraphService.ts` in the next step to see which method `vault_search` uses.
+        // If it uses `search` (line 691), it is PURE VECTOR.
+        // WE NEED TO UPGRADE `search` (line 691) TO BE HYBRID.
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);
     },
@@ -464,16 +856,75 @@ const IndexerWorker: WorkerAPI = {
      * Uses Max-Pooling.
      */
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        const results = await search(orama, {
+        // HYBRID SEARCH UPGRADE
+        // 1. Vector Search
+        const vectorPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR, // Higher limit for pooling
             mode: 'vector',
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT, // 0.001 - We want ALL vector candidates for re-ranking
             vector: {
                 property: 'embedding',
                 value: await generateEmbedding(query, 'Query')
             }
         });
 
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
+        // 2. Keyword Search (for specific terms like "cats")
+        const keywordPromise = search(orama, {
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
+            properties: ['title', 'content', 'params', 'status'],
+            term: stripStopWords(query), // Clean query
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
+            tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
+        });
+
+        const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
+
+        workerLogger.debug(`[search] Vector Hits: ${vectorResults.hits.length}, Keyword Hits: ${keywordResults.hits.length}`);
+        workerLogger.debug(`[search] Threshold: ${JSON.stringify(WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE)}`);
+
+        // 3. Merge Strategies
+        const hits = new Map<string, OramaHit>();
+
+        // Add Vector Hits (Base Score: 0-1)
+        for (const hit of vectorResults.hits) {
+            hits.set(hit.id, hit as unknown as OramaHit);
+        }
+
+        // Calculate Max Keyword Score for Local Normalization
+        let maxKeywordScore = 0;
+        if (keywordResults.hits.length > 0) {
+            for (const h of keywordResults.hits) {
+                if (h.score > maxKeywordScore) maxKeywordScore = h.score;
+            }
+        }
+        const keywordNormFactor = Math.max(1.0, maxKeywordScore);
+
+        workerLogger.debug(`[search] Keyword Max Score: ${maxKeywordScore} -> Norm Factor: ${keywordNormFactor}`);
+
+        // Add Keyword Hits (Boost if exists, append if not)
+        for (const hit of keywordResults.hits) {
+            const h = hit as unknown as OramaHit;
+            const normalizedScore = h.score / keywordNormFactor; // Scale to 0-1
+
+            if (hits.has(h.id)) {
+                // Boost existing vector hit
+                const existing = hits.get(h.id)!;
+                // Hybrid: Vector + (Normalized Keyword * 0.5)
+                // Result can go up to ~1.5 (normalized later globally)
+                existing.score += (normalizedScore * 0.5);
+            } else {
+                // Keyword only match
+                // We give it the normalized score (0-1) scaled slightly down to favor hybrids
+                h.score = normalizedScore * 0.9;
+                hits.set(h.id, h);
+            }
+        }
+
+
+        // Convert back to array
+        const mergedHits = Array.from(hits.values());
+
+        return maxPoolResults(mergedHits, limit, config.minSimilarityScore ?? 0);
     },
 
     /**
@@ -518,6 +969,13 @@ const IndexerWorker: WorkerAPI = {
         if (dimensionChanged || modelChanged) {
             await recreateOrama();
         }
+
+        // Reload stop words if language changed
+        if (newConfig.agentLanguage && newConfig.agentLanguage !== config.agentLanguage) {
+            currentStopWords = await loadStopWords(newConfig.agentLanguage);
+            workerLogger.info(`Reloaded ${currentStopWords.length} stop words for ${newConfig.agentLanguage}`);
+        }
+
         await Promise.resolve();
     },
 
@@ -525,7 +983,7 @@ const IndexerWorker: WorkerAPI = {
      * Updates a file in both Orama (content/vector) and Graphology (links).
      * Chunking Strategy Implemented Here.
      */
-    async updateFile(path: string, content: string, mtime: number, size: number, title: string) {
+    async updateFile(path: string, content: string, mtime: number, size: number, title: string, links: string[] = []) {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
@@ -599,6 +1057,7 @@ const IndexerWorker: WorkerAPI = {
                 created: mtime,
                 embedding: embedding,
                 id: chunkId,
+                links: links,
                 params: params,
                 path: normalizedPath,
                 status: status,
@@ -642,10 +1101,26 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
         }
     }
 
-    return Array.from(uniqueHits.values())
+    const finalHits = Array.from(uniqueHits.values());
+
+    // 2. Compute Global Max Score for Normalization
+    let maxScore = 0;
+    for (const h of finalHits) {
+        if (h.score > maxScore) maxScore = h.score;
+    }
+
+    // 3. Normalize (Scale 0 to 1 based on Max)
+    // Use Math.max(1.0, maxScore) to prevent upscaling small scores (e.g., max 0.6 staying 0.6)
+    // while scaling down huge scores (e.g., max 2.6 becoming 1.0)
+    const normalizationFactor = Math.max(1.0, maxScore);
+    workerLogger.debug(`[maxPoolResults] Max Score: ${maxScore}, Factor: ${normalizationFactor}, Hits: ${finalHits.length}`);
+
+    return finalHits
+        .map(h => ({ ...h, score: h.score / normalizationFactor }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 }
+
 
 function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: number): string[] {
     if (text.length <= chunkSize) return [text];
@@ -766,7 +1241,7 @@ function generateContextString(title: string, fm: unknown, conf: WorkerConfig): 
     // Title/Author are prioritized as they are first in 'parts' (usually).
     // Let's join and truncate.
     let fullContext = parts.join(' ');
-    const MAX_CONTEXT_CHARS = 300;
+    const MAX_CONTEXT_CHARS = 1000;
 
     if (fullContext.length > MAX_CONTEXT_CHARS) {
         // Try to preserve whole words/sentences if possible, but hard cap is safer
@@ -783,9 +1258,13 @@ function sanitizeProperty(value: unknown): string {
     }
     if (typeof value !== 'string') return String(value);
 
-    // Remove [[ ]] and |alias
     // Clean WikiLinks: [[Page|Alias]] -> Alias, [[Page]] -> Page
     let clean = value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1');
+
+    // STRIP QUOTES: Properties often come in as '"Value"' or "'Value'"
+    // This ensures "Agentic AI" and Agentic AI resolve to the same node.
+    clean = clean.replace(/^["'](.+)["']$/, '$1');
+
     return clean.trim();
 }
 
@@ -855,7 +1334,9 @@ function updateGraphEdges(path: string, content: string) {
     for (const link of allExplicitLinks) {
         const resolvedPath = resolvePath(link, aliasMap, dir);
         if (!graph.hasNode(resolvedPath)) {
-            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
+            // Tag detection for virtual nodes
+            const type = resolvedPath.startsWith('#') ? 'tag' : 'topic';
+            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type });
         }
         if (graph.hasEdge(path, resolvedPath)) continue;
 
@@ -906,7 +1387,12 @@ function updateGraphEdges(path: string, content: string) {
 
 async function recreateOrama() {
     const { create } = await import('@orama/orama');
+    const language = getOramaLanguage(config.agentLanguage || 'english');
+
+    workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
+
     orama = create({
+        language: language,
         schema: {
             // New Metadata Fields
             author: 'string', // New: Indexed Author

@@ -67,3 +67,25 @@ The penalty applied as you move further away in the graph.
 Prevents a single large "Primary" document from accidentally crowding out other relevant results in the context window.
 
 - **Logic**: Even if a document is a 100% match, it is "soft-capped" at 10% of the total context budget if other relevant documents are available. This ensures the AI always has a diverse set of sources to draw from.
+
+## 5. Deep Recall & Hybrid Logic
+
+### Candidate Retrieval
+
+The system now retrieves **all** reasonable semantic matches (`similarity: 0.001`) from the vector index before filtering.
+
+- **Why**: Standard vector search cutoffs (eg 0.8) often hide relevant supporting concepts. We trust our internal re-ranking (GARS) more than the raw vector score.
+
+### Keyword Normalization
+
+Matches from full-text search are now normalized **locally** within their result batch before being merged.
+
+- **Tuning**: The `Keyword Weight` setting (default 1.2) controls how aggressively high-scoring keyword matches can boost a vector result.
+    - Increase this if you find the system ignores exact phrase matches.
+    - Decrease if keyword matches are overpowering semantic context.
+
+### Post-Retrieval Filtering
+
+The `Minimum Similarity Score` setting is applied **after** the hybrid merge and GARS scoring.
+
+- **Implication**: You can safely look for "everything" (Deep Recall) for graph analysis while still only showing the user "good" results (Precision). The graph worker sees the noisy candidates to build connections; the user sees the clean output.

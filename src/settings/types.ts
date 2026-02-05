@@ -26,6 +26,7 @@ export interface VaultIntelligenceSettings {
     embeddingThreads: number;
     enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
+    enableDualLoop: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
     gardenerModel: string;
@@ -41,6 +42,8 @@ export interface VaultIntelligenceSettings {
     googleApiKey: string;
     groundingModel: string;
     indexingDelayMs: number;
+    /** Calibration constant for BM25 score normalization. Higher = more aggressive normalization. */
+    keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
     minSimilarityScore: number;
@@ -49,6 +52,7 @@ export interface VaultIntelligenceSettings {
     plansRetentionDays: number;
     previousVersion: string;
     queueDelayMs: number;
+    reRankingModel: string;
     searchCentralityLimit: number;
     searchExpansionSeedsLimit: number;
     searchExpansionThreshold: number;
@@ -121,8 +125,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
     authorName: 'Me',
     chatModel: 'gemini-flash-latest',
-    codeModel: 'gemini-flash-latest',
-    contextAwareHeaderProperties: ['title', 'topics', 'tags', 'type', 'author', 'status'],
+    codeModel: 'gemini-2.0-flash-thinking-exp-01-21',
+    contextAwareHeaderProperties: ['title', 'topic', 'tags', 'date', 'author', 'status'],
     contextMaxFiles: SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES,
     contextPrimaryThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD,
     contextStructuralThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD,
@@ -136,6 +140,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingThreads: Platform.isMobile ? 1 : 2,
     enableAgentWriteAccess: false,
     enableCodeExecution: true,
+    enableDualLoop: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
@@ -149,8 +154,9 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
     geminiRetries: 10,
     googleApiKey: '',
-    groundingModel: 'gemini-flash-lite-latest',
+    groundingModel: 'gemini-2.5-flash-lite',
     indexingDelayMs: 5000,
+    keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,
@@ -159,6 +165,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     plansRetentionDays: 7,
     previousVersion: '0.0.0',
     queueDelayMs: 100,
+    reRankingModel: 'gemini-flash-latest',
     searchCentralityLimit: 50,
     searchExpansionSeedsLimit: SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT,
     searchExpansionThreshold: SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD,

@@ -1,10 +1,9 @@
 import { App } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
-import { GraphSearchResult } from "../types/graph";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
+import { GeminiService } from "./GeminiService";
 import { GraphService } from "./GraphService";
 import { ScoringStrategy } from "./ScoringStrategy";
 
@@ -15,12 +14,14 @@ import { ScoringStrategy } from "./ScoringStrategy";
 export class SearchOrchestrator {
     private app: App;
     private graphService: GraphService;
-    private scoringStrategy: ScoringStrategy;
+    private geminiService: GeminiService;
     private settings: VaultIntelligenceSettings;
+    private scoringStrategy: ScoringStrategy;
 
-    constructor(app: App, graphService: GraphService, settings: VaultIntelligenceSettings) {
+    constructor(app: App, graphService: GraphService, geminiService: GeminiService, settings: VaultIntelligenceSettings) {
         this.app = app;
         this.graphService = graphService;
+        this.geminiService = geminiService;
         this.settings = settings;
         this.scoringStrategy = new ScoringStrategy();
     }
@@ -32,20 +33,40 @@ export class SearchOrchestrator {
      * @returns A promise resolving to a ranked list of search results.
      */
     public async search(query: string, limit: number): Promise<VaultSearchResult[]> {
+        // DUAL-LOOP LOGIC:
+        // If Dual Loop is enabled, we try the Analyst (Loop 2) first.
+        // It provides deeper, graph-expanded, and AI-ranked results.
+        if (this.settings.enableDualLoop) {
+            try {
+                const analystResults = await this.searchAnalyst(query);
+                if (analystResults.length > 0) {
+                    return analystResults.slice(0, limit);
+                }
+                logger.warn("[SearchOrchestrator] Analyst loop returned no results. Falling back to Reflex.");
+            } catch (error) {
+                logger.error("[SearchOrchestrator] Analyst loop failed. Falling back to Reflex.", error);
+            }
+        }
+
+        // Fallback or Default: Reflex Loop (Loop 1)
+        return this.searchReflex(query, limit);
+    }
+
+    /**
+     * DUAL-LOOP: Loop 1 (Reflex)
+     * Fast, local, parameter-free search.
+     */
+    public async searchReflex(query: string, limit: number): Promise<VaultSearchResult[]> {
         if (!query || query.trim().length === 0) {
-            logger.warn("Vault search called with empty query.");
             return [];
         }
 
-        logger.info(`[SearchOrchestrator] Starting GARS-aware search for: "${query}" (Limit: ${limit})`);
+        logger.info(`[SearchOrchestrator] Reflex Search: "${query}"`);
 
-        // 1. SEED PHASE: Initial Hybrid Search (Vector + Keyword)
-        // RECCO 1: Overshoot the worker limit to ensure we see the "relevance tail"
-        const workerLimit = Math.max(limit * 2, this.settings.searchCentralityLimit || SEARCH_CONSTANTS.DEFAULT_CENTRALITY_LIMIT);
+        const workerLimit = Math.max(limit * 2, 50);
         const vectorResults = await this.graphService.search(query, workerLimit);
         const keywordResults = await this.graphService.keywordSearch(query, workerLimit);
 
-        // Map Results to internal VaultSearchResult format
         const vResults: VaultSearchResult[] = vectorResults.map(r => ({
             excerpt: r.excerpt,
             isKeywordMatch: false,
@@ -62,94 +83,38 @@ export class SearchOrchestrator {
             score: r.score
         }));
 
-        const seedHits = this.mergeAndRank(vResults, kResults, workerLimit);
+        const merged = this.mergeAndRank(vResults, kResults, limit);
+        return merged;
+    }
 
-        // 2. EXPANSION PHASE: Graph Traversal
-        const candidates = new Map<string, VaultSearchResult>();
+    /**
+     * DUAL-LOOP: Loop 2 (Analyst)
+     * Deep, AI-driven re-ranking.
+     */
+    public async searchAnalyst(query: string): Promise<VaultSearchResult[]> {
+        logger.info(`[SearchOrchestrator] Analyst Search: "${query}"`);
 
-        // RECCO 1: Dynamic Expansion Based on score gaps
-        const topScore = seedHits[0]?.score || 0;
-        const expansionThreshold = topScore * (this.settings.searchExpansionThreshold || SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD);
+        if (this.settings.enableDualLoop) {
+            // Dual-Loop: Reflex (Loop 1) is handled by UI. This is Analyst (Loop 2).
+            const queryVector = await this.geminiService.embedText(query, { taskType: "RETRIEVAL_QUERY" });
 
-        const expansionSeeds: string[] = [];
-        // Hard cap on expansion seeds to prevent worker flood
-        const maxSeeds = this.settings.searchExpansionSeedsLimit || SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT;
+            // 1. Build Payload (Graph + Vector + Keyword)
+            const payload = await this.graphService.buildPriorityPayload(queryVector, query);
 
-        for (const hit of seedHits) {
-            candidates.set(hit.path, { ...hit });
-            // Expand neighbors for anything within the threshold, up to cap, and above absolute floor
-            if (hit.score >= expansionThreshold &&
-                hit.score >= SEARCH_CONSTANTS.ABSOLUTE_MIN_EXPANSION_SCORE &&
-                expansionSeeds.length < maxSeeds) {
-                expansionSeeds.push(hit.path);
-            }
-        }
+            // 2. Re-Rank (Gemini 3)
+            const reranked = await this.geminiService.reRank(query, payload);
 
-        // Expand neighbors for top seeds in parallel
-        const neighborPromises = expansionSeeds.map(async (path) => {
-            const parent = candidates.get(path);
-            if (!parent) return;
-
-            // RECCO 2: Dynamic Decay Control
-            const neighbors = await this.graphService.getNeighbors(path, {
-                decay: SEARCH_CONSTANTS.NEIGHBOR_DECAY,
-                direction: 'outbound',
-                mode: 'ontology'
+            // 3. Map to VaultSearchResult
+            return reranked.map((item: unknown) => {
+                const r = item as { id: string, score: number, reasoning: string };
+                return {
+                    content: r.reasoning,
+                    path: r.id.split('#')[0], // Simple path extraction
+                    score: r.score,
+                } as VaultSearchResult;
             });
-
-            return { neighbors, parent };
-        });
-
-        const neighborResults = (await Promise.all(neighborPromises)).filter((r): r is { parent: VaultSearchResult; neighbors: GraphSearchResult[] } => r !== undefined);
-
-        for (const { neighbors, parent } of neighborResults) {
-            for (const n of neighbors) {
-                if (!candidates.has(n.path)) {
-                    candidates.set(n.path, {
-                        isGraphNeighbor: true,
-                        path: n.path,
-                        score: n.score
-                    });
-                }
-
-                // Spreading Activation
-                const neighbor = candidates.get(n.path)!;
-                const activationBoost = parent.score * SEARCH_CONSTANTS.SPREADING_ACTIVATION_WEIGHT;
-                neighbor.score = Math.max(neighbor.score, activationBoost);
-            }
         }
-
-        // 3. SCORING PHASE: Final GARS Calculation
-        // Safety slice for centrality calculation
-        const centralityLimit = this.settings.searchCentralityLimit || SEARCH_CONSTANTS.DEFAULT_CENTRALITY_LIMIT;
-        const candidatePaths = Array.from(candidates.keys()).slice(0, centralityLimit);
-        const centralityMap = await this.graphService.getBatchCentrality(candidatePaths);
-
-        const finalResults: VaultSearchResult[] = [];
-        for (const [path, res] of candidates) {
-            const centrality = centralityMap[path] || 0;
-
-            const similarity = res.isGraphNeighbor ? 0 : res.score;
-            const activation = res.isGraphNeighbor ? res.score : 0;
-
-            res.score = this.scoringStrategy.calculateGARS(similarity, centrality, activation, {
-                activation: this.settings.garsActivationWeight,
-                centrality: this.settings.garsCentralityWeight,
-                similarity: this.settings.garsSimilarityWeight
-            });
-            finalResults.push(res);
-        }
-
-        const sortedResults = finalResults
-            .sort((a, b) => b.score - a.score)
-            .slice(0, limit);
-
-        logger.info(`[SearchOrchestrator] GARS-ranked results: ${sortedResults.length} docs.`);
-        if (sortedResults[0]) {
-            logger.info(`[SearchOrchestrator] Top match: ${sortedResults[0].path} (GARS: ${sortedResults[0].score.toFixed(2)})`);
-        }
-
-        return sortedResults;
+        return []; // Return empty if dual loop is not enabled
     }
 
     /**
@@ -168,33 +133,30 @@ export class SearchOrchestrator {
             mergedMap.set(res.path, res);
         }
 
-        // Add/Merge Keyword Results
+        // We use a Calibration Factor to map unbounded BM25 scores into 0-1 range.
+        // A sigmoid-like function: score / (score + K) allows high scores to approach 1.0 
+        // without capping, preserving ranking granularity.
+        const K = this.settings.keywordWeight;
+
         for (const res of keywordResults) {
             const existing = mergedMap.get(res.path);
+            const normalizedKeywordScore = res.score / (res.score + K);
 
             if (existing !== undefined) {
-                logger.debug(`[SearchOrchestrator] Boosting score for: ${res.path} (Vector + Keyword)`);
-                existing.score = this.scoringStrategy.boostHybridResult(existing.score, {
-                    isKeywordMatch: !!res.isKeywordMatch,
-                    isTitleMatch: !!res.isTitleMatch,
-                    score: res.score
-                });
+                // Blend scores. We give vector results slightly more weight by dividing by 1.5.
+                existing.score = (existing.score + normalizedKeywordScore) / 1.5;
                 existing.isKeywordMatch = true;
             } else {
-                mergedMap.set(res.path, res);
+                mergedMap.set(res.path, { ...res, score: normalizedKeywordScore });
             }
         }
 
+        const minScore = this.settings.minSimilarityScore;
+
         const finalResults = Array.from(mergedMap.values())
+            .filter(r => r.score >= minScore)
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
-
-        logger.info(`[SearchOrchestrator] Final ranked results: ${finalResults.length} docs.`);
-
-        const topMatch = finalResults[0];
-        if (topMatch) {
-            logger.info(`[SearchOrchestrator] Top match: ${topMatch.path} (Score: ${topMatch.score.toFixed(2)})`);
-        }
 
         return finalResults;
     }

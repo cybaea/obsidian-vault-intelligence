@@ -7,7 +7,9 @@ import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../ty
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
+import { ModelRegistry } from "./ModelRegistry";
 import { OntologyService } from "./OntologyService";
+import { PersistenceManager } from './PersistenceManager';
 import { VaultManager } from "./VaultManager";
 
 export interface GraphState {
@@ -24,6 +26,12 @@ interface PluginWithOntology extends Plugin {
     ontologyService?: OntologyService;
 }
 
+export interface GraphTraversalOptions {
+    decay?: number;
+    direction?: 'both' | 'inbound' | 'outbound';
+    mode?: 'simple' | 'ontology';
+}
+
 /**
  * Service responsible for managing the semantic graph and vector index.
  * It spawns and communicates with the Indexer Worker to offload heavy computation
@@ -34,6 +42,7 @@ export class GraphService {
     private vaultManager: VaultManager;
     private gemini: GeminiService;
     private embeddingService: IEmbeddingService;
+    private persistenceManager: PersistenceManager;
     private settings: VaultIntelligenceSettings;
 
     private worker: Worker | null = null;
@@ -43,12 +52,38 @@ export class GraphService {
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
-    constructor(plugin: Plugin, vaultManager: VaultManager, gemini: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
+    constructor(
+        plugin: Plugin,
+        vaultManager: VaultManager,
+        gemini: GeminiService,
+        embeddingService: IEmbeddingService,
+        persistenceManager: PersistenceManager,
+        settings: VaultIntelligenceSettings
+    ) {
         this.plugin = plugin;
         this.vaultManager = vaultManager;
         this.gemini = gemini;
         this.embeddingService = embeddingService;
+        this.persistenceManager = persistenceManager;
         this.settings = settings;
+    }
+
+    /**
+     * Checks if a file path is excluded from indexing based on plugin settings or system rules.
+     */
+    private isPathExcluded(path: string): boolean {
+        // Architecture: Respect user-defined excluded folders
+        if (this.settings.excludedFolders && this.settings.excludedFolders.length > 0) {
+            const normalizedPath = path.toLowerCase();
+            for (const folder of this.settings.excludedFolders) {
+                const normalizedFolder = folder.toLowerCase().replace(/\/+$/, "");
+                if (normalizedPath === normalizedFolder || normalizedPath.startsWith(normalizedFolder + '/')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -63,8 +98,17 @@ export class GraphService {
             this.worker = new IndexerWorker();
             this.api = Comlink.wrap<WorkerAPI>(this.worker);
 
-            // 2. Configure worker
+            // 2. Align settings with Model Registry (Architecture Restoration)
+            const model = ModelRegistry.getModelById(this.settings.embeddingModel);
+            if (model && model.dimensions && this.settings.embeddingDimension !== model.dimensions) {
+                logger.error(`[GraphService] Dimension mismatch detected: settings=${this.settings.embeddingDimension}, model=${model.dimensions}. Aligning to model.`);
+                this.settings.embeddingDimension = model.dimensions;
+                // Note: We don't save settings here to avoid side effects during init, 
+                // but we use the correct dimension for the config.
+            }
+
             const config: WorkerConfig = {
+                agentLanguage: this.settings.agentLanguage,
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
                 contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
@@ -87,17 +131,22 @@ export class GraphService {
                 return res.json as unknown;
             });
 
-            const embedder = Comlink.proxy(async (text: string, _title: string) => {
-                return await this.embeddingService.embedQuery(text);
+            const embedder = Comlink.proxy(async (text: string, title: string) => {
+                if (title === 'Query') {
+                    return await this.embeddingService.embedQuery(text);
+                }
+                // Default: Embed as document (for indexing)
+                const vectors = await this.embeddingService.embedDocument(text, title);
+                return vectors[0];
             });
 
             // Initialize worker
             await this.api.initialize(config, fetcher, embedder);
 
             // 3. Ensure gitignore exists for data folder
-            await this.ensureGitignore();
+            await this.persistenceManager.ensureGitignore();
 
-            // 4. Load or Migrate
+            // 4. Load State
             await this.loadState();
 
             // 5. Register event listeners
@@ -116,11 +165,22 @@ export class GraphService {
      */
     private registerEvents() {
         this.vaultManager.onModify((file) => {
+            if (this.isPathExcluded(file.path)) {
+                // If it was already in the index but now excluded, we should drop it
+                void this.enqueueIndexingTask(async () => {
+                    if (!this.api) return;
+                    await this.api.deleteFile(file.path);
+                    this.requestSave();
+                });
+                return;
+            }
+
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 const content = await this.vaultManager.readFile(file);
                 const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-                await this.api.updateFile(file.path, content, mtime, size, basename);
+                const links = this.getResolvedLinks(file);
+                await this.api.updateFile(file.path, content, mtime, size, basename, links);
                 this.requestSave();
             });
         });
@@ -134,6 +194,17 @@ export class GraphService {
         });
 
         this.vaultManager.onRename((oldPath, newPath) => {
+            // Case 1: Renamed TO an excluded path (delete)
+            if (this.isPathExcluded(newPath)) {
+                void this.enqueueIndexingTask(async () => {
+                    if (!this.api) return;
+                    await this.api.deleteFile(oldPath);
+                    this.requestSave();
+                });
+                return;
+            }
+
+            // Case 2: Standard rename (managed by worker updateFile subsequently)
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
                 await this.api.renameFile(oldPath, newPath);
@@ -189,39 +260,20 @@ export class GraphService {
         if (this.saveTimeout !== undefined) {
             // Clear both standard timeout and RequestIdleCallback handle (treated as number in many envs)
             clearTimeout(this.saveTimeout as number);
-            // If it was an idle callback, cancelIdleCallback might be needed but generic clearTimeout often safe enough or we just let it run.
-            // For simplicity in this env, assuming clearTimeout covers strict setTimeout usage or we just race it.
             this.saveTimeout = undefined;
         }
         await this.saveState();
     }
 
     /**
-     * Internal method to fetch state from worker and write binary MessagePack to vault.
+     * Internal method to fetch state from worker and write via PersistenceManager.
      */
     private async saveState() {
         if (!this.api) return;
         try {
             // Returns Uint8Array (MessagePack)
             const stateBuffer = await this.api.saveIndex();
-
-            const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
-
-            // Write binary (ensure we only write the view's bytes, not the whole underlying buffer)
-            const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
-                ? stateBuffer.buffer
-                : stateBuffer.buffer.slice(stateBuffer.byteOffset, stateBuffer.byteOffset + stateBuffer.byteLength);
-
-            await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
-            logger.debug("[GraphService] State persisted (MessagePack).");
-
-            // Cleanup legacy JSON if it exists
-            const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
-            if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
-                await this.plugin.app.vault.adapter.remove(legacyPath);
-                logger.debug("[GraphService] Legacy JSON state removed.");
-            }
-
+            await this.persistenceManager.saveState(stateBuffer);
         } catch (error) {
             logger.error("[GraphService] Save failed:", error);
         }
@@ -234,74 +286,36 @@ export class GraphService {
     private async loadState() {
         if (!this.api) return;
 
-        const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
-        const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
+        const stateData = await this.persistenceManager.loadState();
 
-        // 1. Try loading MessagePack (Preferred)
-        if (await this.plugin.app.vault.adapter.exists(dataPath)) {
+        if (stateData) {
             try {
-                const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
-                logger.debug(`[GraphService] Reading index: ${stateBuffer.byteLength} bytes`);
-                // Transfer buffer to worker
-                const success = await this.api.loadIndex(new Uint8Array(stateBuffer));
-                if (success) {
-                    logger.info("[GraphService] State loaded (MessagePack).");
-                    return;
+                // If it's a Buffer/Uint8Array, treat as msgpack
+                // If string, legacy JSON
+                let success = false;
+                if (typeof stateData === 'string') {
+                    // Legacy JSON needs to be parsed? The worker accepts unknown for loadIndex to handle this flexibility?
+                    // Actually worker.loadIndex signature is `loadIndex(data: string | Uint8Array)`
+                    success = await this.api.loadIndex(stateData);
+                    if (success) logger.info("[GraphService] State loaded (Legacy JSON).");
+                } else {
+                    // MessagePack
+                    success = await this.api.loadIndex(stateData);
+                    if (success) logger.info("[GraphService] State loaded (MessagePack).");
                 }
-                // Fallthrough implies incompatibility check failed in worker
+
+                if (success) return;
+
                 logger.warn("[GraphService] State incompatible. Triggering migration.");
             } catch (error) {
-                logger.error("[GraphService] Load failed (MessagePack):", error);
-            }
-        }
-
-        // 2. Fallback to Legacy JSON (Migration)
-        if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
-            try {
-                const stateJson = await this.plugin.app.vault.adapter.read(legacyPath);
-                // Legacy always implies migration needed for this update, but let's try generic load
-                const success = await this.api.loadIndex(stateJson);
-                if (success) {
-                    logger.info("[GraphService] State loaded (Legacy JSON).");
-                    // We successfully loaded legacy, but we might want to schedule a save to convert to msgpack eventually.
-                    // For now, treat as success.
-                    return;
-                }
-            } catch (error) {
-                logger.error("[GraphService] Load failed (Legacy JSON):", error);
+                logger.error("[GraphService] Load failed:", error);
             }
         }
 
         // If we reached here, either no state exists OR loading failed/was incompatible.
-        // If files exist but failed to load, we should wipe.
-        if (await this.plugin.app.vault.adapter.exists(dataPath) || await this.plugin.app.vault.adapter.exists(legacyPath)) {
+        if (stateData) {
             new Notice("Vault intelligence: upgrading index to new format...");
             this.scanAll(true).catch(err => logger.error("Migration scan failed", err));
-        }
-    }
-
-    /**
-     * Ensures a .gitignore file exists in the data directory to ignore generated files.
-     */
-    private async ensureGitignore() {
-        const ignorePath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/.gitignore`;
-        const exists = await this.plugin.app.vault.adapter.exists(ignorePath);
-
-        if (!exists) {
-            // Ignore everything in data/ except the .gitignore itself
-            const content = "# Ignore everything\n*\n!.gitignore\n";
-            try {
-                // Ensure data folder exists first
-                const dataFolder = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}`;
-                if (!(await this.plugin.app.vault.adapter.exists(dataFolder))) {
-                    await this.plugin.app.vault.createFolder(dataFolder);
-                }
-
-                await this.plugin.app.vault.adapter.write(ignorePath, content);
-                logger.debug("[GraphService] Created .gitignore in data folder.");
-            } catch (error) {
-                logger.warn("[GraphService] Failed to create data/.gitignore:", error);
-            }
         }
     }
 
@@ -351,8 +365,9 @@ export class GraphService {
         if (file instanceof TFile) {
             const content = await this.vaultManager.readFile(file);
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+            const links = this.getResolvedLinks(file);
             if (this.api) {
-                await this.api.updateFile(path, content, mtime, size, basename);
+                await this.api.updateFile(path, content, mtime, size, basename, links);
             }
         }
 
@@ -366,7 +381,7 @@ export class GraphService {
      * @param options - Traversal options (direction, mode).
      * @returns A promise resolving to an array of neighboring files.
      */
-    public async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
+    public async getNeighbors(path: string, options?: GraphTraversalOptions): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         const neighbors = await this.api.getNeighbors(path, options);
         return neighbors;
@@ -447,6 +462,15 @@ export class GraphService {
     }
 
     /**
+     * Builds the priority payload for Dual-Loop Search (Analyst).
+     * Delegates to the worker to handle parallel fetch, graph expansion, and budget packing.
+     */
+    public async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        if (!this.api) return [];
+        return await this.api.buildPriorityPayload(queryVector, query);
+    }
+
+    /**
      * Scans all markdown files in the vault and queues them for indexing.
      * @param forceWipe - If true, clears the existing graph and Orama index before scanning.
      */
@@ -462,6 +486,22 @@ export class GraphService {
         await this.syncAliases();
 
         const files = this.vaultManager.getMarkdownFiles();
+
+        // REFACTOR: Use strict Worker Authority
+        // Instead of asking for state and comparing here, we iterate and push updates.
+        // It relies on the worker to be efficiently checking hashes or mtimes if we passed them,
+        // BUT `updateFile` in worker usually does the work.
+        // To strictly follow "Worker Authority", we should use `enqueueIndexingTask` which handles the queue.
+        // However, `scanAll` has historically done a diff check on main thread to avoid deserializing
+        // a massive `states` object if not needed?
+        // Actually, the previous implementation fetched `states` from worker to do the diff here.
+        // That IS Main Thread logic deciding what to index. The Review finding suggests:
+        // "scanAll should be a directive: 'Worker, sync yourself with this list of files.'"
+
+        // Implementing "Sync" Logic:
+        // We will fetch states once (it is efficient enough for now, just metadata)
+        // AND we will simply enqueue updates for things that changed.
+
         const states = await this.api.getFileStates();
 
         logger.info(`[GraphService] Comparing ${files.length} files against index.`);
@@ -472,20 +512,11 @@ export class GraphService {
         let count = 0;
         let skipCount = 0;
 
-        const stateKeys = Object.keys(states);
-        logger.debug(`[GraphService] Index has ${stateKeys.length} files. First 5 keys: ${stateKeys.slice(0, 5).join(', ')}`);
-
         for (const file of files) {
+            if (this.isPathExcluded(file.path)) continue;
+
             const state = states[file.path];
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-
-            // Diagnostic: Why is it not skipping?
-            if (!forceWipe && (!state || state.mtime !== mtime)) {
-                if (count < 5) {
-                    const reason = !state ? "missing in index" : `mtime mismatch (${state.mtime} vs ${mtime})`;
-                    logger.debug(`[GraphService] Re-indexing ${file.path}: ${reason}`);
-                }
-            }
 
             // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
             if (!forceWipe && state && state.mtime === mtime) {
@@ -499,7 +530,8 @@ export class GraphService {
                 if (!this.api) return;
                 try {
                     const content = await this.vaultManager.readFile(file);
-                    await this.api.updateFile(file.path, content, mtime, size, basename);
+                    const links = this.getResolvedLinks(file);
+                    await this.api.updateFile(file.path, content, mtime, size, basename, links);
                     count++;
 
                     if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
@@ -507,7 +539,7 @@ export class GraphService {
                     }
                 } catch (error) {
                     logger.error(`[GraphService] Failed to index ${file.path}`, error);
-                    if (String(error).includes("API key")) throw error;
+                    // if (String(error).includes("API key")) throw error; // Don't crash loop on API key
                 }
             });
         }
@@ -519,8 +551,8 @@ export class GraphService {
         // Wait for the entire queue to flush before saving/marking done
         await this.processingQueue;
 
-        // Cleanup orphans (nodes in graph not in vault)
-        const paths = files.map(f => f.path);
+        // Cleanup orphans (nodes in graph not in vault OR nodes now excluded)
+        const paths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
         await this.api.pruneOrphans(paths);
 
         await this.saveState();
@@ -535,6 +567,9 @@ export class GraphService {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
+        const needsReindex = this.settings.embeddingDimension !== settings.embeddingDimension ||
+            this.settings.embeddingModel !== settings.embeddingModel;
+
         this.settings = settings;
         if (this.api) {
             await this.api.updateConfig({
@@ -548,7 +583,29 @@ export class GraphService {
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath
             });
+
+            if (needsReindex) {
+                logger.error("[GraphService] Embedding settings changed. Triggering forced re-scan.");
+                void this.scanAll(true);
+            }
         }
+    }
+
+    /**
+     * Resolves all wikilinks in a file to their canonical paths.
+     */
+    private getResolvedLinks(file: TFile): string[] {
+        const cache = this.plugin.app.metadataCache.getFileCache(file);
+        if (!cache || !cache.links) return [];
+
+        const resolved: string[] = [];
+        for (const link of cache.links) {
+            const dest = this.plugin.app.metadataCache.getFirstLinkpathDest(link.link, file.path);
+            if (dest) {
+                resolved.push(dest.path);
+            }
+        }
+        return resolved;
     }
 
     /**

@@ -1,7 +1,7 @@
 import { Part, Content } from "@google/genai";
 import { TFile, TFolder, App, MarkdownView } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
@@ -17,6 +17,7 @@ export interface ChatMessage {
     contextFiles?: string[];
     createdFiles?: string[];
     role: "user" | "model" | "system";
+    spotlightResults?: VaultSearchResult[];
     text: string;
     thought?: string;
 }
@@ -50,7 +51,7 @@ export class AgentService {
         this.settings = settings;
 
         // Initialize delegates
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, settings);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
@@ -63,6 +64,10 @@ export class AgentService {
             this.contextAssembler,
             fileTools
         );
+    }
+
+    public getSearchOrchestrator(): SearchOrchestrator {
+        return this.searchOrchestrator;
     }
 
     /**
@@ -115,10 +120,12 @@ export class AgentService {
         const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(f.path));
 
-        const formattedHistory = history.map(h => ({
-            parts: [{ text: h.text }],
-            role: h.role as "user" | "model"
-        })) as Content[];
+        const formattedHistory = history
+            .filter(h => h.role === "user" || h.role === "model")
+            .map(h => ({
+                parts: [{ text: h.text }],
+                role: h.role as "user" | "model"
+            })) as Content[];
 
         if (contextFiles.length > 0) {
             // Map files to VaultSearchResult format for assembler
@@ -238,7 +245,7 @@ export class AgentService {
 
         // Regex for @[["Filename"]] or @[[Filename|Alias]] or @Filename 
         // Updated regex to be more lenient with characters and handle quoted strings better
-        const mentionRegex = /@(?:"([^"]+)"|([^\s@.,!?;:]+))/g;
+        const mentionRegex = REGEX_CONSTANTS.MENTION;
         const matches = Array.from(inputMessage.matchAll(mentionRegex));
 
         // We will collect all potential files
