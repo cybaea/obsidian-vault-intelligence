@@ -12,7 +12,7 @@ Your primary interface for interacting with your knowledge base.
     - **Loop 1 (Reflex)**: Instant, typo-tolerant search that runs locally on your device (<100ms).
     - **Loop 2 (Analyst)**: A deep-reasoning agent that uses "Asymmetric Embeddings" to understand complex questions and trace "hidden threads" across your vault.
 - **Deep Recall**: The agent follows metadata bridges (tags, active file context, frontmatter topics) to find connections between notes that don't explicitly link to each other.
-- **Multilingual Native**: Fully supports querying and reasoning in any language (via BCP 47 codes).
+- **Multilingual Native**: Fully supports querying and reasoning in **140+ languages**. We combine high-performance local indexing for **30+ major languages** with the deep linguistic understanding of frontier AI models.
 - **Active Context Awareness**: Automatically prioritizes your currently open note and can "see" what you are working on.
 
 ## 2. The Explorer (Discovery & Search)
