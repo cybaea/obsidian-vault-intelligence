@@ -44,7 +44,7 @@
 		"@secretlint/secretlint-rule-preset-recommend": "^11.3.1",
 		"@types/node": "^24.0.0",
 		"@vitest/ui": "^4.0.17",
-		"esbuild": "0.27.2",
+		"esbuild": "0.27.3",
 		"esbuild-plugin-inline-worker": "^0.1.1",
 		"eslint": "^9.39.2",
 		"eslint-plugin-obsidianmd": "^0.1.9",
@@ -76,7 +76,7 @@
 		"zod": "^4.3.5"
 	},
 	"overrides": {
-		"esbuild": "0.27.2",
+		"esbuild": "0.27.3",
 		"lodash-es": "4.17.23"
 	}
 }
