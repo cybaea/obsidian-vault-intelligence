@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [5.1.0] - 2026-02-06
+
+### User features
+
 - **Simplified advanced settings**: Removed obsolete GARS tuning and search expansion sliders that are no longer supported by the version 5 search architecture.
 - **Improved configuration documentation**: Added detailed descriptions for context tuning parameters (primary, supporting, and structural thresholds) in the documentation.
 - **Refined settings UI**: Improved spacing and layout in the Advanced settings tab for better readability.
