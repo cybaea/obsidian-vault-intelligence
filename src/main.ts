@@ -167,18 +167,21 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.vaultManager = new VaultManager(this.app);
 		this.persistenceManager = new PersistenceManager(this);
 		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.persistenceManager, this.settings);
-		await this.graphService.initialize();
+
 
 		// 4. Initialize Gardener Infrastructure (Stage 2)
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
 		this.gardenerStateService = new GardenerStateService(this.app, this);
 		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
-		await this.ontologyService.initialize();
-		await this.gardenerStateService.loadState();
 
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(async () => {
+			// Defer heavy initialization until layout is ready to unblock UI
+			await this.graphService.initialize();
+			await this.ontologyService.initialize();
+			await this.gardenerStateService.loadState();
+
 			await this.graphService.scanAll();
 		});
 
