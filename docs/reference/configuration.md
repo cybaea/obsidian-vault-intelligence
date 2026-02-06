@@ -40,9 +40,10 @@ Configure how connections and similar notes are discovered.
 | Embedding model | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX models. |
 | Minimum similarity score | `0.5` | Relevance threshold (0.0 to 1.0). Matches below this are ignored. |
 | Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
-| GARS Similarity weight | `1.0` | Importance of vector similarity in hybrid scoring. |
-| GARS Centrality weight | `0.2` | Importance of graph centrality (popularity) in hybrid scoring. |
-| GARS Activation weight | `0.4` | Importance of semantic activation (connections) in hybrid scoring. |
+| Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
+| Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
+| Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
+| Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
 | Keyword match weight | `1.2` | Calibration for hybrid search (BM25). <br>• _Low (0.5 - 1.0):_ Keyword matches are boosted significantly. <br>• _High (2.0 - 5.0):_ Keywords are treated as secondary to vector similarity. |
 | Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now automatically triggers a re-sync if you change the model or dimension in settings. |
 

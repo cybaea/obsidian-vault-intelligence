@@ -28,7 +28,7 @@ New features are added in the "Unreleased" section.
 ### Developer features
 
 - **Accurate similarity scoring**: Fixed an issue where keyword matches could produce impossible similarity percentages (like 3333%). Scoring is now properly normalized using a sigmoidal calibration function in `SearchOrchestrator` for a reliable 0-100% scale.
-- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
+- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbour scores were being zeroed out. Neighbors now correctly retain their spread activation score.
 - **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
 - **Architectural Refactoring**: Decomposed `AgentService` by delegating tool logic to a dedicated `ToolRegistry` and context preparation to `AgentService.prepareContext`.
 - **Humble View Pattern**: Refactored `ResearchChatView` to separate UI logic from business logic, improving testability and code organization.
