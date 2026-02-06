@@ -13,7 +13,6 @@ New features are added in the "Unreleased" section.
 
 - **Fast Startup**: Optimized the plugin initialization process to load the application faster, even with large vaults.
 
-
 ### Developer features
 
 ## [5.1.0] - 2026-02-06
