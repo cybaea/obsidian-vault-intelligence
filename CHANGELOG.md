@@ -11,11 +11,15 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+- **Fast Startup**: Optimized the plugin initialization process to load the application faster, even with large vaults.
+
+
 ### Developer features
 
 ## [5.1.0] - 2026-02-06
 
 ### User features
+
 
 - **Simplified advanced settings**: Removed obsolete GARS tuning and search expansion sliders that are no longer supported by the version 5 search architecture.
 - **Improved configuration documentation**: Added detailed descriptions for context tuning parameters (primary, supporting, and structural thresholds) in the documentation.
