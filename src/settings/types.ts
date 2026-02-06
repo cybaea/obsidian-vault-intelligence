@@ -1,6 +1,6 @@
 import { App, Platform } from "obsidian";
 
-import { GRAPH_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS } from "../constants";
 import { IEmbeddingService } from "../services/IEmbeddingService";
 import { LogLevel } from "../utils/logger";
 
@@ -35,9 +35,6 @@ export interface VaultIntelligenceSettings {
     gardenerRecheckHours: number;
     gardenerSkipRetentionDays: number;
     gardenerSystemInstruction: string | null;
-    garsActivationWeight: number;
-    garsCentralityWeight: number;
-    garsSimilarityWeight: number;
     geminiRetries: number;
     googleApiKey: string;
     groundingModel: string;
@@ -54,8 +51,6 @@ export interface VaultIntelligenceSettings {
     queueDelayMs: number;
     reRankingModel: string;
     searchCentralityLimit: number;
-    searchExpansionSeedsLimit: number;
-    searchExpansionThreshold: number;
     similarNotesLimit: number;
     systemInstruction: string | null;
     vaultSearchResultsLimit: number;
@@ -149,9 +144,6 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerRecheckHours: 24,
     gardenerSkipRetentionDays: 7,
     gardenerSystemInstruction: null, // Use default by reference
-    garsActivationWeight: GRAPH_CONSTANTS.WEIGHTS.ACTIVATION,
-    garsCentralityWeight: GRAPH_CONSTANTS.WEIGHTS.CENTRALITY,
-    garsSimilarityWeight: GRAPH_CONSTANTS.WEIGHTS.SIMILARITY,
     geminiRetries: 10,
     googleApiKey: '',
     groundingModel: 'gemini-2.5-flash-lite',
@@ -167,8 +159,6 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     queueDelayMs: 100,
     reRankingModel: 'gemini-flash-latest',
     searchCentralityLimit: 50,
-    searchExpansionSeedsLimit: SEARCH_CONSTANTS.DEFAULT_EXPANSION_SEEDS_LIMIT,
-    searchExpansionThreshold: SEARCH_CONSTANTS.DEFAULT_EXPANSION_THRESHOLD,
     similarNotesLimit: 20,
     systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25

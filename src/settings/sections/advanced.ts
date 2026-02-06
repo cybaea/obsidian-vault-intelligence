@@ -118,104 +118,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 }
             }));
 
-    // --- 3. Search Relevance (GARS Tuning) ---
-    new Setting(containerEl)
-        .setName('Search relevance tuning')
-        .setHeading();
-
-    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
-        div.createSpan({ text: 'Adjust weights for the proprietary graph-aware scoring engine. ' });
-        div.createEl('a', {
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
-            text: 'View documentation'
-        });
-    });
-
-    containerEl.createEl('p', {
-        cls: 'setting-item-description',
-        text: 'Adjust the weights used to calculate the graph-aware relevance score. The total does not have to be 1.0, as scores are compared relatively.'
-    });
-
-    const garsReset = () => {
-        plugin.settings.garsSimilarityWeight = DEFAULT_SETTINGS.garsSimilarityWeight;
-        plugin.settings.garsCentralityWeight = DEFAULT_SETTINGS.garsCentralityWeight;
-        plugin.settings.garsActivationWeight = DEFAULT_SETTINGS.garsActivationWeight;
-    };
-
-    new Setting(containerEl)
-        .setName('Similarity weight')
-        .setDesc('How much weight to give to vector/keyword match similarity.')
-        .addSlider(slider => slider
-            .setLimits(0, 1, 0.05)
-            .setValue(plugin.settings.garsSimilarityWeight)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-                plugin.settings.garsSimilarityWeight = value;
-                await plugin.saveSettings();
-            }))
-        .addExtraButton(btn => btn
-            .setIcon('reset')
-            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsSimilarityWeight.toFixed(2)})`)
-            .onClick(async () => {
-                plugin.settings.garsSimilarityWeight = DEFAULT_SETTINGS.garsSimilarityWeight;
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
-
-    new Setting(containerEl)
-        .setName('Centrality weight')
-        .setDesc('How much weight to give to the structural importance of a note.')
-        .addSlider(slider => slider
-            .setLimits(0, 1, 0.05)
-            .setValue(plugin.settings.garsCentralityWeight)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-                plugin.settings.garsCentralityWeight = value;
-                await plugin.saveSettings();
-            }))
-        .addExtraButton(btn => btn
-            .setIcon('reset')
-            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsCentralityWeight.toFixed(2)})`)
-            .onClick(async () => {
-                plugin.settings.garsCentralityWeight = DEFAULT_SETTINGS.garsCentralityWeight;
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
-
-    new Setting(containerEl)
-        .setName('Activation weight')
-        .setDesc('How much weight to give to spreading activation (connectedness to other hits).')
-        .addSlider(slider => slider
-            .setLimits(0, 1, 0.05)
-            .setValue(plugin.settings.garsActivationWeight)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-                plugin.settings.garsActivationWeight = value;
-                await plugin.saveSettings();
-            }))
-        .addExtraButton(btn => btn
-            .setIcon('reset')
-            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.garsActivationWeight.toFixed(2)})`)
-            .onClick(async () => {
-                plugin.settings.garsActivationWeight = DEFAULT_SETTINGS.garsActivationWeight;
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
-
-    new Setting(containerEl)
-        .setName('Reset weights')
-        .setDesc('Restore all weights to their default balanced values.')
-        .addButton(btn => btn
-            .setButtonText('Restore defaults')
-            .onClick(async () => {
-                garsReset();
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
 
     // --- 4. Search and Context Tuning ---
     new Setting(containerEl)
@@ -230,61 +132,14 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         });
     });
 
-    containerEl.createEl('p', {
-        cls: 'setting-item-description',
-        text: 'Adjust search result expansion and context assembly.'
-    });
 
     const tuningReset = () => {
-        plugin.settings.searchExpansionSeedsLimit = DEFAULT_SETTINGS.searchExpansionSeedsLimit;
-        plugin.settings.searchExpansionThreshold = DEFAULT_SETTINGS.searchExpansionThreshold;
         plugin.settings.contextPrimaryThreshold = DEFAULT_SETTINGS.contextPrimaryThreshold;
         plugin.settings.contextSupportingThreshold = DEFAULT_SETTINGS.contextSupportingThreshold;
         plugin.settings.contextStructuralThreshold = DEFAULT_SETTINGS.contextStructuralThreshold;
         plugin.settings.contextMaxFiles = DEFAULT_SETTINGS.contextMaxFiles;
     };
 
-    new Setting(containerEl)
-        .setName('Max expansion seeds')
-        .setDesc('Capped number of results that trigger graph neighbor expansion. Prevents performance lag.')
-        .addSlider(slider => slider
-            .setLimits(1, 20, 1)
-            .setValue(plugin.settings.searchExpansionSeedsLimit)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-                plugin.settings.searchExpansionSeedsLimit = value;
-                await plugin.saveSettings();
-            }))
-        .addExtraButton(btn => btn
-            .setIcon('reset')
-            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.searchExpansionSeedsLimit})`)
-            .onClick(async () => {
-                plugin.settings.searchExpansionSeedsLimit = DEFAULT_SETTINGS.searchExpansionSeedsLimit;
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
-
-    new Setting(containerEl)
-        .setName('Expansion gap threshold')
-        .setDesc('Relative score gap (multiplier of top match) within which a result triggers neighbor expansion.')
-        .addSlider(slider => slider
-            .setLimits(0.1, 1.0, 0.05)
-            .setValue(plugin.settings.searchExpansionThreshold)
-            .setDynamicTooltip()
-            .onChange(async (value) => {
-                plugin.settings.searchExpansionThreshold = value;
-                await plugin.saveSettings();
-            }))
-        .addExtraButton(btn => btn
-            .setIcon('reset')
-            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.searchExpansionThreshold.toFixed(2)})`)
-            .onClick(async () => {
-                plugin.settings.searchExpansionThreshold = DEFAULT_SETTINGS.searchExpansionThreshold;
-                await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
-            }));
 
     new Setting(containerEl)
         .setName('Primary context threshold')

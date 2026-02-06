@@ -678,6 +678,10 @@ a.similar-notes-link[data-score-ten="10"]:visited {
     display: none;
 }
 
+.vi-settings-tab .setting-item-description {
+    margin-bottom: var(--size-4-2);
+}
+
 .vi-settings-tab.is-active {
     display: block;
 }

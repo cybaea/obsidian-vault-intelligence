@@ -11,7 +11,13 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+- **Simplified advanced settings**: Removed obsolete GARS tuning and search expansion sliders that are no longer supported by the version 5 search architecture.
+- **Improved configuration documentation**: Added detailed descriptions for context tuning parameters (primary, supporting, and structural thresholds) in the documentation.
+- **Refined settings UI**: Improved spacing and layout in the Advanced settings tab for better readability.
+
 ### Developer features
+
+- **Scoring engine cleanup**: Removed unused GARS weight parameters and search expansion seeds/thresholds from settings and types to resolve scoring ambiguity.
 
 ## [5.0.0] - 2026-02-05
 
@@ -28,7 +34,7 @@ New features are added in the "Unreleased" section.
 ### Developer features
 
 - **Accurate similarity scoring**: Fixed an issue where keyword matches could produce impossible similarity percentages (like 3333%). Scoring is now properly normalized using a sigmoidal calibration function in `SearchOrchestrator` for a reliable 0-100% scale.
-- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
+- **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbour scores were being zeroed out. Neighbors now correctly retain their spread activation score.
 - **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
 - **Architectural Refactoring**: Decomposed `AgentService` by delegating tool logic to a dedicated `ToolRegistry` and context preparation to `AgentService.prepareContext`.
 - **Humble View Pattern**: Refactored `ResearchChatView` to separate UI logic from business logic, improving testability and code organization.
