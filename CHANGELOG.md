@@ -16,6 +16,8 @@ New features are added in the "Unreleased" section.
 -   **Persistence Stability**: Fixed a critical "Folder already exists" error during plugin startup by implementing robust existence checks and graceful race condition handling for dot-prefixed folders (e.g., `.vault-intelligence`).
 -   **Agent Knowledge Distillation**: Created authoritative `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to codify project standards, validated against 2026 Obsidian best practices.
 -   **Project-Level System Instructions**: Configured `.gemini/GEMINI.md` to enforce architectural standards and operational guardrails for all future Gemini 3 agent sessions.
+-   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
+-   **Linting Compliance**: Cleared over 1000 project-wide markdown linting errors and established a zero-tolerance baseline for developer documentation quality.
 
 ## [5.1.1] - 2026-02-06
 
