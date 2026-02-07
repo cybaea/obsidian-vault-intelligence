@@ -254,7 +254,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     }
 
     // --- 3. Similarity Thresholds ---
-    new Setting(containerEl).setName('Search settings').setHeading();
+    new Setting(containerEl).setName('Search').setHeading();
 
     new Setting(containerEl)
         .setName('Minimum similarity score')

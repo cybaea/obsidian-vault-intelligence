@@ -6,8 +6,8 @@ Vault Intelligence uses Google Gemini 3 for reasoning. This architectural choice
 
 We use a hybrid computing model to ensure your vault remains private while giving you access to state-of-the-art intelligence.
 
-- Local Indexing: Your notes are indexed entirely on your machine. The Vector Search and graph analysis happen locally in Obsidian.
-- Cloud Reasoning: Once the relevant snippets of your notes are identified locally, they are sent to the Gemini API for synthesis and reasoning.
+-   Local Indexing: Your notes are indexed entirely on your machine. The Vector Search and graph analysis happen locally in Obsidian.
+-   Cloud Reasoning: Once the relevant snippets of your notes are identified locally, they are sent to the Gemini API for synthesis and reasoning.
 
 ## Rationale for an API Key
 
@@ -23,9 +23,9 @@ _3. Privacy through isolation_
 
 Unlike web-based AI tools, Vault Intelligence does not "upload your vault" to the cloud.
 
-- Only the specific contexts identified by your local search are sent to the API.
-- Data sent to the API is strictly used for your response; it is not used to train Google's models.
-- You control your key and your usage directly.
+-   Only the specific contexts identified by your local search are sent to the API.
+-   Data sent to the API is strictly used for your response; it is not used to train Google's models.
+-   You control your key and your usage directly.
 
 ## Comparison: Local vs Cloud
 

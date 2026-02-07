@@ -15,8 +15,8 @@ The `devs/ARCHITECTURE.md` file contains complex mermaid diagrams (flowcharts, s
 
 **Implementation**:
 
-- Install `vitepress-plugin-mermaid`.
-- Configure in `config.mts`.
+-   Install `vitepress-plugin-mermaid`.
+-   Configure in `config.mts`.
 
 ### 2. Local search
 
@@ -27,7 +27,7 @@ Search is a fundamental expectation for documentation users. VitePress includes 
 
 **Implementation**:
 
-- Add `search: { provider: 'local' }` to `themeConfig`.
+-   Add `search: { provider: 'local' }` to `themeConfig`.
 
 ### 3. GitHub integration (Edit links & timestamps)
 
@@ -36,14 +36,14 @@ Search is a fundamental expectation for documentation users. VitePress includes 
 **Reasoning**:
 For an open-source project, encouraging community contributions is vital.
 
-- **Edit links**: Reduce friction for users to fix typos or improve docs.
-- **Last updated**: Builds trust by showing that documentation is current.
+-   **Edit links**: Reduce friction for users to fix typos or improve docs.
+-   **Last updated**: Builds trust by showing that documentation is current.
 
 **Implementation**:
 
-- Add `editLink` configuration.
-- Enable `lastUpdated`.
-- **Note**: Requires updating the GitHub Action workflow to `fetch-depth: 0` to ensure accurate timestamps.
+-   Add `editLink` configuration.
+-   Enable `lastUpdated`.
+-   **Note**: Requires updating the GitHub Action workflow to `fetch-depth: 0` to ensure accurate timestamps.
 
 ### 4. Sitemap generation
 
@@ -54,7 +54,7 @@ A seamless, zero-config addition that improves SEO and discoverability for the d
 
 **Implementation**:
 
-- Add `sitemap` configuration to `config.mts`.
+-   Add `sitemap` configuration to `config.mts`.
 
 ### 5. Automated social images (Open Graph)
 
@@ -65,8 +65,8 @@ Dynamic Open Graph images make shared links look professional on platforms like 
 
 **Implementation**:
 
-- Install and configure the plugin.
-- Remove hardcoded static meta tags where redundant.
+-   Install and configure the plugin.
+-   Remove hardcoded static meta tags where redundant.
 
 ---
 
@@ -79,8 +79,8 @@ Dynamic Open Graph images make shared links look professional on platforms like 
 **Reasoning**:
 The project documentation is authored directly in standard Markdown/VitePress Markdown, not maintained in an Obsidian vault.
 
-- **Callouts**: VitePress native `::: info` syntax is functionally equivalent to Obsidian's `> [!INFO]`. Supporting Obsidian syntax adds parsing overhead and dependency risk without improving the authoring workflow.
-- **Wikilinks**: We rely on standard file paths and links. Adding a wikilink parser introduces complexity (ambiguity resolution) that is unnecessary for a standard static site generator workflow.
+-   **Callouts**: VitePress native `::: info` syntax is functionally equivalent to Obsidian's `> [!INFO]`. Supporting Obsidian syntax adds parsing overhead and dependency risk without improving the authoring workflow.
+-   **Wikilinks**: We rely on standard file paths and links. Adding a wikilink parser introduces complexity (ambiguity resolution) that is unnecessary for a standard static site generator workflow.
 
 ### 7. Auto-generated sidebar
 
@@ -89,6 +89,6 @@ The project documentation is authored directly in standard Markdown/VitePress Ma
 **Reasoning**:
 The current `config.mts` already contains a custom `getSidebarItems` function that dynamically generates the sidebar.
 
-- It works correctly for our current scale (~10-20 files).
-- It handles specific overrides (e.g. `ARCHITECTURE` -> "Architecture").
-- Switching to `vitepress-sidebar` would introduce a new dependency and require configuration migration for marginal benefit. We should stick with the current custom implementation until it becomes unmanageable.
+-   It works correctly for our current scale (~10-20 files).
+-   It handles specific overrides (e.g. `ARCHITECTURE` -> "Architecture").
+-   Switching to `vitepress-sidebar` would introduce a new dependency and require configuration migration for marginal benefit. We should stick with the current custom implementation until it becomes unmanageable.

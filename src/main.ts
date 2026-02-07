@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Menu, Notice, requestUrl } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Menu, Notice, requestUrl, TFile } from 'obsidian';
 
 import { VIEW_TYPES, SANITIZATION_CONSTANTS, UI_STRINGS } from "./constants";
 import { ReleaseNotesModal } from "./modals/ReleaseNotesModal";
@@ -480,8 +480,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	private async getSponsorUrl(): Promise<string | undefined> {
 		try {
 			const fundingFile = ".github/FUNDING.yml";
-			if (await this.app.vault.adapter.exists(fundingFile)) {
-				const content = await this.app.vault.adapter.read(fundingFile);
+			const file = this.app.vault.getAbstractFileByPath(fundingFile);
+			if (file instanceof TFile) {
+				const content = await this.app.vault.read(file);
 				const githubLine = content.split("\n").find(line => line.trim().startsWith("github:"));
 				if (githubLine) {
 					const parts = githubLine.split(":");

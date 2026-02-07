@@ -82,18 +82,18 @@ Technical tuning for power users.
 
 ### Google Gemini (Cloud)
 
-- **Pros:** Highest quality (`gemini-embedding-001`), zero local CPU/RAM overhead, handles large documents.
-- **Cons:** Requires API key, internet dependent, remote processing.
+-   **Pros:** Highest quality (`gemini-embedding-001`), zero local CPU/RAM overhead, handles large documents.
+-   **Cons:** Requires API key, internet dependent, remote processing.
 
 ### Transformers.js (Local)
 
-- **Pros:** 100% private, offline, no API costs.
-- **Cons:** Uses local resources, slightly lower quality on smaller presets.
+-   **Pros:** 100% private, offline, no API costs.
+-   **Cons:** Uses local resources, slightly lower quality on smaller presets.
 
 ## Privacy and Git Sync
 
 Vault Intelligence stores its search index and relationship graph in a specialized binary format inside the plugin's `data/` directory.
 
-- **Automated .gitignore**: The plugin automatically creates and maintains a `.gitignore` file inside its internal data folder.
-- **Why?**: These index files can be very large (up to 100MB+ for massive vaults) and change frequently. Excluding them from Git prevents repository bloat and sync conflicts while using plugins like **Obsidian Git**.
-- **Data safety**: Since the index is a derived cache, it can be regenerated automatically from your notes at any time.
+-   **Automated .gitignore**: The plugin automatically creates and maintains a `.gitignore` file inside its internal data folder.
+-   **Why?**: These index files can be very large (up to 100MB+ for massive vaults) and change frequently. Excluding them from Git prevents repository bloat and sync conflicts while using plugins like **Obsidian Git**.
+-   **Data safety**: Since the index is a derived cache, it can be regenerated automatically from your notes at any time.

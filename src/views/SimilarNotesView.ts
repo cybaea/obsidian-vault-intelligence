@@ -116,13 +116,12 @@ export class SimilarNotesView extends ItemView {
                 item.addClass("similar-notes-item");
 
                 // Visual Indicator for Link Reason
-                const isLinked = doc.reason && doc.reason.includes("Topic");
-                const scoreColor = isLinked ? "var(--text-accent)" : "var(--text-muted)";
+                const score = Math.round(doc.score * 100);
 
                 item.createSpan({
-                    attr: { style: `color: ${scoreColor}` },
+                    attr: { 'data-score-ten': Math.round(doc.score * 10).toString() },
                     cls: "similar-notes-score",
-                    text: `${Math.round(doc.score * 100)}%`
+                    text: `${score}%`
                 });
 
                 const link = item.createEl("a", {

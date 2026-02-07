@@ -192,14 +192,14 @@ export const WORKER_INDEXER_CONSTANTS = {
 };
 
 export const GRAPH_CONSTANTS = {
-    /** Default directory for index storage */
+    /** Default directory for index storage (deprecated) */
     DATA_DIR: "data",
     /** Default indexing delay if not configured (2s) */
     DEFAULT_INDEXING_DELAY_MS: 2000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
     IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",
-    /** Max hops to traverse (currently limited to 1 for performance) */
+    /** Max expansion depth to traverse (currently limited to 1 for performance) */
     MAX_EXPANSION_DEPTH: 1,
     /** Max neighbors to fetch per node to avoid state explosion */
     MAX_NEIGHBORS_PER_NODE: 5,
@@ -208,6 +208,8 @@ export const GRAPH_CONSTANTS = {
     SCAN_LOG_BATCH_SIZE: 50,
     /** Default filename for graph state */
     STATE_FILE: "graph-state.msgpack",
+    /** Hidden directory in vault for plugin-specific persistent data */
+    VAULT_DATA_DIR: ".vault-intelligence",
     /** Scoring Weights (alpha, beta, gamma) */
     WEIGHTS: {
         /** Spreading Activation (connectedness) weight */

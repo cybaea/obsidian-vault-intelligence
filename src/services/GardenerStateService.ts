@@ -1,5 +1,6 @@
-import { App, Plugin, TFile } from "obsidian";
+import { App, Plugin, TFile, normalizePath } from "obsidian";
 
+import { GRAPH_CONSTANTS } from "../constants";
 import { logger } from "../utils/logger";
 
 export interface FileState {
@@ -20,13 +21,15 @@ export interface GardenerState {
 export class GardenerStateService {
     private app: App;
     private plugin: Plugin;
-    private statePath: string;
     private state: GardenerState = { files: {} };
 
     constructor(app: App, plugin: Plugin) {
         this.app = app;
         this.plugin = plugin;
-        this.statePath = `${this.plugin.manifest.dir}/data/gardener-state.json`;
+    }
+
+    private getVaultPath(): string {
+        return normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/gardener-state.json`);
     }
 
     /**
@@ -34,15 +37,40 @@ export class GardenerStateService {
      */
     public async loadState(): Promise<void> {
         try {
-            const exists = await this.app.vault.adapter.exists(this.statePath);
+            const vaultPath = this.getVaultPath();
+            const exists = await this.app.vault.adapter.exists(vaultPath);
+
             if (exists) {
-                const content = await this.app.vault.adapter.read(this.statePath);
-                this.state = JSON.parse(content) as GardenerState;
-                logger.info("GardenerState: loaded existing state.");
-            } else {
-                logger.info("GardenerState: no state file found, starting fresh.");
-                this.state = { files: {} };
+                const file = this.app.vault.getAbstractFileByPath(vaultPath);
+                if (file instanceof TFile) {
+                    const content = await this.app.vault.read(file);
+                    this.state = JSON.parse(content) as GardenerState;
+                } else {
+                    // Fallback for dot-files that Vault API cannot resolve
+                    const content = await this.app.vault.adapter.read(vaultPath);
+                    this.state = JSON.parse(content) as GardenerState;
+                }
+                logger.info("GardenerState: loaded existing state from vault.");
+                return;
             }
+
+            // Migration from plugin folder
+            const pluginStatePath = normalizePath(`${this.plugin.manifest.dir}/data/gardener-state.json`);
+            if (await this.app.vault.adapter.exists(pluginStatePath)) {
+                try {
+                    const content = await this.app.vault.adapter.read(pluginStatePath);
+                    this.state = JSON.parse(content) as GardenerState;
+                    logger.info("GardenerState: migrating state from plugin folder to vault.");
+                    await this.saveState();
+                    await this.app.vault.adapter.remove(pluginStatePath);
+                    return;
+                } catch (error) {
+                    logger.error("GardenerState: migration failed:", error);
+                }
+            }
+
+            logger.info("GardenerState: no state found, starting fresh.");
+            this.state = { files: {} };
         } catch (error) {
             logger.error("GardenerState: failed to load state:", error);
             this.state = { files: {} };
@@ -54,13 +82,38 @@ export class GardenerStateService {
      */
     private async saveState(): Promise<void> {
         try {
-            // Ensure data folder exists
-            const dataFolder = "data";
+            const vaultPath = this.getVaultPath();
+            const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
+
             if (!(await this.app.vault.adapter.exists(dataFolder))) {
-                await this.app.vault.createFolder(dataFolder);
+                try {
+                    await this.app.vault.createFolder(dataFolder);
+                } catch (error) {
+                    if (!(error instanceof Error && error.message.includes("already exists"))) {
+                        throw error;
+                    }
+                }
             }
 
-            await this.app.vault.adapter.write(this.statePath, JSON.stringify(this.state, null, 2));
+            const content = JSON.stringify(this.state, null, 2);
+            if (await this.app.vault.adapter.exists(vaultPath)) {
+                const file = this.app.vault.getAbstractFileByPath(vaultPath);
+                if (file instanceof TFile) {
+                    await this.app.vault.modify(file, content);
+                } else {
+                    await this.app.vault.adapter.write(vaultPath, content);
+                }
+            } else {
+                try {
+                    await this.app.vault.create(vaultPath, content);
+                } catch (error) {
+                    if (error instanceof Error && error.message.includes("already exists")) {
+                        await this.app.vault.adapter.write(vaultPath, content);
+                    } else {
+                        throw error;
+                    }
+                }
+            }
         } catch (error) {
             logger.error("GardenerState: failed to save state:", error);
         }
