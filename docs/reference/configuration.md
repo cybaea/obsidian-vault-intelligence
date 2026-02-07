@@ -68,8 +68,8 @@ Technical tuning for power users.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing the current note. |
-| Bulk scan delay | `300ms` | Delay between files during full vault scans. |
+| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing background or synced notes. **Note:** The currently active note has a fixed 30nd delay to avoid interruptions while typing. |
+| Indexing throttle | `100ms` | Delay between files during indexing task processing to respect API rate limits. |
 | Local worker threads | `1-2` | CPU threads for local embeddings. Higher is faster but heavier. |
 | Local SIMD acceleration | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |
 | Gemini API retries | `10` | Number of retries for spotty connections. |
