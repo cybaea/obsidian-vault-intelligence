@@ -370,11 +370,26 @@ export class GraphService extends Events {
         // This is important during initial scans or if the file was just created
         const file = this.plugin.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
-            const content = await this.vaultManager.readFile(file);
             const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-            const links = this.getResolvedLinks(file);
+
+            // OPTIMIZATION: Check if update is actually needed
+            // This prevents redundant embedding generation on every view refresh
+            let needsUpdate = true;
             if (this.api) {
-                await this.api.updateFile(path, content, mtime, size, basename, links);
+                const state = await this.api.getFileState(path);
+                if (state && state.mtime === mtime && state.size === size) {
+                    needsUpdate = false;
+                }
+            }
+
+            if (needsUpdate) {
+                const content = await this.vaultManager.readFile(file);
+                const links = this.getResolvedLinks(file);
+                if (this.api) {
+                    await this.api.updateFile(path, content, mtime, size, basename, links);
+                }
+            } else {
+                logger.debug(`[GraphService] File ${path} is up to date, skipping update in getSimilar.`);
             }
         }
 
