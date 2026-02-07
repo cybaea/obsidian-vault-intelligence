@@ -11,25 +11,24 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Persistence Stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder. This prevents data corruption during system crashes or background synchronisation conflicts.
--   **UI Refinements**: Standardised visual highlighting for similarity scores and aligned action buttons with native Obsidian design tokens for a more integrated feel.
--   **Cleanup Guide**: Added a comprehensive [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide to help users manage their local data footprint.
--   **Redundant Embedding Prevention**: The plugin now verifies if a file has actually changed (using `mtime` and `size`) before requesting a new embedding when viewing similar notes, significantly reducing API usage and processing overhead.
--   **Indexing Debounce**: Implemented a per-file indexing debounce. Typing in an active note now has a 30-second delay before re-indexing, while background files use a shorter 5-second delay.
--   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
--   **Similar Notes Fix**: Resolved a race condition in the "Similar Notes" view that caused duplicate file entries when switching notes rapidly.
+-   **Persistence stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder, preventing data corruption during crashes or background synchronization conflicts.
+-   **UI refinements**: Standardized visual highlighting for similarity scores and aligned action buttons with native Obsidian design tokens.
+-   **Cleanup guide**: Added an [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide for managing the plugin's data footprint.
+-   **Redundant embedding prevention**: Reduced API usage by verifying file changes (via `mtime` and `size`) before requesting new embeddings.
+-   **Indexing debounce**: Added per-file indexing delays (30s for active notes, 5s for background files) to optimize resource usage.
+-   **Purge and reset**: Introduced a "Danger Zone" in Advanced settings with a button to fully reset or purge plugin data.
+-   **Similar notes fix**: Resolved a race condition causing duplicate entries in the "Similar notes" view.
 
 ### Developer features
 
--   **Persistence Hardening**: Fixed a critical "Folder already exists" error during plugin startup by implementing robust existence checks and graceful race condition handling for dot-prefixed folders (e.g., `.vault-intelligence`).
--   **Version Baseline**: Bumped the minimum required Obsidian version to `v1.5.0` to support modern Electron features and native API enhancements.
--   **Agent Knowledge Distillation**: Created authoritative `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to codify project standards, validated against 2026 Obsidian best practices.
--   **Project-Level System Instructions**: Configured `.gemini/GEMINI.md` to enforce architectural standards and operational guardrails for all future Gemini 3 agent sessions.
--   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
--   **Worker API Enhancement**: Added a high-performance `getFileState` method to the background worker for efficient single-note metadata retrieval without requiring a full vault scan projection.
--   **Robust Scan Logic**: Enhanced the vault scanner in `GraphService` to verify both modification time and file size when determining re-indexing necessity.
--   **Constants Consolidation**: Rationalised all indexing delay constants into `GRAPH_CONSTANTS` in `src/constants.ts`, eliminating redundant duplicates and magic numbers.
--   **Settings Consistency**: Refactored `DEFAULT_SETTINGS` to use centralized constants for indexing delays, ensuring architectural alignment across the plugin lifecycle.
+-   **Persistence hardening**: Fixed "Folder already exists" errors during startup by improving existence checks for the `.vault-intelligence` directory.
+-   **Version baseline**: Set minimum required Obsidian version to `v1.5.0`.
+-   **Standards codification**: Created `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to formalize project architecture.
+-   **Agent guardrails**: Configured `.gemini/GEMINI.md` to enforce architectural alignment across agent sessions.
+-   **Documentation improvements**: Updated technical documentation to fix diagrams and ensure consistency with 2026 standards.
+-   **Worker API enhancement**: Added a `getFileState` method to the background worker for efficient metadata retrieval.
+-   **Robust scan logic**: Integrated file size and modification time checks into the `GraphService` scanner.
+-   **Constants consolidation**: Centralized indexing delay constants in `GRAPH_CONSTANTS` and refactored settings to use them.
 
 ## [5.1.1] - 2026-02-06
 
@@ -95,7 +94,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Active tab context prioritisation**: The Researcher assistant now correctly identifies and prioritises the document you are currently focused on. It also excludes "hidden" background tabs from its context, ensuring it only sees what you see.
+-   **Active tab context prioritisation**: The Researcher assistant now correctly identifies and prioritizes the document you are currently focused on. It also excludes "hidden" background tabs from its context, ensuring it only sees what you see.
 
 ### Developer features
 
@@ -130,17 +129,17 @@ New features are added in the "Unreleased" section.
 -   **Strict content sanitization**: Added a robust sanitization pipeline that aggressively strips YAML frontmatter from agent-generated content to prevent metadata corruption.
 -   **Link-aware renaming**: The rename_note tool utilizes app.fileManager.renameFile, ensuring Obsidian automatically updates all wikilinks pointing to the moved file.
 -   **Promise-based modal pattern**: Refactored ToolConfirmationModal to use a static async open() pattern, allowing the Agent's execution loop to pause and await user interaction naturally without complex event listeners.
--   **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronises the sponsor link without requiring manual code updates.
+-   **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronizes the sponsor link without requiring manual code updates.
 -   **Per-request agent overrides**: Refactored the AgentService and GeminiService to support optional overrides for model selection and tool enablement inside the Research Chat.
 -   **Interactive model ID tooltips**: Restored tooltips in the Research Chat model selection dropdown to match the behavior in the main settings.
 -   **Version upgrade tracking**: Added a previousVersion field to the plugin settings to reliably detect and trigger update-specific UI workflows.
 -   **Responsive walkthrough UI**: Developed a dedicated `ReleaseNotesModal` using Obsidian's `MarkdownRenderer` and future-proofed it with responsive sizing units and native design tokens.
--   **Centralised documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.
--   **Centralised UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
--   **Enhanced API documentation**: Fully synchronised the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.
+-   **Centralized documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.
+-   **Centralized UI strings**: Refactored the core plugin to use a centralized `UI_STRINGS` constant for all human-readable labels, icons, and tooltips, improving maintainability and consistency.
+-   **Enhanced API documentation**: Fully synchronized the internal `WorkerAPI` developer documentation with the current implementation and corrected architectural diagrams.
 -   **Improved JSDoc coverage**: Added detailed inline documentation for core lifecycle methods and service orchestrators to improve developer experience and code readability.
 -   **Expanded linting suite**: Integrated `stylelint`, `secretlint`, and `markdownlint-cli2` into the CI workflow to ensure high standards for CSS, security, and documentation.
--   **Code organisation enforcement**: Added `eslint-plugin-perfectionist` to maintain consistent import sorting and object key ordering.
+-   **Code organization enforcement**: Added `eslint-plugin-perfectionist` to maintain consistent import sorting and object key ordering.
 -   **Robust utility refactoring**: Improved the `isSafeUrl` utility with stricter domain validation to prevent potential security regressions in external requests.
 
 ## [4.2.0] - 2026-01-27
@@ -183,7 +182,7 @@ New features are added in the "Unreleased" section.
 -   **Batch metadata optimization**: Context assembly now uses a single high-efficiency worker call to fetch headers and titles for all results, reducing latency by 95% in large vaults.
 -   **Context structural cap**: Implemented a hard safety cap for structural (header-only) documents to ensure the agent is never overwhelmed by peripheral metadata.
 -   **Zero-latency I/O**: Migrated all context file reading to `app.vault.cachedRead` for near-instant assembly from memory.
--   **Magic number elimination**: Centralised all internal search and context constants into `src/constants.ts` and exposed them via settings.
+-   **Magic number elimination**: Centralized all internal search and context constants into `src/constants.ts` and exposed them via settings.
 -   **Domination prevention**: Reduced the single-document soft limit to 10% of total budget to ensure a more diverse context window.
 
 ## [4.0.1] - 2026-01-26
@@ -211,11 +210,11 @@ New features are added in the "Unreleased" section.
 -   **Model tooltips**: Added hover tooltips to all model dropdowns showing the raw Gemini model ID for advanced users.
 -   **Improved model sorting**: Model lists are now intelligently sorted to prioritize the latest Gemini versions (eg Gemini 3.0 and 2.5 families).
 -   **Refined model lists**: Cleaned up dropdown menus by excluding experimental and device-bound (Nano) models by default.
--   **Grounding optimisation**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
+-   **Grounding optimization**: Specifically restricted grounding models to Flash and Lite variants for the best balance of speed and cost during web search workflows.
 -   **Model list debugging**: Added a "Log items" utility in the Developer section to print the raw Gemini API response to the console, with automatic fresh fetch if data is missing.
 -   **Dynamic budget scaling**: Context budgets now automatically adjust when switching models to maintain a consistent capacity ratio.
 -   **Tabbed settings interface**: Refactored the settings UI into a clean, tabbed layout (Connection, Researcher, Explorer, Gardener, and Advanced).
--   **Improved settings architecture**: Centralised tab rendering logic and standardised agent sections using a unified `SettingsTabContext`.
+-   **Improved settings architecture**: Centralized tab rendering logic and standardized agent sections using a unified `SettingsTabContext`.
 -   **Proportional reset buttons**: Added "Reset to default ratio" buttons to context budgets, restoring them to sensible baselines (20% for chat, 10% for gardener) based on the current model's limit.
 -   **Persistent debugging**: Updated the model registry to persist raw API responses in local storage for a more reliable troubleshooting experience across restarts.
 -   **UI layout optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
@@ -225,21 +224,21 @@ New features are added in the "Unreleased" section.
 -   **GARS mathematical model**: Formalized the graph-augmented relevance score calculation in `ScoringStrategy.ts`.
 -   **Dynamic ontology config**: Propagated `ontologyPath` settings to the background worker to ensure traversal logic respects custom folder structures.
 -   **Shadow graph specification**: Created a deep technical document (`devs/shadow-graph-technical.md`) covering architecture, pipelines, and algorithms.
--   **UI standardisation**: Refined settings labels and messages to strictly follow sentence case for a more native feel.
+-   **UI standardization**: Refined settings labels and messages to strictly follow sentence case for a more native feel.
 -   **Critical error propagation**: Updated the Indexer Web Worker to explicitly re-throw authentication and API errors back to the main thread.
 -   **Throwing model discovery**: Enhanced `ModelRegistry.fetchModels` with an optional `throwOnError` flag to allow UI-driven error handling during model refreshes.
 -   **Security hardening**: Removed a leaked API key from the test suite and replaced it with a safe dummy string.
--   **UI compliance**: Standardised interactive notices to use strict sentence case in accordance with Obsidian UI guidelines.
+-   **UI compliance**: Standardized interactive notices to use strict sentence case in accordance with Obsidian UI guidelines.
 -   **Lazy loading implementation**: High-performance settings rendering that only loads section content when its tab is first activated.
 -   **Ontology robustness**: Fixed a console error that occurred at startup if ontology folders or files already existed. The plugin now handles existing structures silently and gracefully.
 -   **Internal storage migration**: Refactored the `ModelRegistry` to use Obsidian's vault-specific `loadLocalStorage` and `saveLocalStorage` for persistent model caching.
 -   **Robust storage interfaces**: Defined the `InternalApp` and `InternalPlugin` interfaces to eliminate `any` casts and ensure strict type safety when accessing internal Obsidian settings.
 -   **UI auto-refresh**: Implemented a reactive settings refresh mechanism that updates the UI automatically when background model discovery completes.
--   **Standardised logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
+-   **Standardized logging**: Refactored model registry and settings logic to use the project's central `logger` utility, removing direct `console` calls.
 -   **Concurrency protection**: Added fetching locks to prevent redundant API calls during rapid UI refreshes or plugin re-initialization.
 -   **Settings sanitization**: Implemented a boot-time sanitization pass that validates and caps saved context budgets against model-specific limits to prevent configuration corruption.
 -   **UI architecture**: Decoupled developer-focused controls into a dedicated `Developer` settings section.
--   **Constant centralisation**: Refactored view types, sanitisation limits, and model ranking scores into `src/constants.ts` to improve maintainability and eliminate magic numbers.
+-   **Constant centralization**: Refactored view types, sanitization limits, and model ranking scores into `src/constants.ts` to improve maintainability and eliminate magic numbers.
 -   **Architectural documentation**: Enhanced `devs/ARCHITECTURE.md` with detailed Mermaid.js diagrams for Agent control flows and Model selection logic.
 -   **Service safety**: Replaced unsafe non-null assertions in `LocalEmbeddingService` with defensive checks to ensure stable task dequeuing.
 -   **Service documentation**: Improved JSDoc coverage for core services including `OntologyService`, `GardenerService`, and `SearchOrchestrator` to improve maintainability.
@@ -280,7 +279,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Unified agentic terminology**: Standardised all major features under a role-based naming convention: **Researcher** for chat and reasoning, **Gardener** for vault hygiene and ontology management, and **Explorer** for similarity search and graph discovery.
+-   **Unified agentic terminology**: Standardized all major features under a role-based naming convention: **Researcher** for chat and reasoning, **Gardener** for vault hygiene and ontology management, and **Explorer** for similarity search and graph discovery.
 -   **Gardener agent for vault hygiene**: Introduced a proactive agent that analyses note metadata and suggests improvements based on a shared ontology. It operates on a "plan-review-apply" model to ensure user oversight and safety.
 -   **Centralized ontology management**: Established a formal directory structure (`Concepts`, `Entities`, `MOCs`) and an `Instructions.md` file to guide AI classification, ensuring consistent naming and tagging across the vault.
 -   **Interactive hygiene plans**: Refactored the Gardener's output into an interactive markdown interface. Users can now review, select, and apply specific metadata changes directly from the plan note.
