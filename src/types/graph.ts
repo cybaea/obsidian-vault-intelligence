@@ -66,7 +66,8 @@ export interface WorkerAPI {
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
     getCentrality(path: string): Promise<number>;
-    getFileStates(): Promise<Record<string, { mtime: number, hash: string }>>;
+    getFileState(path: string): Promise<{ mtime: number, size: number, hash: string } | null>;
+    getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
     getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;

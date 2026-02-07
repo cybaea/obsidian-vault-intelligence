@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-New features are added in the "Unreleased" section. 
+New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
 ### User features
+
+-   **Persistence Stability**: Fixed a critical issue where the plugin would rebuild its index on every startup. The plugin now correctly persists state in the `.vault-intelligence` folder, even though it is hidden from the main file tree.
+-   **Redundant Embedding Prevention**: The plugin now verifies if a file has actually changed (using `mtime` and `size`) before requesting a new embedding when viewing similar notes, significantly reducing API usage and processing overhead.
+-   **Indexing Debounce**: Implemented a per-file indexing debounce. Typing in an active note now has a 30-second delay before re-indexing, while background files use a shorter 5-second delay.
+-   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
+-   **Similar Notes Fix**: Resolved a race condition in the "Similar Notes" view that caused duplicate file entries when switching notes rapidly.
 
 ### Developer features
 
@@ -17,7 +23,10 @@ New features are added in the "Unreleased" section.
 -   **Agent Knowledge Distillation**: Created authoritative `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to codify project standards, validated against 2026 Obsidian best practices.
 -   **Project-Level System Instructions**: Configured `.gemini/GEMINI.md` to enforce architectural standards and operational guardrails for all future Gemini 3 agent sessions.
 -   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
--   **Linting Compliance**: Cleared over 1000 project-wide markdown linting errors and established a zero-tolerance baseline for developer documentation quality.
+-   **Worker API Enhancement**: Added a high-performance `getFileState` method to the background worker for efficient single-note metadata retrieval without requiring a full vault scan projection.
+-   **Robust Scan Logic**: Enhanced the vault scanner in `GraphService` to verify both modification time and file size when determining re-indexing necessity.
+-   **Constants Consolidation**: Rationalised all indexing delay constants into `GRAPH_CONSTANTS` in `src/constants.ts`, eliminating redundant duplicates and magic numbers.
+-   **Settings Consistency**: Refactored `DEFAULT_SETTINGS` to use centralized constants for indexing delays, ensuring architectural alignment across the plugin lifecycle.
 
 ## [5.1.1] - 2026-02-06
 

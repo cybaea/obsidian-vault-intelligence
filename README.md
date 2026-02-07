@@ -19,6 +19,7 @@ Vault Intelligence integrates state-of-the-art Gemini 3 models to help you reaso
 
 -   [Getting Started](docs/tutorials/getting-started.md): Connect your API key and run your first query in 5 minutes.
 -   [How-To Guides](docs/how-to/researcher-workflows.md): Master specific workflows like data analysis and context management.
+-   [Uninstall & Cleanup](docs/how-to/uninstall-and-cleanup.md): How to completely remove the plugin and its data.
 -   [Reference](docs/reference/configuration.md): Detailed configuration options and troubleshooting.
 -   [Explanation](docs/explanation/research-engine.md): Understand the Hybrid Search and GARS engine.
 

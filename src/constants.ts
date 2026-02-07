@@ -101,8 +101,7 @@ export const EMBEDDING_CONSTANTS = {
     /** Backoff delay duration when hitting rate limits (ms) */
     BACKOFF_DELAY_MS: 30000,
 
-    /** Default indexing delay after typing stops (ms) */
-    DEFAULT_INDEXING_DELAY_MS: 5000,
+
 
     /** Default delay between embedding requests (ms) */
     DEFAULT_QUEUE_DELAY_MS: 300,
@@ -153,8 +152,7 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Default token size for chunks (512 tokens) */
     DEFAULT_CHUNK_TOKENS: 512,
 
-    /** Default delay between index updates (ms) */
-    DEFAULT_INDEXING_DELAY: 2000,
+
 
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
@@ -192,10 +190,12 @@ export const WORKER_INDEXER_CONSTANTS = {
 };
 
 export const GRAPH_CONSTANTS = {
+    /** Default indexing delay for currently active file (30s) */
+    ACTIVE_FILE_INDEXING_DELAY_MS: 30000,
     /** Default directory for index storage (deprecated) */
     DATA_DIR: "data",
-    /** Default indexing delay if not configured (2s) */
-    DEFAULT_INDEXING_DELAY_MS: 2000,
+    /** Default indexing delay if not configured (5s) */
+    DEFAULT_INDEXING_DELAY_MS: 5000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
     IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",

@@ -1,6 +1,6 @@
 import { App, Platform } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS, GRAPH_CONSTANTS } from "../constants";
 import { IEmbeddingService } from "../services/IEmbeddingService";
 import { LogLevel } from "../utils/logger";
 
@@ -147,7 +147,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     geminiRetries: 10,
     googleApiKey: '',
     groundingModel: 'gemini-2.5-flash-lite',
-    indexingDelayMs: 5000,
+    indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,

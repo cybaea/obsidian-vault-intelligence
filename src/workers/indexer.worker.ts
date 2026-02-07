@@ -510,17 +510,36 @@ const IndexerWorker: WorkerAPI = {
 
 
     /**
+     * Returns the state of a single file.
+     * @param path - The path of the file to check.
+     */
+    async getFileState(path: string) {
+        await Promise.resolve();
+        const normalized = workerNormalizePath(path);
+        if (!graph || !graph.hasNode(normalized)) return null;
+
+        const attr = graph.getNodeAttributes(normalized) as GraphNodeData;
+        if (attr.type !== 'file') return null;
+
+        return {
+            hash: attr.hash || '',
+            mtime: attr.mtime,
+            size: attr.size
+        };
+    },
+
+    /**
      * Returns the mtime and hash for all tracked files.
      * @returns Record of file paths to their metadata.
      */
     async getFileStates() {
         await Promise.resolve(); // Satisfy linter for async method
-        const states: Record<string, { mtime: number, hash: string }> = {};
+        const states: Record<string, { hash: string, mtime: number, size: number }> = {};
         if (graph) {
             graph.forEachNode((node, attr) => {
                 const a = attr as GraphNodeData;
                 if (a.type === 'file') {
-                    states[node] = { hash: a.hash || '', mtime: a.mtime };
+                    states[node] = { hash: a.hash || '', mtime: a.mtime, size: a.size };
                 }
             });
         }

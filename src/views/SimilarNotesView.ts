@@ -28,6 +28,11 @@ export class SimilarNotesView extends ItemView {
         this.gemini = gemini;
         this.embeddingService = embeddingService;
         this.icon = "layout-grid";
+
+        // Refresh when graph is ready
+        this.plugin.graphService.on('index-ready', () => {
+            void this.updateView();
+        });
     }
 
     getViewType() {
@@ -55,21 +60,32 @@ export class SimilarNotesView extends ItemView {
         if (!force && file?.path === this.lastPath && this.contentEl.children.length > 2) return;
         this.lastPath = file?.path || "";
 
+        // Race condition fix: increment ID to invalidate previous running calls
+        this.lastUpdateId++;
+        const currentUpdateId = this.lastUpdateId;
+
         const container = this.contentEl;
         container.empty();
         if (!file) return;
 
         container.createEl("h4", { text: `Similar to: ${file.basename}` });
 
+        if (!this.graphService.isReady || this.graphService.isScanning) {
+            container.createEl("p", { cls: "loading-text", text: "Loading connections..." });
+            return;
+        }
+
         try {
             // 1. Get Content Matches (Vector)
             const vectorMatches = await this.graphService.getSimilar(file.path, this.plugin.settings.similarNotesLimit);
+            if (this.lastUpdateId !== currentUpdateId) return;
 
             // 2. Get Topic/Graph Matches (Neighbors) -> THIS IS NEW
             const graphNeighbors = await this.graphService.getNeighbors(file.path, {
                 direction: 'both',
                 mode: 'ontology'
             });
+            if (this.lastUpdateId !== currentUpdateId) return;
 
             // 3. Merge Strategies
             interface HybridSearchResult extends GraphSearchResult {
