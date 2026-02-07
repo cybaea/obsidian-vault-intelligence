@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { Plugin, Notice, TFile } from "obsidian";
+import { Plugin, Notice, TFile, Events } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
@@ -37,7 +37,7 @@ export interface GraphTraversalOptions {
  * It spawns and communicates with the Indexer Worker to offload heavy computation
  * and ensures that the vault's semantic state is persisted.
  */
-export class GraphService {
+export class GraphService extends Events {
     private plugin: Plugin;
     private vaultManager: VaultManager;
     private gemini: GeminiService;
@@ -48,6 +48,8 @@ export class GraphService {
     private worker: Worker | null = null;
     private api: Comlink.Remote<WorkerAPI> | null = null;
     private isInitialized = false;
+    private _isScanning = false;
+    private needsForcedScan = false;
 
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
@@ -60,6 +62,7 @@ export class GraphService {
         persistenceManager: PersistenceManager,
         settings: VaultIntelligenceSettings
     ) {
+        super();
         this.plugin = plugin;
         this.vaultManager = vaultManager;
         this.gemini = gemini;
@@ -147,7 +150,7 @@ export class GraphService {
             await this.persistenceManager.ensureGitignore();
 
             // 4. Load State
-            await this.loadState();
+            this.needsForcedScan = await this.loadState();
 
             // 5. Register event listeners
             this.registerEvents();
@@ -158,6 +161,14 @@ export class GraphService {
             logger.error("[GraphService] Initialization failed:", error);
             new Notice("Failed to initialize vault intelligence graph");
         }
+    }
+
+    public get isReady(): boolean {
+        return this.isInitialized;
+    }
+
+    public get isScanning(): boolean {
+        return this._isScanning;
     }
 
     /**
@@ -282,40 +293,36 @@ export class GraphService {
     /**
      * Internal method to load state from vault and push to worker.
      * Handles migration from legacy JSON format.
+     * @returns true if migration (full scan) is needed.
      */
-    private async loadState() {
-        if (!this.api) return;
+    private async loadState(): Promise<boolean> {
+        if (!this.api) return false;
 
         const stateData = await this.persistenceManager.loadState();
-
-        if (stateData) {
-            try {
-                // If it's a Buffer/Uint8Array, treat as msgpack
-                // If string, legacy JSON
-                let success = false;
-                if (typeof stateData === 'string') {
-                    // Legacy JSON needs to be parsed? The worker accepts unknown for loadIndex to handle this flexibility?
-                    // Actually worker.loadIndex signature is `loadIndex(data: string | Uint8Array)`
-                    success = await this.api.loadIndex(stateData);
-                    if (success) logger.info("[GraphService] State loaded (Legacy JSON).");
-                } else {
-                    // MessagePack
-                    success = await this.api.loadIndex(stateData);
-                    if (success) logger.info("[GraphService] State loaded (MessagePack).");
-                }
-
-                if (success) return;
-
-                logger.warn("[GraphService] State incompatible. Triggering migration.");
-            } catch (error) {
-                logger.error("[GraphService] Load failed:", error);
-            }
+        if (!stateData) {
+            logger.info("[GraphService] No existing state found (checked adapter). Starting fresh scan.");
+            return false;
         }
 
-        // If we reached here, either no state exists OR loading failed/was incompatible.
-        if (stateData) {
-            new Notice("Vault intelligence: upgrading index to new format...");
-            this.scanAll(true).catch(err => logger.error("Migration scan failed", err));
+        try {
+            // If it's a Buffer/Uint8Array, treat as msgpack
+            // If string, legacy JSON
+            let success = false;
+            if (typeof stateData === 'string') {
+                success = await this.api.loadIndex(stateData);
+                if (success) logger.info("[GraphService] State loaded (Legacy JSON).");
+            } else {
+                success = await this.api.loadIndex(stateData);
+                if (success) logger.info("[GraphService] State loaded (MessagePack).");
+            }
+
+            if (success) return false;
+
+            logger.warn("[GraphService] State incompatible or corrupted. Triggering migration.");
+            return true;
+        } catch (error) {
+            logger.error("[GraphService] Load failed during worker ingestion:", error);
+            return true;
         }
     }
 
@@ -477,88 +484,99 @@ export class GraphService {
     public async scanAll(forceWipe = false) {
         if (!this.api) return;
 
-        if (forceWipe) {
-            logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
-            await this.api.fullReset();
-        }
+        const shouldWipe = forceWipe || this.needsForcedScan;
+        this.needsForcedScan = false;
 
-        // Ensure aliases are up to date before scanning content
-        await this.syncAliases();
-
-        const files = this.vaultManager.getMarkdownFiles();
-
-        // REFACTOR: Use strict Worker Authority
-        // Instead of asking for state and comparing here, we iterate and push updates.
-        // It relies on the worker to be efficiently checking hashes or mtimes if we passed them,
-        // BUT `updateFile` in worker usually does the work.
-        // To strictly follow "Worker Authority", we should use `enqueueIndexingTask` which handles the queue.
-        // However, `scanAll` has historically done a diff check on main thread to avoid deserializing
-        // a massive `states` object if not needed?
-        // Actually, the previous implementation fetched `states` from worker to do the diff here.
-        // That IS Main Thread logic deciding what to index. The Review finding suggests:
-        // "scanAll should be a directive: 'Worker, sync yourself with this list of files.'"
-
-        // Implementing "Sync" Logic:
-        // We will fetch states once (it is efficient enough for now, just metadata)
-        // AND we will simply enqueue updates for things that changed.
-
-        const states = await this.api.getFileStates();
-
-        logger.info(`[GraphService] Comparing ${files.length} files against index.`);
-        if (forceWipe) {
-            new Notice(`GraphService: scanning ${files.length} files`);
-        }
-
-        let count = 0;
-        let skipCount = 0;
-
-        for (const file of files) {
-            if (this.isPathExcluded(file.path)) continue;
-
-            const state = states[file.path];
-            const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-
-            // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
-            if (!forceWipe && state && state.mtime === mtime) {
-                skipCount++;
-                continue;
+        this._isScanning = true;
+        try {
+            if (shouldWipe) {
+                logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
+                await this.api.fullReset();
             }
 
-            // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
-            // all respect the same serial throttle.
-            void this.enqueueIndexingTask(async () => {
-                if (!this.api) return;
-                try {
-                    const content = await this.vaultManager.readFile(file);
-                    const links = this.getResolvedLinks(file);
-                    await this.api.updateFile(file.path, content, mtime, size, basename, links);
-                    count++;
+            // Ensure aliases are up to date before scanning content
+            await this.syncAliases();
 
-                    if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
-                        logger.debug(`[GraphService] Processed ${count} files...`);
-                    }
-                } catch (error) {
-                    logger.error(`[GraphService] Failed to index ${file.path}`, error);
-                    // if (String(error).includes("API key")) throw error; // Don't crash loop on API key
+            const files = this.vaultManager.getMarkdownFiles();
+
+            // REFACTOR: Use strict Worker Authority
+            // Instead of asking for state and comparing here, we iterate and push updates.
+            // It relies on the worker to be efficiently checking hashes or mtimes if we passed them,
+            // BUT `updateFile` in worker usually does the work.
+            // To strictly follow "Worker Authority", we should use `enqueueIndexingTask` which handles the queue.
+            // However, `scanAll` has historically done a diff check on main thread to avoid deserializing
+            // a massive `states` object if not needed?
+            // Actually, the previous implementation fetched `states` from worker to do the diff here.
+            // That IS Main Thread logic deciding what to index. The Review finding suggests:
+            // "scanAll should be a directive: 'Worker, sync yourself with this list of files.'"
+
+            // Implementing "Sync" Logic:
+            // We will fetch states once (it is efficient enough for now, just metadata)
+            // AND we will simply enqueue updates for things that changed.
+
+            const states = await this.api.getFileStates();
+
+            logger.info(`[GraphService] Comparing ${files.length} files against index.`);
+            if (shouldWipe) {
+                new Notice(`GraphService: scanning ${files.length} files`);
+            }
+
+            let count = 0;
+            let skipCount = 0;
+
+            for (const file of files) {
+                if (this.isPathExcluded(file.path)) continue;
+
+                const state = states[file.path];
+                const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+
+                // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
+                if (!shouldWipe && state && state.mtime === mtime) {
+                    skipCount++;
+                    continue;
                 }
-            });
-        }
 
-        if (skipCount > 0) {
-            logger.info(`[GraphService] Skipped ${skipCount} unchanged files.`);
-        }
+                // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
+                // all respect the same serial throttle.
+                void this.enqueueIndexingTask(async () => {
+                    if (!this.api) return;
+                    try {
+                        const content = await this.vaultManager.readFile(file);
+                        const links = this.getResolvedLinks(file);
+                        await this.api.updateFile(file.path, content, mtime, size, basename, links);
+                        count++;
 
-        // Wait for the entire queue to flush before saving/marking done
-        await this.processingQueue;
+                        if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
+                            logger.debug(`[GraphService] Processed ${count} files...`);
+                            this.requestSave();
+                        }
+                    } catch (error) {
+                        logger.error(`[GraphService] Failed to index ${file.path}`, error);
+                        // if (String(error).includes("API key")) throw error; // Don't crash loop on API key
+                    }
+                });
+            }
 
-        // Cleanup orphans (nodes in graph not in vault OR nodes now excluded)
-        const paths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
-        await this.api.pruneOrphans(paths);
+            if (skipCount > 0) {
+                logger.info(`[GraphService] Skipped ${skipCount} unchanged files.`);
+            }
 
-        await this.saveState();
-        if (count > 0) {
-            logger.info(`[GraphService] Scan complete. Total indexed: ${count}`);
-            if (forceWipe) new Notice("GraphService: scan complete");
+            // Wait for the entire queue to flush before saving/marking done
+            await this.processingQueue;
+
+            // Cleanup orphans (nodes in graph not in vault OR nodes now excluded)
+            const paths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
+            await this.api.pruneOrphans(paths);
+
+            await this.saveState();
+
+            if (count > 0) {
+                logger.info(`[GraphService] Scan complete. Total indexed: ${count}`);
+                if (forceWipe) new Notice("GraphService: scan complete");
+            }
+        } finally {
+            this._isScanning = false;
+            this.trigger('index-ready');
         }
     }
 

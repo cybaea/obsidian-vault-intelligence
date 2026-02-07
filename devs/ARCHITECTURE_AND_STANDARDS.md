@@ -40,7 +40,8 @@ All code must adhere to the latest Obsidian API standards.
 *   **Settings UI**: Use `SettingGroup` (API v1.9+) to organize settings instead of manual headings.
 *   **File Access**:
 
-    *   Use `app.vault.getAbstractFileByPath()` for file resolution.
+    *   Use `app.vault.getAbstractFileByPath()` for file resolution (user content).
+    *   **Exception**: Use `app.vault.adapter` for hidden files/folders (e.g. `.vault-intelligence/`) which are not indexed by the Vault API.
     *   Use `app.fileManager.processFrontMatter()` for metadata updates (never regex-replace the file content directly).
     *   **Performance**: Use `cachedRead` where possible for read-heavy operations.
 
