@@ -93,7 +93,8 @@ export default withMermaid(defineConfig({
                     { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
                     { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
                     { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
-                    { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' }
+                    { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' },
+                    { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
                 ]
             },
             {

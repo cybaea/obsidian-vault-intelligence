@@ -11,6 +11,9 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Persistence Stability**: Fixed a critical issue where the plugin would rebuild its index on every startup. The plugin now correctly persists state in the `.vault-intelligence` folder, even though it is hidden from the main file tree.
+-   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
+
 ### Developer features
 
 -   **Persistence Stability**: Fixed a critical "Folder already exists" error during plugin startup by implementing robust existence checks and graceful race condition handling for dot-prefixed folders (e.g., `.vault-intelligence`).

@@ -197,7 +197,7 @@ export const GRAPH_CONSTANTS = {
     /** Default indexing delay if not configured (2s) */
     DEFAULT_INDEXING_DELAY_MS: 2000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
-    IDLE_SAVE_TIMEOUT_MS: 5000,
+    IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",
     /** Max expansion depth to traverse (currently limited to 1 for performance) */
     MAX_EXPANSION_DEPTH: 1,

@@ -627,6 +627,21 @@ export class GraphService extends Events {
     }
 
     /**
+     * Purges all data from the plugin (index, graph, and persisted files).
+     * Used for clean uninstallation.
+     */
+    public async purgeData() {
+        // 1. Stop worker
+        this.shutdown();
+
+        // 2. Wipe persisted data
+        await this.persistenceManager.purgeAllData();
+
+        logger.info("[GraphService] Data purged. Plugin requires restart to function.");
+        new Notice("Data purged. Please restart plugin.");
+    }
+
+    /**
      * Terminates the worker and cleans up resources.
      */
     public shutdown() {

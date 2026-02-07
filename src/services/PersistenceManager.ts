@@ -1,4 +1,4 @@
-import { Plugin, TFile, normalizePath } from "obsidian";
+import { Plugin, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { logger } from "../utils/logger";
@@ -160,5 +160,23 @@ export class PersistenceManager {
             await this.plugin.app.vault.adapter.remove(vaultPath);
         }
         return Promise.resolve();
+    }
+
+    /**
+     * Recursively deletes the entire data directory (.vault-intelligence).
+     * Used for "Purge & Reset" functionality.
+     */
+    public async purgeAllData(): Promise<void> {
+        const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
+        if (await this.plugin.app.vault.adapter.exists(dataFolder)) {
+            try {
+                // Recursive delete
+                await this.plugin.app.vault.adapter.rmdir(dataFolder, true);
+                logger.info("[PersistenceManager] Purged all data in .vault-intelligence");
+            } catch (error) {
+                logger.error("[PersistenceManager] Failed to purge data folder:", error);
+                throw error;
+            }
+        }
     }
 }
