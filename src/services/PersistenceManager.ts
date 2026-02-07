@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, TFile, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { logger } from "../utils/logger";
@@ -20,14 +20,43 @@ export class PersistenceManager {
      */
     public async saveState(stateBuffer: Uint8Array): Promise<void> {
         try {
-            const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
+            const dataPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+
+            // Ensure directory exists
+            await this.ensureDataFolder();
 
             // Write binary (ensure we only write the view's bytes, not the whole underlying buffer)
             const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
                 ? stateBuffer.buffer
                 : stateBuffer.buffer.slice(stateBuffer.byteOffset, stateBuffer.byteOffset + stateBuffer.byteLength);
 
-            await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
+            if (await this.plugin.app.vault.adapter.exists(dataPath)) {
+                // Use the adapter for existence check on dot-files/folders, but Vault API for writing
+                const file = this.plugin.app.vault.getAbstractFileByPath(dataPath);
+                if (file instanceof TFile) {
+                    await this.plugin.app.vault.modifyBinary(file, bufferToWrite as ArrayBuffer);
+                } else {
+                    // Fallback to adapter writing if Vault API cannot resolve the dot-file TFile
+                    await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
+                }
+            } else {
+                try {
+                    await this.plugin.app.vault.createBinary(dataPath, bufferToWrite as ArrayBuffer);
+                } catch (error) {
+                    if (error instanceof Error && error.message.includes("already exists")) {
+                        // Race condition or Vault API quirk with dot-files
+                        const file = this.plugin.app.vault.getAbstractFileByPath(dataPath);
+                        if (file instanceof TFile) {
+                            await this.plugin.app.vault.modifyBinary(file, bufferToWrite as ArrayBuffer);
+                        } else {
+                            await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
+                        }
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+
             logger.debug("[PersistenceManager] State persisted (MessagePack).");
 
             // Cleanup legacy JSON if it exists
@@ -45,13 +74,14 @@ export class PersistenceManager {
      * @returns The state data as Uint8Array (for msgpack) or string (for legacy JSON), or null if none.
      */
     public async loadState(): Promise<Uint8Array | string | null> {
-        const dataPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`;
-        const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
+        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+        const legacyVaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
 
-        // 1. Try loading MessagePack (Preferred)
-        if (await this.plugin.app.vault.adapter.exists(dataPath)) {
+        // 1. Check for state in the vault (Preferred)
+        const file = this.plugin.app.vault.getAbstractFileByPath(vaultPath);
+        if (file instanceof TFile) {
             try {
-                const stateBuffer = await this.plugin.app.vault.adapter.readBinary(dataPath);
+                const stateBuffer = await this.plugin.app.vault.readBinary(file);
                 logger.debug(`[PersistenceManager] Reading index: ${stateBuffer.byteLength} bytes`);
                 return new Uint8Array(stateBuffer);
             } catch (error) {
@@ -59,14 +89,43 @@ export class PersistenceManager {
             }
         }
 
-        // 2. Fallback to Legacy JSON (Migration)
-        if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
+        // 2. Migration: Check for state in the plugin folder (Legacy)
+        const pluginDataPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+        const pluginLegacyPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
+
+        if (await this.plugin.app.vault.adapter.exists(pluginDataPath)) {
             try {
-                const stateJson = await this.plugin.app.vault.adapter.read(legacyPath);
+                const stateBuffer = await this.plugin.app.vault.adapter.readBinary(pluginDataPath);
+                logger.info("[PersistenceManager] Migrating index from plugin folder to vault.");
+                await this.saveState(new Uint8Array(stateBuffer));
+                // Remove from plugin folder after migration
+                await this.plugin.app.vault.adapter.remove(pluginDataPath);
+                return new Uint8Array(stateBuffer);
+            } catch (error) {
+                logger.error("[PersistenceManager] Migration failed (MessagePack):", error);
+            }
+        }
+
+        // 3. Fallback to Legacy JSON (Migration)
+        const legacyFile = this.plugin.app.vault.getAbstractFileByPath(legacyVaultPath);
+        if (legacyFile instanceof TFile) {
+            try {
+                const stateJson = await this.plugin.app.vault.read(legacyFile);
                 logger.debug("[PersistenceManager] Loaded legacy JSON state.");
                 return stateJson;
             } catch (error) {
                 logger.error("[PersistenceManager] Load failed (Legacy JSON):", error);
+            }
+        }
+
+        // 4. Fallback to Legacy JSON in plugin folder
+        if (await this.plugin.app.vault.adapter.exists(pluginLegacyPath)) {
+            try {
+                const stateJson = await this.plugin.app.vault.adapter.read(pluginLegacyPath);
+                logger.info("[PersistenceManager] Loaded legacy JSON from plugin folder.");
+                return stateJson;
+            } catch (error) {
+                logger.error("[PersistenceManager] Load failed (Legacy JSON plugin):", error);
             }
         }
 
@@ -77,10 +136,24 @@ export class PersistenceManager {
      * Removes the legacy JSON state file if it exists.
      */
     private async cleanupLegacyState() {
-        const legacyPath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`;
-        if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
-            await this.plugin.app.vault.adapter.remove(legacyPath);
+        const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
+        const file = this.plugin.app.vault.getAbstractFileByPath(legacyPath);
+        if (file instanceof TFile) {
+            await this.plugin.app.fileManager.trashFile(file);
             logger.debug("[PersistenceManager] Legacy JSON state removed.");
+        }
+    }
+
+    private async ensureDataFolder() {
+        const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
+        if (!(await this.plugin.app.vault.adapter.exists(dataFolder))) {
+            try {
+                await this.plugin.app.vault.createFolder(dataFolder);
+            } catch (error) {
+                if (!(error instanceof Error && error.message.includes("already exists"))) {
+                    throw error;
+                }
+            }
         }
     }
 
@@ -88,32 +161,32 @@ export class PersistenceManager {
      * Ensures a .gitignore file exists in the data directory to ignore generated files.
      */
     public async ensureGitignore() {
-        const ignorePath = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/.gitignore`;
+        const ignorePath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/.gitignore`);
         const exists = await this.plugin.app.vault.adapter.exists(ignorePath);
 
         if (!exists) {
             // Ignore everything in data/ except the .gitignore itself
             const content = "# Ignore everything\n*\n!.gitignore\n";
             try {
-                // Ensure data folder exists first
-                const dataFolder = `${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}`;
-                if (!(await this.plugin.app.vault.adapter.exists(dataFolder))) {
-                    await this.plugin.app.vault.createFolder(dataFolder);
-                }
-
-                await this.plugin.app.vault.adapter.write(ignorePath, content);
+                await this.ensureDataFolder();
+                await this.plugin.app.vault.create(ignorePath, content);
                 logger.debug("[PersistenceManager] Created .gitignore in data folder.");
             } catch (error) {
-                logger.warn("[PersistenceManager] Failed to create data/.gitignore:", error);
+                if (error instanceof Error && error.message.includes("already exists")) {
+                    logger.debug("[PersistenceManager] .gitignore already exists.");
+                } else {
+                    logger.warn("[PersistenceManager] Failed to create .gitignore:", error);
+                }
             }
         }
     }
 
     public async wipeState(): Promise<void> {
-        // We might want to wipe checks here?
-        // GraphService.scanAll(true) calls this.api.fullReset() which wipes memory.
-        // But if we want to wipe disk:
-        // (Not strictly required by Refactor Plan but good practice)
+        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+        const file = this.plugin.app.vault.getAbstractFileByPath(vaultPath);
+        if (file instanceof TFile) {
+            await this.plugin.app.fileManager.trashFile(file);
+        }
         return Promise.resolve();
     }
 }

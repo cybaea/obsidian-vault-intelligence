@@ -796,8 +796,8 @@ a.similar-notes-link[data-score-ten="10"]:visited {
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button {
-    border-color: #bf3989 !important;
-    color: #bf3989 !important;
+    border-color: var(--color-red) !important;
+    color: var(--color-red) !important;
 }
 
 .vi-release-notes-modal .modal-button-container .github-button,
