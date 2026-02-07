@@ -4,16 +4,16 @@ The Explorer view helps you rediscover forgotten notes and find hidden relations
 
 ## Opening the Explorer
 
-1. Click the compass icon in the left ribbon to open the Explorer sidebar.
-2. Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer: open similar notes view`.
+1.  Click the compass icon in the left ribbon to open the Explorer sidebar.
+2.  Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer: open similar notes view`.
 
 ## Finding Similar Notes
 
 The Explorer works automatically based on your current active note.
 
-- Automatic Updates: As you switch between notes, the Explorer list refreshes to show the most semantically similar content in your vault.
-- Semantic Matching: Unlike standard search, the Explorer finds notes that share the same meaning, even if they use different keywords.
-- Relevance Scores: Each suggestion includes a similarity percentage. High scores (e.g., 85%+) indicate very close conceptual matches.
+-   Automatic Updates: As you switch between notes, the Explorer list refreshes to show the most semantically similar content in your vault.
+-   Semantic Matching: Unlike standard search, the Explorer finds notes that share the same meaning, even if they use different keywords.
+-   Relevance Scores: Each suggestion includes a similarity percentage. High scores (e.g., 85%+) indicate very close conceptual matches.
 
 ## Use Cases
 
@@ -33,5 +33,5 @@ If a note shows a 99% similarity to another note, you might have accidentally cr
 
 You can adjust how the Explorer calculates similarity in Settings > Explorer.
 
-- Minimum similarity: Increase this if you only want to see very strong matches.
-- Number of results: Limit this to keep your sidebar clean.
+-   Minimum similarity: Increase this if you only want to see very strong matches.
+-   Number of results: Limit this to keep your sidebar clean.

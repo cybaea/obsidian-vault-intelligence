@@ -20,7 +20,8 @@ C4Context
     System(obsidian, "Obsidian App", "Host Application (Electron)")
     System_Boundary(plugin_boundary, "Vault Intelligence Plugin") {
         System(plugin, "Plugin Core", "Orchestrator")
-        System(worker, "Web Worker", "Vector Store, Graph & Indexing")
+        System(worker, "Web Worker", "Vector Store, Graph and Indexing")
+
         System(gardener, "Gardener Agent", "Proactive Maintenance")
         System(ontology, "Ontology Service", "Knowledge Model")
     }
@@ -32,6 +33,7 @@ C4Context
     Rel(user, obsidian, "Writes notes in")
     Rel(obsidian, plugin, "Loads & Execs")
     Rel(plugin, worker, "Offloads heavy tasks to", "Comlink/MessageChannel")
+
     Rel(plugin, gardener, "Manages vault hygiene via")
     Rel(gardener, ontology, "Consults knowledge model")
     
@@ -44,12 +46,12 @@ C4Context
 
 ### Core responsibilities
 
-- Indexing and retrieval: Converting markdown notes into vector embeddings and maintaining a searchable index.
-- Semantic search: Finding relevant notes based on meaning, not just keywords.
-- Agentic reasoning: An AI agent that uses tools (Search, Code, Read) to answer user questions using vault data. Supports multilingual system prompts.
-- Vault hygiene (Gardener): A specialised agent that proposes metadata and structural improvements to the vault based on a shared ontology.
-- Knowledge graph: Maintaining a formal graph structure of note connections (wikilinks) and metadata.
-- Ontology management: Defining and enforcing a consistent vocabulary (concepts, entities) across the vault.
+-   Indexing and retrieval: Converting markdown notes into vector embeddings and maintaining a searchable index.
+-   Semantic search: Finding relevant notes based on meaning, not just keywords.
+-   Agentic reasoning: An AI agent that uses tools (Search, Code, Read) to answer user questions using vault data. Supports multilingual system prompts.
+-   Vault hygiene (Gardener): A specialised agent that proposes metadata and structural improvements to the vault based on a shared ontology.
+-   Knowledge graph: Maintaining a formal graph structure of note connections (wikilinks) and metadata.
+-   Ontology management: Defining and enforcing a consistent vocabulary (concepts, entities) across the vault.
 
 ---
 
@@ -59,16 +61,16 @@ C4Context
 
 The system follows a _Service-Oriented Architecture (SOA)_ adapted for a monolithic client-side application.
 
-- **Services** (eg `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
-- **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
-- **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
-- **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`, and tool execution to `ToolRegistry`.
-- **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
+-   **Services** (eg `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
+-   **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
+-   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
+-   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`, and tool execution to `ToolRegistry`.
+-   **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
 
 ### Brain vs Body
 
-- **The body (views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the view.
-- **The brain (services)**: All heavy lifting happens in services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
+-   **The body (views)**: React is NOT used. Views (`ResearchChatView.ts`) are built using native DOM manipulation or simple rendering helpers to keep the bundle size small and performance high. State is local to the view.
+-   **The brain (services)**: All heavy lifting happens in services. Views never touch `app.vault` directly; they ask dedicated managers like `VaultManager` or `MetadataManager` to perform operations.
 
 ### Dependency injection
 
@@ -87,129 +89,130 @@ this.graphService = new GraphService(..., embeddingService); // Injects dependen
 
 ### 3.1. The "Vectorization" pipeline (indexing)
 
-> #### Indexing pipeline architecture
->
-> 1. **Intent**: Converts raw markdown edits into searchable vector embeddings and graph relationships.
-> 2. **Trigger mechanism**: `Event: vault.on('modify')` (Debounced).
-> 3. **The "black box" contract**:
->    - **Input**: `TFile`
->    - **Output**: `OramaDocument` + `GraphNode`
-> 4. **Mechanics**:
->
->    ```mermaid
->    flowchart LR
->      A[File modified] --> B(VaultManager)
->      B --> C{Hash changed?}
->      C -- No --> D[Skip]
->      C -- Yes --> E(GraphService)
->      E --> F[Worker message]
->      F --> G(Graphology: update edges)
->      F --> H(Sanitize: Excalidraw)
->      H --> I(Prep: Semantic context)
->      I --> J(Orama: upsert chunks)
->      J --> K[Serialize to MessagePack]
->    ```
->
-> 5. **Processing details**:
->    - **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
->    - **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
->    - **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
+#### Indexing pipeline architecture
+
+1.  **Intent**: Converts raw markdown edits into searchable vector embeddings and graph relationships.
+2.  **Trigger mechanism**: `Event: vault.on('modify')` (Debounced).
+3.  **The "black box" contract**:
+    -   **Input**: `TFile`
+    -   **Output**: `OramaDocument` + `GraphNode`
+4.  **Mechanics**:
+
+```mermaid
+flowchart LR
+    A[File modified] --> B(VaultManager)
+    B --> C{Hash changed?}
+    C -- No --> D[Skip]
+    C -- Yes --> E(GraphService)
+    E --> F[Worker message]
+    F --> G(Graphology: update edges)
+    H --> I(Prep: Semantic context)
+    I --> J(Orama: upsert chunks)
+    J --> K[Serialize to MessagePack]
+```
+
+1.  **Processing details**:
+
+-   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
+-   **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
+-   **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
 
 ### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
 
 To support Obsidian's flexible `[[Basename]]` linking without creating "Ghost Nodes", the `GraphService` maintains a global alias map.
 
-1. **Synchronization**: `GraphService.syncAliases()` iterates all vault files and maps `basename.toLowerCase() -> fullPath`.
-2. **Worker Update**: This map is pushed to the `IndexerWorker`.
-3. **Resolution**: During indexing, `resolvePath` uses this map to canonicalize all links (eg `[[Agentic AI]]` -> `Ontology/Concepts/Agentic AI.md`).
+1.  **Synchronization**: `GraphService.syncAliases()` iterates all vault files and maps `basename.toLowerCase() -> fullPath`.
+2.  **Worker Update**: This map is pushed to the `IndexerWorker`.
+3.  **Resolution**: During indexing, `resolvePath` uses this map to canonicalize all links (eg `[[Agentic AI]]` -> `Ontology/Concepts/Agentic AI.md`).
 
-### 3.2. Search and Answer loop (Data Flow)
+### 3.2. Search and answer loop (data flow)
 
-> #### The RAG cycle
->
-> 1. **Intent**: User asks a question in the chat.
-> 2. **Mechanics**:
->
->    ```mermaid
->    sequenceDiagram
->        participant U as User
->        participant V as ResearchChatView
->        participant A as AgentService
->        participant TR as ToolRegistry
->        participant S as SearchOrchestrator
->        participant G as GeminiService
->        participant CA as ContextAssembler
->        participant GS as GraphService
->        participant IW as IndexerWorker
->
->        U->>V: Types question
->        V->>A: chat(history, msg)
->        A->>G: startChat()
->        G-->>A: Request Tool: "vault_search"
->        A->>TR: execute("vault_search")
->        TR->>S: search(query)
->
->        rect rgb(240, 240, 240)
->        Note over S,IW: Hybrid Search (Seed Phase)
->        S->>GS: search(query)
->        GS->>IW: vector_search(query)
->        IW-->>GS: Vector Results
->        S->>GS: keywordSearch(query)
->        GS->>IW: keyword_search(query)
->        IW-->>GS: Keyword Results
->        end
->
->        rect rgb(230, 240, 255)
->        Note over S,IW: Graph Expansion Phase
->        S->>GS: getNeighbors(seeds)
->        GS->>IW: traverse_graph(seeds)
->        IW-->>GS: Neighbors
->        end
->
->        rect rgb(255, 245, 230)
->        Note over S,GS: GARS Scoring Phase
->        S->>GS: getBatchCentrality(candidates)
->        GS->>IW: centrality_calc(candidates)
->        IW-->>GS: Centrality Scores
->        S->>S: calculateGARS()
->        end
->
->        S-->>TR: Ranked Results
->        TR-->>A: Context Content
->        A->>CA: assemble(results)
->        CA-->>A: Optimized Protobuf Context
->        A->>G: sendMessage(context)
->        G-->>A: Final Answer
->        A-->>V: Display Answer
->        V-->>U: Read Answer
->    ```
->
-> 3. **Tool calling loop (Control Flow)**:
->
->    The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer.
->
->    ```mermaid
->    flowchart TD
->        Start[User Prompt] --> Agent[AgentService: chat]
->        Agent --> LLM[GeminiService: sendMessage]
->        LLM --> Check{Tool Call?}
->        Check -- Yes --> Exec[Execute Tool]
->        Exec --> LLM
->        Check -- No --> Final[Return Final Answer]
->
->        subgraph "Tools Available"
->            T1[Vault Search]
->            T2[Google Search]
->            T3[Read URL]
->            T4[Code Execution]
->            T5[Graph Connections]
->        end
->        Exec -.-> T1
->        Exec -.-> T2
->        Exec -.-> T3
->        Exec -.-> T4
->        Exec -.-> T5
->    ```
+#### The RAG cycle
+
+1.  **Intent**: User asks a question in the chat.
+2.  **Mechanics**:
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant V as ResearchChatView
+    participant A as AgentService
+    participant TR as ToolRegistry
+    participant S as SearchOrchestrator
+    participant G as GeminiService
+    participant CA as ContextAssembler
+    participant GS as GraphService
+    participant IW as IndexerWorker
+
+    U->>V: Types question
+    V->>A: chat(history, msg)
+    A->>G: startChat()
+    G-->>A: Request Tool: "vault_search"
+    A->>TR: execute("vault_search")
+    TR->>S: search(query)
+
+    rect rgb(240, 240, 240)
+    Note over S,IW: Hybrid Search (Seed Phase)
+    S->>GS: search(query)
+    GS->>IW: vector_search(query)
+    IW-->>GS: Vector Results
+    S->>GS: keywordSearch(query)
+    GS->>IW: keyword_search(query)
+    IW-->>GS: Keyword Results
+    end
+
+    rect rgb(230, 240, 255)
+    Note over S,IW: Graph Expansion Phase
+    S->>GS: getNeighbors(seeds)
+    GS->>IW: traverse_graph(seeds)
+    IW-->>GS: Neighbors
+    end
+
+    rect rgb(255, 245, 230)
+    Note over S,GS: GARS Scoring Phase
+    S->>GS: getBatchCentrality(candidates)
+    GS->>IW: centrality_calc(candidates)
+    IW-->>GS: Centrality Scores
+    S->>S: calculateGARS()
+    end
+
+    S-->>TR: Ranked Results
+    TR-->>A: Context Content
+    A->>CA: assemble(results)
+    CA-->>A: Optimized Protobuf Context
+    A->>G: sendMessage(context)
+    G-->>A: Final Answer
+    A-->>V: Display Answer
+    V-->>U: Read Answer
+```
+
+1.  **Tool calling loop (control flow)**:
+
+The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer.
+
+```mermaid
+
+flowchart TD
+  Start[User Prompt] --> Agent[AgentService: chat]
+  Agent --> LLM[GeminiService: sendMessage]
+  LLM --> Check{Tool Call?}
+  Check -- Yes --> Exec[Execute Tool]
+  Exec --> LLM
+  Check -- No --> Final[Return Final Answer]
+
+  subgraph Tools Available
+    T1[Vault Search]
+    T2[Google Search]
+    T3[Read URL]
+    T4[Code Execution]
+    T5[Graph Connections]
+  end
+  Exec -.-> T1
+  Exec -.-> T2
+  Exec -.-> T3
+  Exec -.-> T4
+  Exec -.-> T5
+```
 
 ### 3.3. Context assembly (relative accordion)
 
@@ -222,7 +225,7 @@ To maximise the utility of the context window while staying within token budgets
 | **Structural** | >= 35% of top | Note structure (headers) only. Capped at top 10 files. |
 | **Filtered** | < 35% of top | Skipped entirely to reduce prompt noise. |
 
-#### Hybrid Score Calibration
+#### Hybrid score calibration
 
 To ensure keyword matches do not overwhelm semantic similarity, the `SearchOrchestrator` applies a **Sigmoid Calibration** to BM25 scores before blending.
 
@@ -233,75 +236,77 @@ Where `keywordWeight` (default `1.2`) is a configurable parameter in the plugin 
 
 This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
-### 3.4. Dynamic Model Ranking & Fetching
+### 3.4. Dynamic model ranking and fetching
 
 The `ModelRegistry` synchronises available Gemini models and ranks them to ensure the user always has access to the most capable stable versions.
 
-1. **Fetch**: Models are fetched from the Google AI API and cached locally.
-2. **Scoring**: A weighted scoring system (`ModelRegistry.sortModels`) ranks models based on:
-    - **Tier**: Gemini 3 > Gemini 2.5 > Gemini 2 > Gemini 1.5.
-    - **Capability**: Pro > Flash > Lite.
-    - **Stability**: Preview or Experimental versions receive a penalty.
-3. **Budget Scaling**: When switching models, `calculateAdjustedBudget` ensures the user's context configuration scales proportionally (eg if a user sets a 10% budget on a 1M model, it scales to 10% on a 32k model).
+1.  **Fetch**: Models are fetched from the Google AI API and cached locally.
+2.  **Scoring**: A weighted scoring system (`ModelRegistry.sortModels`) ranks models based on:
+    -   **Tier**: Gemini 3 > Gemini 2.5 > Gemini 2 > Gemini 1.5.
+    -   **Capability**: Pro > Flash > Lite.
+    -   **Stability**: Preview or Experimental versions receive a penalty.
+3.  **Budget Scaling**: When switching models, `calculateAdjustedBudget` ensures the user's context configuration scales proportionally (eg if a user sets a 10% budget on a 1M model, it scales to 10% on a 32k model).
 
 ### 3.5. Model fetching and budget scaling (metadata flow)
 
-> #### Dynamic model reconfiguration
->
-> 1. **Intent**: Synchronize available Gemini models and ensure context budgets are scaled proportionally to model limits.
-> 2. **Mechanics**:
->
->    ```mermaid
->    sequenceDiagram
->        participant S as SettingsView
->        participant R as ModelRegistry
->        participant G as GeminiAPI
->        participant L as LocalStorage
->
->        S->>R: fetchModels(apiKey)
->        R->>G: GET /v1beta/models
->        G-->>R: List of models + limits
->        R->>L: Save to cache
->        R-->>S: Update UI dropdowns
->        S->>R: calculateAdjustedBudget(oldId, newId)
->        R-->>S: New scaled budget value
->    ```
->
-> 3. **Model Selection Logic**:
->    Models are ranked based on their capabilities (Flash vs Pro) and version (Gemini 3 > 2 > 1.5). Preview and experimental models receive a slight penalty in ranking to prefer stable releases for the main user interface.
+#### Dynamic model reconfiguration
+
+1.  **Intent**: Synchronize available Gemini models and ensure context budgets are scaled proportionally to model limits.
+2.  **Mechanics**:
+
+```mermaid
+sequenceDiagram
+    participant S as SettingsView
+    participant R as ModelRegistry
+    participant G as GeminiAPI
+    participant L as LocalStorage
+
+    S->>R: fetchModels(apiKey)
+    R->>G: GET /v1beta/models
+    G-->>R: List of models + limits
+    R->>L: Save to cache
+    R-->>S: Update UI dropdowns
+    S->>R: calculateAdjustedBudget(oldId, newId)
+    R-->>S: New scaled budget value
+```
+
+1.  Models are ranked based on their capabilities (Flash vs Pro) and version (Gemini 3 > 2 > 1.5). Preview and experimental models receive a penalty in ranking to prefer stable releases for the main user interface.
 
 ### 3.6. System mechanics and orchestration
 
-- **Pipeline registry**: There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
-- **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
-
-- **The event bus**:
+-   **Pipeline registry**:
+ There is no central registry. Pipelines are implicit in the event listeners registered by `GraphService` in `registerEvents()`.
+-   **Extension points**: Currently closed. New pipelines require modifying `GraphService`.
+-   **The event bus**:
     The plugin relies on Obsidian's global `app.metadataCache` and `app.vault` events.
-    - `UI Events`: Handled by Views.
-    - `System Events`: Handled by `VaultManager`.
+    -   `UI Events`: Handled by Views.
+    -   `System Events`: Handled by `VaultManager`.
 
 ### 3.7. The "Gardening" cycle (vault hygiene)
 
-> #### Gardener plan-act cycle
->
-> 1. **Intent**: Systematic improvement of vault metadata and structure.
-> 2. **Trigger mechanism**: Manual command or periodic background scan.
-> 3. **The "black box" contract**:
->    - **Input**: Vault subset + Ontology context.
->    - **Output**: Interactive Gardener Plan (JSON-in-Markdown).
-> 4. **Stages**:
->
->    ```mermaid
->    flowchart TD
->      A[Start Analysis] --> B(Consult Ontology)
->      B --> C(Scan recent files)
->      C --> D(LLM: Generate plan)
->      D --> E[Write .md plan file]
->      E --> F(User: Review UI)
->      F -- Reject --> G[Delete plan]
->      F -- Apply --> H(MetadataManager: Update FM)
->      H --> I[Record check in StateService]
->    ```
+#### Gardener plan-act cycle
+
+1.  **Intent**: Systematic improvement of vault metadata and structure.
+2.  **Trigger mechanism**: Manual command or periodic background scan.
+3.  **The "black box" contract**:
+
+-   **Input**: Vault subset + Ontology context.
+-   **Output**: Interactive Gardener Plan (JSON-in-Markdown).
+
+1.  **Stages**:
+
+```mermaid
+
+flowchart TD
+  A[Start Analysis] --> B(Consult Ontology)
+  B --> C(Scan recent files)
+  C --> D(LLM: Generate plan)
+  D --> E[Write .md plan file]
+  E --> F(User: Review UI)
+  F -- Reject --> G[Delete plan]
+  F -- Apply --> H(MetadataManager: Update FM)
+  H --> I[Record check in StateService]
+```
 
 ---
 
@@ -506,9 +511,9 @@ export class SearchOrchestrator {
 
 ### Anti-pattern watchlist
 
-1. **Direct `app.vault` access in views**: NEVER access the vault directly in a View for write operations. Use `VaultManager` or `MetadataManager`.
-2. **Blocking the main thread**: NEVER perform synchronous heavy math or huge JSON parsing on the main thread. Use the indexer worker.
-3. **Local state in services**: Services should remain stateless where possible, deferring state to `settings` or the `GardenerStateService`.
+1.  **Direct `app.vault` access in views**: NEVER access the vault directly in a View for write operations. Use `VaultManager` or `MetadataManager`.
+2.  **Blocking the main thread**: NEVER perform synchronous heavy math or huge JSON parsing on the main thread. Use the indexer worker.
+3.  **Local state in services**: Services should remain stateless where possible, deferring state to `settings` or the `GardenerStateService`.
 
 ---
 
@@ -518,12 +523,12 @@ export class SearchOrchestrator {
 
 Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`), but abstraction covers the Embeddings layer.
 
-- **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
+-   **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
 
-### Failover & retry logic
+### Failover and retry logic
 
-- **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
-- **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (Threads -> 1, SIMD -> Off).
+-   **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
+-   **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (threads -> 1, SIMD -> off).
 
 ---
 
@@ -531,13 +536,13 @@ Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`),
 
 ### Build pipeline
 
-- **Tool**: `esbuild`.
-- **Config**: `esbuild.config.mjs`.
-- **Worker bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
+-   **Tool**: `esbuild`.
+-   **Config**: `esbuild.config.mjs`.
+-   **Worker bundling**: The worker source (`src/workers/*.ts`) is inlined into base64 strings and injected into `main.js` using `esbuild-plugin-inline-worker`. This allows the plugin to remain a single file distributable.
 
 ### Testing strategy
 
-- Unit tests: Not fully established.
-- Manual testing:
-    - Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
-    - Use `npm run dev` to watch for changes and hot-reload.
+-   Unit tests: Not fully established.
+-   Manual testing:
+    -   Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
+    -   Use `npm run dev` to watch for changes and hot-reload.

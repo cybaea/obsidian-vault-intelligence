@@ -6,8 +6,8 @@ Thanks for your interest in contributing to this Obsidian plugin. This project r
 
 ### Prerequisites
 
-- **Node.js**: v22.x or higher (Verified in `.github/workflows/release.yml`)
-- **npm**: v10+
+-   **Node.js**: v22.x or higher (Verified in `.github/workflows/release.yml`)
+-   **npm**: v10+
 
 ### Installation
 
@@ -33,9 +33,9 @@ npm run dev
 
 To test your changes in Obsidian:
 
-1. Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in a test vault.
-2. Symlink this repository into your vault's `.obsidian/plugins/` directory.
-3. Add an empty `.hotreload` file to the root of this repo.
+1.  Install the [Hot Reload plugin](https://github.com/pjeby/hot-reload) in a test vault.
+2.  Symlink this repository into your vault's `.obsidian/plugins/` directory.
+3.  Add an empty `.hotreload` file to the root of this repo.
 
 ## Linting and testing
 
@@ -65,11 +65,11 @@ npm run test:ui
 
 ## Project structure
 
-- **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
-- **`devs/`**: Developer documentation and guides.
-    - **`devs/adr/`**: **Architecture Decision Records**. Please review these to understand key design choices.
-    - **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
-- **`manifest.json`**: Plugin metadata.
+-   **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
+-   **`devs/`**: Developer documentation and guides.
+    -   **`devs/adr/`**: **Architecture Decision Records**. Please review these to understand key design choices.
+    -   **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
+-   **`manifest.json`**: Plugin metadata.
 
 ## Release process
 
@@ -87,13 +87,13 @@ See [devs/RELEASE_WORKFLOW.md](devs/RELEASE_WORKFLOW.md) for the complete guide.
 
 This plugin uses sophisticated agent patterns. If you are modifying the agents (Gardener, Researcher, etc.), please refer to:
 
-- `AGENTS.md` (Root)
-- `devs/ARCHITECTURE.md`
+-   `AGENTS.md` (Root)
+-   `devs/ARCHITECTURE.md`
 
 ## Security and privacy
 
-- **Local first**: The plugin must function offline.
-- **Consent**: No network calls without explicit user action.
-- **Secrets**: Securely handle API keys; warn users about where they are stored.
+-   **Local first**: The plugin must function offline.
+-   **Consent**: No network calls without explicit user action.
+-   **Secrets**: Securely handle API keys; warn users about where they are stored.
 
 Thank you for helping us build specific, intelligent tools for Obsidian!
