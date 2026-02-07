@@ -515,12 +515,12 @@ const IndexerWorker: WorkerAPI = {
      */
     async getFileStates() {
         await Promise.resolve(); // Satisfy linter for async method
-        const states: Record<string, { mtime: number, hash: string }> = {};
+        const states: Record<string, { mtime: number, size: number, hash: string }> = {};
         if (graph) {
             graph.forEachNode((node, attr) => {
                 const a = attr as GraphNodeData;
                 if (a.type === 'file') {
-                    states[node] = { hash: a.hash || '', mtime: a.mtime };
+                    states[node] = { hash: a.hash || '', mtime: a.mtime, size: a.size };
                 }
             });
         }

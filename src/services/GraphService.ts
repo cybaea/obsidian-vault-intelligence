@@ -498,22 +498,6 @@ export class GraphService extends Events {
             await this.syncAliases();
 
             const files = this.vaultManager.getMarkdownFiles();
-
-            // REFACTOR: Use strict Worker Authority
-            // Instead of asking for state and comparing here, we iterate and push updates.
-            // It relies on the worker to be efficiently checking hashes or mtimes if we passed them,
-            // BUT `updateFile` in worker usually does the work.
-            // To strictly follow "Worker Authority", we should use `enqueueIndexingTask` which handles the queue.
-            // However, `scanAll` has historically done a diff check on main thread to avoid deserializing
-            // a massive `states` object if not needed?
-            // Actually, the previous implementation fetched `states` from worker to do the diff here.
-            // That IS Main Thread logic deciding what to index. The Review finding suggests:
-            // "scanAll should be a directive: 'Worker, sync yourself with this list of files.'"
-
-            // Implementing "Sync" Logic:
-            // We will fetch states once (it is efficient enough for now, just metadata)
-            // AND we will simply enqueue updates for things that changed.
-
             const states = await this.api.getFileStates();
 
             logger.info(`[GraphService] Comparing ${files.length} files against index.`);
@@ -530,8 +514,17 @@ export class GraphService extends Events {
                 const state = states[file.path];
                 const { basename, mtime, size } = this.vaultManager.getFileStat(file);
 
-                // OPTIMIZATION: Skip if mtime matches and we aren't forcing a wipe
-                if (!shouldWipe && state && state.mtime === mtime) {
+                // OPTIMIZATION: Robust Change Detection
+                // We compare both mtime and size to detect changes.
+                // NOTE: We deliberately use a "Peeking" architecture here (Main thread fetches state projection)
+                // rather than a "Pull" architecture (Worker requests file content). 
+                // Why?
+                // 1. Performance: Transferring a simplified state object (~1MB for 20k files) is much faster
+                //    than 20k async round-trips for the worker to "ask" for file content.
+                // 2. Simplicity: The Main Thread is the authority on the File System. The Worker is the authority
+                //    on the Index. It is cleaner for the Main Thread to say "Here is the truth" than for
+                //    the Worker to try to discover it through a narrow communication channel.
+                if (!shouldWipe && state && state.mtime === mtime && state.size === size) {
                     skipCount++;
                     continue;
                 }
