@@ -119,7 +119,6 @@ export default withMermaid(defineConfig({
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
                     { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
-                    { text: 'Search Tuning', link: '/devs/SEARCH_TUNING' },
                     { text: 'Shadow Graph Technical', link: '/devs/shadow-graph-technical' },
                     { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
                     { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },

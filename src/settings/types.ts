@@ -120,7 +120,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
     authorName: 'Me',
     chatModel: 'gemini-flash-latest',
-    codeModel: 'gemini-2.0-flash-thinking-exp-01-21',
+    codeModel: 'gemini-flash-latest',
     contextAwareHeaderProperties: ['title', 'topic', 'tags', 'date', 'author', 'status'],
     contextMaxFiles: SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES,
     contextPrimaryThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD,
