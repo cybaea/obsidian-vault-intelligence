@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-New features are added in the "Unreleased" section. 
+New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
@@ -13,6 +13,7 @@ New features are added in the "Unreleased" section.
 
 -   **Persistence Stability**: Fixed a critical issue where the plugin would rebuild its index on every startup. The plugin now correctly persists state in the `.vault-intelligence` folder, even though it is hidden from the main file tree.
 -   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
+-   **Similar Notes Fix**: Resolved a race condition in the "Similar Notes" view that caused duplicate file entries when switching notes rapidly.
 
 ### Developer features
 
