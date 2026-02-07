@@ -11,7 +11,9 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Persistence Stability**: Fixed a critical issue where the plugin would rebuild its index on every startup. The plugin now correctly persists state in the `.vault-intelligence` folder, even though it is hidden from the main file tree.
+-   **Persistence Stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder. This prevents data corruption during system crashes or background synchronisation conflicts.
+-   **UI Refinements**: Standardised visual highlighting for similarity scores and aligned action buttons with native Obsidian design tokens for a more integrated feel.
+-   **Cleanup Guide**: Added a comprehensive [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide to help users manage their local data footprint.
 -   **Redundant Embedding Prevention**: The plugin now verifies if a file has actually changed (using `mtime` and `size`) before requesting a new embedding when viewing similar notes, significantly reducing API usage and processing overhead.
 -   **Indexing Debounce**: Implemented a per-file indexing debounce. Typing in an active note now has a 30-second delay before re-indexing, while background files use a shorter 5-second delay.
 -   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
@@ -19,7 +21,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **Persistence Stability**: Fixed a critical "Folder already exists" error during plugin startup by implementing robust existence checks and graceful race condition handling for dot-prefixed folders (e.g., `.vault-intelligence`).
+-   **Persistence Hardening**: Fixed a critical "Folder already exists" error during plugin startup by implementing robust existence checks and graceful race condition handling for dot-prefixed folders (e.g., `.vault-intelligence`).
+-   **Version Baseline**: Bumped the minimum required Obsidian version to `v1.5.0` to support modern Electron features and native API enhancements.
 -   **Agent Knowledge Distillation**: Created authoritative `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to codify project standards, validated against 2026 Obsidian best practices.
 -   **Project-Level System Instructions**: Configured `.gemini/GEMINI.md` to enforce architectural standards and operational guardrails for all future Gemini 3 agent sessions.
 -   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
