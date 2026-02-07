@@ -12,6 +12,8 @@ New features are added in the "Unreleased" section.
 ### User features
 
 -   **Persistence Stability**: Fixed a critical issue where the plugin would rebuild its index on every startup. The plugin now correctly persists state in the `.vault-intelligence` folder, even though it is hidden from the main file tree.
+-   **Redundant Embedding Prevention**: The plugin now verifies if a file has actually changed (using `mtime` and `size`) before requesting a new embedding when viewing similar notes, significantly reducing API usage and processing overhead.
+-   **Indexing Debounce**: Implemented a per-file indexing debounce. Typing in an active note now has a 30-second delay before re-indexing, while background files use a shorter 5-second delay.
 -   **Purge & Reset**: Added a "Danger Zone" in Advanced Settings with a "Purge & Reset" button. This allows for a clean uninstallation or a full factory reset of the plugin's data.
 -   **Similar Notes Fix**: Resolved a race condition in the "Similar Notes" view that caused duplicate file entries when switching notes rapidly.
 
@@ -21,6 +23,8 @@ New features are added in the "Unreleased" section.
 -   **Agent Knowledge Distillation**: Created authoritative `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to codify project standards, validated against 2026 Obsidian best practices.
 -   **Project-Level System Instructions**: Configured `.gemini/GEMINI.md` to enforce architectural standards and operational guardrails for all future Gemini 3 agent sessions.
 -   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
+-   **Worker API Enhancement**: Added a high-performance `getFileState` method to the background worker for efficient single-note metadata retrieval without requiring a full vault scan projection.
+-   **Robust Scan Logic**: Enhanced the vault scanner in `GraphService` to verify both modification time and file size when determining re-indexing necessity.
 
 ## [5.1.1] - 2026-02-06
 

@@ -192,6 +192,8 @@ export const WORKER_INDEXER_CONSTANTS = {
 };
 
 export const GRAPH_CONSTANTS = {
+    /** Default indexing delay for currently active file (30s) */
+    ACTIVE_FILE_INDEXING_DELAY_MS: 30000,
     /** Default directory for index storage (deprecated) */
     DATA_DIR: "data",
     /** Default indexing delay if not configured (2s) */

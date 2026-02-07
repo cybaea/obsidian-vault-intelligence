@@ -54,6 +54,11 @@ export class GraphService extends Events {
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
+    // Map to track per-file debounce timers for modification events
+    private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
+
+
     constructor(
         plugin: Plugin,
         vaultManager: VaultManager,
@@ -186,14 +191,7 @@ export class GraphService extends Events {
                 return;
             }
 
-            void this.enqueueIndexingTask(async () => {
-                if (!this.api) return;
-                const content = await this.vaultManager.readFile(file);
-                const { basename, mtime, size } = this.vaultManager.getFileStat(file);
-                const links = this.getResolvedLinks(file);
-                await this.api.updateFile(file.path, content, mtime, size, basename, links);
-                this.requestSave();
-            });
+            this.debounceUpdate(file.path, file);
         });
 
         this.vaultManager.onDelete((path) => {
@@ -222,6 +220,44 @@ export class GraphService extends Events {
                 this.requestSave();
             });
         });
+    }
+
+    /**
+     * Debounces and enqueues an indexing update for a specific file.
+     * Uses a longer timeout for the active file (default 30s) to avoid redundant embeddings while typing.
+     */
+    private debounceUpdate(path: string, file: TFile) {
+        const existing = this.debounceTimers.get(path);
+        if (existing) {
+            clearTimeout(existing);
+        }
+
+        const activeFile = this.plugin.app.workspace.getActiveFile();
+        const isActive = activeFile?.path === path;
+
+        const delay = isActive
+            ? GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS
+            : (this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS);
+
+        const timer = setTimeout(() => {
+            this.debounceTimers.delete(path);
+            void this.enqueueIndexingTask(async () => {
+                if (!this.api) return;
+                // Double check if file still exists and not excluded
+                const currentFile = this.vaultManager.getFileByPath(path);
+                if (!currentFile || this.isPathExcluded(path)) return;
+
+                const content = await this.vaultManager.readFile(currentFile);
+                const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
+                const links = this.getResolvedLinks(currentFile);
+
+                logger.debug(`[GraphService] Debounce finished for ${path} (${isActive ? 'Active' : 'Background'}). Updating index.`);
+                await this.api.updateFile(path, content, mtime, size, basename, links);
+                this.requestSave();
+            });
+        }, delay);
+
+        this.debounceTimers.set(path, timer);
     }
 
     /**
@@ -653,6 +689,12 @@ export class GraphService extends Events {
      * Terminates the worker and cleans up resources.
      */
     public shutdown() {
+        // Clear all pending debounce timers
+        if (this.debounceTimers.size > 0) {
+            this.debounceTimers.forEach((timer) => clearTimeout(timer));
+            this.debounceTimers.clear();
+        }
+
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
