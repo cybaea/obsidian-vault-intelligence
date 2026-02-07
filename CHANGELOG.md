@@ -25,6 +25,8 @@ New features are added in the "Unreleased" section.
 -   **Documentation Refinement**: Re-architected `devs/ARCHITECTURE.md` and `devs/web-worker-embedding.md` to fix technical diagrams, list numbering inconsistencies, and enforce grounded semantic labels for AI agents.
 -   **Worker API Enhancement**: Added a high-performance `getFileState` method to the background worker for efficient single-note metadata retrieval without requiring a full vault scan projection.
 -   **Robust Scan Logic**: Enhanced the vault scanner in `GraphService` to verify both modification time and file size when determining re-indexing necessity.
+-   **Constants Consolidation**: Rationalised all indexing delay constants into `GRAPH_CONSTANTS` in `src/constants.ts`, eliminating redundant duplicates and magic numbers.
+-   **Settings Consistency**: Refactored `DEFAULT_SETTINGS` to use centralized constants for indexing delays, ensuring architectural alignment across the plugin lifecycle.
 
 ## [5.1.1] - 2026-02-06
 
