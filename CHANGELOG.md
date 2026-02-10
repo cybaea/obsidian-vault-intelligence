@@ -20,6 +20,7 @@ New features are added in the "Unreleased" section.
 -   **Indexing debounce**: Added per-file indexing delays (30s for active notes, 5s for background files) to optimize resource usage.
 -   **Purge and reset**: Introduced a "Danger Zone" in Advanced settings with a button to fully reset or purge plugin data.
 -   **Customizable chunk sizes**: Control how your notes are split for indexing. Added presets ranging from 256 for local models to 2048 for cloud-only English vaults.
+-   **Robust stopword support**: Added intelligent stopword mapping for 30+ languages, including specific support for Chinese (Mandarin), Hindi (Indian), and Japanese.
 -   **Deferred re-indexing**: Re-embeddings now wait until you close the settings dialog, allowing for multiple changes without redundant API calls.
 -   **Idempotent re-index queuing**: Reverting a setting back to its original value before closing the dialog now correctly cancels any pending re-index.
 -   **High-visibility warnings**: Added prominent "yellow box" warnings for settings that require a full vault re-index, ensuring no surprises.

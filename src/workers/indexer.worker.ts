@@ -5,7 +5,7 @@ import Graph from 'graphology';
 
 import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
-import { resolveLanguageKey } from '../utils/language-utils';
+import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
 let graph: Graph;
@@ -20,36 +20,25 @@ interface StopWordsModule {
 }
 
 // Helper to normalize language code for Orama
+// Helper to normalize language code for Orama engine
 function getOramaLanguage(language: string): string {
-    return resolveLanguageKey(language);
+    return resolveEngineLanguage(language);
 }
 
 // Language Normalization & Stop Word Loading
 async function loadStopWords(language: string): Promise<string[]> {
     try {
-        const normalized = language.toLowerCase().trim();
         // 1. Try exact match mappings
         // 2. Try prefix (en-GB -> en)
         // 3. Map to @orama/stopwords exports
 
-        const langCode = resolveLanguageKey(language);
-
-        // Japanese/Chinese special handling if needed, but 'chinese' is now supported.
-        // Japanese often requires tokenizer, no stopwords for now.
-        if (normalized.startsWith('ja')) return [];
-
-        // Dynamic import to avoid bundling all languages
-        // Note: ESBuild might bundle them if path is static, but dynamic string makes it tricky.
-        // For simplicity and safety with the installed package, let's try a direct map if possible,
-        // or just use the english default + extensive map if we want to be fancy.
-        // Given the constraints, we'll try to import the specific one.
-        // Since we can't easily do dynamic template string imports in all bundlers without config:
+        const langCode = resolveStopwordKey(language);
 
         switch (langCode) {
             case 'arabic': return (await import('@orama/stopwords/arabic') as StopWordsModule).stopwords;
             case 'armenian': return (await import('@orama/stopwords/armenian') as StopWordsModule).stopwords;
             case 'bulgarian': return (await import('@orama/stopwords/bulgarian') as StopWordsModule).stopwords;
-            case 'chinese': return (await import('@orama/stopwords/chinese') as StopWordsModule).stopwords;
+            case 'mandarin': return (await import('@orama/stopwords/mandarin') as StopWordsModule).stopwords;
             case 'danish': return (await import('@orama/stopwords/danish') as StopWordsModule).stopwords;
             case 'dutch': return (await import('@orama/stopwords/dutch') as StopWordsModule).stopwords;
             case 'english': return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
@@ -57,11 +46,12 @@ async function loadStopWords(language: string): Promise<string[]> {
             case 'french': return (await import('@orama/stopwords/french') as StopWordsModule).stopwords;
             case 'german': return (await import('@orama/stopwords/german') as StopWordsModule).stopwords;
             case 'greek': return (await import('@orama/stopwords/greek') as StopWordsModule).stopwords;
-            case 'hindi': return (await import('@orama/stopwords/hindi') as StopWordsModule).stopwords;
+            case 'indian': return (await import('@orama/stopwords/indian') as StopWordsModule).stopwords;
             case 'hungarian': return (await import('@orama/stopwords/hungarian') as StopWordsModule).stopwords;
             case 'indonesian': return (await import('@orama/stopwords/indonesian') as StopWordsModule).stopwords;
             case 'irish': return (await import('@orama/stopwords/irish') as StopWordsModule).stopwords;
             case 'italian': return (await import('@orama/stopwords/italian') as StopWordsModule).stopwords;
+            case 'japanese': return (await import('@orama/stopwords/japanese') as StopWordsModule).stopwords;
             case 'nepali': return (await import('@orama/stopwords/nepali') as StopWordsModule).stopwords;
             case 'norwegian': return (await import('@orama/stopwords/norwegian') as StopWordsModule).stopwords;
             case 'portuguese': return (await import('@orama/stopwords/portuguese') as StopWordsModule).stopwords;
@@ -929,9 +919,10 @@ const IndexerWorker: WorkerAPI = {
     async updateConfig(newConfig: Partial<WorkerConfig>) {
         const dimensionChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
+        const chunkSizeChanged = newConfig.embeddingChunkSize !== undefined && newConfig.embeddingChunkSize !== config.embeddingChunkSize;
 
         config = { ...config, ...newConfig };
-        if (dimensionChanged || modelChanged) {
+        if (dimensionChanged || modelChanged || chunkSizeChanged) {
             await recreateOrama();
         }
 
@@ -1351,25 +1342,30 @@ function updateGraphEdges(path: string, content: string) {
 }
 
 async function recreateOrama() {
-    const { create } = await import('@orama/orama');
-    const language = getOramaLanguage(config.agentLanguage || 'english');
+    try {
+        const { create } = await import('@orama/orama');
+        const language = getOramaLanguage(config.agentLanguage || 'english');
 
-    workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
+        workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
 
-    orama = create({
-        language: language,
-        schema: {
-            // New Metadata Fields
-            author: 'string', // New: Indexed Author
-            content: 'string',
-            created: 'number',
-            embedding: `vector[${config.embeddingDimension}]`,
-            params: 'string[]', // For Tags/Topics
-            path: 'enum',
-            status: 'string',
-            title: 'string'
-        }
-    });
+        orama = create({
+            language: language,
+            schema: {
+                // New Metadata Fields
+                author: 'string', // New: Indexed Author
+                content: 'string',
+                created: 'number',
+                embedding: `vector[${config.embeddingDimension}]`,
+                params: 'string[]', // For Tags/Topics
+                path: 'enum',
+                status: 'string',
+                title: 'string'
+            }
+        });
+    } catch (e) {
+        workerLogger.error(`[recreateOrama] CRITICAL: Failed to create Orama index.`, e);
+        // Fail gracefully - search will just return empty or error later but won't crash the worker thread immediately in a way that blocks other tasks if we handle it.
+    }
 }
 
 async function computeHash(text: string): Promise<string> {

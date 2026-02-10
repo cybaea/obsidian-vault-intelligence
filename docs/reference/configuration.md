@@ -44,7 +44,7 @@ Configure how connections and similar notes are discovered.
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
 | Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
-| Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) or local models to improve retrieval accuracy. |
+| Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) and local models to improve retrieval accuracy. Supports values up to `2048` for Gemini English-only vaults. |
 | Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now manages this automatically; re-indexing is queued when you change critical settings and triggers when you close the settings dialog. |
 
 ## Gardener
