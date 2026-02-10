@@ -172,6 +172,7 @@ export interface IVaultIntelligencePlugin {
     graphService: {
         scanAll(forceWipe?: boolean): Promise<void>;
         updateConfig(settings: VaultIntelligenceSettings): Promise<void>;
+        commitConfigChange(): void;
     };
     saveSettings(): Promise<void>;
     settings: VaultIntelligenceSettings;

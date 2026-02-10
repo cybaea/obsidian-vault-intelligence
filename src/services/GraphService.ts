@@ -49,6 +49,7 @@ export class GraphService extends Events {
     private api: Comlink.Remote<WorkerAPI> | null = null;
     private isInitialized = false;
     private _isScanning = false;
+    private reindexQueued = false;
     private needsForcedScan = false;
 
     // Serial queue to handle API rate limiting across all indexing tasks
@@ -654,10 +655,22 @@ export class GraphService extends Events {
             });
 
             if (needsReindex) {
-                logger.error("[GraphService] Embedding settings changed. Triggering forced re-scan.");
-                new Notice("Embedding settings changed. Re-indexing vault...");
-                void this.scanAll(true);
+                logger.error("[GraphService] Embedding settings changed. Queueing re-scan.");
+                this.reindexQueued = true;
             }
+        }
+    }
+
+    /**
+     * Commits any queued configuration changes, such as triggering a full re-index.
+     * Called when the settings UI is closed.
+     */
+    public commitConfigChange() {
+        if (this.reindexQueued) {
+            this.reindexQueued = false;
+            logger.error("[GraphService] Committing config change: Triggering forced re-scan.");
+            new Notice("Embedding settings changed. Re-indexing vault...");
+            void this.scanAll(true);
         }
     }
 

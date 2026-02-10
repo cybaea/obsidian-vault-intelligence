@@ -30,7 +30,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     // --- 1. Embedding Provider ---
     new Setting(containerEl)
         .setName('Embedding provider')
-        .setDesc('Choose where your document vectors are calculated.')
+        .setDesc('Choose where your document vectors are calculated. Changing this triggers a full vault re-embedding on exit.')
         .addDropdown(dropdown => {
             const google = "Google";
             const gemini = "Gemini";
@@ -129,7 +129,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         // Embedding Dimension
         new Setting(containerEl)
             .setName('Embedding dimension')
-            .setDesc('Control the size of the vector. Higher dimensions mean better search but larger index. Changing this kills your local index.')
+            .setDesc('Control the size of the vector. Higher dimensions mean better search but larger index. Changing this triggers a full vault re-embedding on exit.')
             .addDropdown(dropdown => {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
                 const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';

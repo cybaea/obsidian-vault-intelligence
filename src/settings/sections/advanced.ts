@@ -59,7 +59,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
 
     new Setting(containerEl)
         .setName('Embedding chunk size')
-        .setDesc('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).')
+        .setDesc('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk). Changing this triggers a full vault re-embedding on exit.')
         .addDropdown(dropdown => dropdown
             .addOption('256', `256 (granular / ${local.toLowerCase()} models)`)
             .addOption('512', '512 (standard / cjk max)')
