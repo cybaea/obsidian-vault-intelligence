@@ -271,7 +271,7 @@ export class ToolRegistry {
         const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
         const limit = Math.max(0, Math.trunc(rawLimit));
 
-        const results = await this.searchOrchestrator.search(query, limit);
+        const results = await this.searchOrchestrator.search(query, limit, { deep: false });
 
         if (results.length === 0) {
             return { result: "No relevant notes found." };

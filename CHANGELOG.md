@@ -11,6 +11,8 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Search performance overhaul**: Reduced agent response times by up to 50% by bypassing redundant reranking loops during tool execution.
+-   **Local embedding stability**: Resolved CORS errors that occurred when using local models by ensuring correct service routing.
 -   **Persistence stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder, preventing data corruption during crashes or background synchronization conflicts.
 -   **UI refinements**: Standardized visual highlighting for similarity scores and aligned action buttons with native Obsidian design tokens.
 -   **Cleanup guide**: Added an [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide for managing the plugin's data footprint.
@@ -21,6 +23,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Deep search toggling**: Added a `deep` option to the `SearchOrchestrator.search` method to allow manual control over the "Analyst Loop" (Loop 2).
+-   **Dynamic latency sizing**: Refactored `LATENCY_BUDGET_TOKENS` into a dynamic value calculated from a multiplier of the chunk size.
 -   **Persistence hardening**: Fixed "Folder already exists" errors during startup by improving existence checks for the `.vault-intelligence` directory.
 -   **Version baseline**: Set minimum required Obsidian version to `v1.5.0`.
 -   **Standards codification**: Created `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to formalize project architecture.

@@ -33,13 +33,16 @@ export class SearchOrchestrator {
      * Performs a hybrid search (Vector + Keyword) on the vault.
      * @param query - The user's search query.
      * @param limit - Maximum number of final results to return.
+     * @param options - Search options (e.g. deep: false to skip AI reranking).
      * @returns A promise resolving to a ranked list of search results.
      */
-    public async search(query: string, limit: number): Promise<VaultSearchResult[]> {
+    public async search(query: string, limit: number, options: { deep?: boolean } = {}): Promise<VaultSearchResult[]> {
         // DUAL-LOOP LOGIC:
-        // If Dual Loop is enabled, we try the Analyst (Loop 2) first.
+        // If Deep search is requested (or default is enabled), we try the Analyst (Loop 2) first.
         // It provides deeper, graph-expanded, and AI-ranked results.
-        if (this.settings.enableDualLoop) {
+        const deep = options.deep ?? this.settings.enableDualLoop;
+
+        if (deep) {
             try {
                 const analystResults = await this.searchAnalyst(query);
                 if (analystResults.length > 0) {
