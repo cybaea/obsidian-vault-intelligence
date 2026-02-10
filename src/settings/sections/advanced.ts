@@ -1,4 +1,4 @@
-import { Setting } from "obsidian";
+import { Setting, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
@@ -57,9 +57,16 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 }
             }));
 
+    const chunkDesc = document.createDocumentFragment();
+    chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
+    chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+    });
+
     new Setting(containerEl)
         .setName('Embedding chunk size')
-        .setDesc('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk). Changing this triggers a full vault re-embedding on exit.')
+        .setDesc(chunkDesc)
         .addDropdown(dropdown => dropdown
             .addOption('256', `256 (granular / ${local.toLowerCase()} models)`)
             .addOption('512', '512 (standard / cjk max)')

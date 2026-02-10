@@ -27,10 +27,16 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const hasApiKey = !!plugin.settings.googleApiKey;
 
 
-    // --- 1. Embedding Provider ---
+    const providerDesc = document.createDocumentFragment();
+    providerDesc.appendText('Choose where your document vectors are calculated.');
+    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+    });
+
     new Setting(containerEl)
         .setName('Embedding provider')
-        .setDesc('Choose where your document vectors are calculated. Changing this triggers a full vault re-embedding on exit.')
+        .setDesc(providerDesc)
         .addDropdown(dropdown => {
             const google = "Google";
             const gemini = "Gemini";
@@ -126,10 +132,16 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        // Embedding Dimension
+        const dimensionDesc = document.createDocumentFragment();
+        dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
+        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+            setIcon(div.createSpan(), 'lucide-alert-triangle');
+            div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+        });
+
         new Setting(containerEl)
             .setName('Embedding dimension')
-            .setDesc('Control the size of the vector. Higher dimensions mean better search but larger index. Changing this triggers a full vault re-embedding on exit.')
+            .setDesc(dimensionDesc)
             .addDropdown(dropdown => {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
                 const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';
