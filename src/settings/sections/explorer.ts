@@ -65,8 +65,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         }
 
                         await plugin.saveSettings();
+                        await plugin.graphService.updateConfig(plugin.settings);
                         refreshSettings(plugin);
-                        new Notice("Provider changed. Re-scanning vault suggested.");
                     })();
                 });
         });
@@ -103,6 +103,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
                             }
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }
                         refreshSettings(plugin);
                     })();
@@ -121,6 +122,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }));
             }
         } else {
@@ -158,7 +160,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             }
 
                             await plugin.saveSettings();
-                            new Notice("Dimension changed. You must re-index your vault for this to take effect.");
+                            await plugin.graphService.updateConfig(plugin.settings);
                             refreshSettings(plugin);
                         }
                     });
@@ -184,6 +186,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
                         await plugin.saveSettings();
+                        await plugin.graphService.updateConfig(plugin.settings);
                     }
                     refreshSettings(plugin);
                 })();
@@ -206,6 +209,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         })();
                     }))
                 .addButton(btn => btn

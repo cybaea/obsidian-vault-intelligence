@@ -52,9 +52,10 @@ export class GraphService extends Events {
     private reindexQueued = false;
     private needsForcedScan = false;
     private committedSettings: {
-        embeddingModel: string;
-        embeddingDimension: number;
         embeddingChunkSize: number;
+        embeddingDimension: number;
+        embeddingModel: string;
+        embeddingProvider: string;
     } | null = null;
 
     // Serial queue to handle API rate limiting across all indexing tasks
@@ -171,7 +172,8 @@ export class GraphService extends Events {
             this.committedSettings = {
                 embeddingChunkSize: this.settings.embeddingChunkSize,
                 embeddingDimension: this.settings.embeddingDimension,
-                embeddingModel: this.settings.embeddingModel
+                embeddingModel: this.settings.embeddingModel,
+                embeddingProvider: this.settings.embeddingProvider
             };
             logger.info("[GraphService] Initialized and worker started.");
         } catch (error) {
@@ -560,7 +562,8 @@ export class GraphService extends Events {
                 this.committedSettings = {
                     embeddingChunkSize: this.settings.embeddingChunkSize,
                     embeddingDimension: this.settings.embeddingDimension,
-                    embeddingModel: this.settings.embeddingModel
+                    embeddingModel: this.settings.embeddingModel,
+                    embeddingProvider: this.settings.embeddingProvider
                 };
             }
 
@@ -648,8 +651,8 @@ export class GraphService extends Events {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
-        // Idempotent Comparison: Compare against the settings reflected in the current index
         const needsReindex = this.committedSettings && (
+            this.committedSettings.embeddingProvider !== settings.embeddingProvider ||
             this.committedSettings.embeddingDimension !== settings.embeddingDimension ||
             this.committedSettings.embeddingModel !== settings.embeddingModel ||
             this.committedSettings.embeddingChunkSize !== settings.embeddingChunkSize
@@ -689,7 +692,8 @@ export class GraphService extends Events {
             this.committedSettings = {
                 embeddingChunkSize: this.settings.embeddingChunkSize,
                 embeddingDimension: this.settings.embeddingDimension,
-                embeddingModel: this.settings.embeddingModel
+                embeddingModel: this.settings.embeddingModel,
+                embeddingProvider: this.settings.embeddingProvider
             };
 
             logger.error("[GraphService] Committing config change: Triggering forced re-scan.");
