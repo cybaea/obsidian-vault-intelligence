@@ -50,3 +50,6 @@ Now that you are connected, try a specific workflow:
 -   [Chat with specific documents](../how-to/researcher-workflows.md)
 -   [Analyse data with Python](../how-to/data-analysis.md)
 -   [Clean up your vault structure](../how-to/gardener-workflows.md)
+
+> [!TIP]
+> **For Chinese/CJK users**: To get the best results, ensure your **Agent language** is set correctly in settings. For local embeddings, the plugin automatically uses a smaller chunk size (512) for Chinese text to better handle the high token density of logographic scripts, ensuring more precise search results.

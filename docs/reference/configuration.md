@@ -44,8 +44,8 @@ Configure how connections and similar notes are discovered.
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
 | Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
-| Keyword match weight | `1.2` | Calibration for hybrid search (BM25). <br>• _Low (0.5 - 1.0):_ Keyword matches are boosted significantly. <br>• _High (2.0 - 5.0):_ Keywords are treated as secondary to vector similarity. |
-| Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now automatically triggers a re-sync if you change the model or dimension in settings. |
+| Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) or local models to improve retrieval accuracy. |
+| Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now manages this automatically; re-indexing is queued when you change critical settings and triggers when you close the settings dialog. |
 
 ## Gardener
 
