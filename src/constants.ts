@@ -4,7 +4,7 @@
  */
 
 const DEFAULT_CHUNK_TOKENS = 512;
-const LATENCY_BUDGET_FACTOR = 1.5;
+const LATENCY_BUDGET_FACTOR = 4.0;
 
 export const SEARCH_CONSTANTS = {
     /** Absolute minimum score for a seed to trigger neighbor expansion */

@@ -51,7 +51,7 @@ export class AgentService {
         this.settings = settings;
 
         // Initialize delegates
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, settings);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
