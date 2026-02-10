@@ -5,6 +5,7 @@ import Graph from 'graphology';
 
 import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
+import { resolveLanguageKey } from '../utils/language-utils';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
 let graph: Graph;
@@ -20,38 +21,7 @@ interface StopWordsModule {
 
 // Helper to normalize language code for Orama
 function getOramaLanguage(language: string): string {
-    const normalized = language.toLowerCase().trim();
-    if (normalized.startsWith('ar')) return 'arabic';
-    if (normalized.startsWith('hy')) return 'armenian';
-    if (normalized.startsWith('bg')) return 'bulgarian';
-    if (normalized.startsWith('zh')) return 'chinese';
-    if (normalized.startsWith('da')) return 'danish';
-    if (normalized.startsWith('nl')) return 'dutch';
-    if (normalized.startsWith('en')) return 'english';
-    if (normalized.startsWith('fi')) return 'finnish';
-    if (normalized.startsWith('fr')) return 'french';
-    if (normalized.startsWith('de')) return 'german';
-    if (normalized.startsWith('el')) return 'greek';
-    if (normalized.startsWith('hi')) return 'hindi';
-    if (normalized.startsWith('hu')) return 'hungarian';
-    if (normalized.startsWith('id')) return 'indonesian';
-    if (normalized.startsWith('ga')) return 'irish';
-    if (normalized.startsWith('it')) return 'italian';
-    if (normalized.startsWith('ne')) return 'nepali';
-    if (normalized.startsWith('no')) return 'norwegian';
-    if (normalized.startsWith('pt')) return 'portuguese';
-    if (normalized.startsWith('ro')) return 'romanian';
-    if (normalized.startsWith('ru')) return 'russian';
-    if (normalized.startsWith('sa')) return 'sanskrit';
-    if (normalized.startsWith('sr')) return 'serbian';
-    if (normalized.startsWith('sl')) return 'slovenian';
-    if (normalized.startsWith('es')) return 'spanish';
-    if (normalized.startsWith('sv')) return 'swedish';
-    if (normalized.startsWith('ta')) return 'tamil';
-    if (normalized.startsWith('tr')) return 'turkish';
-    if (normalized.startsWith('uk')) return 'ukrainian';
-
-    return 'english'; // Default
+    return resolveLanguageKey(language);
 }
 
 // Language Normalization & Stop Word Loading
@@ -62,37 +32,7 @@ async function loadStopWords(language: string): Promise<string[]> {
         // 2. Try prefix (en-GB -> en)
         // 3. Map to @orama/stopwords exports
 
-        let langCode = 'english'; // Default
-
-        if (normalized.startsWith('ar')) langCode = 'arabic';
-        else if (normalized.startsWith('hy')) langCode = 'armenian';
-        else if (normalized.startsWith('bg')) langCode = 'bulgarian';
-        else if (normalized.startsWith('zh')) langCode = 'chinese';
-        else if (normalized.startsWith('da')) langCode = 'danish';
-        else if (normalized.startsWith('nl')) langCode = 'dutch';
-        else if (normalized.startsWith('en')) langCode = 'english';
-        else if (normalized.startsWith('fi')) langCode = 'finnish';
-        else if (normalized.startsWith('fr')) langCode = 'french';
-        else if (normalized.startsWith('de')) langCode = 'german';
-        else if (normalized.startsWith('el')) langCode = 'greek';
-        else if (normalized.startsWith('hi')) langCode = 'hindi';
-        else if (normalized.startsWith('hu')) langCode = 'hungarian';
-        else if (normalized.startsWith('id')) langCode = 'indonesian';
-        else if (normalized.startsWith('ga')) langCode = 'irish';
-        else if (normalized.startsWith('it')) langCode = 'italian';
-        else if (normalized.startsWith('ne')) langCode = 'nepali';
-        else if (normalized.startsWith('no')) langCode = 'norwegian';
-        else if (normalized.startsWith('pt')) langCode = 'portuguese';
-        else if (normalized.startsWith('ro')) langCode = 'romanian';
-        else if (normalized.startsWith('ru')) langCode = 'russian';
-        else if (normalized.startsWith('sa')) langCode = 'sanskrit';
-        else if (normalized.startsWith('sr')) langCode = 'serbian';
-        else if (normalized.startsWith('sl')) langCode = 'slovenian';
-        else if (normalized.startsWith('es')) langCode = 'spanish';
-        else if (normalized.startsWith('sv')) langCode = 'swedish';
-        else if (normalized.startsWith('ta')) langCode = 'tamil';
-        else if (normalized.startsWith('tr')) langCode = 'turkish';
-        else if (normalized.startsWith('uk')) langCode = 'ukrainian';
+        const langCode = resolveLanguageKey(language);
 
         // Japanese/Chinese special handling if needed, but 'chinese' is now supported.
         // Japanese often requires tokenizer, no stopwords for now.
