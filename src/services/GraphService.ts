@@ -51,6 +51,11 @@ export class GraphService extends Events {
     private _isScanning = false;
     private reindexQueued = false;
     private needsForcedScan = false;
+    private committedSettings: {
+        embeddingModel: string;
+        embeddingDimension: number;
+        embeddingChunkSize: number;
+    } | null = null;
 
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
@@ -163,6 +168,11 @@ export class GraphService extends Events {
             this.registerEvents();
 
             this.isInitialized = true;
+            this.committedSettings = {
+                embeddingChunkSize: this.settings.embeddingChunkSize,
+                embeddingDimension: this.settings.embeddingDimension,
+                embeddingModel: this.settings.embeddingModel
+            };
             logger.info("[GraphService] Initialized and worker started.");
         } catch (error) {
             logger.error("[GraphService] Initialization failed:", error);
@@ -545,6 +555,13 @@ export class GraphService extends Events {
             if (shouldWipe) {
                 logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
                 await this.api.fullReset();
+
+                // Align committed snapshot with current settings after wipe
+                this.committedSettings = {
+                    embeddingChunkSize: this.settings.embeddingChunkSize,
+                    embeddingDimension: this.settings.embeddingDimension,
+                    embeddingModel: this.settings.embeddingModel
+                };
             }
 
             // Ensure aliases are up to date before scanning content
@@ -631,14 +648,13 @@ export class GraphService extends Events {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
-        // Deep clone or granularly compare before updating internal reference
-        const needsReindex =
-            (this.settings.embeddingDimension !== undefined && this.settings.embeddingDimension !== settings.embeddingDimension) ||
-            (this.settings.embeddingModel !== undefined && this.settings.embeddingModel !== settings.embeddingModel) ||
-            (this.settings.embeddingChunkSize !== undefined && this.settings.embeddingChunkSize !== settings.embeddingChunkSize);
+        // Idempotent Comparison: Compare against the settings reflected in the current index
+        const needsReindex = this.committedSettings && (
+            this.committedSettings.embeddingDimension !== settings.embeddingDimension ||
+            this.committedSettings.embeddingModel !== settings.embeddingModel ||
+            this.committedSettings.embeddingChunkSize !== settings.embeddingChunkSize
+        );
 
-        // Note: GraphService.settings usually shares a reference with plugin.settings.
-        // We update the local reference anyway to stay in sync.
         this.settings = { ...settings };
         if (this.api) {
             await this.api.updateConfig({
@@ -654,9 +670,9 @@ export class GraphService extends Events {
                 ontologyPath: settings.ontologyPath
             });
 
-            if (needsReindex) {
-                logger.error("[GraphService] Embedding settings changed. Queueing re-scan.");
-                this.reindexQueued = true;
+            this.reindexQueued = !!needsReindex;
+            if (this.reindexQueued) {
+                logger.error("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
             }
         }
     }
@@ -668,6 +684,14 @@ export class GraphService extends Events {
     public commitConfigChange() {
         if (this.reindexQueued) {
             this.reindexQueued = false;
+
+            // Update committed snapshot
+            this.committedSettings = {
+                embeddingChunkSize: this.settings.embeddingChunkSize,
+                embeddingDimension: this.settings.embeddingDimension,
+                embeddingModel: this.settings.embeddingModel
+            };
+
             logger.error("[GraphService] Committing config change: Triggering forced re-scan.");
             new Notice("Embedding settings changed. Re-indexing vault...");
             void this.scanAll(true);
