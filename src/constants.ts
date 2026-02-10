@@ -3,6 +3,9 @@
  * Grouped by logical area to improve maintainability.
  */
 
+const DEFAULT_CHUNK_TOKENS = 512;
+const LATENCY_BUDGET_FACTOR = 1.5;
+
 export const SEARCH_CONSTANTS = {
     /** Absolute minimum score for a seed to trigger neighbor expansion */
     ABSOLUTE_MIN_EXPANSION_SCORE: 0.40,
@@ -150,7 +153,7 @@ export const WORKER_INDEXER_CONSTANTS = {
     CONTENT_PREVIEW_LENGTH: 25000,
 
     /** Default token size for chunks (512 tokens) */
-    DEFAULT_CHUNK_TOKENS: 512,
+    DEFAULT_CHUNK_TOKENS,
 
 
 
@@ -405,6 +408,8 @@ export const MODEL_CONSTANTS = {
 };
 
 export const WORKER_LATENCY_CONSTANTS = {
+    /** Multiple of chunk size allowed in the fast-path search */
+    LATENCY_BUDGET_FACTOR,
     /** Tokens budgeted for latency overhead in worker */
-    LATENCY_BUDGET_TOKENS: 200
+    LATENCY_BUDGET_TOKENS: Math.floor(DEFAULT_CHUNK_TOKENS * LATENCY_BUDGET_FACTOR)
 };
