@@ -52,4 +52,4 @@ Now that you are connected, try a specific workflow:
 -   [Clean up your vault structure](../how-to/gardener-workflows.md)
 
 > [!TIP]
-> **For Chinese/CJK users**: To get the best results, ensure your **Agent language** is set correctly in settings. For local embeddings, the plugin automatically uses a smaller chunk size (512) for Chinese text to better handle the high token density of logographic scripts, ensuring more precise search results.
+> **For users of complex scripts**: If you write primarily in Chinese, Japanese, Korean, Arabic, or other logographic/right-to-left scripts, ensure your **Agent language** is set correctly. The plugin automatically optimises settings like chunk size to handle the higher information density of these languages, ensuring better semantic retrieval.

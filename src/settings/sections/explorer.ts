@@ -4,6 +4,7 @@ import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
+import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
 
@@ -60,11 +61,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingChunkSize = 512;
                         } else {
                             // Gemini: Check for complex languages (CJK, etc.)
-                            const complexLanguages = ['zh', 'ja', 'ko', 'ar', 'hi', 'th', 'he'];
-                            const isComplex = complexLanguages.some(lang =>
-                                plugin.settings.agentLanguage.toLowerCase().startsWith(lang)
-                            );
-                            plugin.settings.embeddingChunkSize = isComplex ? 512 : 1024;
+                            plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
                         }
 
                         await plugin.saveSettings();
