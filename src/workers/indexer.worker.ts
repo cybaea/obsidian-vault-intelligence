@@ -185,7 +185,6 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
-const LATENCY_BUDGET_TOKENS = WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_TOKENS;
 
 function calculateInheritedScore(parentScore: number, linkCount: number): number {
     const dilution = Math.max(1, Math.log2(linkCount + 1));
@@ -214,6 +213,9 @@ const IndexerWorker: WorkerAPI = {
      * 4. Batch Hydration (fixing I/O)
      */
     async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        // Calculate dynamic budget based on current config
+        const LATENCY_BUDGET_TOKENS = (config.embeddingChunkSize || 512) * WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_FACTOR;
+
         // 1. Parallel Wide Fetch (Top 100 Vector + 50 Keyword)
         const vectorPromise = search(orama, {
             includeVectors: false,
@@ -1025,7 +1027,7 @@ const IndexerWorker: WorkerAPI = {
         const contextString = generateContextString(title, parsedFrontmatter, config);
 
         // 4. Split
-        const tokensPerChunk = WORKER_INDEXER_CONSTANTS.DEFAULT_CHUNK_TOKENS;
+        const tokensPerChunk = config.embeddingChunkSize || 512;
         const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE || 4;
         const chunkSize = tokensPerChunk * charsPerToken;
         const overlap = Math.floor(chunkSize * WORKER_INDEXER_CONSTANTS.DEFAULT_OVERLAP_RATIO);

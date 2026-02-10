@@ -18,6 +18,7 @@ export interface VaultIntelligenceSettings {
     contextStructuralThreshold: number;
     contextSupportingThreshold: number;
     contextWindowTokens: number;
+    embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
     // New: Provider Selector
@@ -127,6 +128,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     contextStructuralThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_STRUCTURAL_THRESHOLD,
     contextSupportingThreshold: SEARCH_CONSTANTS.DEFAULT_CONTEXT_SUPPORTING_THRESHOLD,
     contextWindowTokens: 200000,
+    embeddingChunkSize: 512,
     embeddingDimension: 768,
     embeddingModel: 'gemini-embedding-001',
     // Default to Gemini for now to preserve existing behavior
@@ -169,6 +171,7 @@ export interface IVaultIntelligencePlugin {
     embeddingService: IEmbeddingService;
     graphService: {
         scanAll(forceWipe?: boolean): Promise<void>;
+        updateConfig(settings: VaultIntelligenceSettings): Promise<void>;
     };
     saveSettings(): Promise<void>;
     settings: VaultIntelligenceSettings;

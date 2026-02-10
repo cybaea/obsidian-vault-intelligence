@@ -57,6 +57,24 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 }
             }));
 
+    new Setting(containerEl)
+        .setName('Embedding chunk size')
+        .setDesc('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).')
+        .addDropdown(dropdown => dropdown
+            .addOption('256', `256 (granular / ${local.toLowerCase()} models)`)
+            .addOption('512', '512 (standard / cjk max)')
+            .addOption('1024', '1024 (high context / code max)')
+            .addOption('1500', `1500 (${gemini} safe)`)
+            .addOption('2048', `2048 (${gemini} english only)`)
+            .setValue(String(plugin.settings.embeddingChunkSize))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                plugin.settings.embeddingChunkSize = num;
+                await plugin.saveSettings();
+                // GraphService will auto-detect change and re-index
+                await plugin.graphService.updateConfig(plugin.settings);
+            }));
+
     if (plugin.settings.embeddingProvider === 'local') {
         const maxThreads = Math.max(4, navigator.hardwareConcurrency || 4);
         new Setting(containerEl)

@@ -3,7 +3,6 @@
  * Grouped by logical area to improve maintainability.
  */
 
-const DEFAULT_CHUNK_TOKENS = 512;
 const LATENCY_BUDGET_FACTOR = 4.0;
 
 export const SEARCH_CONSTANTS = {
@@ -95,7 +94,6 @@ export const SEARCH_CONSTANTS = {
 
     /** Default character limit for tool responses (truncation) */
     TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
-
     /** Search: Minimum threshold for vector results to be considered relevant */
     VECTOR_MIN_RELEVANCE: 0.35
 };
@@ -151,11 +149,6 @@ export const WORKER_CONSTANTS = {
 export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
     CONTENT_PREVIEW_LENGTH: 25000,
-
-    /** Default token size for chunks (512 tokens) */
-    DEFAULT_CHUNK_TOKENS,
-
-
 
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
@@ -409,7 +402,5 @@ export const MODEL_CONSTANTS = {
 
 export const WORKER_LATENCY_CONSTANTS = {
     /** Multiple of chunk size allowed in the fast-path search */
-    LATENCY_BUDGET_FACTOR,
-    /** Tokens budgeted for latency overhead in worker */
-    LATENCY_BUDGET_TOKENS: Math.floor(DEFAULT_CHUNK_TOKENS * LATENCY_BUDGET_FACTOR)
+    LATENCY_BUDGET_FACTOR
 };

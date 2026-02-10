@@ -49,6 +49,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         plugin.settings.embeddingModel = defaultModelId;
                         plugin.settings.embeddingDimension = modelDef?.dimensions ?? 768;
 
+                        // Language-aware defaults for chunk size
+                        if (provider === 'local') {
+                            plugin.settings.embeddingChunkSize = 512;
+                        } else {
+                            // Gemini: Check for complex languages (CJK, etc.)
+                            const complexLanguages = ['zh', 'ja', 'ko', 'ar', 'hi', 'th', 'he'];
+                            const isComplex = complexLanguages.some(lang =>
+                                plugin.settings.agentLanguage.toLowerCase().startsWith(lang)
+                            );
+                            plugin.settings.embeddingChunkSize = isComplex ? 512 : 1024;
+                        }
+
                         await plugin.saveSettings();
                         refreshSettings(plugin);
                         new Notice("Provider changed. Re-scanning vault suggested.");

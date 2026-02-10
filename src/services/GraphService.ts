@@ -120,6 +120,7 @@ export class GraphService extends Events {
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
                 contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
+                embeddingChunkSize: this.settings.embeddingChunkSize,
                 embeddingDimension: this.settings.embeddingDimension,
                 embeddingModel: this.settings.embeddingModel,
                 googleApiKey: this.settings.googleApiKey,
@@ -630,7 +631,8 @@ export class GraphService extends Events {
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
         const needsReindex = this.settings.embeddingDimension !== settings.embeddingDimension ||
-            this.settings.embeddingModel !== settings.embeddingModel;
+            this.settings.embeddingModel !== settings.embeddingModel ||
+            this.settings.embeddingChunkSize !== settings.embeddingChunkSize;
 
         this.settings = settings;
         if (this.api) {
@@ -638,6 +640,7 @@ export class GraphService extends Events {
                 authorName: settings.authorName,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
+                embeddingChunkSize: settings.embeddingChunkSize,
                 embeddingDimension: settings.embeddingDimension,
                 embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,
