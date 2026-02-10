@@ -73,7 +73,7 @@ export class GraphService extends Events {
         this.gemini = gemini;
         this.embeddingService = embeddingService;
         this.persistenceManager = persistenceManager;
-        this.settings = settings;
+        this.settings = { ...settings };
     }
 
     /**
@@ -630,11 +630,15 @@ export class GraphService extends Events {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
-        const needsReindex = this.settings.embeddingDimension !== settings.embeddingDimension ||
-            this.settings.embeddingModel !== settings.embeddingModel ||
-            this.settings.embeddingChunkSize !== settings.embeddingChunkSize;
+        // Deep clone or granularly compare before updating internal reference
+        const needsReindex =
+            (this.settings.embeddingDimension !== undefined && this.settings.embeddingDimension !== settings.embeddingDimension) ||
+            (this.settings.embeddingModel !== undefined && this.settings.embeddingModel !== settings.embeddingModel) ||
+            (this.settings.embeddingChunkSize !== undefined && this.settings.embeddingChunkSize !== settings.embeddingChunkSize);
 
-        this.settings = settings;
+        // Note: GraphService.settings usually shares a reference with plugin.settings.
+        // We update the local reference anyway to stay in sync.
+        this.settings = { ...settings };
         if (this.api) {
             await this.api.updateConfig({
                 authorName: settings.authorName,
@@ -651,6 +655,7 @@ export class GraphService extends Events {
 
             if (needsReindex) {
                 logger.error("[GraphService] Embedding settings changed. Triggering forced re-scan.");
+                new Notice("Embedding settings changed. Re-indexing vault...");
                 void this.scanAll(true);
             }
         }

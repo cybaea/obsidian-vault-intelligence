@@ -178,6 +178,7 @@ interface OramaHit {
 }
 
 interface SerializedIndexState {
+    embeddingChunkSize?: number;
     embeddingDimension: number;
     embeddingModel: string;
     graph: object;
@@ -769,16 +770,18 @@ const IndexerWorker: WorkerAPI = {
             const expectedDimension = config.embeddingDimension;
             const loadedModel = parsed.embeddingModel;
             const expectedModel = config.embeddingModel;
+            const loadedChunkSize = parsed.embeddingChunkSize;
+            const expectedChunkSize = config.embeddingChunkSize;
 
             const modelMismatch = loadedModel !== undefined && loadedModel !== expectedModel;
             const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
+            const chunkMismatch = loadedChunkSize !== undefined && loadedChunkSize !== expectedChunkSize;
 
-            if (modelMismatch || dimMismatch || loadedDimension === undefined) {
-                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), loadedDimensionUndef=${loadedDimension === undefined}`);
+            if (modelMismatch || dimMismatch || chunkMismatch || loadedDimension === undefined) {
+                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), chunkMismatch=${String(chunkMismatch)} (${loadedChunkSize} vs ${expectedChunkSize}), loadedDimensionUndef=${loadedDimension === undefined}`);
                 await recreateOrama();
                 return false; // Signal migration
             }
-
             try {
                 load(orama, parsed.orama);
                 const total = count(orama);
@@ -861,6 +864,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         const serialized: SerializedIndexState = {
+            embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
