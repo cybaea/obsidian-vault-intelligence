@@ -25,6 +25,7 @@ New features are added in the "Unreleased" section.
 -   **Idempotent re-index queuing**: Reverting a setting back to its original value before closing the dialog now correctly cancels any pending re-index.
 -   **High-visibility warnings**: Added prominent "yellow box" warnings for settings that require a full vault re-index, ensuring no surprises.
 -   **Similar notes fix**: Resolved a race condition causing duplicate entries in the "Similar notes" view.
+-   **Enhanced similarity intelligence**: The "Similar Notes" view now utilises a more robust hybrid scoring engine that prioritises conceptually linked topic siblings (Graph Neighbors) over pure text similarity (Vector matches) when the connection is strong.
 
 ### Developer features
 
@@ -40,6 +41,10 @@ New features are added in the "Unreleased" section.
 -   **Constants consolidation**: Centralized indexing delay constants in `GRAPH_CONSTANTS` and refactored settings to use them.
 -   **Settings UI decoupling**: Refactored the Explorer settings to use local DOM refreshes instead of full tab reloads, preventing premature `hide()` hook execution.
 -   **Synchronous re-index flags**: Optimized `GraphService` to update re-index state synchronously before configuration propagation, eliminating race conditions during modal closure.
+-   **SOA Refactoring phase 1**: Decomposed monolithic logic in `ResearchChatView` and `SimilarNotesView` by delegating business operations to `AgentService` and `GraphService` respectively, following the "Humble View" pattern.
+-   **Service Facade extension**: Expanded `GraphService` with `getGraphEnhancedSimilar` and `AgentService` with `reflexSearch` to provide high-level APIs for views and tool registries.
+-   **Loop 1 search delegation**: Formally separated the "Reflex" (Loop 1) search from the reasoning loop by moving orchestrator interaction into `AgentService`.
+-   **UI Architecture cleanup**: Removed tight coupling between `SimilarNotesView` and the embedding/vault management layers, resulting in a cleaner, more testable view component.
 
 ## [5.1.1] - 2026-02-06
 
