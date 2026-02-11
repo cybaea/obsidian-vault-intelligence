@@ -83,19 +83,26 @@ export class SimilarNotesView extends ItemView {
                 const item = list.createEl("li");
                 item.addClass("similar-notes-item");
 
-                // Visual Indicator for Link Reason
-                const score = Math.round(doc.score * 100);
+                const header = item.createDiv({ cls: "similar-notes-header" });
 
-                item.createSpan({
+                const score = Math.round(doc.score * 100);
+                header.createSpan({
                     attr: { 'data-score-ten': Math.round(doc.score * 10).toString() },
                     cls: "similar-notes-score",
                     text: `${score}%`
                 });
 
-                const link = item.createEl("a", {
+                const link = header.createEl("a", {
                     cls: "similar-notes-link",
                     text: doc.path.split('/').pop()?.replace('.md', '') || doc.path
                 });
+
+                if (doc.excerpt) {
+                    item.createEl("p", {
+                        cls: "similar-notes-excerpt",
+                        text: doc.excerpt
+                    });
+                }
 
                 link.addEventListener("click", () => {
                     void this.plugin.app.workspace.openLinkText(doc.path, "", true);

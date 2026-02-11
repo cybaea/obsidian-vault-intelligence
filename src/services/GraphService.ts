@@ -4,6 +4,7 @@ import { Plugin, Notice, TFile, Events } from "obsidian";
 import { GRAPH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../types/graph";
+import { fastHash, splitFrontmatter } from '../utils/link-parsing';
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
@@ -358,6 +359,7 @@ export class GraphService extends Events {
             // If it's a Buffer/Uint8Array, treat as msgpack
             // If string, legacy JSON
             let success = false;
+            await Promise.resolve();
             if (typeof stateData === 'string') {
                 success = await this.api.loadIndex(stateData);
                 if (success) logger.info("[GraphService] State loaded (Legacy JSON).");
@@ -377,6 +379,88 @@ export class GraphService extends Events {
     }
 
     /**
+     * Internal method to hydrate hollow search results with actual file content.
+     * Uses anchored alignment to handle drift.
+     */
+    private async hydrateResults(results: GraphSearchResult[]): Promise<GraphSearchResult[]> {
+        const hydrated: GraphSearchResult[] = [];
+
+        for (const res of results) {
+            // If we already have an excerpt, no hydration needed
+            if (res.excerpt && res.excerpt.length > 0) {
+                hydrated.push(res);
+                continue;
+            }
+
+            // Hydrate from file
+            const file = this.plugin.app.vault.getAbstractFileByPath(res.path);
+            if (!(file instanceof TFile)) {
+                hydrated.push(res);
+                continue;
+            }
+
+            try {
+                const alignedContent = await this.anchoredAlignment(
+                    file,
+                    res.anchorHash ?? 0,
+                    res.start ?? 0,
+                    res.end ?? 0
+                );
+
+                hydrated.push({
+                    ...res,
+                    excerpt: alignedContent ?? "(Content drifted - Re-indexing background)"
+                });
+
+                if (!alignedContent) {
+                    // Deep drift detected: Trigger background re-indexing of this file
+                    void this.debounceUpdate(res.path, file);
+                }
+            } catch (e) {
+                logger.error(`[GraphService] Hydration failed for ${res.path}:`, e);
+                hydrated.push(res);
+            }
+        }
+
+        return hydrated;
+    }
+
+    private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
+        const content = await this.vaultManager.readFile(file);
+        splitFrontmatter(content);
+
+        // 1. Direct match check (offset by frontmatter)
+        // Note: worker start/end is relative to full file content
+        const snippet = content.substring(start, end).trim();
+        if (fastHash(snippet) === expectedHash) return snippet;
+
+        // 2. Drift Detection: Look for anchor in a sliding window
+        // Since we semantic split by headers, we prioritize matches that look like headers/sections
+        const searchRange = 5000; // Look 5kb around original spot
+        const searchStart = Math.max(0, start - searchRange);
+        const searchEnd = Math.min(content.length, end + searchRange);
+        const window = content.substring(searchStart, searchEnd);
+
+        // Simple sliding window search for the hash anchor
+        // We search for lines that could be the start of our chunk
+        const lines = window.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+
+            // Check if this line matches the anchor hash
+            // (Remember fastHash only looks at first 100 chars)
+            if (fastHash(line) === expectedHash) {
+                // Found the start! Re-construct the chunk (approximate end)
+                const actualStart = window.indexOf(line);
+                return window.substring(actualStart, actualStart + (end - start)).trim();
+            }
+        }
+
+        return null; // Deep drift
+    }
+
+    /**
      * Semantically searches the vault using vector embeddings.
      * @param query - The search query string.
      * @param limit - Max number of results (default determined by worker).
@@ -384,8 +468,8 @@ export class GraphService extends Events {
      */
     public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const results = await this.api.search(query, limit);
-        return results;
+        const rawResults = await this.api.search(query, limit);
+        return this.hydrateResults(rawResults);
     }
 
     /**
@@ -396,8 +480,8 @@ export class GraphService extends Events {
      */
     public async keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const results = await this.api.keywordSearch(query, limit);
-        return results;
+        const rawResults = await this.api.keywordSearch(query, limit);
+        return this.hydrateResults(rawResults);
     }
 
     /**
@@ -409,8 +493,8 @@ export class GraphService extends Events {
      */
     public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        const results = await this.api.searchInPaths(query, paths, limit);
-        return results;
+        const rawResults = await this.api.searchInPaths(query, paths, limit);
+        return this.hydrateResults(rawResults);
     }
 
     public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
@@ -444,7 +528,8 @@ export class GraphService extends Events {
         }
 
         if (!this.api) return [];
-        return await this.api.getSimilar(path, limit);
+        const rawResults = await this.api.getSimilar(path, limit);
+        return this.hydrateResults(rawResults);
     }
 
     /**
@@ -496,6 +581,7 @@ export class GraphService extends Events {
      * @returns A promise resolving to an array of neighboring files.
      */
     public async getNeighbors(path: string, options?: GraphTraversalOptions): Promise<GraphSearchResult[]> {
+        await Promise.resolve();
         if (!this.api) return [];
         const neighbors = await this.api.getNeighbors(path, options);
         return neighbors;
@@ -537,6 +623,7 @@ export class GraphService extends Events {
      * @returns A promise resolving to an object containing node metrics.
      */
     public async getCentrality(path: string): Promise<number> {
+        await Promise.resolve();
         if (!this.api) return 0;
         const centrality = await this.api.getCentrality(path);
         return centrality;
@@ -548,6 +635,7 @@ export class GraphService extends Events {
      * @returns A promise resolving to an object containing node metrics.
      */
     public async getNodeMetadata(path: string): Promise<{ title?: string; headers?: string[] }> {
+        await Promise.resolve();
         if (!this.api) return {};
         const results = await this.api.getBatchMetadata([path]);
         return results[path] || {};
@@ -559,6 +647,7 @@ export class GraphService extends Events {
      * @returns A promise resolving to a record of path -> metadata.
      */
     public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[] }>> {
+        await Promise.resolve();
         if (!this.api) return {};
         const results = await this.api.getBatchMetadata(paths);
         return results;
@@ -570,6 +659,7 @@ export class GraphService extends Events {
      * @returns A promise resolving to a record of path -> centrality.
      */
     public async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
+        await Promise.resolve();
         if (!this.api) return {};
         const results = await this.api.getBatchCentrality(paths);
         return results;
@@ -605,7 +695,7 @@ export class GraphService extends Events {
                     embeddingChunkSize: this.settings.embeddingChunkSize,
                     embeddingDimension: this.settings.embeddingDimension,
                     embeddingModel: this.settings.embeddingModel,
-                    embeddingProvider: this.settings.embeddingProvider
+                    embeddingProvider: this.settings.embeddingProvider,
                 };
             }
 

@@ -33,9 +33,12 @@ export interface GraphEdgeData {
  * Search results from the Shadow Graph.
  */
 export interface GraphSearchResult {
+    anchorHash?: number;
+    end?: number;
     excerpt?: string;
     path: string;
     score: number;
+    start?: number;
     title?: string;
 }
 
