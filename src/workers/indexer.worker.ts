@@ -83,6 +83,7 @@ interface OramaDocument {
     anchorHash: number;
     author?: string;
     content: string;
+    context: string;
     created: number;
     embedding?: number[];
     end: number;
@@ -185,7 +186,7 @@ const IndexerWorker: WorkerAPI = {
         const keywordPromise = search(orama, {
             includeVectors: false,
             limit: 50,
-            properties: ['content', 'title'],
+            properties: ['content', 'title', 'context'],
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
@@ -519,7 +520,7 @@ const IndexerWorker: WorkerAPI = {
     async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
-            properties: ['title', 'content', 'params', 'status'],
+            properties: ['title', 'content', 'context', 'params', 'status'],
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
@@ -601,7 +602,10 @@ const IndexerWorker: WorkerAPI = {
             for (const key in docs) {
                 if (Object.prototype.hasOwnProperty.call(docs, key)) {
                     const doc = docs[key];
-                    if (doc) doc.content = ""; // HOLLOW OUT
+                    if (doc) {
+                        doc.content = ""; // HOLLOW OUT
+                        doc.context = ""; // HOLLOW OUT
+                    }
                 }
             }
         }
@@ -639,7 +643,7 @@ const IndexerWorker: WorkerAPI = {
 
         const keywordPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
-            properties: ['title', 'content'],
+            properties: ['title', 'content', 'context'],
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
@@ -717,7 +721,7 @@ const IndexerWorker: WorkerAPI = {
         const parsedFM = parseYaml(frontmatter);
         const context = generateContextString(title, parsedFM, config);
 
-        // HYBRID SLIM-SYNC: Semantic Chunking
+        const bodyOffset = cleanlyContent.indexOf(body);
         const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * 4);
 
         const batchedDocs: OramaDocument[] = [];
@@ -735,16 +739,17 @@ const IndexerWorker: WorkerAPI = {
             batchedDocs.push({
                 anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
                 author: (parsedFM.author as string) || undefined,
-                content: fullText, // Live index keeps content
+                content: chunk.text, // Live index keeps content (pure)
+                context: context, // Metadata header
                 created: mtime,
                 embedding: embedding,
-                end: chunk.end,
+                end: chunk.end + bodyOffset,
                 id: chunkId,
                 links: links,
                 mtime: mtime,
                 params: [], // Simplified for now
                 path: normalizedPath,
-                start: chunk.start,
+                start: chunk.start + bodyOffset,
                 status: (parsedFM.status as string) || 'active',
                 title: title,
             });
@@ -914,6 +919,7 @@ async function recreateOrama() {
                 anchorHash: 'number',
                 author: 'string',
                 content: 'string',
+                context: 'string',
                 created: 'number',
                 embedding: `vector[${config.embeddingDimension}]`,
                 end: 'number',
