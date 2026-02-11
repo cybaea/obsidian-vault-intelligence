@@ -2,31 +2,22 @@ import { ItemView, WorkspaceLeaf, TFile } from "obsidian";
 
 import { VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
-import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
-import { IEmbeddingService } from "../services/IEmbeddingService";
-import { GraphSearchResult } from "../types/graph";
 import { logger } from "../utils/logger";
 
 export class SimilarNotesView extends ItemView {
     plugin: VaultIntelligencePlugin;
     graphService: GraphService;
-    gemini: GeminiService;
-    embeddingService: IEmbeddingService; // Add Property
 
     // Update Constructor
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        graphService: GraphService,
-        gemini: GeminiService,
-        embeddingService: IEmbeddingService // Add Argument
+        graphService: GraphService
     ) {
         super(leaf);
         this.plugin = plugin;
         this.graphService = graphService;
-        this.gemini = gemini;
-        this.embeddingService = embeddingService;
         this.icon = "layout-grid";
 
         // Refresh when graph is ready
@@ -76,49 +67,10 @@ export class SimilarNotesView extends ItemView {
         }
 
         try {
-            // 1. Get Content Matches (Vector)
-            const vectorMatches = await this.graphService.getSimilar(file.path, this.plugin.settings.similarNotesLimit);
+            // Hybrid Retrieval: Merged Vector + Graph Expansion (Preserves 0.65 floor and +0.1 boost)
+            const limit = this.plugin.settings.similarNotesLimit;
+            const finalResults = await this.graphService.getGraphEnhancedSimilar(file.path, limit);
             if (this.lastUpdateId !== currentUpdateId) return;
-
-            // 2. Get Topic/Graph Matches (Neighbors) -> THIS IS NEW
-            const graphNeighbors = await this.graphService.getNeighbors(file.path, {
-                direction: 'both',
-                mode: 'ontology'
-            });
-            if (this.lastUpdateId !== currentUpdateId) return;
-
-            // 3. Merge Strategies
-            interface HybridSearchResult extends GraphSearchResult {
-                reason?: string;
-            }
-            const merged = new Map<string, HybridSearchResult>();
-
-            // Priority A: Graph Neighbors (Conceptually linked)
-            graphNeighbors.forEach(n => {
-                if (n.path !== file.path) {
-                    // Boost score slightly to ensure visibility
-                    merged.set(n.path, { ...n, reason: "Linked Topic", score: Math.max(n.score, 0.65) });
-                }
-            });
-
-            // Priority B: Vector Matches (Content similar)
-            vectorMatches.forEach(v => {
-                if (v.path !== file.path) {
-                    const existing = merged.get(v.path);
-                    if (existing) {
-                        // If matched both ways, boost significantly
-                        existing.score = Math.max(existing.score, v.score + 0.1);
-                        existing.reason = "Content + Topic";
-                    } else {
-                        merged.set(v.path, { ...v, reason: "Similar Content" });
-                    }
-                }
-            });
-
-            // 4. Sort & Display
-            const finalResults = Array.from(merged.values())
-                .sort((a, b) => b.score - a.score)
-                .slice(0, this.plugin.settings.similarNotesLimit);
 
             if (finalResults.length === 0) {
                 container.createEl("p", { text: "No connections found." });

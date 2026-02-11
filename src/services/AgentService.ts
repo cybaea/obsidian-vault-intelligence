@@ -71,6 +71,17 @@ export class AgentService {
     }
 
     /**
+     * DUAL-LOOP: Loop 1 (Reflex) Search.
+     * Fast, local search suitable for immediate feedback (e.g. Spotlight).
+     * @param query - The search query.
+     * @param limit - Max results.
+     * @returns Raw search results.
+     */
+    public async reflexSearch(query: string, limit: number): Promise<VaultSearchResult[]> {
+        return this.searchOrchestrator.searchReflex(query, limit);
+    }
+
+    /**
      * Conducts a chat session with the agent, handling tool calling loops.
      * @param history - The chat history.
      * @param message - The user's latest message.

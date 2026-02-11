@@ -448,6 +448,48 @@ export class GraphService extends Events {
     }
 
     /**
+     * DUAL-LOOP: Explorer Method.
+     * Merges vector-based similarity with graph-based neighbors for a hybrid result.
+     * @param path - The source file path.
+     * @param limit - Maximum number of results.
+     * @returns Hybrid results ranked by merged score.
+     */
+    public async getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]> {
+        const [vectorResults, neighborResults] = await Promise.all([
+            this.getSimilar(path, limit),
+            this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
+        ]);
+
+        const mergedMap = new Map<string, GraphSearchResult>();
+        const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
+
+        // 1. Process Neighbors (Baseline Graph Context)
+        for (const n of neighborResults) {
+            if (n.path === path) continue;
+            mergedMap.set(n.path, {
+                ...n,
+                score: Math.max(n.score, weights.NEIGHBOR_FLOOR)
+            });
+        }
+
+        // 2. Blend with Vector similarity
+        for (const v of vectorResults) {
+            if (v.path === path) continue;
+            const existing = mergedMap.get(v.path);
+            if (existing) {
+                // If in both, take the better of (neighbor floor, vector match + boost)
+                existing.score = Math.max(existing.score, v.score + weights.HYBRID_BOOST);
+            } else {
+                mergedMap.set(v.path, v);
+            }
+        }
+
+        return Array.from(mergedMap.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+    }
+
+    /**
      * Gets direct neighbors of a file in the graph.
      * @param path - The path of the source file.
      * @param options - Traversal options (direction, mode).

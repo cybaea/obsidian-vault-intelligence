@@ -210,7 +210,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Register Views
 		this.registerView(
 			VIEW_TYPES.SIMILAR_NOTES,
-			(leaf) => new SimilarNotesView(leaf, this, this.graphService, this.geminiService, this.embeddingService)
+			(leaf) => new SimilarNotesView(leaf, this, this.graphService)
 		);
 
 		this.registerView(

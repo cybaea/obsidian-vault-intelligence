@@ -42,7 +42,7 @@
 		"@eslint/js": "^9.39.2",
 		"@nolebase/vitepress-plugin-og-image": "^2.18.2",
 		"@secretlint/secretlint-rule-preset-recommend": "^11.3.1",
-		"@types/node": "^24.0.0",
+		"@types/node": "^24.10.13",
 		"@vitest/ui": "^4.0.17",
 		"esbuild": "0.27.3",
 		"esbuild-plugin-inline-worker": "^0.1.1",
