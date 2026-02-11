@@ -41,7 +41,7 @@ export class AgentService {
         app: App,
         gemini: GeminiService,
         graphService: GraphService,
-        embeddingService: IEmbeddingService, // Injected here
+        embeddingService: IEmbeddingService,
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
