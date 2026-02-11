@@ -698,9 +698,9 @@ export class GraphService extends Events {
                 // We use the start/end offsets from the hollow hit to snip the exact text
                 const start = item.start ?? 0;
                 const end = item.end ?? fileContent.length;
-                (item as GraphSearchResult).content = fileContent.substring(start, end).trim();
+                item.content = fileContent.substring(start, end).trim();
             } else {
-                (item as GraphSearchResult).content = "(Note removed)";
+                item.content = "(Note removed)";
             }
             return item;
         }));
