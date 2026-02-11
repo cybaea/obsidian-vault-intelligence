@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [5.2.0] - 2026-02-11
+
+### User features
+
 -   **Search performance overhaul**: Reduced agent response times by up to 50% by bypassing redundant reranking loops during tool execution.
 -   **Local embedding stability**: Resolved CORS errors that occurred when using local models by ensuring correct service routing.
 -   **Persistence stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder, preventing data corruption during crashes or background synchronization conflicts.
