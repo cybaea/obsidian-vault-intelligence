@@ -66,7 +66,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                         await plugin.saveSettings();
                         await plugin.graphService.updateConfig(plugin.settings);
-                        refreshSettings(plugin);
+                        containerEl.empty();
+                        renderExplorerSettings(context);
                     })();
                 });
         });
@@ -105,7 +106,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             await plugin.saveSettings();
                             await plugin.graphService.updateConfig(plugin.settings);
                         }
-                        refreshSettings(plugin);
+                        containerEl.empty();
+                        renderExplorerSettings(context);
                     })();
                 });
             });
@@ -161,7 +163,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                             await plugin.saveSettings();
                             await plugin.graphService.updateConfig(plugin.settings);
-                            refreshSettings(plugin);
+                            containerEl.empty();
+                            renderExplorerSettings(context);
                         }
                     });
             });
@@ -188,7 +191,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         await plugin.saveSettings();
                         await plugin.graphService.updateConfig(plugin.settings);
                     }
-                    refreshSettings(plugin);
+                    containerEl.empty();
+                    renderExplorerSettings(context);
                 })();
             });
         });
@@ -225,7 +229,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
                                     await plugin.saveSettings();
-                                    refreshSettings(plugin);
+                                    await plugin.graphService.updateConfig(plugin.settings);
+                                    containerEl.empty();
+                                    renderExplorerSettings(context);
                                 }
                             } else {
                                 new Notice(`Invalid: ${result.reason}`, 5000);
@@ -245,6 +251,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }
                     }));
         }
@@ -352,8 +359,4 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             }));
 }
 
-function refreshSettings(plugin: IVaultIntelligencePlugin) {
-    const app = plugin.app as InternalApp;
-    const manifestId = (plugin as unknown as Plugin).manifest.id;
-    app.setting.openTabById(manifestId);
-}
+

@@ -374,7 +374,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.initDebouncedHandlers();
 
 		if (this.graphService) {
-			void this.graphService.updateConfig(this.settings);
+			await this.graphService.updateConfig(this.settings);
 		}
 	}
 

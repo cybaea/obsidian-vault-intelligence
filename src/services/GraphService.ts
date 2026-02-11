@@ -658,6 +658,11 @@ export class GraphService extends Events {
             this.committedSettings.embeddingChunkSize !== settings.embeddingChunkSize
         );
 
+        if (needsReindex) {
+            this.reindexQueued = true;
+            logger.error("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
+        }
+
         this.settings = { ...settings };
         if (this.api) {
             await this.api.updateConfig({
@@ -672,11 +677,6 @@ export class GraphService extends Events {
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath
             });
-
-            this.reindexQueued = !!needsReindex;
-            if (this.reindexQueued) {
-                logger.error("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
-            }
         }
     }
 
