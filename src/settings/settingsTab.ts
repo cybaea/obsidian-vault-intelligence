@@ -64,6 +64,11 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         this.activateTab(initialTab, tabs, contentWrapper);
     }
 
+    override hide(): void {
+        void this.plugin.graphService.commitConfigChange();
+        super.hide();
+    }
+
     private activateTab(id: TabId, tabs: TabDefinition[], contentWrapper: HTMLElement): void {
         const definition = tabs.find(t => t.id === id);
         if (!definition) return;

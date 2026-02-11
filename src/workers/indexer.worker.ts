@@ -5,6 +5,7 @@ import Graph from 'graphology';
 
 import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
+import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
 import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
 
 let graph: Graph;
@@ -19,97 +20,25 @@ interface StopWordsModule {
 }
 
 // Helper to normalize language code for Orama
+// Helper to normalize language code for Orama engine
 function getOramaLanguage(language: string): string {
-    const normalized = language.toLowerCase().trim();
-    if (normalized.startsWith('ar')) return 'arabic';
-    if (normalized.startsWith('hy')) return 'armenian';
-    if (normalized.startsWith('bg')) return 'bulgarian';
-    if (normalized.startsWith('zh')) return 'chinese';
-    if (normalized.startsWith('da')) return 'danish';
-    if (normalized.startsWith('nl')) return 'dutch';
-    if (normalized.startsWith('en')) return 'english';
-    if (normalized.startsWith('fi')) return 'finnish';
-    if (normalized.startsWith('fr')) return 'french';
-    if (normalized.startsWith('de')) return 'german';
-    if (normalized.startsWith('el')) return 'greek';
-    if (normalized.startsWith('hi')) return 'hindi';
-    if (normalized.startsWith('hu')) return 'hungarian';
-    if (normalized.startsWith('id')) return 'indonesian';
-    if (normalized.startsWith('ga')) return 'irish';
-    if (normalized.startsWith('it')) return 'italian';
-    if (normalized.startsWith('ne')) return 'nepali';
-    if (normalized.startsWith('no')) return 'norwegian';
-    if (normalized.startsWith('pt')) return 'portuguese';
-    if (normalized.startsWith('ro')) return 'romanian';
-    if (normalized.startsWith('ru')) return 'russian';
-    if (normalized.startsWith('sa')) return 'sanskrit';
-    if (normalized.startsWith('sr')) return 'serbian';
-    if (normalized.startsWith('sl')) return 'slovenian';
-    if (normalized.startsWith('es')) return 'spanish';
-    if (normalized.startsWith('sv')) return 'swedish';
-    if (normalized.startsWith('ta')) return 'tamil';
-    if (normalized.startsWith('tr')) return 'turkish';
-    if (normalized.startsWith('uk')) return 'ukrainian';
-
-    return 'english'; // Default
+    return resolveEngineLanguage(language);
 }
 
 // Language Normalization & Stop Word Loading
 async function loadStopWords(language: string): Promise<string[]> {
     try {
-        const normalized = language.toLowerCase().trim();
         // 1. Try exact match mappings
         // 2. Try prefix (en-GB -> en)
         // 3. Map to @orama/stopwords exports
 
-        let langCode = 'english'; // Default
-
-        if (normalized.startsWith('ar')) langCode = 'arabic';
-        else if (normalized.startsWith('hy')) langCode = 'armenian';
-        else if (normalized.startsWith('bg')) langCode = 'bulgarian';
-        else if (normalized.startsWith('zh')) langCode = 'chinese';
-        else if (normalized.startsWith('da')) langCode = 'danish';
-        else if (normalized.startsWith('nl')) langCode = 'dutch';
-        else if (normalized.startsWith('en')) langCode = 'english';
-        else if (normalized.startsWith('fi')) langCode = 'finnish';
-        else if (normalized.startsWith('fr')) langCode = 'french';
-        else if (normalized.startsWith('de')) langCode = 'german';
-        else if (normalized.startsWith('el')) langCode = 'greek';
-        else if (normalized.startsWith('hi')) langCode = 'hindi';
-        else if (normalized.startsWith('hu')) langCode = 'hungarian';
-        else if (normalized.startsWith('id')) langCode = 'indonesian';
-        else if (normalized.startsWith('ga')) langCode = 'irish';
-        else if (normalized.startsWith('it')) langCode = 'italian';
-        else if (normalized.startsWith('ne')) langCode = 'nepali';
-        else if (normalized.startsWith('no')) langCode = 'norwegian';
-        else if (normalized.startsWith('pt')) langCode = 'portuguese';
-        else if (normalized.startsWith('ro')) langCode = 'romanian';
-        else if (normalized.startsWith('ru')) langCode = 'russian';
-        else if (normalized.startsWith('sa')) langCode = 'sanskrit';
-        else if (normalized.startsWith('sr')) langCode = 'serbian';
-        else if (normalized.startsWith('sl')) langCode = 'slovenian';
-        else if (normalized.startsWith('es')) langCode = 'spanish';
-        else if (normalized.startsWith('sv')) langCode = 'swedish';
-        else if (normalized.startsWith('ta')) langCode = 'tamil';
-        else if (normalized.startsWith('tr')) langCode = 'turkish';
-        else if (normalized.startsWith('uk')) langCode = 'ukrainian';
-
-        // Japanese/Chinese special handling if needed, but 'chinese' is now supported.
-        // Japanese often requires tokenizer, no stopwords for now.
-        if (normalized.startsWith('ja')) return [];
-
-        // Dynamic import to avoid bundling all languages
-        // Note: ESBuild might bundle them if path is static, but dynamic string makes it tricky.
-        // For simplicity and safety with the installed package, let's try a direct map if possible,
-        // or just use the english default + extensive map if we want to be fancy.
-        // Given the constraints, we'll try to import the specific one.
-        // Since we can't easily do dynamic template string imports in all bundlers without config:
+        const langCode = resolveStopwordKey(language);
 
         switch (langCode) {
             case 'arabic': return (await import('@orama/stopwords/arabic') as StopWordsModule).stopwords;
             case 'armenian': return (await import('@orama/stopwords/armenian') as StopWordsModule).stopwords;
             case 'bulgarian': return (await import('@orama/stopwords/bulgarian') as StopWordsModule).stopwords;
-            case 'chinese': return (await import('@orama/stopwords/chinese') as StopWordsModule).stopwords;
+            case 'mandarin': return (await import('@orama/stopwords/mandarin') as StopWordsModule).stopwords;
             case 'danish': return (await import('@orama/stopwords/danish') as StopWordsModule).stopwords;
             case 'dutch': return (await import('@orama/stopwords/dutch') as StopWordsModule).stopwords;
             case 'english': return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
@@ -117,11 +46,12 @@ async function loadStopWords(language: string): Promise<string[]> {
             case 'french': return (await import('@orama/stopwords/french') as StopWordsModule).stopwords;
             case 'german': return (await import('@orama/stopwords/german') as StopWordsModule).stopwords;
             case 'greek': return (await import('@orama/stopwords/greek') as StopWordsModule).stopwords;
-            case 'hindi': return (await import('@orama/stopwords/hindi') as StopWordsModule).stopwords;
+            case 'indian': return (await import('@orama/stopwords/indian') as StopWordsModule).stopwords;
             case 'hungarian': return (await import('@orama/stopwords/hungarian') as StopWordsModule).stopwords;
             case 'indonesian': return (await import('@orama/stopwords/indonesian') as StopWordsModule).stopwords;
             case 'irish': return (await import('@orama/stopwords/irish') as StopWordsModule).stopwords;
             case 'italian': return (await import('@orama/stopwords/italian') as StopWordsModule).stopwords;
+            case 'japanese': return (await import('@orama/stopwords/japanese') as StopWordsModule).stopwords;
             case 'nepali': return (await import('@orama/stopwords/nepali') as StopWordsModule).stopwords;
             case 'norwegian': return (await import('@orama/stopwords/norwegian') as StopWordsModule).stopwords;
             case 'portuguese': return (await import('@orama/stopwords/portuguese') as StopWordsModule).stopwords;
@@ -178,6 +108,7 @@ interface OramaHit {
 }
 
 interface SerializedIndexState {
+    embeddingChunkSize?: number;
     embeddingDimension: number;
     embeddingModel: string;
     graph: object;
@@ -185,7 +116,6 @@ interface SerializedIndexState {
 }
 
 // Match project logger format: [VaultIntelligence:LEVEL]
-const LATENCY_BUDGET_TOKENS = WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_TOKENS;
 
 function calculateInheritedScore(parentScore: number, linkCount: number): number {
     const dilution = Math.max(1, Math.log2(linkCount + 1));
@@ -214,6 +144,9 @@ const IndexerWorker: WorkerAPI = {
      * 4. Batch Hydration (fixing I/O)
      */
     async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        // Calculate dynamic budget based on current config
+        const LATENCY_BUDGET_TOKENS = (config.embeddingChunkSize || 512) * WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_FACTOR;
+
         // 1. Parallel Wide Fetch (Top 100 Vector + 50 Keyword)
         const vectorPromise = search(orama, {
             includeVectors: false,
@@ -767,16 +700,18 @@ const IndexerWorker: WorkerAPI = {
             const expectedDimension = config.embeddingDimension;
             const loadedModel = parsed.embeddingModel;
             const expectedModel = config.embeddingModel;
+            const loadedChunkSize = parsed.embeddingChunkSize;
+            const expectedChunkSize = config.embeddingChunkSize;
 
             const modelMismatch = loadedModel !== undefined && loadedModel !== expectedModel;
             const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
+            const chunkMismatch = loadedChunkSize !== undefined && loadedChunkSize !== expectedChunkSize;
 
-            if (modelMismatch || dimMismatch || loadedDimension === undefined) {
-                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), loadedDimensionUndef=${loadedDimension === undefined}`);
+            if (modelMismatch || dimMismatch || chunkMismatch || loadedDimension === undefined) {
+                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), chunkMismatch=${String(chunkMismatch)} (${loadedChunkSize} vs ${expectedChunkSize}), loadedDimensionUndef=${loadedDimension === undefined}`);
                 await recreateOrama();
                 return false; // Signal migration
             }
-
             try {
                 load(orama, parsed.orama);
                 const total = count(orama);
@@ -859,6 +794,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         const serialized: SerializedIndexState = {
+            embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
@@ -983,9 +919,10 @@ const IndexerWorker: WorkerAPI = {
     async updateConfig(newConfig: Partial<WorkerConfig>) {
         const dimensionChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
+        const chunkSizeChanged = newConfig.embeddingChunkSize !== undefined && newConfig.embeddingChunkSize !== config.embeddingChunkSize;
 
         config = { ...config, ...newConfig };
-        if (dimensionChanged || modelChanged) {
+        if (dimensionChanged || modelChanged || chunkSizeChanged) {
             await recreateOrama();
         }
 
@@ -1025,7 +962,7 @@ const IndexerWorker: WorkerAPI = {
         const contextString = generateContextString(title, parsedFrontmatter, config);
 
         // 4. Split
-        const tokensPerChunk = WORKER_INDEXER_CONSTANTS.DEFAULT_CHUNK_TOKENS;
+        const tokensPerChunk = config.embeddingChunkSize || 512;
         const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE || 4;
         const chunkSize = tokensPerChunk * charsPerToken;
         const overlap = Math.floor(chunkSize * WORKER_INDEXER_CONSTANTS.DEFAULT_OVERLAP_RATIO);
@@ -1405,25 +1342,30 @@ function updateGraphEdges(path: string, content: string) {
 }
 
 async function recreateOrama() {
-    const { create } = await import('@orama/orama');
-    const language = getOramaLanguage(config.agentLanguage || 'english');
+    try {
+        const { create } = await import('@orama/orama');
+        const language = getOramaLanguage(config.agentLanguage || 'english');
 
-    workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
+        workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
 
-    orama = create({
-        language: language,
-        schema: {
-            // New Metadata Fields
-            author: 'string', // New: Indexed Author
-            content: 'string',
-            created: 'number',
-            embedding: `vector[${config.embeddingDimension}]`,
-            params: 'string[]', // For Tags/Topics
-            path: 'enum',
-            status: 'string',
-            title: 'string'
-        }
-    });
+        orama = create({
+            language: language,
+            schema: {
+                // New Metadata Fields
+                author: 'string', // New: Indexed Author
+                content: 'string',
+                created: 'number',
+                embedding: `vector[${config.embeddingDimension}]`,
+                params: 'string[]', // For Tags/Topics
+                path: 'enum',
+                status: 'string',
+                title: 'string'
+            }
+        });
+    } catch (e) {
+        workerLogger.error(`[recreateOrama] CRITICAL: Failed to create Orama index.`, e);
+        // Fail gracefully - search will just return empty or error later but won't crash the worker thread immediately in a way that blocks other tasks if we handle it.
+    }
 }
 
 async function computeHash(text: string): Promise<string> {

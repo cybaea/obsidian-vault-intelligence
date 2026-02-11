@@ -5,6 +5,7 @@ import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { GraphService } from "./GraphService";
+import { IEmbeddingService } from "./IEmbeddingService";
 import { ScoringStrategy } from "./ScoringStrategy";
 
 /**
@@ -15,13 +16,15 @@ export class SearchOrchestrator {
     private app: App;
     private graphService: GraphService;
     private geminiService: GeminiService;
+    private embeddingService: IEmbeddingService;
     private settings: VaultIntelligenceSettings;
     private scoringStrategy: ScoringStrategy;
 
-    constructor(app: App, graphService: GraphService, geminiService: GeminiService, settings: VaultIntelligenceSettings) {
+    constructor(app: App, graphService: GraphService, geminiService: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
         this.app = app;
         this.graphService = graphService;
         this.geminiService = geminiService;
+        this.embeddingService = embeddingService;
         this.settings = settings;
         this.scoringStrategy = new ScoringStrategy();
     }
@@ -30,13 +33,16 @@ export class SearchOrchestrator {
      * Performs a hybrid search (Vector + Keyword) on the vault.
      * @param query - The user's search query.
      * @param limit - Maximum number of final results to return.
+     * @param options - Search options (e.g. deep: false to skip AI reranking).
      * @returns A promise resolving to a ranked list of search results.
      */
-    public async search(query: string, limit: number): Promise<VaultSearchResult[]> {
+    public async search(query: string, limit: number, options: { deep?: boolean } = {}): Promise<VaultSearchResult[]> {
         // DUAL-LOOP LOGIC:
-        // If Dual Loop is enabled, we try the Analyst (Loop 2) first.
+        // If Deep search is requested (or default is enabled), we try the Analyst (Loop 2) first.
         // It provides deeper, graph-expanded, and AI-ranked results.
-        if (this.settings.enableDualLoop) {
+        const deep = options.deep ?? this.settings.enableDualLoop;
+
+        if (deep) {
             try {
                 const analystResults = await this.searchAnalyst(query);
                 if (analystResults.length > 0) {
@@ -96,7 +102,7 @@ export class SearchOrchestrator {
 
         if (this.settings.enableDualLoop) {
             // Dual-Loop: Reflex (Loop 1) is handled by UI. This is Analyst (Loop 2).
-            const queryVector = await this.geminiService.embedText(query, { taskType: "RETRIEVAL_QUERY" });
+            const queryVector = await this.embeddingService.embedQuery(query);
 
             // 1. Build Payload (Graph + Vector + Keyword)
             const payload = await this.graphService.buildPriorityPayload(queryVector, query);

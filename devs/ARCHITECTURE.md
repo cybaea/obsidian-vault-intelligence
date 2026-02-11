@@ -63,9 +63,10 @@ The system follows a _Service-Oriented Architecture (SOA)_ adapted for a monolit
 
 -   **Services** (eg `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
 -   **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
--   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication.
--   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`, and tool execution to `ToolRegistry`.
+-   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication. It provides high-level methods like `getGraphEnhancedSimilar` for views.
+-   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`. It exposes `reflexSearch` for fast-path UI feedback.
 -   **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
+-   **Safe Mutation**: `MetadataManager` centralises all vault frontmatter updates, ensuring thread safety and idempotency.
 
 ### Brain vs Body
 
@@ -144,7 +145,18 @@ sequenceDiagram
     participant GS as GraphService
     participant IW as IndexerWorker
 
+    Note over U,V: User interaction
     U->>V: Types question
+    
+    rect rgb(235, 235, 235)
+    Note over V,GS: Loop 1 (Reflex Search) - Spotlight
+    V->>A: reflexSearch(query)
+    A->>S: searchReflex(query)
+    S-->>V: Raw top-K candidates
+    V->>U: Display "Spotlight" results
+    end
+
+    Note over V,A: Intent expansion
     V->>A: chat(history, msg)
     A->>G: startChat()
     G-->>A: Request Tool: "vault_search"
@@ -317,8 +329,9 @@ flowchart TD
 ```mermaid
 classDiagram
     class AgentService {
-        +chat(history, msg)
-        +prepareContext(msg)
+        +chat(history, msg): Promise<any>
+        +reflexSearch(query, limit): Promise<VaultSearchResult[]>
+        +prepareContext(msg): Promise<ChatMessage>
     }
     class ToolRegistry {
         +getTools()
@@ -477,6 +490,7 @@ export class GraphService {
     public keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     public getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
     public getNeighbors(path: string, options?: any): Promise<GraphSearchResult[]>;
+    public getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]>;
     public scanAll(forceWipe?: boolean): Promise<void>;
     public forceSave(): Promise<void>;
 }

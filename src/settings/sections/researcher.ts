@@ -2,6 +2,7 @@ import { Setting, App, Plugin } from "obsidian";
 
 import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
@@ -111,6 +112,18 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (val !== 'custom') {
                         plugin.settings.agentLanguage = val;
+
+                        // Propagate default changes for chunk size if using standard defaults
+                        const isCurrentlyStandard = plugin.settings.embeddingChunkSize === 512 || plugin.settings.embeddingChunkSize === 1024;
+                        if (isCurrentlyStandard && plugin.settings.embeddingProvider === 'gemini') {
+                            const suggested = isComplexLanguage(val) ? 512 : 1024;
+                            if (suggested !== plugin.settings.embeddingChunkSize) {
+                                plugin.settings.embeddingChunkSize = suggested;
+                                // Notify GraphService to queue re-index if needed
+                                await plugin.graphService.updateConfig(plugin.settings);
+                            }
+                        }
+
                         await plugin.saveSettings();
                         refreshSettings(plugin); // Hide text box if picking preset
                     } else {

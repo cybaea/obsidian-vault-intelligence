@@ -44,8 +44,8 @@ Configure how connections and similar notes are discovered.
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
 | Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
-| Keyword match weight | `1.2` | Calibration for hybrid search (BM25). <br>• _Low (0.5 - 1.0):_ Keyword matches are boosted significantly. <br>• _High (2.0 - 5.0):_ Keywords are treated as secondary to vector similarity. |
-| Re-index vault | `None` | Wipe and rebuild all embeddings. **Note:** The plugin now automatically triggers a re-sync if you change the model or dimension in settings. |
+| Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) and local models to improve retrieval accuracy. Supports values up to `2048` for Gemini English-only vaults. |
+| Re-index vault | None | Wipe and rebuild all embeddings. **Note:** The plugin now manages this automatically; re-indexing is queued when you change critical embedding settings (provider, model, or chunk size) and triggers when you close the settings dialog. |
 
 ## Gardener
 
@@ -68,7 +68,7 @@ Technical tuning for power users.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing background or synced notes. **Note:** The currently active note has a fixed 30nd delay to avoid interruptions while typing. |
+| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing background or synced notes. **Note:** The currently active note has a fixed 30s delay to avoid interruptions while typing. |
 | Indexing throttle | `100ms` | Delay between files during indexing task processing to respect API rate limits. |
 | Local worker threads | `1-2` | CPU threads for local embeddings. Higher is faster but heavier. |
 | Local SIMD acceleration | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |

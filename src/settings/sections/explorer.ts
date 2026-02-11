@@ -1,17 +1,14 @@
-import { Setting, Notice, App, Plugin, setIcon } from "obsidian";
+import { Setting, Notice, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
+import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { DEFAULT_SETTINGS } from "../types";
 
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
+
 
 export function renderExplorerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
@@ -27,10 +24,16 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const hasApiKey = !!plugin.settings.googleApiKey;
 
 
-    // --- 1. Embedding Provider ---
+    const providerDesc = document.createDocumentFragment();
+    providerDesc.appendText('Choose where your document vectors are calculated.');
+    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+    });
+
     new Setting(containerEl)
         .setName('Embedding provider')
-        .setDesc('Choose where your document vectors are calculated.')
+        .setDesc(providerDesc)
         .addDropdown(dropdown => {
             const google = "Google";
             const gemini = "Gemini";
@@ -49,9 +52,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         plugin.settings.embeddingModel = defaultModelId;
                         plugin.settings.embeddingDimension = modelDef?.dimensions ?? 768;
 
+                        // Language-aware defaults for chunk size
+                        if (provider === 'local') {
+                            plugin.settings.embeddingChunkSize = 512;
+                        } else {
+                            // Gemini: Check for complex languages (CJK, etc.)
+                            plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
+                        }
+
                         await plugin.saveSettings();
-                        refreshSettings(plugin);
-                        new Notice("Provider changed. Re-scanning vault suggested.");
+                        await plugin.graphService.updateConfig(plugin.settings);
+                        containerEl.empty();
+                        renderExplorerSettings(context);
                     })();
                 });
         });
@@ -88,8 +100,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
                             }
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }
-                        refreshSettings(plugin);
+                        containerEl.empty();
+                        renderExplorerSettings(context);
                     })();
                 });
             });
@@ -106,6 +120,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }));
             }
         } else {
@@ -114,10 +129,16 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        // Embedding Dimension
+        const dimensionDesc = document.createDocumentFragment();
+        dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
+        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+            setIcon(div.createSpan(), 'lucide-alert-triangle');
+            div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+        });
+
         new Setting(containerEl)
             .setName('Embedding dimension')
-            .setDesc('Control the size of the vector. Higher dimensions mean better search but larger index. Changing this kills your local index.')
+            .setDesc(dimensionDesc)
             .addDropdown(dropdown => {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
                 const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';
@@ -137,8 +158,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             }
 
                             await plugin.saveSettings();
-                            new Notice("Dimension changed. You must re-index your vault for this to take effect.");
-                            refreshSettings(plugin);
+                            await plugin.graphService.updateConfig(plugin.settings);
+                            containerEl.empty();
+                            renderExplorerSettings(context);
                         }
                     });
             });
@@ -163,8 +185,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
                         await plugin.saveSettings();
+                        await plugin.graphService.updateConfig(plugin.settings);
                     }
-                    refreshSettings(plugin);
+                    containerEl.empty();
+                    renderExplorerSettings(context);
                 })();
             });
         });
@@ -185,6 +209,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         })();
                     }))
                 .addButton(btn => btn
@@ -200,7 +225,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
                                     await plugin.saveSettings();
-                                    refreshSettings(plugin);
+                                    await plugin.graphService.updateConfig(plugin.settings);
+                                    containerEl.empty();
+                                    renderExplorerSettings(context);
                                 }
                             } else {
                                 new Notice(`Invalid: ${result.reason}`, 5000);
@@ -220,6 +247,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
                             await plugin.saveSettings();
+                            await plugin.graphService.updateConfig(plugin.settings);
                         }
                     }));
         }
@@ -327,8 +355,4 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             }));
 }
 
-function refreshSettings(plugin: IVaultIntelligencePlugin) {
-    const app = plugin.app as InternalApp;
-    const manifestId = (plugin as unknown as Plugin).manifest.id;
-    app.setting.openTabById(manifestId);
-}
+

@@ -49,7 +49,14 @@ export class GraphService extends Events {
     private api: Comlink.Remote<WorkerAPI> | null = null;
     private isInitialized = false;
     private _isScanning = false;
+    private reindexQueued = false;
     private needsForcedScan = false;
+    private committedSettings: {
+        embeddingChunkSize: number;
+        embeddingDimension: number;
+        embeddingModel: string;
+        embeddingProvider: string;
+    } | null = null;
 
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
@@ -73,7 +80,7 @@ export class GraphService extends Events {
         this.gemini = gemini;
         this.embeddingService = embeddingService;
         this.persistenceManager = persistenceManager;
-        this.settings = settings;
+        this.settings = { ...settings };
     }
 
     /**
@@ -120,6 +127,7 @@ export class GraphService extends Events {
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
                 contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
+                embeddingChunkSize: this.settings.embeddingChunkSize,
                 embeddingDimension: this.settings.embeddingDimension,
                 embeddingModel: this.settings.embeddingModel,
                 googleApiKey: this.settings.googleApiKey,
@@ -161,6 +169,12 @@ export class GraphService extends Events {
             this.registerEvents();
 
             this.isInitialized = true;
+            this.committedSettings = {
+                embeddingChunkSize: this.settings.embeddingChunkSize,
+                embeddingDimension: this.settings.embeddingDimension,
+                embeddingModel: this.settings.embeddingModel,
+                embeddingProvider: this.settings.embeddingProvider
+            };
             logger.info("[GraphService] Initialized and worker started.");
         } catch (error) {
             logger.error("[GraphService] Initialization failed:", error);
@@ -434,6 +448,48 @@ export class GraphService extends Events {
     }
 
     /**
+     * DUAL-LOOP: Explorer Method.
+     * Merges vector-based similarity with graph-based neighbors for a hybrid result.
+     * @param path - The source file path.
+     * @param limit - Maximum number of results.
+     * @returns Hybrid results ranked by merged score.
+     */
+    public async getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]> {
+        const [vectorResults, neighborResults] = await Promise.all([
+            this.getSimilar(path, limit),
+            this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
+        ]);
+
+        const mergedMap = new Map<string, GraphSearchResult>();
+        const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
+
+        // 1. Process Neighbors (Baseline Graph Context)
+        for (const n of neighborResults) {
+            if (n.path === path) continue;
+            mergedMap.set(n.path, {
+                ...n,
+                score: Math.max(n.score, weights.NEIGHBOR_FLOOR)
+            });
+        }
+
+        // 2. Blend with Vector similarity
+        for (const v of vectorResults) {
+            if (v.path === path) continue;
+            const existing = mergedMap.get(v.path);
+            if (existing) {
+                // If in both, take the better of (neighbor floor, vector match + boost)
+                existing.score = Math.max(existing.score, v.score + weights.HYBRID_BOOST);
+            } else {
+                mergedMap.set(v.path, v);
+            }
+        }
+
+        return Array.from(mergedMap.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+    }
+
+    /**
      * Gets direct neighbors of a file in the graph.
      * @param path - The path of the source file.
      * @param options - Traversal options (direction, mode).
@@ -543,6 +599,14 @@ export class GraphService extends Events {
             if (shouldWipe) {
                 logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
                 await this.api.fullReset();
+
+                // Align committed snapshot with current settings after wipe
+                this.committedSettings = {
+                    embeddingChunkSize: this.settings.embeddingChunkSize,
+                    embeddingDimension: this.settings.embeddingDimension,
+                    embeddingModel: this.settings.embeddingModel,
+                    embeddingProvider: this.settings.embeddingProvider
+                };
             }
 
             // Ensure aliases are up to date before scanning content
@@ -629,15 +693,25 @@ export class GraphService extends Events {
      * @param settings - The new plugin settings.
      */
     public async updateConfig(settings: VaultIntelligenceSettings) {
-        const needsReindex = this.settings.embeddingDimension !== settings.embeddingDimension ||
-            this.settings.embeddingModel !== settings.embeddingModel;
+        const needsReindex = this.committedSettings && (
+            this.committedSettings.embeddingProvider !== settings.embeddingProvider ||
+            this.committedSettings.embeddingDimension !== settings.embeddingDimension ||
+            this.committedSettings.embeddingModel !== settings.embeddingModel ||
+            this.committedSettings.embeddingChunkSize !== settings.embeddingChunkSize
+        );
 
-        this.settings = settings;
+        if (needsReindex && !this.reindexQueued) {
+            logger.warn("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
+        }
+        this.reindexQueued = !!needsReindex;
+
+        this.settings = { ...settings };
         if (this.api) {
             await this.api.updateConfig({
                 authorName: settings.authorName,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
+                embeddingChunkSize: settings.embeddingChunkSize,
                 embeddingDimension: settings.embeddingDimension,
                 embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,
@@ -645,11 +719,28 @@ export class GraphService extends Events {
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath
             });
+        }
+    }
 
-            if (needsReindex) {
-                logger.error("[GraphService] Embedding settings changed. Triggering forced re-scan.");
-                void this.scanAll(true);
-            }
+    /**
+     * Commits any queued configuration changes, such as triggering a full re-index.
+     * Called when the settings UI is closed.
+     */
+    public commitConfigChange() {
+        if (this.reindexQueued) {
+            this.reindexQueued = false;
+
+            // Update committed snapshot
+            this.committedSettings = {
+                embeddingChunkSize: this.settings.embeddingChunkSize,
+                embeddingDimension: this.settings.embeddingDimension,
+                embeddingModel: this.settings.embeddingModel,
+                embeddingProvider: this.settings.embeddingProvider
+            };
+
+            logger.warn("[GraphService] Committing config change: Triggering forced re-scan.");
+            new Notice("Embedding settings changed. Re-indexing vault...");
+            void this.scanAll(true);
         }
     }
 

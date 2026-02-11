@@ -3,6 +3,8 @@
  * Grouped by logical area to improve maintainability.
  */
 
+const LATENCY_BUDGET_FACTOR = 4.0;
+
 export const SEARCH_CONSTANTS = {
     /** Absolute minimum score for a seed to trigger neighbor expansion */
     ABSOLUTE_MIN_EXPANSION_SCORE: 0.40,
@@ -92,7 +94,6 @@ export const SEARCH_CONSTANTS = {
 
     /** Default character limit for tool responses (truncation) */
     TOOL_RESPONSE_TRUNCATE_LIMIT: 5000,
-
     /** Search: Minimum threshold for vector results to be considered relevant */
     VECTOR_MIN_RELEVANCE: 0.35
 };
@@ -100,8 +101,6 @@ export const SEARCH_CONSTANTS = {
 export const EMBEDDING_CONSTANTS = {
     /** Backoff delay duration when hitting rate limits (ms) */
     BACKOFF_DELAY_MS: 30000,
-
-
 
     /** Default delay between embedding requests (ms) */
     DEFAULT_QUEUE_DELAY_MS: 300,
@@ -149,11 +148,6 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
     CONTENT_PREVIEW_LENGTH: 25000,
 
-    /** Default token size for chunks (512 tokens) */
-    DEFAULT_CHUNK_TOKENS: 512,
-
-
-
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
 
@@ -186,7 +180,6 @@ export const WORKER_INDEXER_CONSTANTS = {
 
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
-
 };
 
 export const GRAPH_CONSTANTS = {
@@ -196,6 +189,11 @@ export const GRAPH_CONSTANTS = {
     DATA_DIR: "data",
     /** Default indexing delay if not configured (5s) */
     DEFAULT_INDEXING_DELAY_MS: 5000,
+    /** Scoring for Explorer (Vector + Graph) enhanced similarity */
+    ENHANCED_SIMILAR_WEIGHTS: {
+        HYBRID_BOOST: 0.1,
+        NEIGHBOR_FLOOR: 0.65
+    },
     /** Throttle/Idle time before auto-saving graph state (ms) */
     IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",
@@ -343,6 +341,8 @@ export const UI_STRINGS = {
     NOTICE_PURGE_FAILED: "Purge failed: ",
     NOTICE_SANITISED_BUDGETS: "Sanitised context budgets to safe bounds",
     PLUGIN_NAME: "Vault Intelligence",
+    RESEARCHER_SPOTLIGHT_HEADER: "⚡ Spotlight candidates",
+    RESEARCHER_SYSTEM_NOTE_PREFIX: "*System Note:* ",
     RESEARCHER_TITLE: "Researcher: chat with vault",
     RIBBON_ICON: "brain-circuit",
     RIBBON_TOOLTIP: "Vault intelligence"
@@ -405,6 +405,6 @@ export const MODEL_CONSTANTS = {
 };
 
 export const WORKER_LATENCY_CONSTANTS = {
-    /** Tokens budgeted for latency overhead in worker */
-    LATENCY_BUDGET_TOKENS: 200
+    /** Multiple of chunk size allowed in the fast-path search */
+    LATENCY_BUDGET_FACTOR
 };

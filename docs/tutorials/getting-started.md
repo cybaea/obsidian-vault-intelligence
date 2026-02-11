@@ -50,3 +50,6 @@ Now that you are connected, try a specific workflow:
 -   [Chat with specific documents](../how-to/researcher-workflows.md)
 -   [Analyse data with Python](../how-to/data-analysis.md)
 -   [Clean up your vault structure](../how-to/gardener-workflows.md)
+
+> [!TIP]
+> **For users of complex scripts**: If you write primarily in Chinese, Japanese, Korean, Arabic, or other logographic/right-to-left scripts, ensure your **Agent language** is set correctly. The plugin automatically optimises settings like chunk size to handle the higher information density of these languages, ensuring better semantic retrieval. For best results, please check the 'Embedding chunk size' setting in Advanced settings and select a size that is appropriate for your language.

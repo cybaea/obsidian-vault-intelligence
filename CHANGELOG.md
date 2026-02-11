@@ -11,16 +11,26 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Search performance overhaul**: Reduced agent response times by up to 50% by bypassing redundant reranking loops during tool execution.
+-   **Local embedding stability**: Resolved CORS errors that occurred when using local models by ensuring correct service routing.
 -   **Persistence stability**: Hardened state persistence using atomic-like binary operations in the `.vault-intelligence` folder, preventing data corruption during crashes or background synchronization conflicts.
 -   **UI refinements**: Standardized visual highlighting for similarity scores and aligned action buttons with native Obsidian design tokens.
 -   **Cleanup guide**: Added an [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide for managing the plugin's data footprint.
 -   **Redundant embedding prevention**: Reduced API usage by verifying file changes (via `mtime` and `size`) before requesting new embeddings.
 -   **Indexing debounce**: Added per-file indexing delays (30s for active notes, 5s for background files) to optimize resource usage.
 -   **Purge and reset**: Introduced a "Danger Zone" in Advanced settings with a button to fully reset or purge plugin data.
+-   **Customizable chunk sizes**: Control how your notes are split for indexing. Added presets ranging from 256 for local models to 2048 for cloud-only English vaults.
+-   **Robust stopword support**: Added intelligent stopword mapping for 30+ languages, including specific support for Chinese (Mandarin), Hindi (Indian), and Japanese.
+-   **Deferred re-indexing**: Re-embeddings now wait until you close the settings dialog, allowing for multiple changes without redundant re-scans.
+-   **Idempotent re-index queuing**: Reverting a setting back to its original value before closing the dialog now correctly cancels any pending re-index.
+-   **High-visibility warnings**: Added prominent "yellow box" warnings for settings that require a full vault re-index, ensuring no surprises.
 -   **Similar notes fix**: Resolved a race condition causing duplicate entries in the "Similar notes" view.
+-   **Enhanced similarity intelligence**: The "Similar Notes" view now utilises a more robust hybrid scoring engine that prioritises conceptually linked topic siblings (Graph Neighbors) over pure text similarity (Vector matches) when the connection is strong.
 
 ### Developer features
 
+-   **Deep search toggling**: Added a `deep` option to the `SearchOrchestrator.search` method to allow manual control over the "Analyst Loop" (Loop 2).
+-   **Dynamic latency sizing**: Refactored `LATENCY_BUDGET_TOKENS` into a dynamic value calculated from a multiplier of the chunk size.
 -   **Persistence hardening**: Fixed "Folder already exists" errors during startup by improving existence checks for the `.vault-intelligence` directory.
 -   **Version baseline**: Set minimum required Obsidian version to `v1.5.0`.
 -   **Standards codification**: Created `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/REFERENCE_LINKS.md` to formalize project architecture.
@@ -29,6 +39,12 @@ New features are added in the "Unreleased" section.
 -   **Worker API enhancement**: Added a `getFileState` method to the background worker for efficient metadata retrieval.
 -   **Robust scan logic**: Integrated file size and modification time checks into the `GraphService` scanner.
 -   **Constants consolidation**: Centralized indexing delay constants in `GRAPH_CONSTANTS` and refactored settings to use them.
+-   **Settings UI decoupling**: Refactored the Explorer settings to use local DOM refreshes instead of full tab reloads, preventing premature `hide()` hook execution.
+-   **Synchronous re-index flags**: Optimized `GraphService` to update re-index state synchronously before configuration propagation, eliminating race conditions during modal closure.
+-   **SOA Refactoring phase 1**: Decomposed monolithic logic in `ResearchChatView` and `SimilarNotesView` by delegating business operations to `AgentService` and `GraphService` respectively, following the "Humble View" pattern.
+-   **Service Facade extension**: Expanded `GraphService` with `getGraphEnhancedSimilar` and `AgentService` with `reflexSearch` to provide high-level APIs for views and tool registries.
+-   **Loop 1 search delegation**: Formally separated the "Reflex" (Loop 1) search from the reasoning loop by moving orchestrator interaction into `AgentService`.
+-   **UI Architecture cleanup**: Removed tight coupling between `SimilarNotesView` and the embedding/vault management layers, resulting in a cleaner, more testable view component.
 
 ## [5.1.1] - 2026-02-06
 

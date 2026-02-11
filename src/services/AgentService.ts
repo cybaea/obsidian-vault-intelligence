@@ -51,7 +51,7 @@ export class AgentService {
         this.settings = settings;
 
         // Initialize delegates
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, settings);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
@@ -68,6 +68,17 @@ export class AgentService {
 
     public getSearchOrchestrator(): SearchOrchestrator {
         return this.searchOrchestrator;
+    }
+
+    /**
+     * DUAL-LOOP: Loop 1 (Reflex) Search.
+     * Fast, local search suitable for immediate feedback (e.g. Spotlight).
+     * @param query - The search query.
+     * @param limit - Max results.
+     * @returns Raw search results.
+     */
+    public async reflexSearch(query: string, limit: number): Promise<VaultSearchResult[]> {
+        return this.searchOrchestrator.searchReflex(query, limit);
     }
 
     /**

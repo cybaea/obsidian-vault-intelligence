@@ -47,6 +47,7 @@ export interface WorkerConfig {
     authorName: string;
     chatModel: string;
     contextAwareHeaderProperties: string[];
+    embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
     googleApiKey: string;

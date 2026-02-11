@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, setIcon, DropdownComponent, ToggleComponent, normalizePath } from "obsidian";
 
-import { VIEW_TYPES } from "../constants";
+import { VIEW_TYPES, UI_STRINGS } from "../constants";
 import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { GeminiService } from "../services/GeminiService";
@@ -183,8 +183,7 @@ export class ResearchChatView extends ItemView {
 
         // SPOTLIGHT: Call Reflex Search Immediately (Loop 1)
         try {
-            const orchestrator = this.agent.getSearchOrchestrator();
-            const reflexResults = await orchestrator.searchReflex(text, 5);
+            const reflexResults = await this.agent.reflexSearch(text, 5);
             if (reflexResults.length > 0) {
                 this.addMessage("system", "", undefined, undefined, undefined, reflexResults);
             }
@@ -197,7 +196,7 @@ export class ResearchChatView extends ItemView {
 
             if (warnings && warnings.length > 0) {
                 warnings.forEach(w => new Notice(w));
-                this.addMessage("model", `*System Note:* ${warnings.join("\n")}`);
+                this.addMessage("model", `${UI_STRINGS.RESEARCHER_SYSTEM_NOTE_PREFIX}${warnings.join("\n")}`);
             }
 
             const response = await this.agent.chat(this.messages, cleanMessage, contextFiles, {
@@ -235,8 +234,7 @@ export class ResearchChatView extends ItemView {
             // SPOTLIGHT RENDER
             if (msg.spotlightResults && msg.spotlightResults.length > 0) {
                 const spotlightDiv = msgDiv.createDiv({ cls: "spotlight-container" });
-                // eslint-disable-next-line obsidianmd/ui/sentence-case -- Proper noun 'Spotlight'
-                spotlightDiv.createEl("h5", { text: "⚡ Spotlight candidates" });
+                spotlightDiv.createEl("h5", { text: UI_STRINGS.RESEARCHER_SPOTLIGHT_HEADER });
                 const list = spotlightDiv.createEl("ul");
                 for (const res of msg.spotlightResults) {
                     const item = list.createEl("li");
