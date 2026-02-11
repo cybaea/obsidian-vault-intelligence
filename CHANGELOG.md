@@ -13,6 +13,12 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+## [5.2.1] - 2026-02-11
+
+### User features
+
+### Developer features
+
 -   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals. This ensures memory safety and complies with Obsidian's rendering requirements.
 
 ## [5.2.0] - 2026-02-11
