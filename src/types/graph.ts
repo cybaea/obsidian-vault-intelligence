@@ -1,5 +1,6 @@
 /**
  * Core type definitions for the Shadow Graph infrastructure.
+ * Note: content property added for RAG hydration.
  */
 
 export type NodeType = 'file' | 'topic' | 'concept' | 'person';

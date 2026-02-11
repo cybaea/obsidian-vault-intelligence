@@ -468,7 +468,7 @@ const IndexerWorker: WorkerAPI = {
                             path: sibling,
                             score: score,
                             title: attr.title || sibling.split('/').pop()?.replace('.md', '')
-                        });
+                        } as GraphSearchResult);
                     }
                 }
             }
@@ -812,7 +812,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
                 score: hit.score,
                 start: doc.start,
                 title: doc.title,
-            });
+            } as GraphSearchResult);
         }
     }
 

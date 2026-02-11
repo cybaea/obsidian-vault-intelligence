@@ -19,7 +19,7 @@ We have overhauled the search pipeline to prioritize **Recall** at the retrieval
 ### 1. Deep Vector Recall
 
 *   **Change**: We now explicitly set the Orama vector search `similarity` threshold to `0.001` (effectively "get everything").
-*   **Reasoning**: We trust our internal re-ranking logic (GARS) more than the raw cosine similarity cutoff. By fetching _all_ semantic candidates, we ensure that graph-connected but loose semantic matches (siblings, neighbors) are initially considered.
+*   **Reasoning**: We trust our internal re-ranking logic (GARS) more than the raw cosine similarity cut-off. By fetching _all_ semantic candidates, we ensure that graph-connected but loose semantic matches (siblings, neighbors) are initially considered.
 
 ### 2. Local Keyword Normalization
 

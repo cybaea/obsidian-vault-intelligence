@@ -587,7 +587,7 @@ export class GraphService extends Events {
      * Gets direct neighbors of a file in the graph.
      * @param path - The path of the source file.
      * @param options - Traversal options (direction, mode).
-     * @returns A promise resolving to an array of neighboring files.
+     * @returns A promise resolving to an array of neighbouring files.
      */
     public async getNeighbors(path: string, options?: GraphTraversalOptions): Promise<GraphSearchResult[]> {
         await Promise.resolve();
@@ -694,11 +694,11 @@ export class GraphService extends Events {
             const file = this.plugin.app.vault.getAbstractFileByPath(path);
 
             if (file instanceof TFile) {
-                const content = await this.vaultManager.readFile(file);
+                const fileContent = await this.vaultManager.readFile(file);
                 // We use the start/end offsets from the hollow hit to snip the exact text
                 const start = item.start ?? 0;
-                const end = item.end ?? content.length;
-                item.content = content.substring(start, end).trim();
+                const end = item.end ?? fileContent.length;
+                item.content = fileContent.substring(start, end).trim();
             } else {
                 item.content = "(Note removed)";
             }
