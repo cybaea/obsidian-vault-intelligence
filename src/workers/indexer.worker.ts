@@ -784,7 +784,7 @@ const IndexerWorker: WorkerAPI = {
 
             batchedDocs.push({
                 anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
-                author: (parsedFM.author as string) || undefined,
+                author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
                 content: chunk.text, // Live index keeps content (pure)
                 context: context, // Metadata header
                 created: mtime,
@@ -796,7 +796,7 @@ const IndexerWorker: WorkerAPI = {
                 params: [], // Simplified for now
                 path: normalizedPath,
                 start: chunk.start + bodyOffset,
-                status: (parsedFM.status as string) || 'active',
+                status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
                 title: title,
             });
         }
