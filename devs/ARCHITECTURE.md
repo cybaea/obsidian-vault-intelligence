@@ -329,8 +329,9 @@ flowchart TD
 ```mermaid
 classDiagram
     class AgentService {
-        +chat(history, msg)
-        +prepareContext(msg)
+        +chat(history, msg): Promise<any>
+        +reflexSearch(query, limit): Promise<VaultSearchResult[]>
+        +prepareContext(msg): Promise<ChatMessage>
     }
     class ToolRegistry {
         +getTools()
@@ -489,6 +490,7 @@ export class GraphService {
     public keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     public getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
     public getNeighbors(path: string, options?: any): Promise<GraphSearchResult[]>;
+    public getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]>;
     public scanAll(forceWipe?: boolean): Promise<void>;
     public forceSave(): Promise<void>;
 }
