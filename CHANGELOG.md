@@ -21,7 +21,7 @@ New features are added in the "Unreleased" section.
 -   **Purge and reset**: Introduced a "Danger Zone" in Advanced settings with a button to fully reset or purge plugin data.
 -   **Customizable chunk sizes**: Control how your notes are split for indexing. Added presets ranging from 256 for local models to 2048 for cloud-only English vaults.
 -   **Robust stopword support**: Added intelligent stopword mapping for 30+ languages, including specific support for Chinese (Mandarin), Hindi (Indian), and Japanese.
--   **Deferred re-indexing**: Re-embeddings now wait until you close the settings dialog, allowing for multiple changes without redundant API calls.
+-   **Deferred re-indexing**: Re-embeddings now wait until you close the settings dialog, allowing for multiple changes without redundant re-scans.
 -   **Idempotent re-index queuing**: Reverting a setting back to its original value before closing the dialog now correctly cancels any pending re-index.
 -   **High-visibility warnings**: Added prominent "yellow box" warnings for settings that require a full vault re-index, ensuring no surprises.
 -   **Similar notes fix**: Resolved a race condition causing duplicate entries in the "Similar notes" view.
@@ -38,6 +38,8 @@ New features are added in the "Unreleased" section.
 -   **Worker API enhancement**: Added a `getFileState` method to the background worker for efficient metadata retrieval.
 -   **Robust scan logic**: Integrated file size and modification time checks into the `GraphService` scanner.
 -   **Constants consolidation**: Centralized indexing delay constants in `GRAPH_CONSTANTS` and refactored settings to use them.
+-   **Settings UI decoupling**: Refactored the Explorer settings to use local DOM refreshes instead of full tab reloads, preventing premature `hide()` hook execution.
+-   **Synchronous re-index flags**: Optimized `GraphService` to update re-index state synchronously before configuration propagation, eliminating race conditions during modal closure.
 
 ## [5.1.1] - 2026-02-06
 
