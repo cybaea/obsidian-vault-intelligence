@@ -113,6 +113,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	ontologyService: OntologyService;
 	gardenerService: GardenerService;
 	gardenerStateService: GardenerStateService;
+	private needsReindex = false;
 
 	private initDebouncedHandlers() {
 		// Consistently handled by VectorStore now
@@ -182,7 +183,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			await this.ontologyService.initialize();
 			await this.gardenerStateService.loadState();
 
-			await this.graphService.scanAll();
+			await this.graphService.scanAll(this.needsReindex);
 		});
 
 		// Ribbon Icon
@@ -329,7 +330,17 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<VaultIntelligenceSettings>);
+		const data = await this.loadData() as Partial<VaultIntelligenceSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+		// Flag for auto-reindex if version is older than latest (v2 introduced field separation)
+		const loadedVersion = data?.indexVersion ?? 1;
+		if (loadedVersion < DEFAULT_SETTINGS.indexVersion) {
+			logger.warn(`[Index Migration] Stale index version detected (${loadedVersion}). Forcing re-index.`);
+			this.needsReindex = true;
+			this.settings.indexVersion = DEFAULT_SETTINGS.indexVersion;
+			await this.saveSettings();
+		}
 
 		// Migration: Convert Legacy Default Prompts to Reference Mode (null)
 		if (this.settings.systemInstruction === LEGACY_SYSTEM_PROMPT || this.settings.systemInstruction === LEGACY_SYSTEM_PROMPT_v4_2_0) {

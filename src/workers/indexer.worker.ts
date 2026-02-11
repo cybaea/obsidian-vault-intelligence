@@ -492,7 +492,17 @@ const IndexerWorker: WorkerAPI = {
         for (const vec of vectors) {
             for (let i = 0; i < dim; i++) centroid[i] += vec[i];
         }
-        for (let i = 0; i < dim; i++) centroid[i] = centroid[i] / vectors.length;
+
+        let magnitude = 0;
+        for (let i = 0; i < dim; i++) {
+            centroid[i] = centroid[i] / vectors.length;
+            magnitude += centroid[i] * centroid[i];
+        }
+        magnitude = Math.sqrt(magnitude);
+
+        if (magnitude > 1e-6) {
+            for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
+        }
 
         const results = await search(orama, {
             limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP,

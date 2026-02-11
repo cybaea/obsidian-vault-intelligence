@@ -427,7 +427,12 @@ export class GraphService extends Events {
 
     private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
         const content = await this.vaultManager.readFile(file);
-        splitFrontmatter(content);
+        const { body } = splitFrontmatter(content);
+
+        // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
+        if (!expectedHash && !start && !end) {
+            return body.substring(0, 300).trim() + "...";
+        }
 
         // 1. Direct match check (offset by frontmatter)
         // Note: worker start/end is relative to full file content
@@ -563,7 +568,11 @@ export class GraphService extends Events {
             const existing = mergedMap.get(v.path);
             if (existing) {
                 // If in both, take the better of (neighbor floor, vector match + boost)
-                existing.score = Math.max(existing.score, v.score + weights.HYBRID_BOOST);
+                // Also PREFER the vector properties (anchorHash, offsets) for clean snippets
+                mergedMap.set(v.path, {
+                    ...v,
+                    score: Math.max(existing.score, v.score + weights.HYBRID_BOOST)
+                });
             } else {
                 mergedMap.set(v.path, v);
             }
