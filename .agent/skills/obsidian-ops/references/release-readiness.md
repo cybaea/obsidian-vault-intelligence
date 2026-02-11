@@ -202,9 +202,9 @@ When user asks "is my theme ready for release?" or similar:
 
 - [versioning-releases.md](versioning-releases.md) - Release process and versioning
 - [security-privacy.md](security-privacy.md) - Security and privacy guidelines
-- [manifest.md](manifest.md) - Manifest requirements and validation
+- [manifest.md](../../obsidian-ref/references/manifest.md) - Manifest requirements and validation
 - [testing.md](testing.md) - Testing procedures and platform testing
-- [ux-copy.md](ux-copy.md) - UI text conventions (for theme names and descriptions)
+- [ux-copy.md](../../obsidian-ref/references/ux-copy.md) - UI text conventions (for theme names and descriptions)
 - [build-workflow.md](build-workflow.md) - Build commands (if using build tools)
 - [performance.md](performance.md) - Performance optimization best practices
 

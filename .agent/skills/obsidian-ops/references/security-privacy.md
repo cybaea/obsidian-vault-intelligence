@@ -54,7 +54,7 @@ Themes are CSS-only and have minimal security surface area, but still follow pri
 ## Related Documentation
 
 - [release-readiness.md](release-readiness.md) - Comprehensive release checklist including policy adherence
-- [manifest.md](manifest.md) - Manifest requirements (includes security-related fields)
+- [manifest.md](../../obsidian-ref/references/manifest.md) - Manifest requirements (includes security-related fields)
 - [Developer Policies](https://docs.obsidian.md/Developer+policies) - Official Obsidian Developer Policies
 - [Theme Guidelines](https://docs.obsidian.md/Themes/Releasing/Theme+guidelines) - Official Theme Guidelines
 

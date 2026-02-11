@@ -1,13 +1,13 @@
 <!--
 Source: Project-specific procedure
-Last synced: See sync-status.json for authoritative sync dates
+Last synced: 2026-02-08
 Update frequency: Update as sync process evolves
 Applicability: Both
 -->
 
 # Sync Procedure: Keeping .agents Up to Date
 
-**Sync Tracking**: All sync dates are tracked centrally in [sync-status.json](sync-status.json). Always update this file with the actual current date when syncing (use `Get-Date -Format "yyyy-MM-dd"` to get the date - never use placeholder dates).
+**Sync Tracking**: Keep track of sync dates manually in the documentation file headers to ensure traceability.
 
 This document outlines the standard procedure for keeping the `.agents` directory content synchronized with the latest updates from the 6 core Obsidian repositories:
 - [Obsidian API](https://github.com/obsidianmd/obsidian-api) - Official API documentation and type definitions
@@ -19,7 +19,7 @@ This document outlines the standard procedure for keeping the `.agents` director
 
 ## Prerequisites
 
-1. **Set up reference repositories** (see [ref-instructions.md](ref-instructions.md)):
+1. **Set up reference repositories** (see [ref-instructions.md](../../obsidian-ref/references/ref-instructions.md)):
    - The 6 core Obsidian projects should be available in `.ref/` (either as symlinks to a central location or as local clones):
      - `obsidian-api/` - API documentation
      - `obsidian-sample-plugin/` - Sample plugin template
@@ -284,7 +284,7 @@ For each file that needs updating:
    
    **Important**: Always use the actual current date from `Get-Date -Format "yyyy-MM-dd"`, never use placeholder dates.
 
-4. **Note**: Individual file headers still have "Last synced" dates, but the authoritative source is `.agent/sync-status.json`. When syncing, update the central file rather than individual file headers.
+4. **Note**: Individual file headers have "Last synced" dates. When syncing, update these dates to reflect the actual sync time.
 
 ### Step 6: Verify and Test
 
@@ -309,7 +309,7 @@ For each file that needs updating:
 - [ ] Review developer docs for policy/guideline updates
 - [ ] Review plugin docs for best practices
 - [ ] Update relevant `.agent/skills/**/*.md` files
-- [ ] **Update `.agent/sync-status.json` with actual current date** (use `Get-Date -Format "yyyy-MM-dd"` - never use placeholder dates)
+- [ ] **Update sync dates** in file headers
 - [ ] Review and commit changes
 
 ## Troubleshooting
@@ -354,39 +354,25 @@ ls -la .ref/obsidian-api
 - **When starting new features**: Verify current best practices
 - **Before releases**: Ensure guidelines are current
 
-## Automation Ideas (Future)
 
-Consider creating a script to:
-- Automatically check for updates in reference repos
-- Compare `AGENTS.md` from sample plugin with current `.agents` structure
-- Generate a diff report of what changed
-- Remind to update "Last synced" dates
 
 ## Updating Sync Status
 
-After completing a sync, update `.agent/sync-status.json`:
-
-**Easy way** (recommended): Use the helper script:
-```bash
-node scripts/update-sync-status.mjs "Description of what was synced"
-```
+After completing a sync, update the "Last synced" dates in the documentation file headers.
 
 **Manual way**: Edit the file directly:
 ```powershell
 # Get actual current date (CRITICAL: never use placeholder!)
 $syncDate = Get-Date -Format "yyyy-MM-dd"
 
-# Update sync-status.json with:
-# - "lastFullSync": "$syncDate"
-# - "lastSyncSource": "Description of what was synced"
-# - Update relevant dates in "sourceRepos" section for repos that were checked/synced
+# Update the file header with the actual sync date
 ```
 
-**Critical**: Always use the actual date from `Get-Date -Format "yyyy-MM-dd"`. Never use placeholder dates like "YYYY-MM-DD" or hardcoded dates. The sync-status.json file is the authoritative source for all sync dates.
+**Critical**: Always use the actual date from `Get-Date -Format "yyyy-MM-dd"`. Never use placeholder dates like "YYYY-MM-DD" or hardcoded dates.
 
 ## Notes
 
 - Not all changes need to be synced immediately - focus on breaking changes and new best practices
 - Some content may be project-specific and shouldn't be overwritten
 - Always review changes before committing to ensure they make sense for your project
-- **Always update sync-status.json with the actual current date** - this is the authoritative source for sync dates
+- **Always update sync dates** to reflect when the information was last verified
