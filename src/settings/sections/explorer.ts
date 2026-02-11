@@ -1,4 +1,4 @@
-import { Setting, Notice, App, Plugin, setIcon } from "obsidian";
+import { Setting, Notice, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
@@ -6,13 +6,9 @@ import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegis
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS } from "../types";
+import { DEFAULT_SETTINGS } from "../types";
 
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
+
 
 export function renderExplorerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;

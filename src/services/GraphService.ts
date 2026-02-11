@@ -660,7 +660,7 @@ export class GraphService extends Events {
 
         if (needsReindex) {
             this.reindexQueued = true;
-            logger.error("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
+            logger.warn("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
         }
 
         this.settings = { ...settings };
@@ -696,7 +696,7 @@ export class GraphService extends Events {
                 embeddingProvider: this.settings.embeddingProvider
             };
 
-            logger.error("[GraphService] Committing config change: Triggering forced re-scan.");
+            logger.warn("[GraphService] Committing config change: Triggering forced re-scan.");
             new Notice("Embedding settings changed. Re-indexing vault...");
             void this.scanAll(true);
         }
