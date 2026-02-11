@@ -105,7 +105,7 @@ New features are added in the "Unreleased" section.
 ### Developer features
 
 -   **Accurate similarity scoring**: Fixed an issue where keyword matches could produce impossible similarity percentages (like 3333%). Scoring is now properly normalized using a sigmoidal calibration function in `SearchOrchestrator` for a reliable 0-100% scale.
--   **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbour scores were being zeroed out. Neighbors now correctly retain their spread activation score.
+-   **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
 -   **Graph Math Tuning**: Increased default `ACTIVATION` weight to 0.5 and optimized threshold defaults to ensure semantic siblings are reliably included in the researcher's context window.
 -   **Architectural Refactoring**: Decomposed `AgentService` by delegating tool logic to a dedicated `ToolRegistry` and context preparation to `AgentService.prepareContext`.
 -   **Humble View Pattern**: Refactored `ResearchChatView` to separate UI logic from business logic, improving testability and code organization.
@@ -127,7 +127,7 @@ New features are added in the "Unreleased" section.
 -   **Search Logic Overhaul**:
     -   **Asymmetric Embedding**: Implemented query-specific embedding headers (distinguishing `Query` vs `Document`) to strictly align with the embedding model's training objective. This significantly improves vector retrieval accuracy.
     -   **Fuzzy Search Integration**: Enabled Levenshtein distance matching (`tolerance: 2`) for keyword searches. The agent can now find notes even with typos (eg "storis" finds "stories") or morphological variations.
-    -   **Deep Vector Recall**: Modified the vector search pipeline to bypass Orama's default strict cutoff. We now request _all_ semantic candidates (`similarity: 0.001`) and let our GARS re-ranker handle the filtering. This solves "empty result" issues for broad conceptual queries.
+    -   **Deep Vector Recall**: Modified the vector search pipeline to bypass Orama's default strict cut-off. We now request _all_ semantic candidates (`similarity: 0.001`) and let our GARS re-ranker handle the filtering. This solves "empty result" issues for broad conceptual queries.
     -   **Permissive Hybrid Merging**: Configured keyword search to use a permissive recall threshold (`1.0`) combined with local score normalization. This ensures that a strong keyword match for one term (eg "cats") isn't discarded just because other terms in the query are missing.
 
 ## [4.3.1] - 2026-01-31
@@ -171,7 +171,7 @@ New features are added in the "Unreleased" section.
 -   **Promise-based modal pattern**: Refactored ToolConfirmationModal to use a static async open() pattern, allowing the Agent's execution loop to pause and await user interaction naturally without complex event listeners.
 -   **Dynamic funding resolution**: Implemented a runtime parser for `.github/FUNDING.yml` that automatically synchronizes the sponsor link without requiring manual code updates.
 -   **Per-request agent overrides**: Refactored the AgentService and GeminiService to support optional overrides for model selection and tool enablement inside the Research Chat.
--   **Interactive model ID tooltips**: Restored tooltips in the Research Chat model selection dropdown to match the behavior in the main settings.
+-   **Interactive model ID tooltips**: Restored tooltips in the Research Chat model selection dropdown to match the behaviour in the main settings.
 -   **Version upgrade tracking**: Added a previousVersion field to the plugin settings to reliably detect and trigger update-specific UI workflows.
 -   **Responsive walkthrough UI**: Developed a dedicated `ReleaseNotesModal` using Obsidian's `MarkdownRenderer` and future-proofed it with responsive sizing units and native design tokens.
 -   **Centralized documentation URLs**: Introduced a structured `DOCUMENTATION_URLS` object in `constants.ts` to manage all external documentation links and anchors in one place. Refactored to follow DRY principles by using hierarchical constants for base and configuration paths.

@@ -53,7 +53,7 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Gardener model | `gemini-3-flash-preview` | The model used for analyzing vault structure and recommending improvements. |
+| Gardener model | `gemini-3-flash-preview` | The model used for analysing vault structure and recommending improvements. |
 | Gardener rules | `Default (Managed)` | The persona and hygiene instructions for the Gardener. Leave as default to receive automatic improvements. |
 | Ontology path | `Ontology` | Folder where concepts, entities, and MOCs are stored. |
 | Gardener plans path | `Gardener/Plans` | Folder where proposed plans are saved. |
