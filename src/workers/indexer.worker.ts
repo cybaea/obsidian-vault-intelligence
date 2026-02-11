@@ -119,7 +119,7 @@ const workerLogger = {
 };
 
 // 2. Semantic Splitter (Header-Based with Fallback)
-function semanticSplit(text: string, maxChunkSize: number = 2000): Array<{ text: string, start: number, end: number }> {
+function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): Array<{ text: string, start: number, end: number }> {
     const chunks: Array<{ text: string, start: number, end: number }> = [];
     const regex = /(^#{1,6}\s[^\n]*)([\s\S]*?)(?=^#{1,6}\s|$)/gm;
 
@@ -170,6 +170,9 @@ function semanticSplit(text: string, maxChunkSize: number = 2000): Array<{ text:
 
 const IndexerWorker: WorkerAPI = {
     async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
+        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
+
         const LATENCY_BUDGET_TOKENS = (config.embeddingChunkSize || 512) * WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_FACTOR;
 
         const vectorPromise = search(orama, {
@@ -232,7 +235,8 @@ const IndexerWorker: WorkerAPI = {
                     const inherited = calculateInheritedScore(seed.score, degree);
                     const neighborId = neighbor;
 
-                    if (!candidates.has(neighborId) || candidates.get(neighborId)!.score < inherited) {
+                    const existing = candidates.get(neighborId);
+                    if (!existing || existing.score < inherited) {
                         candidates.set(neighborId, {
                             id: neighborId,
                             score: inherited,
@@ -350,9 +354,11 @@ const IndexerWorker: WorkerAPI = {
     async fullReset() {
         if (graph) graph.clear();
         await recreateOrama();
+        workerLogger.info("Full reset complete.");
     },
 
     async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         await Promise.resolve();
         const results: Record<string, number> = {};
         const totalNodes = graph.order;
@@ -369,6 +375,7 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         await Promise.resolve();
         const results: Record<string, { title?: string, headers?: string[] }> = {};
         for (const path of paths) {
@@ -384,6 +391,7 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async getCentrality(path: string): Promise<number> {
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         await Promise.resolve();
         const normalizedPath = workerNormalizePath(path);
         if (!graph.hasNode(normalizedPath)) return 0;
@@ -477,7 +485,8 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        if (!orama) return [];
+        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
+        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
         const normalizedPath = workerNormalizePath(path);
 
         const docResult = await search(orama, {
@@ -531,6 +540,7 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
             properties: ['title', 'content', 'context', 'params', 'status'],
@@ -591,6 +601,7 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async renameFile(oldPath: string, newPath: string) {
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         const normalizedOld = workerNormalizePath(oldPath);
         const normalizedNew = workerNormalizePath(newPath);
         if (graph.hasNode(normalizedOld)) {
@@ -686,7 +697,10 @@ const IndexerWorker: WorkerAPI = {
             const h = hit as unknown as OramaHit;
             const score = h.score / norm;
             if (hits.has(h.id)) {
-                hits.get(h.id)!.score += (score * 0.5);
+                const existing = hits.get(h.id);
+                if (existing) {
+                    existing.score += (score * 0.5);
+                }
             } else {
                 h.score = score * 0.9;
                 hits.set(h.id, h);
@@ -716,9 +730,12 @@ const IndexerWorker: WorkerAPI = {
         for (const [alias, path] of Object.entries(map)) {
             aliasMap.set(alias.toLowerCase(), workerNormalizePath(path));
         }
+        workerLogger.debug(`Updated alias map: ${aliasMap.size} entries.`);
     },
 
     async updateConfig(newConfig: Partial<WorkerConfig>) {
+        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
+        workerLogger.info("Updating worker configuration.");
         const dimChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
 
@@ -731,6 +748,10 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async updateFile(path: string, content: string, mtime: number, size: number, title: string, links: string[] = []) {
+        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
+        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
+
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
@@ -763,7 +784,7 @@ const IndexerWorker: WorkerAPI = {
 
             batchedDocs.push({
                 anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
-                author: (parsedFM.author as string) || undefined,
+                author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
                 content: chunk.text, // Live index keeps content (pure)
                 context: context, // Metadata header
                 created: mtime,
@@ -775,7 +796,7 @@ const IndexerWorker: WorkerAPI = {
                 params: [], // Simplified for now
                 path: normalizedPath,
                 start: chunk.start + bodyOffset,
-                status: (parsedFM.status as string) || 'active',
+                status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
                 title: title,
             });
         }
