@@ -97,6 +97,13 @@ export class SimilarNotesView extends ItemView {
                     text: doc.path.split('/').pop()?.replace('.md', '') || doc.path
                 });
 
+                if (doc.description) {
+                    item.createEl("p", {
+                        cls: "similar-notes-description",
+                        text: doc.description
+                    });
+                }
+
                 if (doc.excerpt) {
                     item.createEl("p", {
                         cls: "similar-notes-excerpt",

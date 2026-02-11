@@ -252,11 +252,13 @@ const IndexerWorker: WorkerAPI = {
         for (const candidate of sorted) {
             if (currentTokens >= LATENCY_BUDGET_TOKENS) break;
 
-            if (candidate.type === 'vector' && candidate.content) {
-                const tokens = estimateTokens(candidate.content);
+            if (candidate.type === 'vector') {
+                // Use actual content length if available, otherwise assume a standard chunk size (e.g. 500 chars)
+                const tokens = candidate.content ? estimateTokens(candidate.content) : 128;
+
                 if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
                     payload.push({
-                        content: candidate.content,
+                        content: candidate.content || "", // Pass empty string to be hydrated later
                         id: candidate.id,
                         score: candidate.score,
                         type: 'vector'
@@ -461,7 +463,8 @@ const IndexerWorker: WorkerAPI = {
                         if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
 
                         results.set(sibling, {
-                            excerpt: `(Sibling via ${neighbor})`,
+                            description: `(Sibling via ${neighbor})`,
+                            excerpt: undefined,
                             path: sibling,
                             score: score,
                             title: attr.title || sibling.split('/').pop()?.replace('.md', '')
@@ -600,41 +603,53 @@ const IndexerWorker: WorkerAPI = {
 
     async saveIndex(): Promise<Uint8Array> {
         const { save } = await import('@orama/orama');
-        const liveRaw = save(orama);
 
-        // HYBRID SLIM-SYNC: Create a stripped version for serialization
-        // We traverse the docs in the Document Store and nullify 'content'
-        const strippedRaw = JSON.parse(JSON.stringify(liveRaw)) as Record<string, unknown>;
-        const docStore = strippedRaw.documentStore as Record<string, unknown> | undefined;
-        const docs = docStore?.docs as Record<string, Record<string, unknown>> | undefined;
-
-        if (docs) {
-            for (const key in docs) {
-                if (Object.prototype.hasOwnProperty.call(docs, key)) {
-                    const doc = docs[key];
-                    if (doc) {
-                        doc.content = ""; // HOLLOW OUT
-                        doc.context = ""; // HOLLOW OUT
-                    }
-                }
-            }
+        interface OramaDocsStoreRaw {
+            count: number;
+            docs: Record<string, Record<string, unknown>>;
         }
+
+        interface OramaRawData {
+            docs: OramaDocsStoreRaw;
+            index: unknown;
+            internalDocumentIDStore: unknown;
+            language: string;
+            pinning: unknown;
+            sorting: unknown;
+        }
+
+        const rawFull = (save as (orama: unknown) => OramaRawData)(orama);
 
         // 1. Save FULL index to "Hot Store" (IndexedDB)
         try {
-            await storage.put(STORES.VECTORS, "orama_index", liveRaw);
+            await storage.put(STORES.VECTORS, "orama_index", rawFull);
             workerLogger.info("[saveIndex] Hot Store (IDB) updated.");
         } catch (e) {
             workerLogger.warn("[saveIndex] Hot Store update failed:", e);
         }
 
-        // 2. Return SLIM index for "Cold Store" (Vault File)
+        // 2. Prepare SLIM index for "Cold Store" (Vault File)
+        // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
+        const slimRaw: OramaRawData = { ...rawFull };
+
+        if (rawFull.docs?.docs) {
+            const hollowDocs: Record<string, Record<string, unknown>> = {};
+            for (const [id, doc] of Object.entries(rawFull.docs.docs)) {
+                hollowDocs[id] = {
+                    ...doc,
+                    content: "",
+                    context: ""
+                };
+            }
+            slimRaw.docs = { ...rawFull.docs, docs: hollowDocs };
+        }
+
         const serialized: SerializedIndexState = {
             embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            orama: strippedRaw as unknown as RawData,
+            orama: slimRaw as unknown as RawData,
         };
 
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });

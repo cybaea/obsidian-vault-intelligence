@@ -34,8 +34,11 @@ export interface GraphEdgeData {
  */
 export interface GraphSearchResult {
     anchorHash?: number;
+    content?: string; // New: hold full/chunk text for RAG/hydration
+    description?: string; // New: hold relationship metadata (e.g., "(Sibling via ...)")
     end?: number;
     excerpt?: string;
+    id?: string; // New: Orama document ID (path#chunk)
     path: string;
     score: number;
     start?: number;

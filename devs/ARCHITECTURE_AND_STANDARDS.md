@@ -63,6 +63,7 @@ All code must adhere to the latest Obsidian API standards.
 ### 4.1 AI Agent Rules
 
 1.  **Verification**: Always run `npm run lint`, `npm run build`, `npm run test` and `npm run docs:build` before marking a coding task as complete.
+2.  **Linting**: Use descriptive ESLint suppressions for Orama internal types. Do not use any other `eslint-disable` comments: resolve the issue, don't hide the symptom.
 
 ### 4.2 Release Readiness
 

@@ -593,7 +593,7 @@ export class GraphService extends Events {
         await Promise.resolve();
         if (!this.api) return [];
         const neighbors = await this.api.getNeighbors(path, options);
-        return neighbors;
+        return this.hydrateResults(neighbors);
     }
 
     /**
@@ -678,9 +678,34 @@ export class GraphService extends Events {
      * Builds the priority payload for Dual-Loop Search (Analyst).
      * Delegates to the worker to handle parallel fetch, graph expansion, and budget packing.
      */
-    public async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
+    public async buildPriorityPayload(queryVector: number[], query: string): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
-        return await this.api.buildPriorityPayload(queryVector, query);
+
+        // 1. Get Hollow Hits from Worker
+        const hollowHits = await this.api.buildPriorityPayload(queryVector, query) as GraphSearchResult[];
+
+        // 2. Hydrate on Main Thread (access to disk ensures RAG always works)
+        const hydrated = await Promise.all(hollowHits.map(async (item: GraphSearchResult) => {
+            // item.id is Orama document ID (usually path#chunkIndex or path)
+            const id = item.id || item.path || "";
+            const path = id.split('#')[0];
+            if (!path) return item;
+
+            const file = this.plugin.app.vault.getAbstractFileByPath(path);
+
+            if (file instanceof TFile) {
+                const content = await this.vaultManager.readFile(file);
+                // We use the start/end offsets from the hollow hit to snip the exact text
+                const start = item.start ?? 0;
+                const end = item.end ?? content.length;
+                item.content = content.substring(start, end).trim();
+            } else {
+                item.content = "(Note removed)";
+            }
+            return item;
+        }));
+
+        return hydrated;
     }
 
     /**
