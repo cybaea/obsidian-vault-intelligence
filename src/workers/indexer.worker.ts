@@ -308,7 +308,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         return payload
-            .filter(p => p.content && p.content !== "(Content unavailable)")
+            .filter(p => p.type === 'graph' || (p.content !== "(Content unavailable)"))
             .map(p => {
                 const { body } = splitFrontmatter(p.content || "");
                 return {
