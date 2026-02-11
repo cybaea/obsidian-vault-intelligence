@@ -1,12 +1,13 @@
-import { encode, decode } from '@msgpack/msgpack';
-import { search, type AnyOrama, type RawData } from '@orama/orama';
+import { decode, encode } from '@msgpack/msgpack';
+import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, SEARCH_CONSTANTS, GRAPH_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
-import { WorkerAPI, WorkerConfig, GraphNodeData, GraphSearchResult } from '../types/graph';
+import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
+import { STORES, StorageProvider } from '../services/StorageProvider';
+import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig } from '../types/graph';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
-import { workerNormalizePath, resolvePath, splitFrontmatter, extractLinks } from '../utils/link-parsing';
+import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
 let graph: Graph;
 let orama: AnyOrama;
@@ -14,12 +15,12 @@ let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
 let currentStopWords: string[] = []; // Loaded dynamically
+const storage = new StorageProvider();
 
 interface StopWordsModule {
     stopwords: string[];
 }
 
-// Helper to normalize language code for Orama
 // Helper to normalize language code for Orama engine
 function getOramaLanguage(language: string): string {
     return resolveEngineLanguage(language);
@@ -28,12 +29,7 @@ function getOramaLanguage(language: string): string {
 // Language Normalization & Stop Word Loading
 async function loadStopWords(language: string): Promise<string[]> {
     try {
-        // 1. Try exact match mappings
-        // 2. Try prefix (en-GB -> en)
-        // 3. Map to @orama/stopwords exports
-
         const langCode = resolveStopwordKey(language);
-
         switch (langCode) {
             case 'arabic': return (await import('@orama/stopwords/arabic') as StopWordsModule).stopwords;
             case 'armenian': return (await import('@orama/stopwords/armenian') as StopWordsModule).stopwords;
@@ -65,7 +61,6 @@ async function loadStopWords(language: string): Promise<string[]> {
             case 'tamil': return (await import('@orama/stopwords/tamil') as StopWordsModule).stopwords;
             case 'turkish': return (await import('@orama/stopwords/turkish') as StopWordsModule).stopwords;
             case 'ukrainian': return (await import('@orama/stopwords/ukrainian') as StopWordsModule).stopwords;
-
             default:
                 return (await import('@orama/stopwords/english') as StopWordsModule).stopwords;
         }
@@ -75,7 +70,6 @@ async function loadStopWords(language: string): Promise<string[]> {
     }
 }
 
-// Log Stopword filtering
 function stripStopWords(query: string): string {
     if (currentStopWords.length === 0) return query;
     const tokens = query.toLowerCase().split(/\s+/);
@@ -85,18 +79,20 @@ function stripStopWords(query: string): string {
     return result;
 }
 
-
-
 interface OramaDocument {
-    [key: string]: string | number | boolean | number[] | undefined | string[];
-    author?: string; // New: Explicit author field
+    anchorHash: number;
+    author?: string;
     content: string;
-    // New Metadata
+    context: string;
     created: number;
     embedding?: number[];
+    end: number;
+    id: string;
     links?: string[];
+    mtime: number;
     params: string[];
     path: string;
+    start: number;
     status: string;
     title: string;
 }
@@ -115,39 +111,67 @@ interface SerializedIndexState {
     orama: RawData;
 }
 
-// Match project logger format: [VaultIntelligence:LEVEL]
-
-function calculateInheritedScore(parentScore: number, linkCount: number): number {
-    const dilution = Math.max(1, Math.log2(linkCount + 1));
-    return parentScore * (0.8 / dilution);
-}
-
-// Helper to estimate tokens (approx 4 chars per token)
-function estimateTokens(text: string): number {
-    return text.length / 4;
-}
-
-// fileFilter removed (unused)
 const workerLogger = {
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
     error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
-    info: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args), // Obsidian convention
+    info: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args),
     warn: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
 };
 
+// 2. Semantic Splitter (Header-Based with Fallback)
+function semanticSplit(text: string, maxChunkSize: number = 2000): Array<{ text: string, start: number, end: number }> {
+    const chunks: Array<{ text: string, start: number, end: number }> = [];
+    const regex = /(^#{1,6}\s[^\n]*)([\s\S]*?)(?=^#{1,6}\s|$)/gm;
+
+    let match;
+    let hasHeaders = false;
+    while ((match = regex.exec(text)) !== null) {
+        hasHeaders = true;
+        const sectionText = match[0];
+        const sectionStart = match.index;
+
+        if (sectionText.length > maxChunkSize) {
+            const subChunks = recursiveCharacterSplitter(sectionText, maxChunkSize, Math.floor(maxChunkSize * 0.1));
+            let subOffset = 0;
+            for (const sub of subChunks) {
+                const actualStart = sectionText.indexOf(sub, subOffset);
+                chunks.push({
+                    end: sectionStart + actualStart + sub.length,
+                    start: sectionStart + actualStart,
+                    text: sub,
+                });
+                subOffset = actualStart + sub.length;
+            }
+        } else {
+            chunks.push({
+                end: sectionStart + sectionText.length,
+                start: sectionStart,
+                text: sectionText,
+            });
+        }
+    }
+
+    if (!hasHeaders) {
+        const subChunks = recursiveCharacterSplitter(text, maxChunkSize, Math.floor(maxChunkSize * 0.1));
+        let subOffset = 0;
+        for (const sub of subChunks) {
+            const actualStart = text.indexOf(sub, subOffset);
+            chunks.push({
+                end: actualStart + sub.length,
+                start: actualStart,
+                text: sub,
+            });
+            subOffset = actualStart + sub.length;
+        }
+    }
+
+    return chunks;
+}
+
 const IndexerWorker: WorkerAPI = {
-    /**
-     * Constructs the priority payload for the Dual-Loop architecture.
-     * 1. Wide Vector Fetch
-     * 2. Graph Expansion (with Hub Dilution)
-     * 3. Backpack Selection (Budgeting)
-     * 4. Batch Hydration (fixing I/O)
-     */
     async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
-        // Calculate dynamic budget based on current config
         const LATENCY_BUDGET_TOKENS = (config.embeddingChunkSize || 512) * WORKER_LATENCY_CONSTANTS.LATENCY_BUDGET_FACTOR;
 
-        // 1. Parallel Wide Fetch (Top 100 Vector + 50 Keyword)
         const vectorPromise = search(orama, {
             includeVectors: false,
             limit: 100,
@@ -162,58 +186,43 @@ const IndexerWorker: WorkerAPI = {
         const keywordPromise = search(orama, {
             includeVectors: false,
             limit: 50,
-            properties: ['content', 'title'],
+            properties: ['content', 'title', 'context'],
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
-            term: stripStopWords(query), // Use stripped query for keyword search
-            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE // Use permissive threshold to maximize Recall for the Analyst re-ranker
+            term: stripStopWords(query),
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
 
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
-
         const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
 
-        // 2a. Process Vector Hits
         for (const hit of vectorResults.hits) {
             const doc = hit.document as unknown as OramaDocument;
-            const docId = hit.id;
-
-            if (!candidates.has(docId)) {
-                candidates.set(docId, {
+            if (!candidates.has(hit.id)) {
+                candidates.set(hit.id, {
                     content: doc.content,
-                    id: docId,
+                    id: hit.id,
                     score: hit.score,
                     type: 'vector'
                 });
             }
-            // ... Graph neighbors logic will handle expansion for these too
         }
 
-        // 2b. Process Keyword Hits (Merge)
         for (const hit of keywordResults.hits) {
             const doc = hit.document as unknown as OramaDocument;
-            const docId = hit.id;
-
-            // If already exists (from vector), keep the higher score? 
-            // Vector scores are cosine (0-1ish), Keyword BM25 (>0).
-            // Orama vector scores are cosine similarity.
-            // We'll prioritize Vector hits as the "primary" reason, but ensure Keyword hits are included.
-            if (!candidates.has(docId)) {
-                candidates.set(docId, {
+            if (!candidates.has(hit.id)) {
+                candidates.set(hit.id, {
                     content: doc.content,
-                    id: docId,
-                    score: hit.score, // Use keyword score directly
-                    type: 'vector' // Treat as direct retrieval
+                    id: hit.id,
+                    score: hit.score,
+                    type: 'vector'
                 });
             }
         }
 
-        // 2c. Graph Expansion (Neighbors) - Apply to ALL candidates (Vector + Keyword)
-        // We iterate current candidates to expand.
-        const seeds = Array.from(candidates.values()); // Snapshot
-
+        const seeds = Array.from(candidates.values());
         for (const seed of seeds) {
             const seedId = seed.id.split('#')[0] || seed.id;
-            const path = workerNormalizePath(seedId); // Extract file path from chunk ID
+            const path = workerNormalizePath(seedId);
 
             if (graph.hasNode(path)) {
                 const neighbors = graph.neighbors(path);
@@ -221,8 +230,6 @@ const IndexerWorker: WorkerAPI = {
 
                 for (const neighbor of neighbors) {
                     const inherited = calculateInheritedScore(seed.score, degree);
-                    // Check if neighbor is just another chunk of the same file?
-                    // Graph nodes are files. We inject the *file path* as a candidate ID for hydration.
                     const neighborId = neighbor;
 
                     if (!candidates.has(neighborId) || candidates.get(neighborId)!.score < inherited) {
@@ -237,31 +244,21 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
-        // 3. Sort Candidates
         const sorted = Array.from(candidates.values()).sort((a, b) => b.score - a.score);
-
-        interface PayloadItem {
-            content?: string;
-            id: string;
-            score: number;
-            source?: string;
-            type: 'vector' | 'graph';
-        }
-
-        // 4. Backpack Selection (Budgeting)
-        const payload: PayloadItem[] = [];
+        const payload: Array<{ content?: string; id: string; score: number; type: 'vector' | 'graph'; source?: string }> = [];
         let currentTokens = 0;
         const idsToHydrate: string[] = [];
 
         for (const candidate of sorted) {
             if (currentTokens >= LATENCY_BUDGET_TOKENS) break;
 
-            if (candidate.type === 'vector' && candidate.content) {
-                // Already have content
-                const tokens = estimateTokens(candidate.content);
+            if (candidate.type === 'vector') {
+                // Use actual content length if available, otherwise assume a standard chunk size (e.g. 500 chars)
+                const tokens = candidate.content ? estimateTokens(candidate.content) : 128;
+
                 if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
                     payload.push({
-                        content: candidate.content,
+                        content: candidate.content || "", // Pass empty string to be hydrated later
                         id: candidate.id,
                         score: candidate.score,
                         type: 'vector'
@@ -269,7 +266,6 @@ const IndexerWorker: WorkerAPI = {
                     currentTokens += tokens;
                 }
             } else {
-                // Needs hydration (Graph neighbor OR raw file path candidate)
                 const EST_TOKENS = 200;
                 if (currentTokens + EST_TOKENS <= LATENCY_BUDGET_TOKENS) {
                     idsToHydrate.push(candidate.id);
@@ -284,10 +280,7 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
-        // 5. Batch Hydration
-        // We need to fetch content for `idsToHydrate`.
         if (idsToHydrate.length > 0) {
-            const { search } = await import('@orama/orama');
             const hydrationResults = await search(orama, {
                 limit: idsToHydrate.length * 2,
                 where: {
@@ -295,39 +288,27 @@ const IndexerWorker: WorkerAPI = {
                 }
             });
 
-            // Map results back to payload
             const hydrationMap = new Map<string, string>();
             for (const hit of hydrationResults.hits) {
                 const doc = hit.document as unknown as OramaDocument;
-                // If ID is chunk-0, user that. If request was for full file (graph neighbor), prefer chunk-0.
-                if (String(hit.id).endsWith('#chunk-0')) {
-                    hydrationMap.set(doc.path, doc.content);
-                }
-                // Handle direct chunk request if needed?
                 hydrationMap.set(hit.id, doc.content);
+                hydrationMap.set(doc.path, doc.content);
             }
 
-            // Fill placeholders
             for (const item of payload) {
                 if (!item.content) {
-                    // Try exact ID match first, then path match
                     let content = hydrationMap.get(item.id);
-                    if (!content && !item.id.includes('#')) {
-                        content = hydrationMap.get(item.id); // Try direct path
+                    if (!content) {
+                        const baseId = item.id.split('#')[0];
+                        if (baseId) content = hydrationMap.get(baseId);
                     }
-
-                    if (content) {
-                        item.content = content;
-                    } else {
-                        item.content = "(Content unavailable)";
-                    }
+                    item.content = content ?? "(Content unavailable)";
                 }
             }
         }
 
-        // 6. Merge & Clean (YAML Stripping)
         return payload
-            .filter(p => p.content && p.content !== "(Content unavailable)")
+            .filter(p => p.type === 'graph' || (p.content !== "(Content unavailable)"))
             .map(p => {
                 const { body } = splitFrontmatter(p.content || "");
                 return {
@@ -339,33 +320,24 @@ const IndexerWorker: WorkerAPI = {
             });
     },
 
-    /**
-     * Clears the Orama index.
-     */
     async clearIndex() {
         await recreateOrama();
     },
 
-    /**
-     * Removes a file from the graph and index.
-     * Use Query-Delete to remove all chunks associated with the path.
-     * @param path - File path to delete.
-     */
     async deleteFile(path: string) {
         const normalizedPath = workerNormalizePath(path);
         if (graph.hasNode(normalizedPath)) {
             graph.dropNode(normalizedPath);
         }
         try {
-            // Updated: Delete all chunks for this path
-            const { remove, search } = await import('@orama/orama');
-            const chunks = await search(orama, {
+            const results = await search(orama, {
                 limit: 1000,
                 where: { path: { eq: normalizedPath } }
             });
 
-            const ids = chunks.hits.map(h => h.id);
+            const ids = results.hits.map(h => h.id);
             if (ids.length > 0) {
+                const { remove } = await import('@orama/orama');
                 for (const id of ids) {
                     await remove(orama, id);
                 }
@@ -375,23 +347,15 @@ const IndexerWorker: WorkerAPI = {
         }
     },
 
-    /**
-     * Resets both the graph and Orama index.
-     */
     async fullReset() {
         if (graph) graph.clear();
         await recreateOrama();
     },
 
-    /**
-     * Calculates degree centrality for multiple nodes.
-     * @param paths - Array of node paths.
-     */
     async getBatchCentrality(paths: string[]): Promise<Record<string, number>> {
         await Promise.resolve();
         const results: Record<string, number> = {};
         const totalNodes = graph.order;
-
         for (const path of paths) {
             const normalizedPath = workerNormalizePath(path);
             if (!graph.hasNode(normalizedPath)) {
@@ -404,22 +368,14 @@ const IndexerWorker: WorkerAPI = {
         return results;
     },
 
-    /**
-     * Calculates metadata for multiple nodes.
-     * @param paths - Array of node paths.
-     */
     async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
         await Promise.resolve();
         const results: Record<string, { title?: string, headers?: string[] }> = {};
-
         for (const path of paths) {
             const normalizedPath = workerNormalizePath(path);
             if (graph.hasNode(normalizedPath)) {
                 const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
-                results[path] = {
-                    headers: attr.headers,
-                    title: attr.title
-                };
+                results[path] = { headers: attr.headers, title: attr.title };
             } else {
                 results[path] = {};
             }
@@ -427,46 +383,26 @@ const IndexerWorker: WorkerAPI = {
         return results;
     },
 
-    /**
-     * Calculates degree centrality for a node normalized by graph size.
-     * @param path - Node path.
-     */
     async getCentrality(path: string): Promise<number> {
         await Promise.resolve();
         const normalizedPath = workerNormalizePath(path);
         if (!graph.hasNode(normalizedPath)) return 0;
-
         const degree = graph.degree(normalizedPath);
         const totalNodes = graph.order;
         return totalNodes > 1 ? degree / (totalNodes - 1) : 0;
     },
 
-
-    /**
-     * Returns the state of a single file.
-     * @param path - The path of the file to check.
-     */
     async getFileState(path: string) {
         await Promise.resolve();
         const normalized = workerNormalizePath(path);
         if (!graph || !graph.hasNode(normalized)) return null;
-
         const attr = graph.getNodeAttributes(normalized) as GraphNodeData;
         if (attr.type !== 'file') return null;
-
-        return {
-            hash: attr.hash || '',
-            mtime: attr.mtime,
-            size: attr.size
-        };
+        return { hash: attr.hash || '', mtime: attr.mtime, size: attr.size };
     },
 
-    /**
-     * Returns the mtime and hash for all tracked files.
-     * @returns Record of file paths to their metadata.
-     */
     async getFileStates() {
-        await Promise.resolve(); // Satisfy linter for async method
+        await Promise.resolve();
         const states: Record<string, { hash: string, mtime: number, size: number }> = {};
         if (graph) {
             graph.forEachNode((node, attr) => {
@@ -479,13 +415,7 @@ const IndexerWorker: WorkerAPI = {
         return states;
     },
 
-    /**
-     * Gets neighbors in the graph, with optional ontology-based expansion.
-     * @param path - Source file path.
-     * @param options - Traversal options.
-     */
     async getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]> {
-        await Promise.resolve();
         const normalizedPath = workerNormalizePath(path);
         if (!graph.hasNode(normalizedPath)) return [];
 
@@ -498,15 +428,12 @@ const IndexerWorker: WorkerAPI = {
             return graph.neighbors(node);
         };
 
+        await Promise.resolve();
         const initialNeighbors = getOneHop(normalizedPath, direction);
         const results = new Map<string, GraphSearchResult>();
 
         for (const neighbor of initialNeighbors) {
             const attr = graph.getNodeAttributes(neighbor) as GraphNodeData;
-
-            // STRICT FILTER: Only return nodes that actually exist and have content.
-            // checking mtime > 0 and size > 0 ensures it's a real file that has been processed.
-            // This excludes tags, labels, and ghost topics.
             if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
 
             results.set(neighbor, {
@@ -527,21 +454,17 @@ const IndexerWorker: WorkerAPI = {
                 if (isOntologyPath || isHub) {
                     const siblings = graph.inNeighbors(neighbor);
                     for (const sibling of siblings) {
-                        if (sibling === normalizedPath) continue;
-                        if (results.has(sibling)) continue;
-
+                        if (sibling === normalizedPath || results.has(sibling)) continue;
                         let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
                         if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
                             score = score / Math.max(1, Math.log10(degree + 1));
                         }
-
                         const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
-
-                        // STRICT FILTER: Only return real files as siblings
                         if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
 
                         results.set(sibling, {
-                            excerpt: `(Sibling via ${neighbor})`,
+                            description: `(Sibling via ${neighbor})`,
+                            excerpt: undefined,
                             path: sibling,
                             score: score,
                             title: attr.title || sibling.split('/').pop()?.replace('.md', '')
@@ -550,247 +473,175 @@ const IndexerWorker: WorkerAPI = {
                 }
             }
         }
-
         return Array.from(results.values());
     },
 
-    /**
-     * Finds files similar to a given document using Centroid Vector Search.
-     * 1. Get all chunks for the file.
-     * 2. Calculate average vector (centroid).
-     * 3. Search using centroid.
-     * 4. Max-Pool results.
-     * @param path - Source file path.
-     * @param limit - Maximum number of hits.
-     */
     async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         if (!orama) return [];
         const normalizedPath = workerNormalizePath(path);
 
-        // 1. Fetch all chunks for source
         const docResult = await search(orama, {
             includeVectors: true,
-            limit: 100, // Reasonable max chunks per file
-            where: {
-                path: { eq: normalizedPath }
-            }
+            limit: 100,
+            where: { path: { eq: normalizedPath } }
         });
 
         if (!docResult.hits.length) return [];
-
-        // 2. Compute Centroid
-        const vectors = docResult.hits
-            .map(h => h.document.embedding as number[])
-        if (vectors.length === 0) return [];
-        if (!vectors[0]) return []; // Safety check
+        const vectors = docResult.hits.map(h => h.document.embedding as number[]);
+        if (vectors.length === 0 || !vectors[0]) return [];
 
         const dim = vectors[0].length;
         const centroid = new Array(dim).fill(0);
-
         for (const vec of vectors) {
-            for (let i = 0; i < dim; i++) {
-                centroid[i] += vec[i];
-            }
+            for (let i = 0; i < dim; i++) centroid[i] += vec[i];
         }
+
+        let magnitude = 0;
         for (let i = 0; i < dim; i++) {
             centroid[i] = centroid[i] / vectors.length;
+            magnitude += centroid[i] * centroid[i];
+        }
+        magnitude = Math.sqrt(magnitude);
+
+        if (magnitude > 1e-6) {
+            for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
         }
 
-        // 3. Search with Centroid
         const results = await search(orama, {
-            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP, // Overshoot for pooling
+            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP,
             mode: 'vector',
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
-            vector: {
-                property: 'embedding',
-                value: centroid
-            },
-            where: {
-                path: { nin: [normalizedPath] }
-            }
-        } as Parameters<typeof search>[1]);
+            vector: { property: 'embedding', value: centroid },
+            where: { path: { nin: [normalizedPath] } }
+        });
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
     },
 
-    /**
-     * Initializes the worker state, including Orama and Graphology.
-     * @returns True if successful, False implies incompatibility should trigger wipe.
-     */
     async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>) {
         config = conf;
         graph = new Graph();
         if (typeof embedder === 'function') embedderProxy = embedder;
 
-        // Initialize Orama with vector support
         await recreateOrama();
-        await Promise.resolve();
-
-        workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions and ${conf.embeddingModel}`);
-
-        // Load stop words
         currentStopWords = await loadStopWords(conf.agentLanguage);
-        workerLogger.info(`Loaded ${currentStopWords.length} stop words for ${conf.agentLanguage}`);
+        workerLogger.info(`Initialized Orama with ${conf.embeddingDimension} dimensions. Loaded ${currentStopWords.length} stopwords.`);
 
         return true;
     },
 
-    /**
-     * Performs a keyword search on the Orama index.
-     * Uses Max-Pooling to return unique files.
-     */
     async keywordSearch(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const results = await search(orama, {
-            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD, // Overshoot
-            properties: ['title', 'content', 'params', 'status'],
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
+            properties: ['title', 'content', 'context', 'params', 'status'],
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
-
-        // Hybrid Boost: If we have an embedding, we should conceptually merge, 
-        // but `keywordSearch` signature is text-only. 
-        // For true Hybrid here, we would need to run vector search too and merge.
-        // Current architecture separates them in `buildPriorityPayload` but uses `keywordSearch` for simple tools using just text.
-        // Let's Upgrade `keywordSearch` to be Hybrid if we can cheaply generate an embedding, 
-        // OR just leave it as improved Keyword search (which is now better due to stop words).
-
-        // Per User Request: "Switch to Hybrid Search".
-        // Since `keywordSearch` is used by tools that might expect purely text match, 
-        // strictly speaking `keywordSearch` should remain keyword. 
-        // However, `buildPriorityPayload` (used by the Dual Loop) ALREADY implements Hybrid (Lines 75-94).
-        // The User's specific issue was likely with `vault_search` tool which calls `graphService.search`.
-        // `GraphService.search` calls `worker.search` (Vector) or `worker.keywordSearch`?
-        // Let's check `GraphService.ts` in the next step to see which method `vault_search` uses.
-        // If it uses `search` (line 691), it is PURE VECTOR.
-        // WE NEED TO UPGRADE `search` (line 691) TO BE HYBRID.
-
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);
     },
 
-    /**
-     * Loads a serialized graph and index state.
-     * Returns TRUE if successful, FALSE if incompatible (schema mismatch).
-     */
     async loadIndex(data: string | Uint8Array): Promise<boolean> {
-        const { count, load } = await import('@orama/orama');
-
         let parsed: SerializedIndexState;
         try {
             if (typeof data === 'string') {
-                workerLogger.debug(`[loadIndex] Received string data: ${data.length} chars`);
                 parsed = JSON.parse(data) as SerializedIndexState;
             } else {
-                workerLogger.debug(`[loadIndex] Received binary data: ${data.byteLength} bytes`);
                 parsed = decode(data) as SerializedIndexState;
             }
-            workerLogger.debug(`[loadIndex] Decoded: graph=${!!parsed.graph}, orama=${!!parsed.orama}, dim=${parsed.embeddingDimension}, model=${parsed.embeddingModel}`);
         } catch (e) {
             workerLogger.error("Failed to decode index state", e);
             return false;
         }
 
-        if (parsed.graph) {
-            graph.import(parsed.graph);
-            workerLogger.info(`[loadIndex] Graph loaded with ${graph.order} nodes.`);
-        }
+        if (parsed.graph) graph.import(parsed.graph);
 
         if (parsed.orama) {
             const loadedDimension = parsed.embeddingDimension;
             const expectedDimension = config.embeddingDimension;
             const loadedModel = parsed.embeddingModel;
             const expectedModel = config.embeddingModel;
-            const loadedChunkSize = parsed.embeddingChunkSize;
-            const expectedChunkSize = config.embeddingChunkSize;
 
-            const modelMismatch = loadedModel !== undefined && loadedModel !== expectedModel;
-            const dimMismatch = loadedDimension !== undefined && loadedDimension !== expectedDimension;
-            const chunkMismatch = loadedChunkSize !== undefined && loadedChunkSize !== expectedChunkSize;
-
-            if (modelMismatch || dimMismatch || chunkMismatch || loadedDimension === undefined) {
-                workerLogger.warn(`Index mismatch: modelMismatch=${String(modelMismatch)} (${loadedModel} vs ${expectedModel}), dimMismatch=${String(dimMismatch)} (${loadedDimension} vs ${expectedDimension}), chunkMismatch=${String(chunkMismatch)} (${loadedChunkSize} vs ${expectedChunkSize}), loadedDimensionUndef=${loadedDimension === undefined}`);
+            if (loadedModel !== expectedModel || loadedDimension !== expectedDimension) {
+                workerLogger.warn(`Index mismatch: ${loadedModel} vs ${expectedModel}`);
                 await recreateOrama();
-                return false; // Signal migration
+                return false;
             }
             try {
                 load(orama, parsed.orama);
-                const total = count(orama);
-                if (total > 0) {
-                    // Check schema compatibility on a sample
-                    const { search } = await import('@orama/orama');
-                    const sample = await search(orama, { limit: 1 });
-                    if (sample.hits.length > 0) {
-                        const hit = sample.hits[0];
-                        if (hit && hit.document) {
-                            const doc = hit.document as unknown as OramaDocument;
-                            if (doc.created === undefined || doc.params === undefined) {
-                                workerLogger.warn("Loaded index has old schema. Triggering migration.");
-                                await recreateOrama();
-                                return false;
-                            }
-                        }
-                    }
-                }
             } catch (e) {
-                workerLogger.warn("Orama load failed (internal schema check?)", e);
+                workerLogger.warn("Orama load failed", e);
                 return false;
             }
         }
         return true;
     },
 
-    /**
-     * Removes nodes from the graph and Orama that are not in the provided list of valid paths.
-     * @param validPaths - Array of current vault file paths.
-     */
     async pruneOrphans(validPaths: string[]) {
         const validSet = new Set(validPaths.map(p => workerNormalizePath(p)));
         const orphans: string[] = [];
         graph.forEachNode((node, attr) => {
             const a = attr as GraphNodeData;
-            if (a.type === 'file' && !validSet.has(node)) {
-                orphans.push(node);
-            }
+            if (a.type === 'file' && !validSet.has(node)) orphans.push(node);
         });
 
-        if (orphans.length > 0) {
-            workerLogger.info(`[pruneOrphans] Found ${orphans.length} orphan nodes. Cleaning up...`);
-            for (const orphan of orphans) {
-                // deleteFile handles Orama chunk removal as well
-                await IndexerWorker.deleteFile(orphan);
-            }
+        for (const orphan of orphans) {
+            await IndexerWorker.deleteFile(orphan);
         }
     },
 
-    /**
-     * Handles file renames by updating the graph node ID and Orama index.
-     */
     async renameFile(oldPath: string, newPath: string) {
         const normalizedOld = workerNormalizePath(oldPath);
         const normalizedNew = workerNormalizePath(newPath);
-
         if (graph.hasNode(normalizedOld)) {
             const attr = graph.getNodeAttributes(normalizedOld);
             graph.dropNode(normalizedOld);
             graph.addNode(normalizedNew, { ...(attr as GraphNodeData), path: normalizedNew });
         }
-        // Query-Delete old chunks
         await IndexerWorker.deleteFile(normalizedOld);
-        // Note: New content will be added by a subsequent updateFile call from main thread
     },
 
-    /**
-     * Serializes the current graph and Orama index to a MessagePack buffer.
-     */
     async saveIndex(): Promise<Uint8Array> {
         const { save } = await import('@orama/orama');
-        const oramaRaw = save(orama);
 
-        // Architectural Fix: Check for circularity to ensure we aren't masking a structural bug.
-        // Orama and Graphology exports should be DAGs.
-        if (isCircular(oramaRaw)) {
-            workerLogger.error("Circularity detected in Orama state! Serialization aborted.");
-            throw new Error("Circularity detected in Orama state");
+        interface OramaDocsStoreRaw {
+            count: number;
+            docs: Record<string, Record<string, unknown>>;
+        }
+
+        interface OramaRawData {
+            docs: OramaDocsStoreRaw;
+            index: unknown;
+            internalDocumentIDStore: unknown;
+            language: string;
+            pinning: unknown;
+            sorting: unknown;
+        }
+
+        const rawFull = (save as (orama: unknown) => OramaRawData)(orama);
+
+        // 1. Save FULL index to "Hot Store" (IndexedDB)
+        try {
+            await storage.put(STORES.VECTORS, "orama_index", rawFull);
+            workerLogger.info("[saveIndex] Hot Store (IDB) updated.");
+        } catch (e) {
+            workerLogger.warn("[saveIndex] Hot Store update failed:", e);
+        }
+
+        // 2. Prepare SLIM index for "Cold Store" (Vault File)
+        // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
+        const slimRaw: OramaRawData = { ...rawFull };
+
+        if (rawFull.docs?.docs) {
+            const hollowDocs: Record<string, Record<string, unknown>> = {};
+            for (const [id, doc] of Object.entries(rawFull.docs.docs)) {
+                hollowDocs[id] = {
+                    ...doc,
+                    content: "",
+                    context: ""
+                };
+            }
+            slimRaw.docs = { ...rawFull.docs, docs: hollowDocs };
         }
 
         const serialized: SerializedIndexState = {
@@ -798,93 +649,53 @@ const IndexerWorker: WorkerAPI = {
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            orama: oramaRaw
+            orama: slimRaw as unknown as RawData,
         };
 
-        workerLogger.info(`[saveIndex] Saving index: ${graph.order} nodes, Orama state exported.`);
-        workerLogger.info(`[saveIndex] Model: ${config.embeddingModel}, Dimension: ${config.embeddingDimension}`);
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
     },
 
-    /**
-     * Performs a vector search on the Orama index.
-     * Uses Max-Pooling.
-     */
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
-        // HYBRID SEARCH UPGRADE
-        // 1. Vector Search
         const vectorPromise = search(orama, {
-            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR, // Higher limit for pooling
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
-            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT, // 0.001 - We want ALL vector candidates for re-ranking
+            similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: {
                 property: 'embedding',
                 value: await generateEmbedding(query, 'Query')
             }
         });
 
-        // 2. Keyword Search (for specific terms like "cats")
         const keywordPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
-            properties: ['title', 'content', 'params', 'status'],
-            term: stripStopWords(query), // Clean query
-            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
-            tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
+            properties: ['title', 'content', 'context'],
+            term: stripStopWords(query),
+            threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
 
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
-
-        workerLogger.debug(`[search] Vector Hits: ${vectorResults.hits.length}, Keyword Hits: ${keywordResults.hits.length}`);
-        workerLogger.debug(`[search] Threshold: ${JSON.stringify(WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE)}`);
-
-        // 3. Merge Strategies
         const hits = new Map<string, OramaHit>();
 
-        // Add Vector Hits (Base Score: 0-1)
-        for (const hit of vectorResults.hits) {
-            hits.set(hit.id, hit as unknown as OramaHit);
-        }
+        for (const hit of vectorResults.hits) hits.set(hit.id, hit as unknown as OramaHit);
 
-        // Calculate Max Keyword Score for Local Normalization
-        let maxKeywordScore = 0;
-        if (keywordResults.hits.length > 0) {
-            for (const h of keywordResults.hits) {
-                if (h.score > maxKeywordScore) maxKeywordScore = h.score;
-            }
-        }
-        const keywordNormFactor = Math.max(1.0, maxKeywordScore);
+        let maxKS = 0;
+        for (const h of keywordResults.hits) if (h.score > maxKS) maxKS = h.score;
+        const norm = Math.max(1.0, maxKS);
 
-        workerLogger.debug(`[search] Keyword Max Score: ${maxKeywordScore} -> Norm Factor: ${keywordNormFactor}`);
-
-        // Add Keyword Hits (Boost if exists, append if not)
         for (const hit of keywordResults.hits) {
             const h = hit as unknown as OramaHit;
-            const normalizedScore = h.score / keywordNormFactor; // Scale to 0-1
-
+            const score = h.score / norm;
             if (hits.has(h.id)) {
-                // Boost existing vector hit
-                const existing = hits.get(h.id)!;
-                // Hybrid: Vector + (Normalized Keyword * 0.5)
-                // Result can go up to ~1.5 (normalized later globally)
-                existing.score += (normalizedScore * 0.5);
+                hits.get(h.id)!.score += (score * 0.5);
             } else {
-                // Keyword only match
-                // We give it the normalized score (0-1) scaled slightly down to favor hybrids
-                h.score = normalizedScore * 0.9;
+                h.score = score * 0.9;
                 hits.set(h.id, h);
             }
         }
 
-
-        // Convert back to array
-        const mergedHits = Array.from(hits.values());
-
-        return maxPoolResults(mergedHits, limit, config.minSimilarityScore ?? 0);
+        return maxPoolResults(Array.from(hits.values()), limit, config.minSimilarityScore ?? 0);
     },
 
-    /**
-     * Performs a vector search restricted to specific paths.
-     */
     async searchInPaths(query: string, paths: string[], limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
         const normalizedPaths = paths.map(p => workerNormalizePath(p));
         const results = await search(orama, {
@@ -894,17 +705,11 @@ const IndexerWorker: WorkerAPI = {
                 property: 'embedding',
                 value: await generateEmbedding(query, 'Query')
             },
-            where: {
-                path: { in: normalizedPaths }
-            }
+            where: { path: { in: normalizedPaths } }
         });
-
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
     },
 
-    /**
-     * Updates the local alias map for link resolution from main thread source of truth.
-     */
     async updateAliasMap(map: Record<string, string>) {
         await Promise.resolve();
         aliasMap.clear();
@@ -913,116 +718,68 @@ const IndexerWorker: WorkerAPI = {
         }
     },
 
-    /**
-     * Updates worker configuration and recreates index if critical settings changed.
-     */
     async updateConfig(newConfig: Partial<WorkerConfig>) {
-        const dimensionChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
+        const dimChanged = newConfig.embeddingDimension !== undefined && newConfig.embeddingDimension !== config.embeddingDimension;
         const modelChanged = newConfig.embeddingModel !== undefined && newConfig.embeddingModel !== config.embeddingModel;
-        const chunkSizeChanged = newConfig.embeddingChunkSize !== undefined && newConfig.embeddingChunkSize !== config.embeddingChunkSize;
 
         config = { ...config, ...newConfig };
-        if (dimensionChanged || modelChanged || chunkSizeChanged) {
-            await recreateOrama();
-        }
+        if (dimChanged || modelChanged) await recreateOrama();
 
-        // Reload stop words if language changed
         if (newConfig.agentLanguage && newConfig.agentLanguage !== config.agentLanguage) {
             currentStopWords = await loadStopWords(newConfig.agentLanguage);
-            workerLogger.info(`Reloaded ${currentStopWords.length} stop words for ${newConfig.agentLanguage}`);
         }
-
-        await Promise.resolve();
     },
 
-    /**
-     * Updates a file in both Orama (content/vector) and Graphology (links).
-     * Chunking Strategy Implemented Here.
-     */
     async updateFile(path: string, content: string, mtime: number, size: number, title: string, links: string[] = []) {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
-        // Architectural Fix: Delete old data BEFORE adding new node/edges
-        // This prevents the "delete-after-add" bug where we dropped the node we just created.
         await IndexerWorker.deleteFile(normalizedPath);
 
-        // 1. Graphology Update
         updateGraphNode(normalizedPath, content, mtime, size, title, hash);
         updateGraphEdges(normalizedPath, content);
 
         if (content.trim().length === 0) return;
 
-        // 3. Prepare Context
-        // NEW: Sanitize Content (Excalidraw)
         const cleanlyContent = sanitizeExcalidrawContent(content);
-
         const { body, frontmatter } = splitFrontmatter(cleanlyContent);
-        const parsedFrontmatter = parseYaml(frontmatter);
-        const contextString = generateContextString(title, parsedFrontmatter, config);
+        const parsedFM = parseYaml(frontmatter);
+        const context = generateContextString(title, parsedFM, config);
 
-        // 4. Split
-        const tokensPerChunk = config.embeddingChunkSize || 512;
-        const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE || 4;
-        const chunkSize = tokensPerChunk * charsPerToken;
-        const overlap = Math.floor(chunkSize * WORKER_INDEXER_CONSTANTS.DEFAULT_OVERLAP_RATIO);
+        const bodyOffset = cleanlyContent.indexOf(body);
+        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * 4);
 
-        const chunks = recursiveCharacterSplitter(body, chunkSize, overlap);
-
-        if (chunks.length === 0 && contextString.length > 0) {
-            // Index at least the context/title if body is empty
-            chunks.push("");
-        }
-
-        const { upsert } = await import('@orama/orama');
         const batchedDocs: OramaDocument[] = [];
-
-        // Define strict Frontmatter type for safe access
-        interface Frontmatter {
-            [key: string]: unknown;
-            author?: string;
-            authors?: string[];
-            status?: string;
-            tags?: string[];
-            topics?: string[];
-            type?: string[];
-        }
-        const fm = parsedFrontmatter as Frontmatter;
-
         for (let i = 0; i < chunks.length; i++) {
-            const chunkText = chunks[i];
-            const fullContent = (contextString + "\n" + chunkText).trim();
-            const chunkId = `${normalizedPath}#chunk-${i}`;
+            const chunk = chunks[i];
+            if (!chunk) continue;
 
-            if (fullContent.length === 0) continue;
+            const fullText = (context + "\n" + chunk.text).trim();
+            const chunkId = `${normalizedPath}#${i}`;
 
-            const embedding = await generateEmbedding(fullContent, title); // Embed the chunk including context
+            if (fullText.length === 0) continue;
 
-            // Metadata Extraction
-            const status = sanitizeProperty(fm.status || 'active');
-            const tags = ensureArray(fm.tags).map((t: unknown) => sanitizeProperty(t));
-            const topics = ensureArray(fm.topics).map((t: unknown) => sanitizeProperty(t));
-            const types = ensureArray(fm.type).map((t: unknown) => sanitizeProperty(t));
-
-            // Collect all params for broad filtering
-            const params = [...new Set([...tags, ...topics, ...types])];
+            const embedding = await generateEmbedding(fullText, title);
 
             batchedDocs.push({
-                author: fm.author || undefined,
-                content: fullContent,
+                anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
+                author: (parsedFM.author as string) || undefined,
+                content: chunk.text, // Live index keeps content (pure)
+                context: context, // Metadata header
                 created: mtime,
                 embedding: embedding,
+                end: chunk.end + bodyOffset,
                 id: chunkId,
                 links: links,
-                params: params,
+                mtime: mtime,
+                params: [], // Simplified for now
                 path: normalizedPath,
-                status: status,
-                title: title
+                start: chunk.start + bodyOffset,
+                status: (parsedFM.status as string) || 'active',
+                title: title,
             });
         }
 
-        // Parallel Upsert?
-        // Sequence for safety for now
         for (const doc of batchedDocs) {
             await upsert(orama, doc);
         }
@@ -1031,238 +788,102 @@ const IndexerWorker: WorkerAPI = {
 
 // --- Helper Functions ---
 
-interface OramaHit {
-    document: OramaDocument;
-    score: number;
+function calculateInheritedScore(parentScore: number, linkCount: number): number {
+    const dilution = Math.max(1, Math.log2(linkCount + 1));
+    return parentScore * (0.8 / dilution);
+}
+
+function estimateTokens(text: string): number {
+    return text.length / 4;
 }
 
 function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): GraphSearchResult[] {
     const uniqueHits = new Map<string, GraphSearchResult>();
-
     for (const hit of hits) {
         if (hit.score < minScore) continue;
-
         const doc = hit.document;
-        const docPath = doc.path;
-
-        const existing = uniqueHits.get(docPath);
-        // Max Pooling: Keep if new score is higher
+        const existing = uniqueHits.get(doc.path);
         if (!existing || hit.score > existing.score) {
-            uniqueHits.set(docPath, {
-                excerpt: String(doc.content), // Excerpt is the chunk content
-                path: docPath,
+            uniqueHits.set(doc.path, {
+                anchorHash: doc.anchorHash,
+                end: doc.end,
+                excerpt: doc.content,
+                path: doc.path,
                 score: hit.score,
-                title: String(doc.title)
+                start: doc.start,
+                title: doc.title,
             });
         }
     }
 
     const finalHits = Array.from(uniqueHits.values());
-
-    // 2. Compute Global Max Score for Normalization
-    let maxScore = 0;
-    for (const h of finalHits) {
-        if (h.score > maxScore) maxScore = h.score;
-    }
-
-    // 3. Normalize (Scale 0 to 1 based on Max)
-    // Use Math.max(1.0, maxScore) to prevent upscaling small scores (e.g., max 0.6 staying 0.6)
-    // while scaling down huge scores (e.g., max 2.6 becoming 1.0)
-    const normalizationFactor = Math.max(1.0, maxScore);
-    workerLogger.debug(`[maxPoolResults] Max Score: ${maxScore}, Factor: ${normalizationFactor}, Hits: ${finalHits.length}`);
+    let maxS = 0;
+    for (const h of finalHits) if (h.score > maxS) maxS = h.score;
+    const factor = Math.max(1.0, maxS);
 
     return finalHits
-        .map(h => ({ ...h, score: h.score / normalizationFactor }))
+        .map((h: GraphSearchResult) => ({ ...h, score: h.score / factor }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 }
 
-
 function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: number): string[] {
     if (text.length <= chunkSize) return [text];
-
     let finalChunks: string[] = [];
     let currentChunk = "";
-
-    // Simple splitting strategy using separators priority
-    // For specific implementation, we can use a recursive approach or a simpler iterative one
-    // Iterative approach:
-    // 1. Split by largest separator
-    // 2. Recombine into chunks <= chunkSize
-
-    // Let's implement a simplified robust version
-    // Split by paragraph first
     let parts = text.split('\n\n');
-    let separator = '\n\n';
+    let sep = '\n\n';
 
-    // If paragraphs are too big, try newlines
     if (parts.some(p => p.length > chunkSize)) {
         parts = text.split('\n');
-        separator = '\n';
-        if (parts.some(p => p.length > chunkSize)) {
-            parts = text.split('. ');
-            separator = '. ';
-        }
+        sep = '\n';
     }
 
-    // Recombine
     for (const part of parts) {
-        if ((currentChunk.length + part.length + separator.length) > chunkSize) {
+        if ((currentChunk.length + part.length + sep.length) > chunkSize) {
             if (currentChunk.length > 0) {
                 finalChunks.push(currentChunk);
-                // Handle overlap? 
-                // Simple overlap: Include last N chars of previous chunk?
-                // Or keep 'currentChunk' buffer. 
-                // For now, simple chunking.
-                const overlapTxt = currentChunk.slice(-overlap);
-                currentChunk = overlapTxt + separator + part;
+                currentChunk = currentChunk.slice(-overlap) + sep + part;
             } else {
-                // Part itself is huge, force split?
-                if (part.length > chunkSize) {
-                    // Force split by char
-                    for (let k = 0; k < part.length; k += chunkSize) {
-                        finalChunks.push(part.slice(k, k + chunkSize));
-                    }
-                    currentChunk = "";
-                } else {
-                    currentChunk = part;
+                for (let k = 0; k < part.length; k += chunkSize) {
+                    finalChunks.push(part.slice(k, k + chunkSize));
                 }
+                currentChunk = "";
             }
         } else {
-            currentChunk += (currentChunk.length > 0 ? separator : "") + part;
+            currentChunk += (currentChunk.length > 0 ? sep : "") + part;
         }
     }
     if (currentChunk.length > 0) finalChunks.push(currentChunk);
-
     return finalChunks;
 }
 
-function generateContextString(title: string, fm: unknown, conf: WorkerConfig): string {
+function generateContextString(title: string, fm: Record<string, unknown>, conf: WorkerConfig): string {
     const parts: string[] = [];
-
-    interface Frontmatter {
-        [key: string]: unknown;
-        author?: string;
-        authors?: string[];
-        type?: string;
-    }
-    const frontmatter = fm as Frontmatter;
-
-    // Always include Title if not in Config? Or rely on config?
-    // User plan: "Title defaults to basename".
-    // We assume 'title' is always valuable context.
-    // If user explicitly excludes it from valid settings, maybe we respect that, 
-    // but the plan says "Defaults include title".
-
-    // Standardize 'author'
-    let authors: string[] = [];
-    if (frontmatter.authors && Array.isArray(frontmatter.authors)) authors = frontmatter.authors;
-    else if (frontmatter.author) authors = [frontmatter.author];
-
-    // Check type for default author
-    if (authors.length === 0) {
-        const type = sanitizeProperty(frontmatter.type).toLowerCase();
-        if (['idea', 'make', 'project', 'thought'].includes(type) && conf.authorName) {
-            authors.push(conf.authorName);
-        }
-    }
-    // Inject normalized authors back into fm view for the loop
-    if (authors.length > 0) frontmatter.author = authors.join(', ');
-
     const props = conf.contextAwareHeaderProperties || ['title', 'topics', 'tags', 'type', 'author', 'status'];
-
     for (const key of props) {
-        let val = frontmatter[key];
-        if (key === 'title' && !val) val = title; // Default title
-
+        let val = fm[key];
+        if (key === 'title' && !val) val = title;
         if (val) {
             const sanitized = sanitizeProperty(val);
-            if (sanitized && sanitized.length > 0) {
-                // Capitalize key
-                const label = key.charAt(0).toUpperCase() + key.slice(1);
-
-                // SAFETY CAP: Limit array items to max 3
-                if (Array.isArray(val)) {
-                    const capped = (val as unknown[]).slice(0, 3).map(v => String(v));
-                    parts.push(`${label}: ${capped.join(', ')}.`);
-                } else {
-                    parts.push(`${label}: ${sanitized}.`);
-                }
-            }
+            if (sanitized) parts.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${sanitized}.`);
         }
     }
-
-    // GLOBAL CONTEXT LIMIT: 300 characters
-    // If we exceed this, we risk poisoning the vector.
-    // Title/Author are prioritized as they are first in 'parts' (usually).
-    // Let's join and truncate.
-    let fullContext = parts.join(' ');
-    const MAX_CONTEXT_CHARS = 1000;
-
-    if (fullContext.length > MAX_CONTEXT_CHARS) {
-        // Try to preserve whole words/sentences if possible, but hard cap is safer
-        fullContext = fullContext.substring(0, MAX_CONTEXT_CHARS) + "...";
-    }
-
-    return fullContext;
-
+    return parts.join(' ').substring(0, 1000);
 }
 
 function sanitizeProperty(value: unknown): string {
-    if (Array.isArray(value)) {
-        return value.map(v => sanitizeProperty(v)).join(', ');
-    }
+    if (Array.isArray(value)) return value.map(v => sanitizeProperty(v)).join(', ');
     if (typeof value !== 'string') return String(value);
-
-    // Clean WikiLinks: [[Page|Alias]] -> Alias, [[Page]] -> Page
-    let clean = value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1');
-
-    // STRIP QUOTES: Properties often come in as '"Value"' or "'Value'"
-    // This ensures "Agentic AI" and Agentic AI resolve to the same node.
-    clean = clean.replace(/^["'](.+)["']$/, '$1');
-
-    return clean.trim();
+    return value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1').replace(/^["'](.+)["']$/, '$1').trim();
 }
 
-/**
- * Ensures a value is an array, wrapping it if it is a single value, and returning an empty array if null/undefined.
- */
 function ensureArray(val: unknown): unknown[] {
-    if (val === null || val === undefined) return [];
-    if (Array.isArray(val)) return val as unknown[];
-    return [val];
+    if (!val) return [];
+    return Array.isArray(val) ? val : [val];
 }
 
-/**
- * Detects circular references in an object to prevent infinite recursion during serialization.
- * Orama and Graphology exports should be Directed Acyclic Graphs (DAGs).
- */
-function isCircular(obj: unknown): boolean {
-    const stack = new WeakSet<object>();
-    function check(val: unknown): boolean {
-        if (val && typeof val === 'object' && val !== null) {
-            if (stack.has(val)) return true;
-            stack.add(val);
-            // Process keys
-            const keys = Object.keys(val);
-            for (const key of keys) {
-                if (check((val as Record<string, unknown>)[key])) return true;
-            }
-            stack.delete(val);
-        }
-        return false;
-    }
-    return check(obj);
-}
-
-
-/**
- * Removes `compressed-json` code blocks to prevent context poisoning from Excalidraw drawings.
- * Preserves the rest of the file (including "Text Elements" headers and content).
- */
 function sanitizeExcalidrawContent(content: string): string {
-    // Regex to remove `compressed-json` code blocks
-    // Pattern: ```compressed-json [sS]*? ```
     return content.replace(/```compressed-json[\s\S]*?```/g, '');
 }
 
@@ -1271,41 +892,25 @@ function updateGraphNode(path: string, content: string, mtime: number, size: num
     if (!graph.hasNode(path)) {
         graph.addNode(path, { hash, headers, mtime, path, size, title, type: 'file' });
     } else {
-        graph.updateNodeAttributes(path, (attr: unknown) => ({
-            ...(attr as GraphNodeData), hash, headers, mtime, size, title
-        }));
+        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title }));
     }
 }
 
 function updateGraphEdges(path: string, content: string) {
-    const { body, frontmatter: fmString } = splitFrontmatter(content);
-    const fm = parseYaml(fmString);
+    const { body, frontmatter } = splitFrontmatter(content);
+    const fm = parseYaml(frontmatter);
     const dir = path.split('/').slice(0, -1).join('/');
+    const links = new Set([...extractLinks(body), ...extractLinks(frontmatter)]);
 
-    // 1. Explicit Link Extraction (Wikilinks / Markdown links)
-    const bodyLinks = extractLinks(body);
-    const fmLinks = extractLinks(fmString);
-    const allExplicitLinks = new Set([...bodyLinks, ...fmLinks]);
-
-    for (const link of allExplicitLinks) {
-        const resolvedPath = resolvePath(link, aliasMap, dir);
-        if (!graph.hasNode(resolvedPath)) {
-            // Tag detection for virtual nodes
-            const type = resolvedPath.startsWith('#') ? 'tag' : 'topic';
-            graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type });
+    for (const link of links) {
+        const resolved = resolvePath(link, aliasMap, dir);
+        if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
+        if (!graph.hasEdge(path, resolved)) {
+            graph.addEdge(path, resolved, { source: 'body', type: 'link', weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY });
         }
-        if (graph.hasEdge(path, resolvedPath)) continue;
-
-        const isFM = fmLinks.includes(link);
-        graph.addEdge(path, resolvedPath, {
-            source: isFM ? 'frontmatter' : 'body',
-            type: 'link',
-            weight: isFM ? ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER : ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY
-        });
     }
 
-    // 2. Semantic Property Link Extraction (topics, tags, topic, tags_list, author)
-    // These might be plain text that should resolve to ontology notes.
+    // Semantic Property Link Extraction
     const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic', 'tags_list', 'author'];
     for (const key of propertyKeys) {
         const val = fm[key];
@@ -1314,29 +919,18 @@ function updateGraphEdges(path: string, content: string) {
         const items = ensureArray(val);
         for (const rawItem of items) {
             if (typeof rawItem !== 'string') continue;
-
-            // Sanitize: "[[Topic]]" -> "Topic", "Topic|Alias" -> "Topic"
             const item = sanitizeProperty(rawItem);
-            if (!item || item.length === 0) continue;
+            if (!item) continue;
 
-            const resolvedPath = resolvePath(item, aliasMap, dir);
-
-            // DEBUG: Trace resolution
-            if (item.toLowerCase().includes('agentic') || item.toLowerCase().includes('cat')) {
-                console.debug(`[IndexerWorker] Resolved semantic link: "${item}" -> "${resolvedPath}" (via ${key} in ${path})`);
+            const resolved = resolvePath(item, aliasMap, dir);
+            if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'file' });
+            if (!graph.hasEdge(path, resolved)) {
+                graph.addEdge(path, resolved, {
+                    source: 'frontmatter-property',
+                    type: 'link',
+                    weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
+                });
             }
-
-            // Check if we already have this edge via explicit links
-            if (!graph.hasNode(resolvedPath)) {
-                graph.addNode(resolvedPath, { mtime: 0, path: resolvedPath, size: 0, type: 'file' });
-            }
-            if (graph.hasEdge(path, resolvedPath)) continue;
-
-            graph.addEdge(path, resolvedPath, {
-                source: 'frontmatter-property',
-                type: 'link',
-                weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
-            });
         }
     }
 }
@@ -1344,71 +938,54 @@ function updateGraphEdges(path: string, content: string) {
 async function recreateOrama() {
     try {
         const { create } = await import('@orama/orama');
-        const language = getOramaLanguage(config.agentLanguage || 'english');
-
-        workerLogger.debug(`[recreateOrama] Creating index with language: ${language} (Raw: ${config.agentLanguage})`);
-
         orama = create({
-            language: language,
+            language: getOramaLanguage(config.agentLanguage || 'english'),
             schema: {
-                // New Metadata Fields
-                author: 'string', // New: Indexed Author
+                anchorHash: 'number',
+                author: 'string',
                 content: 'string',
+                context: 'string',
                 created: 'number',
                 embedding: `vector[${config.embeddingDimension}]`,
-                params: 'string[]', // For Tags/Topics
-                path: 'enum',
+                end: 'number',
+                id: 'string',
+                mtime: 'number',
+                params: 'string[]',
+                path: 'string',
+                start: 'number',
                 status: 'string',
-                title: 'string'
+                title: 'string',
             }
         });
     } catch (e) {
-        workerLogger.error(`[recreateOrama] CRITICAL: Failed to create Orama index.`, e);
-        // Fail gracefully - search will just return empty or error later but won't crash the worker thread immediately in a way that blocks other tasks if we handle it.
+        workerLogger.error("Failed to recreate Orama:", e);
     }
 }
 
 async function computeHash(text: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(text);
-    const hashAsBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    return Array.from(new Uint8Array(hashAsBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const msg = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', msg);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function extractHeaders(text: string): string[] {
-    const headers: string[] = [];
-    const lines = text.split('\n');
-    for (const line of lines) {
-        const match = line.match(/^(#{1,3})\s+(.*)$/);
-        if (match) headers.push(line.trim());
-    }
-    return headers;
+    return text.split('\n').filter(l => l.match(/^(#{1,3})\s+(.*)$/)).map(l => l.trim());
 }
 
 async function generateEmbedding(text: string, title: string): Promise<number[]> {
     if (!embedderProxy) throw new Error("Embedding proxy not initialized.");
-    return await embedderProxy(text, title);
+    return embedderProxy(text, title);
 }
 
-/**
- * Simple YAML parser for Frontmatter.
- * Handles:
- * - key: value
- * - key: [list]
- * - key:
- *   - list item
- */
 function parseYaml(text: string): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     const lines = text.split('\n');
     let currentKey: string | null = null;
 
     for (const line of lines) {
-        if (line.trim() === '---') continue;
-        if (line.trim().length === 0) continue;
-
-        // Check for List Item "- value" (indented or not)
+        if (line.trim() === '---' || !line.trim()) continue;
         const listMatch = line.match(/^\s*-\s+(.*)$/);
-        if (listMatch && listMatch[1] && currentKey) {
+        if (listMatch?.[1] && currentKey) {
             const val = listMatch[1].trim();
             const existing = result[currentKey];
             if (Array.isArray(existing)) {
@@ -1418,25 +995,16 @@ function parseYaml(text: string): Record<string, unknown> {
             }
             continue;
         }
-
-        // Check for Key: Value
         const keyMatch = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-        if (keyMatch && keyMatch[1] && keyMatch[2] !== undefined) {
+        if (keyMatch?.[1] && keyMatch[2] !== undefined) {
             const key = keyMatch[1];
             let value = keyMatch[2].trim();
             currentKey = key;
-
-            // Handle inline list [a, b]
             if (value.startsWith('[') && value.endsWith(']')) {
-                const content = value.slice(1, -1);
-                // Simple comma split, ignoring quotes complexity for now
-                result[key] = content.split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
-            } else if (value.length > 0) {
-                // Remove surrounding quotes
-                value = value.replace(/^['"]|['"]$/g, '');
-                result[key] = value;
+                result[key] = value.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+            } else if (value) {
+                result[key] = value.replace(/^['"]|['"]$/g, '');
             } else {
-                // Empty value, might be start of list
                 result[key] = [];
             }
         }
@@ -1448,10 +1016,6 @@ if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined
     Comlink.expose(IndexerWorker);
 }
 
-// Export a dummy class to satisfy the main thread import type check.
-// This allows 'import Worker from ...' to see a Worker constructor.
 export default class IndexerWorkerHelper extends Worker {
-    constructor() {
-        super('worker');
-    }
+    constructor() { super('worker'); }
 }

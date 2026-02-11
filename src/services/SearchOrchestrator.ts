@@ -20,7 +20,14 @@ export class SearchOrchestrator {
     private settings: VaultIntelligenceSettings;
     private scoringStrategy: ScoringStrategy;
 
-    constructor(app: App, graphService: GraphService, geminiService: GeminiService, embeddingService: IEmbeddingService, settings: VaultIntelligenceSettings) {
+    // FIX: Ensure constructor accepts 5 arguments including embeddingService
+    constructor(
+        app: App,
+        graphService: GraphService,
+        geminiService: GeminiService,
+        embeddingService: IEmbeddingService,
+        settings: VaultIntelligenceSettings
+    ) {
         this.app = app;
         this.graphService = graphService;
         this.geminiService = geminiService;

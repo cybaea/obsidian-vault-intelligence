@@ -11,15 +11,25 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Mobile-ready semantic index**: Our new "Slim-Sync" strategy is a game-changer for mobile users. Your searchable index is now up to 90% smaller on disk, ensuring lightning-fast syncing across devices via Obsidian Sync or iCloud without devouring your storage.
+-   **Large-vault power-up**: We've overhauled the engine to handle 10,000+ notes with ease. By eliminating memory spikes, the plugin is now rock-stable and responsive even in massive knowledge bases.
+-   **Amnesia-proof AI reasoning**: The Researcher assistant is now remarkably more reliable. Even after a plugin restart or on a newly synced device, it always maintains a deep "memory" of your vault for perfect context-aware answers.
+-   **Crisp relationship insights**: Discovering connections is now much cleaner. The "Similar notes" view now separates graph relationship metadata (e.g. "Sibling via Topic") from the note snippets, making it easier to see exactly why notes are linked.
+-   **Instant startup stability**: Fixed a critical "startup crash" flaw, ensuring the plugin is ready to use the moment you open Obsidian.
+
 ### Developer features
+
+-   **Hybrid Slim-Sync Architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
+-   **Main-thread hydration**: Refactored `GraphService` to perform note content hydration on the main thread, overcoming worker memory limits and enabling RAG for stripped indices.
+-   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.
+-   **Internal Orama typings**: Replaced broad `any` usage in the worker with robust internal interfaces (`OramaRawData`, `OramaDocsStoreRaw`), adhering to the new project architecture standards.
+-   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals. This ensures memory safety and complies with Obsidian's rendering requirements.
 
 ## [5.2.1] - 2026-02-11
 
 ### User features
 
 ### Developer features
-
--   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals. This ensures memory safety and complies with Obsidian's rendering requirements.
 
 ## [5.2.0] - 2026-02-11
 

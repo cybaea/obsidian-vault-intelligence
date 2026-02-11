@@ -109,13 +109,17 @@ flowchart LR
     F --> G(Graphology: update edges)
     H --> I(Prep: Semantic context)
     I --> J(Orama: upsert chunks)
-    J --> K[Serialize to MessagePack]
+    J --> K[Hot Store: IndexedDB]
+    K --> L[Cold Store: Vault File - Slimmed]
 ```
 
 1.  **Processing details**:
 
 -   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
 -   **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
+-   **Hybrid Storage (Slim-Sync)**:
+    -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches.
+    -   **Cold Store (Vault File)**: A "slim" serialized version synced to the `.vault-intelligence` folder. To ensure cross-device efficiency, actual note content is stripped from the documents (`content: ""`) before save.
 -   **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
 
 ### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
@@ -179,7 +183,7 @@ sequenceDiagram
     GS->>IW: traverse_graph(seeds)
     IW-->>GS: Neighbors
     end
-
+ 
     rect rgb(255, 245, 230)
     Note over S,GS: GARS Scoring Phase
     S->>GS: getBatchCentrality(candidates)
@@ -187,11 +191,15 @@ sequenceDiagram
     IW-->>GS: Centrality Scores
     S->>S: calculateGARS()
     end
-
-    S-->>TR: Ranked Results
-    TR-->>A: Context Content
-    A->>CA: assemble(results)
-    CA-->>A: Optimized Protobuf Context
+ 
+    S-->>V: Ranked Hollow Results
+    Note over V,GS: Hydration Phase (Main Thread)
+    V->>GS: hydrateResults(hollow)
+    GS->>VM: readFile(path)
+    VM-->>GS: Note Content
+    GS-->>V: Hydrated Results (Context & Excerpts)
+    
+    V->>A: chat(history, hydrated)
     A->>G: sendMessage(context)
     G-->>A: Final Answer
     A-->>V: Display Answer

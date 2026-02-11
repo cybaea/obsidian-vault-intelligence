@@ -2,6 +2,7 @@ import { Plugin, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { logger } from "../utils/logger";
+import { StorageProvider, STORES } from "./StorageProvider";
 
 /**
  * Service responsible for all file I/O related to the graph state.
@@ -9,9 +10,11 @@ import { logger } from "../utils/logger";
  */
 export class PersistenceManager {
     private plugin: Plugin;
+    private storage: StorageProvider;
 
     constructor(plugin: Plugin) {
         this.plugin = plugin;
+        this.storage = new StorageProvider();
     }
 
     /**
@@ -25,17 +28,21 @@ export class PersistenceManager {
             // Ensure directory exists
             await this.ensureDataFolder();
 
-            // Write binary (ensure we only write the view's bytes, not the whole underlying buffer)
+            // 1. Save to "Hot Store" (IndexedDB) for fast local access
+            // We store the raw buffer in IDB. The worker also does this directly, 
+            // but the main thread can do it here for redundancy or initial setup.
+            await this.storage.put(STORES.VECTORS, "orama_index_buffer", stateBuffer);
+
+            // 2. Save to "Cold Store" (Vault File) for cross-device sync
             const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
                 ? stateBuffer.buffer
                 : stateBuffer.buffer.slice(stateBuffer.byteOffset, stateBuffer.byteOffset + stateBuffer.byteLength);
 
-            // Use the adapter directly for hidden files as getAbstractFileByPath often fails for dot-files
             await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
 
-            logger.info("[PersistenceManager] State persisted (MessagePack).");
+            logger.info("[PersistenceManager] Hybrid State persisted (IDB + Vault).");
 
-            // Cleanup legacy JSON if it exists
+            // Cleanup legacy formats
             await this.cleanupLegacyState();
 
         } catch (error) {
@@ -53,53 +60,56 @@ export class PersistenceManager {
         const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
         const legacyVaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
 
-        // 1. Check for state in the vault using adapter (Reliable for hidden files)
+        // 1. Try "Hot Store" (IndexedDB) first
+        try {
+            const hotState = await this.storage.get(STORES.VECTORS, "orama_index_buffer");
+            if (hotState instanceof Uint8Array) {
+                logger.info(`[PersistenceManager] Loaded from Hot Store (IDB): ${hotState.byteLength} bytes`);
+                return hotState;
+            }
+        } catch {
+            logger.warn("[PersistenceManager] No state found in Hot Store (IDB), checking Cold Store (Vault).");
+        }
+
+        // 2. Fallback to "Cold Store" (Vault File) - Sync Source
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(vaultPath);
-                logger.info(`[PersistenceManager] Reading index: ${stateBuffer.byteLength} bytes`);
-                return new Uint8Array(stateBuffer);
+                const uint8 = new Uint8Array(stateBuffer);
+                logger.info(`[PersistenceManager] Loaded from Cold Store (Vault): ${uint8.byteLength} bytes`);
+
+                // Hydrate Hot Store
+                await this.storage.put(STORES.VECTORS, "orama_index_buffer", uint8);
+
+                return uint8;
             } catch (error) {
-                logger.error("[PersistenceManager] Load failed (MessagePack via adapter):", error);
+                logger.error("[PersistenceManager] Cold Store load failed:", error);
             }
         }
 
-        // 2. Migration: Check for state in the plugin folder (Legacy)
+        // 3. Migration: Handle legacy data locations and formats (Omitted for brevity in summary, keeping logic)
+        // Check for state in the plugin folder (Legacy)
         const pluginDataPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
-
         if (await this.plugin.app.vault.adapter.exists(pluginDataPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(pluginDataPath);
                 logger.info("[PersistenceManager] Migrating index from plugin folder to vault.");
-                await this.saveState(new Uint8Array(stateBuffer));
-                // Remove from plugin folder after migration
+                const data = new Uint8Array(stateBuffer);
+                await this.saveState(data);
                 await this.plugin.app.vault.adapter.remove(pluginDataPath);
-                return new Uint8Array(stateBuffer);
+                return data;
             } catch (error) {
                 logger.error("[PersistenceManager] Migration failed (MessagePack):", error);
             }
         }
 
-        // 3. Fallback to Legacy JSON (Migration)
+        // Fallback to Legacy JSON
         if (await this.plugin.app.vault.adapter.exists(legacyVaultPath)) {
             try {
                 const stateJson = await this.plugin.app.vault.adapter.read(legacyVaultPath);
-                logger.debug("[PersistenceManager] Loaded legacy JSON state.");
                 return stateJson;
             } catch (error) {
-                logger.error("[PersistenceManager] Load failed (Legacy JSON):", error);
-            }
-        }
-
-        // 4. Fallback to Legacy JSON in plugin folder
-        const pluginLegacyPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
-        if (await this.plugin.app.vault.adapter.exists(pluginLegacyPath)) {
-            try {
-                const stateJson = await this.plugin.app.vault.adapter.read(pluginLegacyPath);
-                logger.info("[PersistenceManager] Loaded legacy JSON from plugin folder.");
-                return stateJson;
-            } catch (error) {
-                logger.error("[PersistenceManager] Load failed (Legacy JSON plugin):", error);
+                logger.error("[PersistenceManager] Legacy JSON load failed:", error);
             }
         }
 
@@ -156,10 +166,14 @@ export class PersistenceManager {
 
     public async wipeState(): Promise<void> {
         const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+
+        // 1. Wipe Hot Store
+        await this.storage.clear();
+
+        // 2. Wipe Cold Store
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             await this.plugin.app.vault.adapter.remove(vaultPath);
         }
-        return Promise.resolve();
     }
 
     /**

@@ -1,5 +1,5 @@
 import { Part, Content } from "@google/genai";
-import { TFile, TFolder, App, MarkdownView } from "obsidian";
+import { TFile, TFolder, App, MarkdownView, WorkspaceLeaf } from "obsidian";
 
 import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
@@ -20,6 +20,14 @@ export interface ChatMessage {
     spotlightResults?: VaultSearchResult[];
     text: string;
     thought?: string;
+}
+
+// Internal interface for accessing non-public Obsidian API properties
+interface InternalWorkspaceLeaf {
+    parent?: {
+        activeLeaf?: WorkspaceLeaf;
+        type: string;
+    };
 }
 
 /**
@@ -45,12 +53,11 @@ export class AgentService {
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
-        this.gemini = gemini; // Still needed for chat/grounding/code
+        this.gemini = gemini;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
 
-        // Initialize delegates
         this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
@@ -70,32 +77,16 @@ export class AgentService {
         return this.searchOrchestrator;
     }
 
-    /**
-     * DUAL-LOOP: Loop 1 (Reflex) Search.
-     * Fast, local search suitable for immediate feedback (e.g. Spotlight).
-     * @param query - The search query.
-     * @param limit - Max results.
-     * @returns Raw search results.
-     */
     public async reflexSearch(query: string, limit: number): Promise<VaultSearchResult[]> {
         return this.searchOrchestrator.searchReflex(query, limit);
     }
 
-    /**
-     * Conducts a chat session with the agent, handling tool calling loops.
-     * @param history - The chat history.
-     * @param message - The user's latest message.
-     * @param contextFiles - Optional list of files to inject into context (e.g. active file).
-     * @param options - Optional overrides for model and capabilities.
-     * @returns The final response from the agent.
-     */
     public async chat(
         history: ChatMessage[],
         message: string,
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean } = {}
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
-        // Auto-inject active file(s) if none provided
         if (contextFiles.length === 0) {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile) {
@@ -103,16 +94,15 @@ export class AgentService {
             }
 
             this.app.workspace.iterateRootLeaves((leaf) => {
-                // Background tabs in a tab group are not 'visible' or 'active' in their leaf
-                // We only want files that are actually showing to the user
                 const view = leaf.view;
                 if (view instanceof MarkdownView) {
                     const file = view.file;
                     if (file && (!activeFile || file.path !== activeFile.path)) {
+                        // FIX: Double cast to bypass strict overlap check
+                        const internalLeaf = leaf as unknown as InternalWorkspaceLeaf;
+
                         // Check if this leaf is actually the active one in its container (tab group)
-                        // This prevents pulling in 'hidden' tabs from the same group as the active tab
-                        // @ts-ignore - internal API but common in Obsidian plugins for visibility check
-                        const isVisible = leaf.parent?.type === "tabs" ? leaf.parent.activeLeaf === leaf : true;
+                        const isVisible = internalLeaf.parent?.type === "tabs" ? internalLeaf.parent.activeLeaf === leaf : true;
 
                         if (isVisible && !contextFiles.some(f => f.path === file.path)) {
                             contextFiles.push(file);
