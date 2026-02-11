@@ -14,6 +14,7 @@ export interface ToolConfirmationDetails {
 export class ToolConfirmationModal extends Modal {
     private details: ToolConfirmationDetails;
     private resolve: (value: ToolConfirmationDetails | null) => void;
+    private renderComponent: Component;
 
     constructor(app: App, details: ToolConfirmationDetails, resolve: (value: ToolConfirmationDetails | null) => void) {
         super(app);
@@ -84,14 +85,16 @@ export class ToolConfirmationModal extends Modal {
         }
 
         if (this.details.content) {
-            contentEl.createEl("h4", { text: "Content preview" });
+            contentEl.createEl("h4", { text: "Note content or updates" });
             const previewContainer = contentEl.createDiv({ cls: "confirmation-preview" });
-            // Simple preview, maybe truncated if too large
             const previewText = this.details.content.length > 2000
                 ? this.details.content.substring(0, 2000) + "\n\n... (truncated)"
                 : this.details.content;
 
-            void MarkdownRenderer.render(this.app, previewText, previewContainer, "", this as unknown as Component);
+            this.renderComponent = new Component();
+            this.renderComponent.load();
+
+            void MarkdownRenderer.render(this.app, previewText, previewContainer, "", this.renderComponent);
         }
 
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
@@ -113,6 +116,9 @@ export class ToolConfirmationModal extends Modal {
     }
 
     onClose() {
+        if (this.renderComponent) {
+            this.renderComponent.unload();
+        }
         this.resolve(null);
         this.contentEl.empty();
     }

@@ -7,6 +7,7 @@ export class ReleaseNotesModal extends Modal {
     version: string;
     markdownContent: string;
     sponsorUrl?: string;
+    private renderComponent: Component;
 
     constructor(app: App, plugin: Plugin, version: string, markdownContent: string, sponsorUrl?: string) {
         super(app);
@@ -30,13 +31,17 @@ export class ReleaseNotesModal extends Modal {
 
 
 
+        // Initialize a dedicated component for rendering
+        this.renderComponent = new Component();
+        this.renderComponent.load();
+
         // Render rich markdown (handles images, formatting, etc.)
         void MarkdownRenderer.render(
             this.app,
             this.markdownContent,
             markdownContainer,
             "/",
-            this as unknown as Component
+            this.renderComponent
         );
 
         // Footer / Close
@@ -80,6 +85,9 @@ export class ReleaseNotesModal extends Modal {
     }
 
     onClose() {
+        if (this.renderComponent) {
+            this.renderComponent.unload();
+        }
         this.contentEl.empty();
     }
 }

@@ -23,4 +23,4 @@ The "Similar Notes" view and agent retrieval have been upgraded with a hybrid sc
 - **Customizable precision**: Added presets for indexing chunk sizes, allowing you to optimize for everything from small local models (256 tokens) to large cloud deployments (2048 tokens).
 - **Refined controls**: All settings that require a re-index now feature high-visibility warnings, and re-indexing is intelligently deferred until you close the settings dialog.
 - **Standardized UI**: Synchronized visual highlights and action buttons with native Obsidian design tokens for a more integrated feel.
-- **Data transparency**: Added a new "Danger Zone" in Advanced settings for purging plugin data and a comprehensive [Uninstall and Cleanup](docs/how-to/uninstall-and-cleanup.md) guide.
+- **Data transparency**: Added a new "Danger Zone" in Advanced settings for purging plugin data and a comprehensive [Uninstall and Cleanup](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/uninstall-and-cleanup.html) guide.
