@@ -4,14 +4,15 @@ import { Plugin, Notice, TFile, Events } from "obsidian";
 import { GRAPH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../types/graph";
-import { fastHash, splitFrontmatter } from '../utils/link-parsing';
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
 import { ModelRegistry } from "./ModelRegistry";
 import { OntologyService } from "./OntologyService";
 import { PersistenceManager } from './PersistenceManager';
+import { ResultHydrator } from './ResultHydrator';
 import { VaultManager } from "./VaultManager";
+import { WorkerManager } from './WorkerManager';
 
 export interface GraphState {
     graph?: {
@@ -19,8 +20,6 @@ export interface GraphState {
     };
 }
 
-import IndexerWorkerModule from "../workers/indexer.worker";
-const IndexerWorker = IndexerWorkerModule;
 
 // Interface augmentation to support dynamic service access
 interface PluginWithOntology extends Plugin {
@@ -46,7 +45,8 @@ export class GraphService extends Events {
     private persistenceManager: PersistenceManager;
     private settings: VaultIntelligenceSettings;
 
-    private worker: Worker | null = null;
+    private workerManager: WorkerManager;
+    private hydrator: ResultHydrator;
     private api: Comlink.Remote<WorkerAPI> | null = null;
     private isInitialized = false;
     private _isScanning = false;
@@ -82,6 +82,9 @@ export class GraphService extends Events {
         this.embeddingService = embeddingService;
         this.persistenceManager = persistenceManager;
         this.settings = { ...settings };
+
+        this.workerManager = new WorkerManager(plugin.app, embeddingService);
+        this.hydrator = new ResultHydrator(plugin.app, vaultManager);
     }
 
     /**
@@ -110,17 +113,11 @@ export class GraphService extends Events {
         if (this.isInitialized) return;
 
         try {
-            // 1. Spawn worker
-            this.worker = new IndexerWorker();
-            this.api = Comlink.wrap<WorkerAPI>(this.worker);
-
-            // 2. Align settings with Model Registry (Architecture Restoration)
+            // 1. Align settings with Model Registry
             const model = ModelRegistry.getModelById(this.settings.embeddingModel);
             if (model && model.dimensions && this.settings.embeddingDimension !== model.dimensions) {
-                logger.error(`[GraphService] Dimension mismatch detected: settings=${this.settings.embeddingDimension}, model=${model.dimensions}. Aligning to model.`);
+                logger.error(`[GraphService] Dimension mismatch detected. Aligning to model.`);
                 this.settings.embeddingDimension = model.dimensions;
-                // Note: We don't save settings here to avoid side effects during init, 
-                // but we use the correct dimension for the config.
             }
 
             const config: WorkerConfig = {
@@ -137,28 +134,9 @@ export class GraphService extends Events {
                 ontologyPath: this.settings.ontologyPath
             };
 
-            const fetcher = Comlink.proxy(async (url: string, options: { method?: string; headers?: Record<string, string>; body?: string }) => {
-                const { requestUrl } = await import("obsidian");
-                const res = await requestUrl({
-                    body: options.body,
-                    headers: options.headers,
-                    method: options.method || 'GET',
-                    url
-                });
-                return res.json as unknown;
-            });
-
-            const embedder = Comlink.proxy(async (text: string, title: string) => {
-                if (title === 'Query') {
-                    return await this.embeddingService.embedQuery(text);
-                }
-                // Default: Embed as document (for indexing)
-                const vectors = await this.embeddingService.embedDocument(text, title);
-                return vectors[0];
-            });
-
-            // Initialize worker
-            await this.api.initialize(config, fetcher, embedder);
+            // 2. Spawn and Initialize worker via WorkerManager
+            await this.workerManager.initializeWorker(config);
+            this.api = this.workerManager.getApi();
 
             // 3. Ensure gitignore exists for data folder
             await this.persistenceManager.ensureGitignore();
@@ -378,92 +356,6 @@ export class GraphService extends Events {
         }
     }
 
-    /**
-     * Internal method to hydrate hollow search results with actual file content.
-     * Uses anchored alignment to handle drift.
-     */
-    private async hydrateResults(results: GraphSearchResult[]): Promise<GraphSearchResult[]> {
-        const hydrated: GraphSearchResult[] = [];
-
-        for (const res of results) {
-            // If we already have an excerpt, no hydration needed
-            if (res.excerpt && res.excerpt.length > 0) {
-                hydrated.push(res);
-                continue;
-            }
-
-            // Hydrate from file
-            const file = this.plugin.app.vault.getAbstractFileByPath(res.path);
-            if (!(file instanceof TFile)) {
-                hydrated.push(res);
-                continue;
-            }
-
-            try {
-                const alignedContent = await this.anchoredAlignment(
-                    file,
-                    res.anchorHash ?? 0,
-                    res.start ?? 0,
-                    res.end ?? 0
-                );
-
-                hydrated.push({
-                    ...res,
-                    excerpt: alignedContent ?? "(Content drifted - Re-indexing background)"
-                });
-
-                if (!alignedContent) {
-                    // Deep drift detected: Trigger background re-indexing of this file
-                    void this.debounceUpdate(res.path, file);
-                }
-            } catch (e) {
-                logger.error(`[GraphService] Hydration failed for ${res.path}:`, e);
-                hydrated.push(res);
-            }
-        }
-
-        return hydrated;
-    }
-
-    private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
-        const content = await this.vaultManager.readFile(file);
-        const { body } = splitFrontmatter(content);
-
-        // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
-        if (!expectedHash && !start && !end) {
-            return body.substring(0, 300).trim() + "...";
-        }
-
-        // 1. Direct match check (offset by frontmatter)
-        // Note: worker start/end is relative to full file content
-        const snippet = content.substring(start, end).trim();
-        if (fastHash(snippet) === expectedHash) return snippet;
-
-        // 2. Drift Detection: Look for anchor in a sliding window
-        // Since we semantic split by headers, we prioritize matches that look like headers/sections
-        const searchRange = 5000; // Look 5kb around original spot
-        const searchStart = Math.max(0, start - searchRange);
-        const searchEnd = Math.min(content.length, end + searchRange);
-        const window = content.substring(searchStart, searchEnd);
-
-        // Simple sliding window search for the hash anchor
-        // We search for lines that could be the start of our chunk
-        const lines = window.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line) continue;
-
-            // Check if this line matches the anchor hash
-            // (Remember fastHash only looks at first 100 chars)
-            if (fastHash(line) === expectedHash) {
-                // Found the start! Re-construct the chunk (approximate end)
-                const actualStart = window.indexOf(line);
-                return window.substring(actualStart, actualStart + (end - start)).trim();
-            }
-        }
-
-        return null; // Deep drift
-    }
 
     /**
      * Semantically searches the vault using vector embeddings.
@@ -474,7 +366,13 @@ export class GraphService extends Events {
     public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         const rawResults = await this.api.search(query, limit);
-        return this.hydrateResults(rawResults);
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
+
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
+
+        return hydrated;
     }
 
     /**
@@ -486,7 +384,13 @@ export class GraphService extends Events {
     public async keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         const rawResults = await this.api.keywordSearch(query, limit);
-        return this.hydrateResults(rawResults);
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
+
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
+
+        return hydrated;
     }
 
     /**
@@ -499,7 +403,13 @@ export class GraphService extends Events {
     public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
         const rawResults = await this.api.searchInPaths(query, paths, limit);
-        return this.hydrateResults(rawResults);
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
+
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
+
+        return hydrated;
     }
 
     public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
@@ -534,7 +444,13 @@ export class GraphService extends Events {
 
         if (!this.api) return [];
         const rawResults = await this.api.getSimilar(path, limit);
-        return this.hydrateResults(rawResults);
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
+
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
+
+        return hydrated;
     }
 
     /**
@@ -593,7 +509,13 @@ export class GraphService extends Events {
         await Promise.resolve();
         if (!this.api) return [];
         const neighbors = await this.api.getNeighbors(path, options);
-        return this.hydrateResults(neighbors);
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(neighbors);
+
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
+
+        return hydrated;
     }
 
     /**
@@ -684,28 +606,19 @@ export class GraphService extends Events {
         // 1. Get Hollow Hits from Worker
         const hollowHits = await this.api.buildPriorityPayload(queryVector, query) as GraphSearchResult[];
 
-        // 2. Hydrate on Main Thread (access to disk ensures RAG always works)
-        const hydrated = await Promise.all(hollowHits.map(async (item: GraphSearchResult) => {
-            // item.id is Orama document ID (usually path#chunkIndex or path)
-            const id = item.id || item.path || "";
-            const path = id.split('#')[0];
-            if (!path) return item;
+        // 2. Hydrate on Main Thread using ResultHydrator
+        const { driftDetected, hydrated } = await this.hydrator.hydrate(hollowHits);
 
-            const file = this.plugin.app.vault.getAbstractFileByPath(path);
+        // 3. Trigger re-indexing for drifting files
+        for (const file of driftDetected) {
+            void this.debounceUpdate(file.path, file);
+        }
 
-            if (file instanceof TFile) {
-                const fileContent = await this.vaultManager.readFile(file);
-                // We use the start/end offsets from the hollow hit to snip the exact text
-                const start = item.start ?? 0;
-                const end = item.end ?? fileContent.length;
-                item.content = fileContent.substring(start, end).trim();
-            } else {
-                item.content = "(Note removed)";
-            }
-            return item;
+        // 4. Mapping excerpt to content for Analyst/RAG consumers
+        return hydrated.map(item => ({
+            ...item,
+            content: item.excerpt
         }));
-
-        return hydrated;
     }
 
     /**
@@ -910,9 +823,8 @@ export class GraphService extends Events {
             this.debounceTimers.clear();
         }
 
-        if (this.worker) {
-            this.worker.terminate();
-            this.worker = null;
+        if (this.workerManager) {
+            this.workerManager.terminate();
         }
         this.api = null;
         this.isInitialized = false;

@@ -3,7 +3,6 @@
  * Grouped by logical area to improve maintainability.
  */
 
-const LATENCY_BUDGET_FACTOR = 4.0;
 
 export const SEARCH_CONSTANTS = {
     /** Absolute minimum score for a seed to trigger neighbor expansion */
@@ -148,6 +147,9 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Length of content snippet to store in Orama for previews */
     CONTENT_PREVIEW_LENGTH: 25000,
 
+    /** Default max characters per semantic chunk if not specified by config */
+    DEFAULT_MAX_CHUNK_CHARACTERS: 2000,
+
     /** Default minimum similarity for results (0.5 = 50%) */
     DEFAULT_MIN_SIMILARITY: 0.5,
 
@@ -178,6 +180,7 @@ export const WORKER_INDEXER_CONSTANTS = {
     /** Overshoot factor for vector search pooling */
     SEARCH_OVERSHOOT_FACTOR_VECTOR: 4,
 
+
     /** Strict similarity threshold for Orama (bypass default 0.8) */
     SIMILARITY_THRESHOLD_STRICT: 0.001
 };
@@ -194,6 +197,8 @@ export const GRAPH_CONSTANTS = {
         HYBRID_BOOST: 0.1,
         NEIGHBOR_FLOOR: 0.65
     },
+    /** Search range (in characters) around original offsets for drift alignment */
+    HYDRATION_SEARCH_RANGE: 5000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
     IDLE_SAVE_TIMEOUT_MS: 30000,
     legacy_STATE_FILE: "graph-state.json",
@@ -206,6 +211,7 @@ export const GRAPH_CONSTANTS = {
     SCAN_LOG_BATCH_SIZE: 50,
     /** Default filename for graph state */
     STATE_FILE: "graph-state.msgpack",
+
     /** Hidden directory in vault for plugin-specific persistent data */
     VAULT_DATA_DIR: ".vault-intelligence",
     /** Scoring Weights (alpha, beta, gamma) */
@@ -406,5 +412,5 @@ export const MODEL_CONSTANTS = {
 
 export const WORKER_LATENCY_CONSTANTS = {
     /** Multiple of chunk size allowed in the fast-path search */
-    LATENCY_BUDGET_FACTOR
+    LATENCY_BUDGET_FACTOR: 4.0
 };
