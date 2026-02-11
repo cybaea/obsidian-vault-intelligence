@@ -658,10 +658,10 @@ export class GraphService extends Events {
             this.committedSettings.embeddingChunkSize !== settings.embeddingChunkSize
         );
 
-        if (needsReindex) {
-            this.reindexQueued = true;
+        if (needsReindex && !this.reindexQueued) {
             logger.warn("[GraphService] Embedding settings changed relative to committed state. Queueing re-scan.");
         }
+        this.reindexQueued = !!needsReindex;
 
         this.settings = { ...settings };
         if (this.api) {
