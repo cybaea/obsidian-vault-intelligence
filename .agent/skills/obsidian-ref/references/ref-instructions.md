@@ -102,7 +102,7 @@ If you cannot find `.ref` initially, try:
 3. **Report findings**:
    - If updates are available, show what changed (use `git log` or `git diff`)
    - Ask if the user wants to pull the updates
-   - **Never automatically pull** - always ask first (see [agent-dos-donts.md](agent-dos-donts.md))
+   - **Never automatically pull** - always ask first (see [agent-dos-donts.md](../../obsidian-dev/references/agent-dos-donts.md))
 
 4. **If repo not found**:
    - List what's available in `.ref/plugins/` or `.ref/themes/`
@@ -264,7 +264,7 @@ ln -s ../../.ref/obsidian-dev/plugins/plugin-name .ref/plugins/plugin-name
 ln -s ../../.ref/obsidian-dev/themes/theme-name .ref/themes/theme-name
 ```
 
-**Note**: See [sync-procedure.md](sync-procedure.md) for the standard procedure to keep `.agents` content synchronized with updates from these repositories.
+**Note**: See [sync-procedure.md](../../obsidian-ops/references/sync-procedure.md) for the standard procedure to keep `.agents` content synchronized with updates from these repositories.
 
 ## Adding Additional References
 

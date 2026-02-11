@@ -44,7 +44,7 @@ package.json
 
 - Source files in `src/scss/` are compiled to `theme.css`
 - Build tools (Grunt, npm scripts, etc.) handle compilation
-- Run build command after making changes (see [build-workflow.md](build-workflow.md))
+- Run build command after making changes (see [build-workflow.md](../../obsidian-ops/references/build-workflow.md))
 - **Example**: The `obsidian-oxygen` theme uses this pattern with Grunt
 
 ## Wrong Structure (Common Mistakes)

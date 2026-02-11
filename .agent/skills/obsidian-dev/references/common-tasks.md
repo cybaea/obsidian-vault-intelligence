@@ -12,7 +12,7 @@ Update frequency: Check Obsidian Sample Plugin repo for updates
 - **common-tasks.md**: Quick snippets and basic patterns for common operations
 - **code-patterns.md**: Complete, production-ready examples with full context and error handling
 
-> **Note**: If user asks "what does the Obsidian API say about X?" or similar, check `.ref/obsidian-api/obsidian.d.ts` first. See [ref-instructions.md](ref-instructions.md) for when to check `.ref` setup.
+> **Note**: If user asks "what does the Obsidian API say about X?" or similar, check `.ref/obsidian-api/obsidian.d.ts` first. See [ref-instructions.md](../../obsidian-ref/references/ref-instructions.md) for when to check `.ref` setup.
 
 ## Organize code across multiple files
 
@@ -221,7 +221,7 @@ const value = this.app.secretStorage.getSecret("my-api-key");
 
 **Important**: Secret IDs must be lowercase alphanumeric with optional dashes (e.g., `my-plugin-api-key`). Invalid IDs will throw an error.
 
-See [security-privacy.md](security-privacy.md) for security best practices and [code-patterns.md](code-patterns.md) for comprehensive examples with error handling.
+See [security-privacy.md](../../obsidian-ops/references/security-privacy.md) for security best practices and [code-patterns.md](code-patterns.md) for comprehensive examples with error handling.
 
 ## Modal Patterns
 

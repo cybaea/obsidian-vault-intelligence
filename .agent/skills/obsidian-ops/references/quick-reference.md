@@ -34,7 +34,7 @@ One-page cheat sheet for common Obsidian theme development tasks.
 - `add ref ../my-local-plugin` → Creates symlink to local project
 - `check API [feature]` → Searches obsidian.d.ts for feature (for theme CSS variables, etc.)
 
-**Note**: These commands are interpreted by AI agents and execute the corresponding workflows automatically. See detailed documentation in [AGENTS.md](../../AGENTS.md) for full workflows.
+**Note**: These commands are interpreted by AI agents and execute the corresponding workflows automatically.
 
 ## Build Commands
 
@@ -165,5 +165,5 @@ package.json
 Gruntfile.js       # Build configuration (if using Grunt)
 ```
 
-See [file-conventions.md](file-conventions.md) for details.
+See [file-conventions.md](../../obsidian-ref/references/file-conventions.md) for details.
 
