@@ -124,46 +124,60 @@ function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONST
     const chunks: Array<{ text: string, start: number, end: number }> = [];
     const regex = /(^#{1,6}\s[^\n]*)([\s\S]*?)(?=^#{1,6}\s|$)/gm;
 
+    const pushChunk = (t: string, s: number, e: number) => {
+        if (!t.trim()) return;
+        if (t.length > maxChunkSize) {
+            const subChunks = recursiveCharacterSplitter(t, maxChunkSize, Math.floor(maxChunkSize * 0.1));
+            let subOffset = 0;
+            for (const sub of subChunks) {
+                const actualInSub = t.indexOf(sub, subOffset);
+                chunks.push({
+                    end: s + actualInSub + sub.length,
+                    start: s + actualInSub,
+                    text: sub,
+                });
+                subOffset = actualInSub + sub.length;
+            }
+        } else {
+            chunks.push({ end: e, start: s, text: t });
+        }
+    };
+
+    const firstHeaderMatch = text.match(/^#{1,6}\s/m);
+    let scanIndex = 0;
+
+    if (firstHeaderMatch && firstHeaderMatch.index !== undefined) {
+        if (firstHeaderMatch.index > 0) {
+            pushChunk(text.substring(0, firstHeaderMatch.index), 0, firstHeaderMatch.index);
+        }
+        scanIndex = firstHeaderMatch.index;
+    } else {
+        pushChunk(text, 0, text.length);
+        return chunks;
+    }
+
+    regex.lastIndex = scanIndex;
     let match;
-    let hasHeaders = false;
+    let currentChunkText = "";
+    let currentChunkStart = -1;
+
     while ((match = regex.exec(text)) !== null) {
-        hasHeaders = true;
         const sectionText = match[0];
         const sectionStart = match.index;
 
-        if (sectionText.length > maxChunkSize) {
-            const subChunks = recursiveCharacterSplitter(sectionText, maxChunkSize, Math.floor(maxChunkSize * 0.1));
-            let subOffset = 0;
-            for (const sub of subChunks) {
-                const actualStart = sectionText.indexOf(sub, subOffset);
-                chunks.push({
-                    end: sectionStart + actualStart + sub.length,
-                    start: sectionStart + actualStart,
-                    text: sub,
-                });
-                subOffset = actualStart + sub.length;
-            }
+        if (currentChunkStart === -1) currentChunkStart = sectionStart;
+
+        if (currentChunkText.length > 0 && (currentChunkText.length + sectionText.length) > maxChunkSize) {
+            pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
+            currentChunkText = sectionText;
+            currentChunkStart = sectionStart;
         } else {
-            chunks.push({
-                end: sectionStart + sectionText.length,
-                start: sectionStart,
-                text: sectionText,
-            });
+            currentChunkText += sectionText;
         }
     }
 
-    if (!hasHeaders) {
-        const subChunks = recursiveCharacterSplitter(text, maxChunkSize, Math.floor(maxChunkSize * 0.1));
-        let subOffset = 0;
-        for (const sub of subChunks) {
-            const actualStart = text.indexOf(sub, subOffset);
-            chunks.push({
-                end: actualStart + sub.length,
-                start: actualStart,
-                text: sub,
-            });
-            subOffset = actualStart + sub.length;
-        }
+    if (currentChunkText.length > 0) {
+        pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
     }
 
     return chunks;
