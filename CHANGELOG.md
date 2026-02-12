@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [6.0.0] - 2026-02-12
+
+### User features
+
 -   **Large-vault power-up**: We've overhauled the engine to handle 10,000+ notes with ease. By eliminating memory spikes, the plugin is now rock-stable and responsive even in massive knowledge bases.
 -   **Intelligent model switching**: You can now switch embedding models (eg between Local and Gemini) without losing your previous index. Each model maintains its own secure, isolated storage "shard", allowing for seamless transitions.
 -   **Precise context awareness**: The Researcher assistant now uses exact token tracking for its "memory" across all Gemini and local models. This ensures more reliable answers and prevents unexpected cut-offs in long conversations.
