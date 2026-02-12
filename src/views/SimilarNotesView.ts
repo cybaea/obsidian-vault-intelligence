@@ -21,9 +21,11 @@ export class SimilarNotesView extends ItemView {
         this.icon = "layout-grid";
 
         // Refresh when graph is ready
-        this.plugin.graphService.on('index-ready', () => {
-            void this.updateView();
-        });
+        this.registerEvent(
+            this.graphService.on('index-ready', () => {
+                void this.updateView();
+            })
+        );
     }
 
     getViewType() {
