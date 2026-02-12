@@ -34,8 +34,6 @@ New features are added in the "Unreleased" section.
 -   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.
 -   **Standardized token estimation**: Replaced hardcoded math with `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` across all services, ensuring perfectly consistent context budgeting.
 -   **Sharded storage integrity**: Fixed an IDB key collision in the indexing worker that was causing "split-brain" state issues during background sync.
--   **Enforced re-indexing on settings change**: Corrected a bypass in `GraphService` where changing context-critical settings (eg `embeddingChunkSize`) would skip re-indexing.
--   **Internal Orama typings**: Replaced broad `any` usage in the worker with robust internal interfaces (`OramaRawData`, `OramaDocsStoreRaw`).
 -   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals.
 -   **Automatic state migration**: Added logic to detect legacy `graph-state.msgpack` files and migrate them to the new sharded format.
 -   **Updated dependency**: Updated `@google/genai` to `v1.41.0`.
