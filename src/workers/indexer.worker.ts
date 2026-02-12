@@ -3,7 +3,7 @@ import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama'
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
+import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
 import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig } from '../types/graph';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
@@ -12,7 +12,7 @@ import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizeP
 let graph: Graph;
 let orama: AnyOrama;
 let config: WorkerConfig;
-let embedderProxy: ((text: string, title: string) => Promise<number[]>) | null = null;
+let embedderProxy: ((text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
 let currentStopWords: string[] = []; // Loaded dynamically
 const storage = new StorageProvider();
@@ -95,6 +95,7 @@ interface OramaDocument {
     start: number;
     status: string;
     title: string;
+    tokenCount: number;
 }
 
 interface OramaHit {
@@ -123,46 +124,60 @@ function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONST
     const chunks: Array<{ text: string, start: number, end: number }> = [];
     const regex = /(^#{1,6}\s[^\n]*)([\s\S]*?)(?=^#{1,6}\s|$)/gm;
 
+    const pushChunk = (t: string, s: number, e: number) => {
+        if (!t.trim()) return;
+        if (t.length > maxChunkSize) {
+            const subChunks = recursiveCharacterSplitter(t, maxChunkSize, Math.floor(maxChunkSize * 0.1));
+            let subOffset = 0;
+            for (const sub of subChunks) {
+                const actualInSub = t.indexOf(sub, subOffset);
+                chunks.push({
+                    end: s + actualInSub + sub.length,
+                    start: s + actualInSub,
+                    text: sub,
+                });
+                subOffset = actualInSub + sub.length;
+            }
+        } else {
+            chunks.push({ end: e, start: s, text: t });
+        }
+    };
+
+    const firstHeaderMatch = text.match(/^#{1,6}\s/m);
+    let scanIndex = 0;
+
+    if (firstHeaderMatch && firstHeaderMatch.index !== undefined) {
+        if (firstHeaderMatch.index > 0) {
+            pushChunk(text.substring(0, firstHeaderMatch.index), 0, firstHeaderMatch.index);
+        }
+        scanIndex = firstHeaderMatch.index;
+    } else {
+        pushChunk(text, 0, text.length);
+        return chunks;
+    }
+
+    regex.lastIndex = scanIndex;
     let match;
-    let hasHeaders = false;
+    let currentChunkText = "";
+    let currentChunkStart = -1;
+
     while ((match = regex.exec(text)) !== null) {
-        hasHeaders = true;
         const sectionText = match[0];
         const sectionStart = match.index;
 
-        if (sectionText.length > maxChunkSize) {
-            const subChunks = recursiveCharacterSplitter(sectionText, maxChunkSize, Math.floor(maxChunkSize * 0.1));
-            let subOffset = 0;
-            for (const sub of subChunks) {
-                const actualStart = sectionText.indexOf(sub, subOffset);
-                chunks.push({
-                    end: sectionStart + actualStart + sub.length,
-                    start: sectionStart + actualStart,
-                    text: sub,
-                });
-                subOffset = actualStart + sub.length;
-            }
+        if (currentChunkStart === -1) currentChunkStart = sectionStart;
+
+        if (currentChunkText.length > 0 && (currentChunkText.length + sectionText.length) > maxChunkSize) {
+            pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
+            currentChunkText = sectionText;
+            currentChunkStart = sectionStart;
         } else {
-            chunks.push({
-                end: sectionStart + sectionText.length,
-                start: sectionStart,
-                text: sectionText,
-            });
+            currentChunkText += sectionText;
         }
     }
 
-    if (!hasHeaders) {
-        const subChunks = recursiveCharacterSplitter(text, maxChunkSize, Math.floor(maxChunkSize * 0.1));
-        let subOffset = 0;
-        for (const sub of subChunks) {
-            const actualStart = text.indexOf(sub, subOffset);
-            chunks.push({
-                end: actualStart + sub.length,
-                start: actualStart,
-                text: sub,
-            });
-            subOffset = actualStart + sub.length;
-        }
+    if (currentChunkText.length > 0) {
+        pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
     }
 
     return chunks;
@@ -257,8 +272,8 @@ const IndexerWorker: WorkerAPI = {
             if (currentTokens >= LATENCY_BUDGET_TOKENS) break;
 
             if (candidate.type === 'vector') {
-                // Use actual content length if available, otherwise assume a standard chunk size (e.g. 500 chars)
-                const tokens = candidate.content ? estimateTokens(candidate.content) : 128;
+                // Use actual token count from Orama if available, fallback to estimate
+                const tokens = (candidate as { tokenCount?: number }).tokenCount || (candidate.content ? estimateTokens(candidate.content) : 128);
 
                 if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
                     payload.push({
@@ -288,7 +303,7 @@ const IndexerWorker: WorkerAPI = {
             const hydrationResults = await search(orama, {
                 limit: idsToHydrate.length * 2,
                 where: {
-                    path: { in: idsToHydrate }
+                    id: { in: idsToHydrate }
                 }
             });
 
@@ -374,15 +389,15 @@ const IndexerWorker: WorkerAPI = {
         return results;
     },
 
-    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
+    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>> {
         if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         await Promise.resolve();
-        const results: Record<string, { title?: string, headers?: string[] }> = {};
+        const results: Record<string, { title?: string, headers?: string[], tokenCount?: number }> = {};
         for (const path of paths) {
             const normalizedPath = workerNormalizePath(path);
             if (graph.hasNode(normalizedPath)) {
                 const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
-                results[path] = { headers: attr.headers, title: attr.title };
+                results[path] = { headers: attr.headers, title: attr.title, tokenCount: attr.tokenCount };
             } else {
                 results[path] = {};
             }
@@ -465,7 +480,10 @@ const IndexerWorker: WorkerAPI = {
                         if (sibling === normalizedPath || results.has(sibling)) continue;
                         let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
                         if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
-                            score = score / Math.max(1, Math.log10(degree + 1));
+                            // Using Math.log (Natural Log) is the Information Retrieval standard (e.g. TF-IDF).
+                            // It is ~2.3x more aggressive than log10, effectively suppressed "noisy" hubs 
+                            // with 10-15 connections in both small and large vaults.
+                            score = score / Math.max(1, Math.log(degree + 1));
                         }
                         const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
                         if (!attr.mtime || !attr.size || attr.type !== 'file') continue;
@@ -484,7 +502,7 @@ const IndexerWorker: WorkerAPI = {
         return Array.from(results.values());
     },
 
-    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0): Promise<GraphSearchResult[]> {
         if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
         const normalizedPath = workerNormalizePath(path);
@@ -517,17 +535,17 @@ const IndexerWorker: WorkerAPI = {
         }
 
         const results = await search(orama, {
-            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP,
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: { property: 'embedding', value: centroid },
             where: { path: { nin: [normalizedPath] } }
         });
 
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
+        return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
 
-    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<number[]>) {
+    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) {
         config = conf;
         graph = new Graph();
         if (typeof embedder === 'function') embedderProxy = embedder;
@@ -543,7 +561,7 @@ const IndexerWorker: WorkerAPI = {
         if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
-            properties: ['title', 'content', 'context', 'params', 'status'],
+            properties: ['title', 'content', 'context'],
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
@@ -633,8 +651,8 @@ const IndexerWorker: WorkerAPI = {
 
         // 1. Save FULL index to "Hot Store" (IndexedDB)
         try {
-            await storage.put(STORES.VECTORS, "orama_index", rawFull);
-            workerLogger.info("[saveIndex] Hot Store (IDB) updated.");
+            await storage.put(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`, rawFull);
+            workerLogger.info(`[saveIndex] Hot Store (IDB) updated for ${config.sanitizedModelId}.`);
         } catch (e) {
             workerLogger.warn("[saveIndex] Hot Store update failed:", e);
         }
@@ -673,7 +691,7 @@ const IndexerWorker: WorkerAPI = {
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: {
                 property: 'embedding',
-                value: await generateEmbedding(query, 'Query')
+                value: (await generateEmbedding(query, 'Query')).vector
             }
         });
 
@@ -717,7 +735,7 @@ const IndexerWorker: WorkerAPI = {
             mode: 'vector',
             vector: {
                 property: 'embedding',
-                value: await generateEmbedding(query, 'Query')
+                value: (await generateEmbedding(query, 'Query')).vector
             },
             where: { path: { in: normalizedPaths } }
         });
@@ -757,7 +775,8 @@ const IndexerWorker: WorkerAPI = {
 
         await IndexerWorker.deleteFile(normalizedPath);
 
-        updateGraphNode(normalizedPath, content, mtime, size, title, hash);
+        // We update the node initially, but we might patch it with token counts later
+        updateGraphNode(normalizedPath, content, mtime, size, title, hash, 0);
         updateGraphEdges(normalizedPath, content);
 
         if (content.trim().length === 0) return;
@@ -768,9 +787,10 @@ const IndexerWorker: WorkerAPI = {
         const context = generateContextString(title, parsedFM, config);
 
         const bodyOffset = cleanlyContent.indexOf(body);
-        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * 4);
+        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
 
         const batchedDocs: OramaDocument[] = [];
+        let totalTokens = 0;
         for (let i = 0; i < chunks.length; i++) {
             const chunk = chunks[i];
             if (!chunk) continue;
@@ -780,7 +800,8 @@ const IndexerWorker: WorkerAPI = {
 
             if (fullText.length === 0) continue;
 
-            const embedding = await generateEmbedding(fullText, title);
+            const { tokenCount, vector } = await generateEmbedding(fullText, title);
+            totalTokens += tokenCount;
 
             batchedDocs.push({
                 anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
@@ -788,7 +809,7 @@ const IndexerWorker: WorkerAPI = {
                 content: chunk.text, // Live index keeps content (pure)
                 context: context, // Metadata header
                 created: mtime,
-                embedding: embedding,
+                embedding: vector,
                 end: chunk.end + bodyOffset,
                 id: chunkId,
                 links: links,
@@ -798,12 +819,16 @@ const IndexerWorker: WorkerAPI = {
                 start: chunk.start + bodyOffset,
                 status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
                 title: title,
+                tokenCount: tokenCount,
             });
         }
 
         for (const doc of batchedDocs) {
             await upsert(orama, doc);
         }
+
+        // Patch the graph node with the final token count
+        updateGraphNode(normalizedPath, content, mtime, size, title, hash, totalTokens);
     }
 };
 
@@ -815,7 +840,7 @@ function calculateInheritedScore(parentScore: number, linkCount: number): number
 }
 
 function estimateTokens(text: string): number {
-    return text.length / 4;
+    return text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
 }
 
 function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): GraphSearchResult[] {
@@ -833,6 +858,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
                 score: hit.score,
                 start: doc.start,
                 title: doc.title,
+                tokenCount: doc.tokenCount,
             } as GraphSearchResult);
         }
     }
@@ -908,12 +934,12 @@ function sanitizeExcalidrawContent(content: string): string {
     return content.replace(/```compressed-json[\s\S]*?```/g, '');
 }
 
-function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string) {
+function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);
     if (!graph.hasNode(path)) {
-        graph.addNode(path, { hash, headers, mtime, path, size, title, type: 'file' });
+        graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, type: 'file' });
     } else {
-        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title }));
+        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount }));
     }
 }
 
@@ -969,13 +995,14 @@ async function recreateOrama() {
                 created: 'number',
                 embedding: `vector[${config.embeddingDimension}]`,
                 end: 'number',
-                id: 'string',
+                id: 'enum',
                 mtime: 'number',
-                params: 'string[]',
-                path: 'string',
+                params: 'enum[]',
+                path: 'enum',
                 start: 'number',
-                status: 'string',
+                status: 'enum',
                 title: 'string',
+                tokenCount: 'number',
             }
         });
     } catch (e) {
@@ -993,7 +1020,7 @@ function extractHeaders(text: string): string[] {
     return text.split('\n').filter(l => l.match(/^(#{1,3})\s+(.*)$/)).map(l => l.trim());
 }
 
-async function generateEmbedding(text: string, title: string): Promise<number[]> {
+async function generateEmbedding(text: string, title: string): Promise<{ vector: number[], tokenCount: number }> {
     if (!embedderProxy) throw new Error("Embedding proxy not initialized.");
     return embedderProxy(text, title);
 }

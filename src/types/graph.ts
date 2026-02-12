@@ -18,6 +18,7 @@ export interface GraphNodeData {
     size: number;
     tags?: string[];
     title?: string;
+    tokenCount?: number; // New: total tokens for the document
     type: NodeType;
 }
 
@@ -44,6 +45,7 @@ export interface GraphSearchResult {
     score: number;
     start?: number;
     title?: string;
+    tokenCount?: number; // New: tokens for the specific result/chunk
 }
 
 /**
@@ -61,6 +63,7 @@ export interface WorkerConfig {
     indexingDelayMs: number;
     minSimilarityScore: number;
     ontologyPath: string;
+    sanitizedModelId: string;
 }
 
 /**
@@ -72,12 +75,12 @@ export interface WorkerAPI {
     deleteFile(path: string): Promise<void>;
     fullReset(): Promise<void>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
-    getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
+    getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>>;
     getCentrality(path: string): Promise<number>;
     getFileState(path: string): Promise<{ mtime: number, size: number, hash: string } | null>;
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
-    getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    getSimilar(path: string, limit?: number, minScore?: number): Promise<GraphSearchResult[]>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;

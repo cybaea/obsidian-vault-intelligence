@@ -25,6 +25,8 @@ A next-generation search engine built for the "I know I wrote this somewhere" mo
     -   **Graph Centrality**: Boosting notes that are "hubs" of knowledge (PageRank-like).
 -   **Zero-Noise Excalidraw**: Specialized indexing for visual thinkers. It strips away internal JSON metadata so drawings only appear in search when their _text_ matches your query.
 -   **Hybrid Search**: Merges fuzzy keyword search with vector semantic search for Permissive Recall (finding "cat" in "cats").
+-   **Slim-Sync Engine**: The searchable index is up to 90% smaller on disk, ensuring lightning-fast syncing across devices without hitting storage limits.
+-   **Model-Specific Sharding**: Isolate storage for different embedding models, allowing you to switch between Local and Gemini providers without losing data or risking corruption.
 -   **Self-Healing Index**: Automatically re-indexes when you change models or configurations.
 
 ## 3. The Gardener (Vault Hygiene)

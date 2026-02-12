@@ -138,9 +138,9 @@ export class AgentService {
 
             // Assemble intelligently respecting budget
             const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-            const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
+            const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            const { context } = await this.contextAssembler.assemble(fileResults, message, totalCharBudget);
+            const { context } = await this.contextAssembler.assemble(fileResults, message, contextBudget);
 
             if (context) {
                 message = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${message}`;

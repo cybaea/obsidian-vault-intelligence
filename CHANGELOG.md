@@ -11,19 +11,33 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Mobile-ready semantic index**: Our new "Slim-Sync" strategy is a game-changer for mobile users. Your searchable index is now up to 90% smaller on disk, ensuring lightning-fast syncing across devices via Obsidian Sync or iCloud without devouring your storage.
 -   **Large-vault power-up**: We've overhauled the engine to handle 10,000+ notes with ease. By eliminating memory spikes, the plugin is now rock-stable and responsive even in massive knowledge bases.
+-   **Intelligent model switching**: You can now switch embedding models (eg between Local and Gemini) without losing your previous index. Each model maintains its own secure, isolated storage "shard", allowing for seamless transitions.
+-   **Precise context awareness**: The Researcher assistant now uses exact token tracking for its "memory" across all Gemini and local models. This ensures more reliable answers and prevents unexpected cut-offs in long conversations.
+-   **Mobile-ready semantic index ("Slim-Sync")**: Our new "Slim-Sync" strategy is a game-changer for mobile users. Your searchable index is now up to 90% smaller on disk, ensuring lightning-fast syncing across devices via Obsidian Sync or iCloud without devouring your storage.
 -   **Amnesia-proof AI reasoning**: The Researcher assistant is now remarkably more reliable. Even after a plugin restart or on a newly synced device, it always maintains a deep "memory" of your vault for perfect context-aware answers.
--   **Crisp relationship insights**: Discovering connections is now much cleaner. The "Similar notes" view now separates graph relationship metadata (e.g. "Sibling via Topic") from the note snippets, making it easier to see exactly why notes are linked.
+-   **Advanced storage management**: A new "Storage" tab in Advanced settings lets you see which model indices are taking up space and allows you to prune inactive shards or fully reset your plugin data with one click.
+-   **Unstoppable persistence**: The plugin now ensures your graph data is safely saved even when you exit Obsidian unexpectedly or during a heavy re-index, preventing data loss.
+-   **Clearer model selection**: Updated model labels in settings to make it easier to distinguish between different Gemini versions and local models.
+-   **Crisp relationship insights**: Discovering connections is now much cleaner. The "Similar notes" view now separates graph relationship metadata (eg "Sibling via Topic") from the note snippets, making it easier to see exactly why notes are linked.
 -   **Instant startup stability**: Fixed a critical "startup crash" flaw, ensuring the plugin is ready to use the moment you open Obsidian.
 
 ### Developer features
 
--   **Hybrid Slim-Sync Architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
+-   **Model-specific sharding**: Implemented sharded storage in `PersistenceManager` to namespace graph and vector state by model hash and dimension, preventing cross-model data corruption.
+-   **Native token tracking**: Refactored `ContextAssembler` and `SearchOrchestrator` to aggregate `tokenCount` directly from API usage metadata and worker outputs, replacing character-count heuristics.
+-   **Precise RAG context**: Augmented file metadata with `tokenCount`, allowing the Researcher to estimate context relevance with perfect accuracy before reading files.
+-   **IDB isolation (Split-brain fix)**: Separated IndexedDB namespacing for the Main-thread buffer (`orama_index_buffer_`) and Worker-thread hot store (`orama_index_`), eliminating split-brain collisions during background sync.
+-   **Hybrid Slim-Sync architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
 -   **Main-thread hydration**: Refactored `GraphService` to perform note content hydration on the main thread, overcoming worker memory limits and enabling RAG for stripped indices.
+-   **Robust MessagePack decoding**: Implemented `decodeMulti` in persistence logic to handle multi-stage decoding for complex state objects.
 -   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.
--   **Internal Orama typings**: Replaced broad `any` usage in the worker with robust internal interfaces (`OramaRawData`, `OramaDocsStoreRaw`), adhering to the new project architecture standards.
--   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals. This ensures memory safety and complies with Obsidian's rendering requirements.
+-   **Standardized token estimation**: Replaced hardcoded math with `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` across all services, ensuring perfectly consistent context budgeting.
+-   **Sharded storage integrity**: Fixed an IDB key collision in the indexing worker that was causing "split-brain" state issues during background sync.
+-   **Markdown rendering fix**: Resolved the "Plugin is not passing Component in renderMarkdown" error by implementing internal `Component` lifecycles in modals.
+-   **Automatic state migration**: Added logic to detect legacy `graph-state.msgpack` files and migrate them to the new sharded format.
+-   **Updated dependency**: Updated `@google/genai` to `v1.41.0`.
+-   **Enhanced test suite**: Added comprehensive integration tests for `GraphService` lifecycle and `PersistenceManager` storage sharding.
 
 ## [5.2.1] - 2026-02-11
 

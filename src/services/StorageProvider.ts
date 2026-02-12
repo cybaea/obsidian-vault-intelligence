@@ -106,4 +106,23 @@ export class StorageProvider {
             tx.oncomplete = () => resolve();
         });
     }
+
+    /**
+     * Delete a specific key from an object store.
+     */
+    public async delete(storeName: string, key: string): Promise<void> {
+        const db = await this.openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, "readwrite");
+            const store = tx.objectStore(storeName);
+            store.delete(key);
+
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => {
+                const error = tx.error || new Error(`Delete failed for ${key}`);
+                logger.error(`Failed to delete key "${key}" from store "${storeName}":`, error);
+                reject(error);
+            };
+        });
+    }
 }

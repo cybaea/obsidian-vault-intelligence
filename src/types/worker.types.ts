@@ -8,7 +8,7 @@ export interface WorkerMessage {
     headers?: Record<string, string>;
     id: number;
     method?: string;
-    output?: number[][];
+    output?: { vectors: number[][], tokenCount: number };
     progress?: number;
     requestId?: number;
     status: 'success' | 'error';
@@ -41,7 +41,7 @@ export interface EmbedMessage {
 
 export interface WorkerSuccessResponse {
     id: number;
-    output: number[][];
+    output: { vectors: number[][], tokenCount: number };
     status: 'success';
 }
 

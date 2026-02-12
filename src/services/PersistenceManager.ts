@@ -1,3 +1,4 @@
+import { decodeMulti } from "@msgpack/msgpack";
 import { Plugin, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
@@ -18,20 +19,22 @@ export class PersistenceManager {
     }
 
     /**
-     * Persists the graph state to the vault as a MessagePack binary.
-     * @param stateBuffer The binary state data to write.
-     */
-    public async saveState(stateBuffer: Uint8Array): Promise<void> {
+ * Persists the graph state to the vault as a MessagePack binary.
+ * @param stateBuffer The binary state data to write.
+ * @param modelId The ID of the model used to generate the state.
+ * @param dimension The dimension of the model.
+ */
+    public async saveState(stateBuffer: Uint8Array, modelId: string, dimension: number): Promise<void> {
         try {
-            const dataPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+            const sanitizedId = this.getSanitizedModelId(modelId, dimension);
+            const dataPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
 
             // Ensure directory exists
             await this.ensureDataFolder();
 
             // 1. Save to "Hot Store" (IndexedDB) for fast local access
-            // We store the raw buffer in IDB. The worker also does this directly, 
-            // but the main thread can do it here for redundancy or initial setup.
-            await this.storage.put(STORES.VECTORS, "orama_index_buffer", stateBuffer);
+            // We namespace the key to ensure multiple models don't overwrite each other
+            await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, stateBuffer);
 
             // 2. Save to "Cold Store" (Vault File) for cross-device sync
             const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
@@ -40,9 +43,10 @@ export class PersistenceManager {
 
             await this.plugin.app.vault.adapter.writeBinary(dataPath, bufferToWrite as ArrayBuffer);
 
-            logger.info("[PersistenceManager] Hybrid State persisted (IDB + Vault).");
+            logger.info(`[PersistenceManager] Sharded State persisted (IDB + Vault): ${sanitizedId}`);
 
-            // Cleanup legacy formats
+            // 3. One-time Migration & Cleanup
+            await this.handleMigrations(modelId, dimension);
             await this.cleanupLegacyState();
 
         } catch (error) {
@@ -54,24 +58,29 @@ export class PersistenceManager {
     /**
      * Loads the graph state from the vault.
      * Attempts to load MessagePack first, then falls back to legacy JSON.
+     * @param modelId The ID of the currently active model.
+     * @param dimension The dimension of the model.
      * @returns The state data as Uint8Array (for msgpack) or string (for legacy JSON), or null if none.
      */
-    public async loadState(): Promise<Uint8Array | string | null> {
-        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
-        const legacyVaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
+    public async loadState(modelId: string, dimension: number): Promise<Uint8Array | string | null> {
+        const sanitizedId = this.getSanitizedModelId(modelId, dimension);
+        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
 
-        // 1. Try "Hot Store" (IndexedDB) first
+        // 1. Check for legacy file needing migration (Sync Conflict / Legacy Boot)
+        await this.handleMigrations(modelId, dimension);
+
+        // 2. Try "Hot Store" (IndexedDB) first (Namespaced)
         try {
-            const hotState = await this.storage.get(STORES.VECTORS, "orama_index_buffer");
+            const hotState = await this.storage.get(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`);
             if (hotState instanceof Uint8Array) {
                 logger.info(`[PersistenceManager] Loaded from Hot Store (IDB): ${hotState.byteLength} bytes`);
                 return hotState;
             }
         } catch {
-            logger.warn("[PersistenceManager] No state found in Hot Store (IDB), checking Cold Store (Vault).");
+            logger.warn(`[PersistenceManager] No state for ${sanitizedId} in Hot Store (IDB), checking Cold Store (Vault).`);
         }
 
-        // 2. Fallback to "Cold Store" (Vault File) - Sync Source
+        // 3. Fallback to "Cold Store" (Vault File) - Sync Source
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(vaultPath);
@@ -79,7 +88,7 @@ export class PersistenceManager {
                 logger.info(`[PersistenceManager] Loaded from Cold Store (Vault): ${uint8.byteLength} bytes`);
 
                 // Hydrate Hot Store
-                await this.storage.put(STORES.VECTORS, "orama_index_buffer", uint8);
+                await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, uint8);
 
                 return uint8;
             } catch (error) {
@@ -87,33 +96,101 @@ export class PersistenceManager {
             }
         }
 
-        // 3. Migration: Handle legacy data locations and formats (Omitted for brevity in summary, keeping logic)
-        // Check for state in the plugin folder (Legacy)
+        // 4. Final Fallback: Handle original legacy data locations and JSON
+        return await this.loadLegacyJSON();
+    }
+
+    /**
+     * Handles migration and sync-conflict resolution.
+     * Inspects legacy or generic files to identify their true model ID.
+     */
+    private async handleMigrations(currentModelId: string, currentDimension: number) {
+        const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+        if (!(await this.plugin.app.vault.adapter.exists(legacyPath))) return;
+
+        try {
+            // Peek inside the legacy file to see who it belongs to
+            const buffer = await this.plugin.app.vault.adapter.readBinary(legacyPath);
+            // Use decodeMulti to gracefully handle extra padding bytes found in some environments
+            const generator = decodeMulti(new Uint8Array(buffer));
+            const state = generator.next().value as { embeddingDimension?: number; embeddingModel?: string };
+
+            // Expected metadata fields in SerializedIndexState (Top Level)
+            const actualModelId = state.embeddingModel;
+            const actualDimension = state.embeddingDimension;
+
+            if (actualModelId && actualDimension) {
+                const targetSanitizedId = this.getSanitizedModelId(actualModelId, actualDimension);
+                const targetPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${targetSanitizedId}.msgpack`);
+
+                // DIMENSION SAFETY / GHOST MIGRATION GUARD
+                const alreadyExists = await this.plugin.app.vault.adapter.exists(targetPath);
+                if (!alreadyExists) {
+                    logger.info(`[PersistenceManager] Migrating legacy file to sharded format: ${targetSanitizedId}`);
+                    // We can just rename it
+                    await this.plugin.app.vault.adapter.writeBinary(targetPath, buffer);
+                } else {
+                    logger.info(`[PersistenceManager] Stale legacy file found but healthy shard exists. Deleting legacy.`);
+                }
+
+                // Always delete the generic legacy file after handling
+                await this.plugin.app.vault.adapter.remove(legacyPath);
+            } else {
+                logger.warn("[PersistenceManager] Found malformed legacy state file. Removing.");
+                await this.plugin.app.vault.adapter.remove(legacyPath);
+            }
+        } catch (e) {
+            logger.error("[PersistenceManager] Migration peek failed:", e);
+            // If it's totally unreadable, we must remove it to prevent boot loops
+            await this.plugin.app.vault.adapter.remove(legacyPath);
+        }
+    }
+
+    private async loadLegacyJSON(): Promise<string | null> {
+        const legacyVaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
         const pluginDataPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+
+        // Check for state in the plugin folder (Legacy)
         if (await this.plugin.app.vault.adapter.exists(pluginDataPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(pluginDataPath);
                 logger.info("[PersistenceManager] Migrating index from plugin folder to vault.");
-                const data = new Uint8Array(stateBuffer);
-                await this.saveState(data);
+                // Note: We don't have modelId/dim here easily, so we just move it to the generic path 
+                // and let 'handleMigrations' deal with it on next boot/save.
+                const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+                await this.ensureDataFolder();
+                await this.plugin.app.vault.adapter.writeBinary(legacyPath, stateBuffer);
                 await this.plugin.app.vault.adapter.remove(pluginDataPath);
-                return data;
             } catch (error) {
-                logger.error("[PersistenceManager] Migration failed (MessagePack):", error);
+                logger.error("[PersistenceManager] Migration failed (Plugin Folder):", error);
             }
         }
 
         // Fallback to Legacy JSON
         if (await this.plugin.app.vault.adapter.exists(legacyVaultPath)) {
             try {
-                const stateJson = await this.plugin.app.vault.adapter.read(legacyVaultPath);
-                return stateJson;
+                return await this.plugin.app.vault.adapter.read(legacyVaultPath);
             } catch (error) {
                 logger.error("[PersistenceManager] Legacy JSON load failed:", error);
             }
         }
-
         return null;
+    }
+
+    private fastHash(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(16);
+    }
+
+    public getSanitizedModelId(modelId: string, dimension: number): string {
+        const base = modelId.replace(/[^a-z0-9-]/gi, '_').toLowerCase().substring(0, 30);
+        const hash = this.fastHash(modelId);
+        return `${base}-${dimension}-${hash}`;
     }
 
     /**
@@ -164,15 +241,48 @@ export class PersistenceManager {
         }
     }
 
-    public async wipeState(): Promise<void> {
-        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
+    public async wipeState(modelId: string, dimension: number): Promise<void> {
+        const sanitizedId = this.getSanitizedModelId(modelId, dimension);
+        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
 
-        // 1. Wipe Hot Store
-        await this.storage.clear();
+        // 1. Wipe Hot Store (Namespaced)
+        await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`);
 
-        // 2. Wipe Cold Store
+        // 2. Wipe Cold Store (Sharded)
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             await this.plugin.app.vault.adapter.remove(vaultPath);
+        }
+    }
+
+    /**
+     * Lists all available model database files in the vault.
+     */
+    public async listAvailableStates(): Promise<string[]> {
+        const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
+        if (!(await this.plugin.app.vault.adapter.exists(dataFolder))) return [];
+
+        const files = await this.plugin.app.vault.adapter.list(dataFolder);
+        return files.files
+            .filter(f => f.endsWith(".msgpack") && f.includes("graph-state-"))
+            .map(f => f.split("/").pop() || "");
+    }
+
+    /**
+     * Deletes a specific state file and its IDB keys.
+     */
+    public async deleteState(fileName: string): Promise<void> {
+        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${fileName}`);
+        // 1. Delete File
+        if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
+            await this.plugin.app.vault.adapter.remove(vaultPath);
+        }
+
+        // 2. Attempt to extract IDB key from filename
+        // Filename: graph-state-<sanitizedId>.msgpack
+        const match = fileName.match(/graph-state-(.+)\.msgpack/);
+        if (match && match[1]) {
+            await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${match[1]}`);
+            await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`); // ADD THIS LINE TO FIX LEAK
         }
     }
 
@@ -182,6 +292,11 @@ export class PersistenceManager {
      */
     public async purgeAllData(): Promise<void> {
         const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
+
+        // 1. Optimal IDB Wipe (Full reset)
+        await this.storage.clear();
+
+        // 2. Vault Wipe
         if (await this.plugin.app.vault.adapter.exists(dataFolder)) {
             try {
                 // Recursive delete

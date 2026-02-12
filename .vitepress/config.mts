@@ -57,7 +57,13 @@ export default withMermaid(defineConfig({
         'devs/settings_best_practices.md',
         'devs/docs-recommendations.md',
         'devs/2026-agent-support.md',
-        'devs/web-worker-embedding.md'
+        'devs/web-worker-embedding.md',
+        'releases/announcement-*.md',
+        'releases/mastodon-*.md',
+        'releases/about.md',
+        'README.md',
+        'README_DOC.md',
+        'docs/My ontology system.md'
     ],
     vite: {
         build: {
@@ -72,62 +78,81 @@ export default withMermaid(defineConfig({
             { text: 'Changelog', link: '/CHANGELOG' }
         ],
 
-        sidebar: [
-            {
-                text: 'Introduction',
-                items: [
-                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' },
-                    { text: 'Roadmap', link: '/ROADMAP' },
-                    { text: 'Changelog', link: '/CHANGELOG' }
-                ]
-            },
-            {
-                text: 'Tutorials',
-                items: [
-                    { text: 'Getting Started', link: '/docs/tutorials/getting-started' }
-                ]
-            },
-            {
-                text: 'How-To Guides',
-                items: [
-                    { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
-                    { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
-                    { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
-                    { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' },
-                    { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
-                ]
-            },
-            {
-                text: 'Reference',
-                items: [
-                    { text: 'Plugin settings', link: '/docs/reference/configuration' },
-                    { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
-                ]
-            },
-            {
-                text: 'Explanation',
-                items: [
-                    { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
-                    { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
-                    { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
-                    { text: 'Key Features', link: '/docs/explanation/key-features' },
-                    { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' }
-                ]
-            },
-            {
-                text: 'Development',
-                items: [
-                    { text: 'Contributing', link: '/CONTRIBUTING' },
-                    { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
-                    { text: 'Shadow Graph Technical', link: '/devs/shadow-graph-technical' },
-                    { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
-                    { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
-                    { text: 'Documentation Standards', link: '/devs/documentation-standards' },
-                    { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
-                    { text: 'Internal Agents Guide', link: '/AGENTS' }
-                ]
-            }
-        ],
+        sidebar: {
+            '/': [
+                {
+                    text: 'Introduction',
+                    items: [
+                        { text: 'Home', link: '/' },
+                        { text: 'Getting Started', link: '/docs/tutorials/getting-started' },
+                        { text: 'Roadmap', link: '/ROADMAP' },
+                        { text: 'Changelog', link: '/CHANGELOG' }
+                    ]
+                },
+                {
+                    text: 'Tutorials',
+                    items: [
+                        { text: 'Getting Started', link: '/docs/tutorials/getting-started' }
+                    ]
+                },
+                {
+                    text: 'How-To Guides',
+                    items: [
+                        { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
+                        { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
+                        { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
+                        { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' },
+                        { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
+                    ]
+                },
+                {
+                    text: 'Reference',
+                    items: [
+                        { text: 'Plugin settings', link: '/docs/reference/configuration' },
+                        { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
+                    ]
+                },
+                {
+                    text: 'Explanation',
+                    items: [
+                        { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
+                        { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
+                        { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
+                        { text: 'Key Features', link: '/docs/explanation/key-features' },
+                        { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' }
+                    ]
+                },
+                {
+                    text: 'Release History',
+                    items: [
+                        { text: '5.2.0 — Performance Update', link: '/releases/release-5.2.0' },
+                        { text: '5.1.0 — Multilingual Mastery', link: '/releases/release-5.1.0' },
+                        { text: '5.0.0 — The Search Evolution', link: '/releases/release-5.0.0' },
+                        { text: '4.3.1 — Reliability Fixes', link: '/releases/release-4.3.1' },
+                        { text: '4.3.0 — The Agentic Shift', link: '/releases/release-4.3.0' }
+                    ]
+                },
+                {
+                    text: 'Development',
+                    items: [
+                        { text: 'Contributing', link: '/CONTRIBUTING' },
+                        { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
+                        { text: 'Standards & SOA', link: '/devs/ARCHITECTURE_AND_STANDARDS' },
+                        { text: 'Reference Links', link: '/devs/REFERENCE_LINKS' },
+                        { text: 'Shadow Graph Technical', link: '/devs/shadow-graph-technical' },
+                        { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
+                        { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
+                        { text: 'Documentation Standards', link: '/devs/documentation-standards' },
+                        { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
+                        { text: 'Internal Agents Guide', link: '/AGENTS' }
+                    ]
+                }
+            ],
+            // Hidden sidebar items to silence orphaned page warnings from OG image plugin
+            '___hidden': [
+                { text: '404', link: '/404' }
+            ]
+        },
 
         socialLinks: [
             { icon: 'github', link: 'https://github.com/cybaea/obsidian-vault-intelligence' }

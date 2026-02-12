@@ -19,18 +19,19 @@ export class GeminiEmbeddingService implements IEmbeddingService {
         return this.settings.embeddingDimension;
     }
 
-    async embedQuery(text: string, _priority?: EmbeddingPriority): Promise<number[]> {
-        return this.gemini.embedText(text, {
+    async embedQuery(text: string, _priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }> {
+        const { tokenCount, values } = await this.gemini.embedText(text, {
             taskType: "RETRIEVAL_QUERY"
         });
+        return { tokenCount, vector: values };
     }
 
-    async embedDocument(text: string, title?: string, _priority?: EmbeddingPriority): Promise<number[][]> {
+    async embedDocument(text: string, title?: string, _priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }> {
         // The Gemini API handles long text/chunking internally.
-        const vector = await this.gemini.embedText(text, {
+        const { tokenCount, values } = await this.gemini.embedText(text, {
             taskType: "RETRIEVAL_DOCUMENT",
             title: title
         });
-        return [vector];
+        return { tokenCount, vectors: [values] };
     }
 }

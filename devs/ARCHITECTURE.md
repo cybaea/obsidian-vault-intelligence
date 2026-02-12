@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 4.3.1
+**Version**: 5.2.1
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -117,9 +117,10 @@ flowchart LR
 
 -   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
 -   **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
--   **Hybrid Storage (Slim-Sync)**:
-    -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches.
-    -   **Cold Store (Vault File)**: A "slim" serialized version synced to the `.vault-intelligence` folder. To ensure cross-device efficiency, actual note content is stripped from the documents (`content: ""`) before save.
+-   **Hybrid storage (Slim-Sync)**:
+    -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches. This is sharded by model hash (eg `orama_index_<model-hash>`) to ensure isolation between different embedding models.
+    -   **Persistence safety**: To prevent split-brain collisions between the main thread and the background worker, the main thread uses a separate `orama_index_buffer_<model-hash>` namespace for its serialization buffers.
+    -   **Cold Store (Vault File)**: A "slim" serialized version synced to the `.vault-intelligence` folder, sharded by model hash (eg `graph-state-<model-hash>.msgpack`). To ensure cross-device efficiency, actual note content is stripped from the documents (`content: ""`) before save.
 -   **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
 
 ### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
@@ -236,7 +237,7 @@ flowchart TD
 
 ### 3.3. Context assembly (relative accordion)
 
-To maximise the utility of the context window while staying within token budgets, the `ContextAssembler` employs **Relative Accordion Logic** to dynamically scale document density based on the gap between the top match and secondary results:
+To maximise the utility of the context window while staying within precise token budgets extracted from LLM usage metadata, the `ContextAssembler` employs **Relative Accordion Logic** to dynamically scale document density based on the gap between the top match and secondary results:
 
 | Relevance Tier | Threshold | Strategy |
 | :--- | :--- | :--- |
@@ -419,8 +420,8 @@ export interface IEmbeddingService {
     readonly modelName: string;
     readonly dimensions: number;
 
-    embedQuery(text: string, priority?: EmbeddingPriority): Promise<number[]>;
-    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]>;
+    embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }>;
+    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }>;
     updateConfiguration?(): void;
 }
 ```
@@ -444,6 +445,7 @@ export interface WorkerAPI {
     getCentrality(path: string): Promise<number>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
+    getFileState(path: string): Promise<{ mtime: number, hash: string } | null>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
     saveIndex(): Promise<Uint8Array>;
     loadIndex(data: string | Uint8Array): Promise<void>;
@@ -564,7 +566,10 @@ Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`),
 
 ### Testing strategy
 
--   Unit tests: Not fully established.
+-   **Automated tests**:
+    -   Unit tests for utilities (eg link parsing).
+    -   Regression tests for worker-side token accumulation logic (`tests/worker_accumulation.test.ts`).
+    -   Lifecycle and sharding integration tests for `GraphService`.
 -   Manual testing:
     -   Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
     -   Use `npm run dev` to watch for changes and hot-reload.

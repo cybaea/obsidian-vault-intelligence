@@ -256,7 +256,7 @@ export class ToolRegistry {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
         logger.info(`Delegating search to sub-agent for: ${query}`);
-        const searchResult = await this.gemini.searchWithGrounding(query);
+        const { text: searchResult } = await this.gemini.searchWithGrounding(query);
         return { result: searchResult };
     }
 
@@ -278,9 +278,9 @@ export class ToolRegistry {
         }
 
         const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-        const totalCharBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
+        const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-        const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, totalCharBudget);
+        const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, contextBudget);
 
         if (!context) {
             return { result: "No relevant notes found or context budget exceeded." };
@@ -315,7 +315,7 @@ export class ToolRegistry {
 
         const task = args.task as string;
         logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-        const codeResult = await this.gemini.solveWithCode(task);
+        const { text: codeResult } = await this.gemini.solveWithCode(task);
         return { result: codeResult };
     }
 

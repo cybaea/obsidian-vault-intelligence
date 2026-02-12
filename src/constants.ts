@@ -193,10 +193,21 @@ export const GRAPH_CONSTANTS = {
     /** Default indexing delay if not configured (5s) */
     DEFAULT_INDEXING_DELAY_MS: 5000,
     /** Scoring for Explorer (Vector + Graph) enhanced similarity */
+    /** Scoring for Explorer (Vector + Graph) enhanced similarity */
     ENHANCED_SIMILAR_WEIGHTS: {
-        HYBRID_BOOST: 0.1,
-        NEIGHBOR_FLOOR: 0.65
+        /** 
+         * Multiplicative boost applied when a result is found via both vector AND graph.
+         * A 1.15 multiplier provides a 15% boost to semantic scores for connected notes.
+         */
+        HYBRID_MULTIPLIER: 1.15,
+        /** 
+         * Cap on purely structural neighbors (anchors) that failed the semantic threshold.
+         * These act as discovery fallbacks at the bottom of the list.
+         */
+        MAX_PURE_NEIGHBORS: 3
     },
+    /** Length of fallback excerpt when no vector match is found */
+    FALLBACK_EXCERPT_LENGTH: 300,
     /** Search range (in characters) around original offsets for drift alignment */
     HYDRATION_SEARCH_RANGE: 5000,
     /** Throttle/Idle time before auto-saving graph state (ms) */
@@ -236,7 +247,7 @@ export const ONTOLOGY_CONSTANTS = {
     HUB_MIN_DEGREE: 2,
 
     /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
-    HUB_PENALTY_ENABLED: false,
+    HUB_PENALTY_ENABLED: true,
 
     /** Dampening factor for 2-hop (Sibling) relevance */
     SIBLING_DECAY: 0.25

@@ -59,6 +59,11 @@ export class GraphService extends Events {
         embeddingProvider: string;
     } | null = null;
 
+    // ACTIVE WORKER STATE (Frozen for lifecycle safety)
+    private activeModelId: string | null = null;
+    private activeDimension: number | null = null;
+    private workerSessionId: number = 0;
+
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
@@ -120,18 +125,24 @@ export class GraphService extends Events {
                 this.settings.embeddingDimension = model.dimensions;
             }
 
+            // FREEZE STATE FOR THIS WORKER EPOCH
+            this.activeModelId = this.settings.embeddingModel;
+            this.activeDimension = this.settings.embeddingDimension;
+            this.workerSessionId++;
+
             const config: WorkerConfig = {
                 agentLanguage: this.settings.agentLanguage,
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
                 contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
                 embeddingChunkSize: this.settings.embeddingChunkSize,
-                embeddingDimension: this.settings.embeddingDimension,
-                embeddingModel: this.settings.embeddingModel,
+                embeddingDimension: this.activeDimension,
+                embeddingModel: this.activeModelId,
                 googleApiKey: this.settings.googleApiKey,
                 indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
                 minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
-                ontologyPath: this.settings.ontologyPath
+                ontologyPath: this.settings.ontologyPath,
+                sanitizedModelId: this.persistenceManager.getSanitizedModelId(this.activeModelId, this.activeDimension)
             };
 
             // 2. Spawn and Initialize worker via WorkerManager
@@ -257,7 +268,20 @@ export class GraphService extends Events {
      * Enqueues a task for the indexer worker, ensuring serial execution and rate limiting.
      */
     private async enqueueIndexingTask<T>(task: () => Promise<T>): Promise<T> {
+        // Capture the session ID when the task is enqueued
+        const capturedSessionId = this.workerSessionId;
+
         const result = this.processingQueue.then(async () => {
+            // ZOMBIE GUARD: Drop task if worker has restarted since enqueue
+            if (this.workerSessionId !== capturedSessionId) {
+                logger.debug(`[GraphService] Dropping zombie task (Session ${capturedSessionId} vs ${this.workerSessionId})`);
+                // Start a new promise chain for the next valid task, but return something safe here.
+                // Since T is generic, we can't easily return a valid T. 
+                // However, most callers ignore the return value or are void.
+                // Throwing a specific "TaskDropped" error is cleaner and catchable.
+                throw new Error("TaskDropped: Worker session changed");
+            }
+
             const val = await task();
             const delay = this.settings.queueDelayMs || 100;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -266,6 +290,7 @@ export class GraphService extends Events {
 
         // Update the queue but ensure failures don't block the next task
         this.processingQueue = result.then(() => { }).catch((err) => {
+            if (err instanceof Error && err.message.includes("TaskDropped")) return;
             logger.error("[GraphService] Queue task failed:", err);
         });
 
@@ -309,11 +334,11 @@ export class GraphService extends Events {
      * Internal method to fetch state from worker and write via PersistenceManager.
      */
     private async saveState() {
-        if (!this.api) return;
+        if (!this.api || !this.activeModelId || !this.activeDimension) return;
         try {
             // Returns Uint8Array (MessagePack)
             const stateBuffer = await this.api.saveIndex();
-            await this.persistenceManager.saveState(stateBuffer);
+            await this.persistenceManager.saveState(stateBuffer, this.activeModelId, this.activeDimension);
         } catch (error) {
             logger.error("[GraphService] Save failed:", error);
         }
@@ -325,9 +350,9 @@ export class GraphService extends Events {
      * @returns true if migration (full scan) is needed.
      */
     private async loadState(): Promise<boolean> {
-        if (!this.api) return false;
+        if (!this.api || !this.activeModelId || !this.activeDimension) return false;
 
-        const stateData = await this.persistenceManager.loadState();
+        const stateData = await this.persistenceManager.loadState(this.activeModelId, this.activeDimension);
         if (!stateData) {
             logger.info("[GraphService] No existing state found (checked adapter). Starting fresh scan.");
             return false;
@@ -412,7 +437,7 @@ export class GraphService extends Events {
         return hydrated;
     }
 
-    public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
+    public async getSimilar(path: string, limit?: number, minScore?: number): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
 
         // Ensure the source file is indexed before looking for similar files
@@ -443,14 +468,15 @@ export class GraphService extends Events {
         }
 
         if (!this.api) return [];
-        const rawResults = await this.api.getSimilar(path, limit);
+        const rawResults = await this.api.getSimilar(path, limit, minScore);
         const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
 
         for (const file of driftDetected) {
             void this.debounceUpdate(file.path, file);
         }
 
-        return hydrated;
+        const threshold = minScore ?? this.settings.minSimilarityScore;
+        return hydrated.filter(r => r.score >= threshold);
     }
 
     /**
@@ -461,40 +487,49 @@ export class GraphService extends Events {
      * @returns Hybrid results ranked by merged score.
      */
     public async getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]> {
-        const [vectorResults, neighborResults] = await Promise.all([
-            this.getSimilar(path, limit),
+        const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
+        const minScore = this.settings.minSimilarityScore;
+
+        // 1. Fetch High-Quality Vectors (permissively to allow "rescuing" near-misses)
+        const permissiveFloor = Math.max(0, minScore / weights.HYBRID_MULTIPLIER);
+        const [rawVectorResults, neighborResults] = await Promise.all([
+            this.getSimilar(path, 50, permissiveFloor),
             this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
         ]);
 
+        const vectorResults = rawVectorResults.filter(v => v.path !== path);
+        const neighborPathSet = new Set(neighborResults.map(n => n.path));
+        const vectorPathSet = new Set(vectorResults.map(v => v.path));
         const mergedMap = new Map<string, GraphSearchResult>();
-        const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
 
-        // 1. Process Neighbors (Baseline Graph Context)
-        for (const n of neighborResults) {
-            if (n.path === path) continue;
-            mergedMap.set(n.path, {
-                ...n,
-                score: Math.max(n.score, weights.NEIGHBOR_FLOOR)
-            });
-        }
-
-        // 2. Blend with Vector similarity
+        // 2. Hybrid Boost
         for (const v of vectorResults) {
-            if (v.path === path) continue;
-            const existing = mergedMap.get(v.path);
-            if (existing) {
-                // If in both, take the better of (neighbor floor, vector match + boost)
-                // Also PREFER the vector properties (anchorHash, offsets) for clean snippets
-                mergedMap.set(v.path, {
-                    ...v,
-                    score: Math.max(existing.score, v.score + weights.HYBRID_BOOST)
-                });
-            } else {
-                mergedMap.set(v.path, v);
+            if (neighborPathSet.has(v.path)) {
+                v.score = Math.min(1.0, v.score * weights.HYBRID_MULTIPLIER);
+                v.description = "(Enhanced semantic connection)";
             }
+            mergedMap.set(v.path, v);
         }
 
+        // 3. Discovery Anchoring
+        const pureNeighbors = neighborResults
+            .filter(n => !vectorPathSet.has(n.path) && n.path !== path)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, weights.MAX_PURE_NEIGHBORS);
+
+        const { hydrated: hydratedAnchors } = await this.hydrator.hydrate(pureNeighbors);
+
+        // Calculate the anchor score just below the user's threshold
+        const anchorScore = Math.max(0.01, minScore - 0.01);
+        for (const h of hydratedAnchors) {
+            h.score = anchorScore;
+            h.description = "(Structural neighbor)";
+            mergedMap.set(h.path, h);
+        }
+
+        // 4. Final Merge, Filter, and Sort
         return Array.from(mergedMap.values())
+            .filter(r => r.score >= anchorScore) // Drop vectors that weren't rescued above the threshold
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
     }
@@ -577,7 +612,7 @@ export class GraphService extends Events {
      * @param paths - Array of file paths.
      * @returns A promise resolving to a record of path -> metadata.
      */
-    public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[] }>> {
+    public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[], tokenCount?: number }>> {
         await Promise.resolve();
         if (!this.api) return {};
         const results = await this.api.getBatchMetadata(paths);
@@ -605,6 +640,9 @@ export class GraphService extends Events {
 
         // 1. Get Hollow Hits from Worker
         const hollowHits = await this.api.buildPriorityPayload(queryVector, query) as GraphSearchResult[];
+
+        // Note: buildPriorityPayload in worker now returns GraphSearchResult[] which includes tokenCount if available
+        // BUT we need to ensure the Hydrator respects or passes it through.
 
         // 2. Hydrate on Main Thread using ResultHydrator
         const { driftDetected, hydrated } = await this.hydrator.hydrate(hollowHits);
@@ -744,28 +782,50 @@ export class GraphService extends Events {
 
         this.settings = { ...settings };
         if (this.api) {
+            // Push SAFE updates only.
+            // DO NOT push embedding configuration (model, dimension, chunk size) to a live worker.
+            // That requires a restart (handled by commitConfigChange).
             await this.api.updateConfig({
+                agentLanguage: settings.agentLanguage, // Add agentLanguage if missed previously
                 authorName: settings.authorName,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
-                embeddingChunkSize: settings.embeddingChunkSize,
-                embeddingDimension: settings.embeddingDimension,
-                embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
-                ontologyPath: settings.ontologyPath
+                ontologyPath: settings.ontologyPath,
             });
         }
     }
 
     /**
-     * Commits any queued configuration changes, such as triggering a full re-index.
+     * Commits any queued configuration changes by restarting the worker if needed.
      * Called when the settings UI is closed.
      */
-    public commitConfigChange() {
+    public async commitConfigChange() {
         if (this.reindexQueued) {
             this.reindexQueued = false;
+            const oldId = this.committedSettings ? this.persistenceManager.getSanitizedModelId(this.committedSettings.embeddingModel, this.committedSettings.embeddingDimension) : null;
+            const newId = this.persistenceManager.getSanitizedModelId(this.settings.embeddingModel, this.settings.embeddingDimension);
+            const isShardSwap = oldId !== newId;
+
+            // 1. Save state for the OLD model/worker
+            await this.forceSave();
+
+            // 2. Terminate the old worker
+            this.shutdown();
+
+            // 3. Start fresh worker (initialize picks up the NEW settings for activeModelId)
+            await this.initialize();
+
+            // 4. Perform scan
+            if (isShardSwap) {
+                // Catch up the new shard with a delta scan
+                void this.scanAll(false);
+            } else {
+                // Internal setting changed (like chunk size), force a full wipe and rebuild
+                void this.scanAll(true);
+            }
 
             // Update committed snapshot
             this.committedSettings = {
@@ -774,10 +834,6 @@ export class GraphService extends Events {
                 embeddingModel: this.settings.embeddingModel,
                 embeddingProvider: this.settings.embeddingProvider
             };
-
-            logger.warn("[GraphService] Committing config change: Triggering forced re-scan.");
-            new Notice("Embedding settings changed. Re-indexing vault...");
-            void this.scanAll(true);
         }
     }
 

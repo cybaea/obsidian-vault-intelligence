@@ -197,7 +197,7 @@ NOTES:
 ${JSON.stringify(context, null, 2)}
 `.trim();
 
-            const jsonPlan = await this.gemini.generateStructuredContent(prompt, {
+            const { text: jsonPlan } = await this.gemini.generateStructuredContent(prompt, {
                 properties: {
                     actions: {
                         items: {

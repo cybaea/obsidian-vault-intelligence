@@ -62,6 +62,16 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 | Recent note limit | `10` | Max notes to scan in a single session. |
 | Context budget | `100,000` | Max token usage for a single gardener analysis. |
 
+## Storage (Mobile-Ready)
+
+Manage local vector databases and sharded storage to maintain vault performance and sync reliability.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Active database shards | _Dynamic_ | Displays a list of stored indexes. The plugin uses **Model-Specific Sharding** to isolate data for different embedding models, preventing corruption when switching between Local and Gemini providers. |
+| Delete shard | `None` | Remove inactive indexes to free up disk space. You cannot delete the currently active shard. |
+| Purge all data | `None` | A "nuclear" reset that completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data. |
+
 ## Performance and System
 
 Technical tuning for power users.

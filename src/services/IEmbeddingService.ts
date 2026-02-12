@@ -9,17 +9,15 @@ export interface IEmbeddingService {
 
     /**
      * Embed a document for storage.
-     * @param text - The full text content to embed.
-     * @param title - Optional title to provide additional context to the model.
-     * @param priority - Optional priority (high/low). High priority tasks move to the front of the queue.
+     * @returns Object containing the chunked vectors and the total token count.
      */
-    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]>;
+    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }>;
 
     /**
      * Embed a search query.
-     * Some models (like Gemini) require specific task types for queries vs documents.
+     * @returns Object containing the vector and the token count.
      */
-    embedQuery(text: string, priority?: EmbeddingPriority): Promise<number[]>;
+    embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }>;
 
     /**
      * Unique identifier for the model (e.g. "gemini-embedding-001" or "all-MiniLM-L6-v2")

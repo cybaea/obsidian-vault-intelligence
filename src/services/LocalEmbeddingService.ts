@@ -12,7 +12,7 @@ interface EmbeddingTask {
     id: number;
     priority: EmbeddingPriority;
     reject: (err: unknown) => void;
-    resolve: (val: number[][]) => void;
+    resolve: (val: { vectors: number[][], tokenCount: number }) => void;
     text: string;
     title?: string;
 }
@@ -32,7 +32,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
     private lastInitTime = 0;
 
     private messageId = 0;
-    private pendingRequests = new Map<number, { resolve: (val: number[][]) => void, reject: (err: unknown) => void }>();
+    private pendingRequests = new Map<number, { resolve: (val: { vectors: number[][], tokenCount: number }) => void, reject: (err: unknown) => void }>();
     private requestQueue: EmbeddingTask[] = [];
     private isWorkerBusy = false;
 
@@ -311,17 +311,17 @@ export class LocalEmbeddingService implements IEmbeddingService {
         });
     }
 
-    private async runTask(text: string, priority: EmbeddingPriority = 'high', title?: string): Promise<number[][]> {
+    private async runTask(text: string, priority: EmbeddingPriority = 'high', title?: string): Promise<{ vectors: number[][], tokenCount: number }> {
         if (!text || text.trim().length === 0) {
             logger.debug(`[LocalEmbedding] Skipping empty text for: ${title || 'unknown'}`);
-            return [];
+            return { tokenCount: 0, vectors: [] };
         }
         const startTime = Date.now();
 
-        return new Promise<number[][]>((resolve, reject) => {
+        return new Promise<{ vectors: number[][], tokenCount: number }>((resolve, reject) => {
             const id = this.messageId++;
 
-            const wrappedResolve = (val: number[][]) => {
+            const wrappedResolve = (val: { vectors: number[][], tokenCount: number }) => {
                 logger.debug(`[LocalEmbedding] Task ${id} (${priority}) took ${Date.now() - startTime}ms`);
                 resolve(val);
             };
@@ -339,14 +339,16 @@ export class LocalEmbeddingService implements IEmbeddingService {
         });
     }
 
-    async embedQuery(text: string, priority: EmbeddingPriority = 'high'): Promise<number[]> {
-        const vectors = await this.runTask(text, priority);
-        // Queries should be single chunk. If multiple, take first? 
-        // Or average? taking first is safer for now.
-        return vectors[0] || [];
+    async embedQuery(text: string, priority: EmbeddingPriority = 'high'): Promise<{ vector: number[], tokenCount: number }> {
+        const { tokenCount, vectors } = await this.runTask(text, priority);
+        // Queries should be single chunk. If multiple, take first.
+        return {
+            tokenCount,
+            vector: vectors[0] || []
+        };
     }
 
-    async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<number[][]> {
+    async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<{ vectors: number[][], tokenCount: number }> {
         const content = title ? `Title: ${title}\n\n${text}` : text;
 
         // Main-thread chunking to prevent massive string transfers 
@@ -358,16 +360,21 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
         logger.debug(`[LocalEmbedding] Chunking large document (${content.length} chars) into ${Math.ceil(content.length / CHUNK_SIZE_CHARS)} parts.`);
         const allVectors: number[][] = [];
+        let totalTokens = 0;
         for (let i = 0; i < content.length; i += CHUNK_SIZE_CHARS) {
             const chunk = content.slice(i, i + CHUNK_SIZE_CHARS);
             const chunkTitle = title ? `${title} (Part ${i / CHUNK_SIZE_CHARS + 1})` : undefined;
-            const chunkVectors = await this.runTask(chunk, priority, chunkTitle);
-            allVectors.push(...chunkVectors);
+            const { tokenCount, vectors } = await this.runTask(chunk, priority, chunkTitle);
+            allVectors.push(...vectors);
+            totalTokens += tokenCount;
 
             // Explicitly yield to main thread event loop between chunks
             await new Promise(resolve => setTimeout(resolve, 0));
         }
-        return allVectors;
+        return {
+            tokenCount: totalTokens,
+            vectors: allVectors
+        };
     }
 
     private async handleWorkerFetch(data: WorkerMessage) {
