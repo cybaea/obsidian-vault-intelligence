@@ -272,7 +272,6 @@ export class PersistenceManager {
      */
     public async deleteState(fileName: string): Promise<void> {
         const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${fileName}`);
-
         // 1. Delete File
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             await this.plugin.app.vault.adapter.remove(vaultPath);
@@ -283,6 +282,7 @@ export class PersistenceManager {
         const match = fileName.match(/graph-state-(.+)\.msgpack/);
         if (match && match[1]) {
             await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${match[1]}`);
+            await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`); // ADD THIS LINE TO FIX LEAK
         }
     }
 
