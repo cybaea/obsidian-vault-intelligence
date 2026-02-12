@@ -11,14 +11,21 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Intelligent model switching**: You can now switch embedding models (eg between Local and Gemini) without losing your previous index. Each model maintains its own secure, isolated storage "shard", allowing for seamless transitions.
+-   **Precise context awareness**: The Researcher assistant now uses exact token tracking for its "memory" across all Gemini and local models. This ensures more reliable answers and prevents unexpected cut-offs in long conversations.
+-   **Advanced storage management**: A new "Storage" tab in Advanced settings lets you see which model indices are taking up space and allows you to prune inactive shards or fully reset your plugin data with one click.
 -   **Mobile-ready semantic index**: Our new "Slim-Sync" strategy is a game-changer for mobile users. Your searchable index is now up to 90% smaller on disk, ensuring lightning-fast syncing across devices via Obsidian Sync or iCloud without devouring your storage.
 -   **Large-vault power-up**: We've overhauled the engine to handle 10,000+ notes with ease. By eliminating memory spikes, the plugin is now rock-stable and responsive even in massive knowledge bases.
 -   **Amnesia-proof AI reasoning**: The Researcher assistant is now remarkably more reliable. Even after a plugin restart or on a newly synced device, it always maintains a deep "memory" of your vault for perfect context-aware answers.
--   **Crisp relationship insights**: Discovering connections is now much cleaner. The "Similar notes" view now separates graph relationship metadata (e.g. "Sibling via Topic") from the note snippets, making it easier to see exactly why notes are linked.
+-   **Crisp relationship insights**: Discovering connections is now much cleaner. The "Similar notes" view now separates graph relationship metadata (eg "Sibling via Topic") from the note snippets, making it easier to see exactly why notes are linked.
 -   **Instant startup stability**: Fixed a critical "startup crash" flaw, ensuring the plugin is ready to use the moment you open Obsidian.
 
 ### Developer features
 
+-   **Model-specific sharding**: Implemented sharded storage in `PersistenceManager` to namespace graph and vector state by model hash and dimension, preventing cross-model data corruption.
+-   **Token-driven RAG architecture**: Refactored `ContextAssembler` and `SearchOrchestrator` to aggregate `tokenCount` directly from API usage metadata and worker outputs, replacing character-count heuristics.
+-   **Strict type safety**: Removed widespread `any` casts in `PersistenceManager`, `GeminiService`, and `SearchOrchestrator`, replacing them with structured type assertions and interfaces for better maintainability.
+-   **Automatic state migration**: Added logic to detect legacy `graph-state.msgpack` files and migrate them to the new sharded format based on internal metadata.
 -   **Hybrid Slim-Sync Architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
 -   **Main-thread hydration**: Refactored `GraphService` to perform note content hydration on the main thread, overcoming worker memory limits and enabling RAG for stripped indices.
 -   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.

@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 4.3.1
+**Version**: 5.2.1
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -236,7 +236,7 @@ flowchart TD
 
 ### 3.3. Context assembly (relative accordion)
 
-To maximise the utility of the context window while staying within token budgets, the `ContextAssembler` employs **Relative Accordion Logic** to dynamically scale document density based on the gap between the top match and secondary results:
+To maximise the utility of the context window while staying within precise token budgets extracted from LLM usage metadata, the `ContextAssembler` employs **Relative Accordion Logic** to dynamically scale document density based on the gap between the top match and secondary results:
 
 | Relevance Tier | Threshold | Strategy |
 | :--- | :--- | :--- |
@@ -419,8 +419,8 @@ export interface IEmbeddingService {
     readonly modelName: string;
     readonly dimensions: number;
 
-    embedQuery(text: string, priority?: EmbeddingPriority): Promise<number[]>;
-    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]>;
+    embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }>;
+    embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }>;
     updateConfiguration?(): void;
 }
 ```
@@ -444,6 +444,7 @@ export interface WorkerAPI {
     getCentrality(path: string): Promise<number>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
+    getFileState(path: string): Promise<{ mtime: number, hash: string } | null>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
     saveIndex(): Promise<Uint8Array>;
     loadIndex(data: string | Uint8Array): Promise<void>;
