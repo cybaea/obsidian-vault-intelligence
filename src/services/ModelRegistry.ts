@@ -78,7 +78,7 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
         dimensions: 256,
         id: 'MinishLab/potion-base-8M',
         isDefault: false,
-        label: 'Small (Potion-8M) - 256d [~15MB]',
+        label: 'Small (Potion-8M English only) - 256d [~15MB]',
         provider: 'local',
         quantized: false
     },
@@ -93,7 +93,7 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
         dimensions: 1024,
         id: 'Xenova/bge-m3',
         isDefault: false,
-        label: 'Advanced (BGE M3) - 1024d [~150MB]',
+        label: 'Advanced (BGE M3) - 1024d [~220MB]',
         provider: 'local'
     }
 ];

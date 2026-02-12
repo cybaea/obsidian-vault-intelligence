@@ -318,8 +318,11 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 */
 	onunload() {
 		if (this.graphService) {
-			void this.graphService.forceSave();
-			this.graphService.shutdown();
+			// Await the final save to ensure data is retrieved from worker before termination
+			void (async () => {
+				await this.graphService.forceSave();
+				this.graphService.shutdown();
+			})();
 		}
 
 		if (this.embeddingService instanceof RoutingEmbeddingService) {

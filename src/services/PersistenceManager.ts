@@ -1,4 +1,4 @@
-import { decode } from "@msgpack/msgpack";
+import { decodeMulti } from "@msgpack/msgpack";
 import { Plugin, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
@@ -111,7 +111,9 @@ export class PersistenceManager {
         try {
             // Peek inside the legacy file to see who it belongs to
             const buffer = await this.plugin.app.vault.adapter.readBinary(legacyPath);
-            const state = decode(new Uint8Array(buffer)) as { embeddingDimension?: number; embeddingModel?: string };
+            // Use decodeMulti to gracefully handle extra padding bytes found in some environments
+            const generator = decodeMulti(new Uint8Array(buffer));
+            const state = generator.next().value as { embeddingDimension?: number; embeddingModel?: string };
 
             // Expected metadata fields in SerializedIndexState (Top Level)
             const actualModelId = state.embeddingModel;
