@@ -634,7 +634,7 @@ const IndexerWorker: WorkerAPI = {
 
         // 1. Save FULL index to "Hot Store" (IndexedDB)
         try {
-            await storage.put(STORES.VECTORS, `orama_index_buffer_${config.sanitizedModelId}`, rawFull);
+            await storage.put(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`, rawFull);
             workerLogger.info(`[saveIndex] Hot Store (IDB) updated for ${config.sanitizedModelId}.`);
         } catch (e) {
             workerLogger.warn("[saveIndex] Hot Store update failed:", e);

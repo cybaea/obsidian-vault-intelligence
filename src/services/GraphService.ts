@@ -794,8 +794,9 @@ export class GraphService extends Events {
     public async commitConfigChange() {
         if (this.reindexQueued) {
             this.reindexQueued = false;
-            logger.info("[GraphService] Switching embedding models. Graceful restart initiated.");
-            new Notice("Switching embedding models...");
+            const oldId = this.committedSettings ? this.persistenceManager.getSanitizedModelId(this.committedSettings.embeddingModel, this.committedSettings.embeddingDimension) : null;
+            const newId = this.persistenceManager.getSanitizedModelId(this.settings.embeddingModel, this.settings.embeddingDimension);
+            const isShardSwap = oldId !== newId;
 
             // 1. Save state for the OLD model/worker
             await this.forceSave();
@@ -806,9 +807,14 @@ export class GraphService extends Events {
             // 3. Start fresh worker (initialize picks up the NEW settings for activeModelId)
             await this.initialize();
 
-            // 4. Perform delta scan to catch up on any file changes
-            // scanAll(false) will do this efficiently
-            void this.scanAll(false);
+            // 4. Perform scan
+            if (isShardSwap) {
+                // Catch up the new shard with a delta scan
+                void this.scanAll(false);
+            } else {
+                // Internal setting changed (like chunk size), force a full wipe and rebuild
+                void this.scanAll(true);
+            }
 
             // Update committed snapshot
             this.committedSettings = {

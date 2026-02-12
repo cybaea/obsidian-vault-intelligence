@@ -1,6 +1,6 @@
 import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
 
-import { MODEL_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
@@ -250,7 +250,7 @@ export class GeminiService {
             const count = usage?.promptTokenCount || firstEmbedding.statistics?.tokenCount;
             const tokens = (typeof count === 'number' && !isNaN(count) && count > 0)
                 ? count
-                : Math.ceil(text.length / 4); // Heuristic fallback
+                : Math.ceil(text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE); // Heuristic fallback
 
             return {
                 tokenCount: tokens,

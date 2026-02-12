@@ -80,7 +80,7 @@ export class ContextAssembler {
 
                 if (relativeRelevance >= primaryThreshold) {
                     // Scenario: Primary relevance.
-                    const fullFileTokens = meta?.tokenCount || Math.ceil(content.length / 4);
+                    const fullFileTokens = meta?.tokenCount || Math.ceil(content.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                     const isNotTooHuge = fullFileTokens < singleDocSoftLimitTokens;
                     const fitsInBudget = (currentUsageTokens + fullFileTokens) < budgetTokens;
 
@@ -88,22 +88,19 @@ export class ContextAssembler {
                         contentToAdd = content;
                         addedTokens = fullFileTokens;
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${fullFileTokens} tokens)`);
-                    } else if (doc.excerpt) {
-                        // Fallback: Use the relevant chunk found by the worker
-                        contentToAdd = doc.excerpt;
-                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
                         const availableChars = Math.min(singleDocSoftLimitChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
-                        addedTokens = Math.ceil(contentToAdd.length / 4);
+                        addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) clipped: ${file.path}`);
                     }
                 } else if (relativeRelevance >= supportingThreshold) {
                     // Scenario: Supporting relevance.
                     if (doc.excerpt) {
                         contentToAdd = doc.excerpt;
-                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (from worker): ${file.path}`);
                     } else {
                         const supportWindowChars = Math.floor(singleDocSoftLimitChars / 2);
@@ -111,7 +108,7 @@ export class ContextAssembler {
 
                         if (availableChars > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
                             contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
-                            addedTokens = Math.ceil(contentToAdd.length / 4);
+                            addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                             logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (clipped): ${file.path}`);
                         }
                     }
@@ -132,7 +129,7 @@ export class ContextAssembler {
                         contentToAdd = "... (Note details available via search or tools if needed) ...";
                     }
                     structuralCount++;
-                    addedTokens = Math.ceil(contentToAdd.length / 4);
+                    addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                     logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
                 } else {
                     // Scenario: Below threshold, skip entirely to avoid bloat.
@@ -145,7 +142,7 @@ export class ContextAssembler {
                     constructedContext += header + contentToAdd + "\n";
                     // Update usage
                     // Add header tokens approx
-                    currentUsageTokens += addedTokens + Math.ceil(header.length / 4);
+                    currentUsageTokens += addedTokens + Math.ceil(header.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                     includedCount++;
                 }
 

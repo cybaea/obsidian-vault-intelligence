@@ -111,11 +111,11 @@ export class PersistenceManager {
         try {
             // Peek inside the legacy file to see who it belongs to
             const buffer = await this.plugin.app.vault.adapter.readBinary(legacyPath);
-            const state = decode(new Uint8Array(buffer)) as { config?: { embeddingDimension?: number; embeddingModel?: string }; metadata?: { embeddingDimension?: number; embeddingModel?: string } };
+            const state = decode(new Uint8Array(buffer)) as { embeddingDimension?: number; embeddingModel?: string };
 
-            // Expected metadata fields in SerializedIndexState
-            const actualModelId = state.config?.embeddingModel || state.metadata?.embeddingModel;
-            const actualDimension = state.config?.embeddingDimension || state.metadata?.embeddingDimension;
+            // Expected metadata fields in SerializedIndexState (Top Level)
+            const actualModelId = state.embeddingModel;
+            const actualDimension = state.embeddingDimension;
 
             if (actualModelId && actualDimension) {
                 const targetSanitizedId = this.getSanitizedModelId(actualModelId, actualDimension);
