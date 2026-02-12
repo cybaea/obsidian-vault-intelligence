@@ -24,8 +24,10 @@ New features are added in the "Unreleased" section.
 
 -   **Model-specific sharding**: Implemented sharded storage in `PersistenceManager` to namespace graph and vector state by model hash and dimension, preventing cross-model data corruption.
 -   **Token-driven RAG architecture**: Refactored `ContextAssembler` and `SearchOrchestrator` to aggregate `tokenCount` directly from API usage metadata and worker outputs, replacing character-count heuristics.
+-   **IDB isolation (Split-brain fix)**: Separated IndexedDB namespacing for the Main-thread buffer (`orama_index_buffer_`) and Worker-thread hot store (`orama_index_`), eliminating split-brain collisions during background sync.
 -   **Strict type safety**: Removed widespread `any` casts in `PersistenceManager`, `GeminiService`, and `SearchOrchestrator`, replacing them with structured type assertions and interfaces for better maintainability.
--   **Automatic state migration**: Added logic to detect legacy `graph-state.msgpack` files and migrate them to the new sharded format based on internal metadata.
+-   **Automatic state migration**: Added logic to detect legacy `graph-state.msgpack` files and migrate them to the new sharded format. Fixed a critical data-loss bug in the migration logic by correctly destructuring model metadata from the top level of the state object.
+-   **Enforced re-indexing on settings change**: Corrected a bypass in `GraphService` where changing context-critical settings (eg `embeddingChunkSize`) would skip re-indexing. The engine now correctly differentiates between shard swaps and settings wipes.
 -   **Hybrid Slim-Sync Architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
 -   **Main-thread hydration**: Refactored `GraphService` to perform note content hydration on the main thread, overcoming worker memory limits and enabling RAG for stripped indices.
 -   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.

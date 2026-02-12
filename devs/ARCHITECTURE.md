@@ -117,9 +117,10 @@ flowchart LR
 
 -   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
 -   **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
--   **Hybrid Storage (Slim-Sync)**:
-    -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches.
-    -   **Cold Store (Vault File)**: A "slim" serialized version synced to the `.vault-intelligence` folder. To ensure cross-device efficiency, actual note content is stripped from the documents (`content: ""`) before save.
+-   **Hybrid storage (Slim-Sync)**:
+    -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches. This is sharded by model hash (eg `orama_index_<model-hash>`) to ensure isolation between different embedding models.
+    -   **Persistence safety**: To prevent split-brain collisions between the main thread and the background worker, the main thread uses a separate `orama_index_buffer_<model-hash>` namespace for its serialization buffers.
+    -   **Cold Store (Vault File)**: A "slim" serialized version synced to the `.vault-intelligence` folder, sharded by model hash (eg `graph-state-<model-hash>.msgpack`). To ensure cross-device efficiency, actual note content is stripped from the documents (`content: ""`) before save.
 -   **Serial Queue**: `GraphService` implements a serial `processingQueue` to handle rate limiting and prevent worker overload.
 
 ### 3.1.1 Graph Link Resolution (Systemic Path Resolution)
