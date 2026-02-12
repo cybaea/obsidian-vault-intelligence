@@ -290,6 +290,7 @@ export class GraphService extends Events {
 
         // Update the queue but ensure failures don't block the next task
         this.processingQueue = result.then(() => { }).catch((err) => {
+            if (err instanceof Error && err.message.includes("TaskDropped")) return;
             logger.error("[GraphService] Queue task failed:", err);
         });
 

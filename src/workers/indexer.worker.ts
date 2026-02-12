@@ -3,7 +3,7 @@ import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama'
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 
-import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
+import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
 import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig } from '../types/graph';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
@@ -770,7 +770,7 @@ const IndexerWorker: WorkerAPI = {
         const context = generateContextString(title, parsedFM, config);
 
         const bodyOffset = cleanlyContent.indexOf(body);
-        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * 4);
+        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
 
         const batchedDocs: OramaDocument[] = [];
         let totalTokens = 0;
@@ -823,7 +823,7 @@ function calculateInheritedScore(parentScore: number, linkCount: number): number
 }
 
 function estimateTokens(text: string): number {
-    return text.length / 4;
+    return text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
 }
 
 function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): GraphSearchResult[] {

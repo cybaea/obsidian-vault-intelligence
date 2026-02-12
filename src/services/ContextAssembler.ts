@@ -88,6 +88,8 @@ export class ContextAssembler {
                         contentToAdd = content;
                         addedTokens = fullFileTokens;
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${fullFileTokens} tokens)`);
+                    } else if (doc.excerpt) {
+                        contentToAdd = doc.excerpt;
                         addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
