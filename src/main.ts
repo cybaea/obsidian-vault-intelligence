@@ -316,13 +316,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 * Obsidian plugin lifecycle method called when the plugin is unloaded.
 	 * Ensures clean shutdown of workers and saves final state.
 	 */
-	onunload() {
+	// eslint-disable-next-line @typescript-eslint/no-misused-promises -- Obsidian lifecycle requires async onunload for graceful shutdown and persistence
+	async onunload() {
 		if (this.graphService) {
 			// Await the final save to ensure data is retrieved from worker before termination
-			void (async () => {
-				await this.graphService.forceSave();
-				this.graphService.shutdown();
-			})();
+			await this.graphService.forceSave();
+			this.graphService.shutdown();
 		}
 
 		if (this.embeddingService instanceof RoutingEmbeddingService) {
