@@ -490,46 +490,46 @@ export class GraphService extends Events {
         const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
         const minScore = this.settings.minSimilarityScore;
 
-        // 1. Fetch High-Quality Vectors (using user's minSimilarityScore threshold)
-        // AND Fetch Graph Neighbors in parallel
+        // 1. Fetch High-Quality Vectors (permissively to allow "rescuing" near-misses)
+        const permissiveFloor = Math.max(0, minScore / weights.HYBRID_MULTIPLIER);
         const [rawVectorResults, neighborResults] = await Promise.all([
-            this.getSimilar(path, 50, minScore),
+            this.getSimilar(path, 50, permissiveFloor),
             this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
         ]);
 
-        // Explicitly exclude self to avoid regressions if lower levels change
         const vectorResults = rawVectorResults.filter(v => v.path !== path);
-
         const neighborPathSet = new Set(neighborResults.map(n => n.path));
         const vectorPathSet = new Set(vectorResults.map(v => v.path));
+        const mergedMap = new Map<string, GraphSearchResult>();
 
-        // 2. Hybrid Boost: If a node is a vector match AND a neighbor, multiply its score
+        // 2. Hybrid Boost
         for (const v of vectorResults) {
             if (neighborPathSet.has(v.path)) {
                 v.score = Math.min(1.0, v.score * weights.HYBRID_MULTIPLIER);
                 v.description = "(Enhanced semantic connection)";
             }
+            mergedMap.set(v.path, v);
         }
 
-        // 3. Discovery Anchoring: Find pure neighbors (failed vector threshold)
+        // 3. Discovery Anchoring
         const pureNeighbors = neighborResults
             .filter(n => !vectorPathSet.has(n.path) && n.path !== path)
-            .sort((a, b) => b.score - a.score) // Respect worker's centrality/hub scores
+            .sort((a, b) => b.score - a.score)
             .slice(0, weights.MAX_PURE_NEIGHBORS);
 
-        // 4. Hydrate Pure Neighbors: Get fallback excerpts for anchors
         const { hydrated: hydratedAnchors } = await this.hydrator.hydrate(pureNeighbors);
 
-        // Assign low "fallback" score to anchors so they act as discovery fallbacks at the bottom
+        // Calculate the anchor score just below the user's threshold
+        const anchorScore = Math.max(0.01, minScore - 0.01);
         for (const h of hydratedAnchors) {
-            h.score = Math.max(0.01, minScore - 0.01);
+            h.score = anchorScore;
             h.description = "(Structural neighbor)";
+            mergedMap.set(h.path, h);
         }
 
-        // 5. Final Merge, Sort, and Slice
-        const mergedList = [...vectorResults, ...hydratedAnchors];
-
-        return mergedList
+        // 4. Final Merge, Filter, and Sort
+        return Array.from(mergedMap.values())
+            .filter(r => r.score >= anchorScore) // Drop vectors that weren't rescued above the threshold
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
     }
