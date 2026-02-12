@@ -84,16 +84,16 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     },
     {
         dimensions: 384,
-        id: 'Xenova/bge-small-en-v1.5',
+        id: 'Xenova/multilingual-e5-small',
         isDefault: true,
-        label: 'Balanced (BGE-Small) - 384d [~30MB]',
+        label: 'Balanced (European languages E5 Small) - 384d [~30MB]',
         provider: 'local'
     },
     {
-        dimensions: 768,
-        id: 'Xenova/nomic-embed-text-v1',
+        dimensions: 1024,
+        id: 'Xenova/bge-m3',
         isDefault: false,
-        label: 'Advanced (Nomic-Embed) - 768d [~130MB]',
+        label: 'Advanced (BGE M3) - 1024d [~150MB]',
         provider: 'local'
     }
 ];
