@@ -59,6 +59,11 @@ export class GraphService extends Events {
         embeddingProvider: string;
     } | null = null;
 
+    // ACTIVE WORKER STATE (Frozen for lifecycle safety)
+    private activeModelId: string | null = null;
+    private activeDimension: number | null = null;
+    private workerSessionId: number = 0;
+
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
@@ -120,19 +125,24 @@ export class GraphService extends Events {
                 this.settings.embeddingDimension = model.dimensions;
             }
 
+            // FREEZE STATE FOR THIS WORKER EPOCH
+            this.activeModelId = this.settings.embeddingModel;
+            this.activeDimension = this.settings.embeddingDimension;
+            this.workerSessionId++;
+
             const config: WorkerConfig = {
                 agentLanguage: this.settings.agentLanguage,
                 authorName: this.settings.authorName,
                 chatModel: this.settings.chatModel,
                 contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
                 embeddingChunkSize: this.settings.embeddingChunkSize,
-                embeddingDimension: this.settings.embeddingDimension,
-                embeddingModel: this.settings.embeddingModel,
+                embeddingDimension: this.activeDimension,
+                embeddingModel: this.activeModelId,
                 googleApiKey: this.settings.googleApiKey,
                 indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
                 minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
                 ontologyPath: this.settings.ontologyPath,
-                sanitizedModelId: this.persistenceManager.getSanitizedModelId(this.settings.embeddingModel, this.settings.embeddingDimension)
+                sanitizedModelId: this.persistenceManager.getSanitizedModelId(this.activeModelId, this.activeDimension)
             };
 
             // 2. Spawn and Initialize worker via WorkerManager
@@ -258,7 +268,20 @@ export class GraphService extends Events {
      * Enqueues a task for the indexer worker, ensuring serial execution and rate limiting.
      */
     private async enqueueIndexingTask<T>(task: () => Promise<T>): Promise<T> {
+        // Capture the session ID when the task is enqueued
+        const capturedSessionId = this.workerSessionId;
+
         const result = this.processingQueue.then(async () => {
+            // ZOMBIE GUARD: Drop task if worker has restarted since enqueue
+            if (this.workerSessionId !== capturedSessionId) {
+                logger.debug(`[GraphService] Dropping zombie task (Session ${capturedSessionId} vs ${this.workerSessionId})`);
+                // Start a new promise chain for the next valid task, but return something safe here.
+                // Since T is generic, we can't easily return a valid T. 
+                // However, most callers ignore the return value or are void.
+                // Throwing a specific "TaskDropped" error is cleaner and catchable.
+                throw new Error("TaskDropped: Worker session changed");
+            }
+
             const val = await task();
             const delay = this.settings.queueDelayMs || 100;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -310,11 +333,11 @@ export class GraphService extends Events {
      * Internal method to fetch state from worker and write via PersistenceManager.
      */
     private async saveState() {
-        if (!this.api) return;
+        if (!this.api || !this.activeModelId || !this.activeDimension) return;
         try {
             // Returns Uint8Array (MessagePack)
             const stateBuffer = await this.api.saveIndex();
-            await this.persistenceManager.saveState(stateBuffer, this.settings.embeddingModel, this.settings.embeddingDimension);
+            await this.persistenceManager.saveState(stateBuffer, this.activeModelId, this.activeDimension);
         } catch (error) {
             logger.error("[GraphService] Save failed:", error);
         }
@@ -326,9 +349,9 @@ export class GraphService extends Events {
      * @returns true if migration (full scan) is needed.
      */
     private async loadState(): Promise<boolean> {
-        if (!this.api) return false;
+        if (!this.api || !this.activeModelId || !this.activeDimension) return false;
 
-        const stateData = await this.persistenceManager.loadState(this.settings.embeddingModel, this.settings.embeddingDimension);
+        const stateData = await this.persistenceManager.loadState(this.activeModelId, this.activeDimension);
         if (!stateData) {
             logger.info("[GraphService] No existing state found (checked adapter). Starting fresh scan.");
             return false;
@@ -578,7 +601,7 @@ export class GraphService extends Events {
      * @param paths - Array of file paths.
      * @returns A promise resolving to a record of path -> metadata.
      */
-    public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[] }>> {
+    public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[], tokenCount?: number }>> {
         await Promise.resolve();
         if (!this.api) return {};
         const results = await this.api.getBatchMetadata(paths);
@@ -748,29 +771,44 @@ export class GraphService extends Events {
 
         this.settings = { ...settings };
         if (this.api) {
+            // Push SAFE updates only.
+            // DO NOT push embedding configuration (model, dimension, chunk size) to a live worker.
+            // That requires a restart (handled by commitConfigChange).
             await this.api.updateConfig({
+                agentLanguage: settings.agentLanguage, // Add agentLanguage if missed previously
                 authorName: settings.authorName,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
-                embeddingChunkSize: settings.embeddingChunkSize,
-                embeddingDimension: settings.embeddingDimension,
-                embeddingModel: settings.embeddingModel,
                 googleApiKey: settings.googleApiKey,
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath,
-                sanitizedModelId: this.persistenceManager.getSanitizedModelId(settings.embeddingModel, settings.embeddingDimension)
             });
         }
     }
 
     /**
-     * Commits any queued configuration changes, such as triggering a full re-index.
+     * Commits any queued configuration changes by restarting the worker if needed.
      * Called when the settings UI is closed.
      */
-    public commitConfigChange() {
+    public async commitConfigChange() {
         if (this.reindexQueued) {
             this.reindexQueued = false;
+            logger.info("[GraphService] Switching embedding models. Graceful restart initiated.");
+            new Notice("Switching embedding models...");
+
+            // 1. Save state for the OLD model/worker
+            await this.forceSave();
+
+            // 2. Terminate the old worker
+            this.shutdown();
+
+            // 3. Start fresh worker (initialize picks up the NEW settings for activeModelId)
+            await this.initialize();
+
+            // 4. Perform delta scan to catch up on any file changes
+            // scanAll(false) will do this efficiently
+            void this.scanAll(false);
 
             // Update committed snapshot
             this.committedSettings = {
@@ -779,10 +817,6 @@ export class GraphService extends Events {
                 embeddingModel: this.settings.embeddingModel,
                 embeddingProvider: this.settings.embeddingProvider
             };
-
-            logger.warn("[GraphService] Committing config change: Triggering forced re-scan.");
-            new Notice("Embedding settings changed. Re-indexing vault...");
-            void this.scanAll(true);
         }
     }
 

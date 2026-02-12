@@ -75,7 +75,7 @@ export interface WorkerAPI {
     deleteFile(path: string): Promise<void>;
     fullReset(): Promise<void>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
-    getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>>;
+    getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>>;
     getCentrality(path: string): Promise<number>;
     getFileState(path: string): Promise<{ mtime: number, size: number, hash: string } | null>;
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;

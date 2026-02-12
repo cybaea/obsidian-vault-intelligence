@@ -375,15 +375,15 @@ const IndexerWorker: WorkerAPI = {
         return results;
     },
 
-    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[] }>> {
+    async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>> {
         if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
         await Promise.resolve();
-        const results: Record<string, { title?: string, headers?: string[] }> = {};
+        const results: Record<string, { title?: string, headers?: string[], tokenCount?: number }> = {};
         for (const path of paths) {
             const normalizedPath = workerNormalizePath(path);
             if (graph.hasNode(normalizedPath)) {
                 const attr = graph.getNodeAttributes(normalizedPath) as GraphNodeData;
-                results[path] = { headers: attr.headers, title: attr.title };
+                results[path] = { headers: attr.headers, title: attr.title, tokenCount: attr.tokenCount };
             } else {
                 results[path] = {};
             }

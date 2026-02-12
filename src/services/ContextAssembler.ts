@@ -65,6 +65,9 @@ export class ContextAssembler {
                 const content = await this.app.vault.cachedRead(file);
                 let contentToAdd = "";
 
+                // Fetch metadata for accurate token counts
+                const meta = metadataMap[doc.path];
+
                 /**
                  * DYNAMIC RELATIVE ACCORDION LOGIC
                  * 1. Primary Tier (Score > Primary % of top): High confidence. Full file allowed.
@@ -73,29 +76,34 @@ export class ContextAssembler {
                  * 4. Skip: Below structural threshold.
                  */
                 const relativeRelevance = topScore > 0 ? (doc.score / topScore) : 0;
+                let addedTokens = 0;
 
                 if (relativeRelevance >= primaryThreshold) {
                     // Scenario: Primary relevance.
-                    const docTokens = doc.tokenCount || Math.ceil(content.length / 4);
-                    const isNotTooHuge = docTokens < singleDocSoftLimitTokens;
-                    const fitsInBudget = (currentUsageTokens + docTokens) < budgetTokens;
+                    const fullFileTokens = meta?.tokenCount || Math.ceil(content.length / 4);
+                    const isNotTooHuge = fullFileTokens < singleDocSoftLimitTokens;
+                    const fitsInBudget = (currentUsageTokens + fullFileTokens) < budgetTokens;
 
                     if (isNotTooHuge && fitsInBudget) {
                         contentToAdd = content;
-                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${docTokens} tokens)`);
+                        addedTokens = fullFileTokens;
+                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${fullFileTokens} tokens)`);
                     } else if (doc.excerpt) {
                         // Fallback: Use the relevant chunk found by the worker
                         contentToAdd = doc.excerpt;
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
                         const availableChars = Math.min(singleDocSoftLimitChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
                         contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
+                        addedTokens = Math.ceil(contentToAdd.length / 4);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) clipped: ${file.path}`);
                     }
                 } else if (relativeRelevance >= supportingThreshold) {
                     // Scenario: Supporting relevance.
                     if (doc.excerpt) {
                         contentToAdd = doc.excerpt;
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
                         logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (from worker): ${file.path}`);
                     } else {
                         const supportWindowChars = Math.floor(singleDocSoftLimitChars / 2);
@@ -103,6 +111,7 @@ export class ContextAssembler {
 
                         if (availableChars > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
                             contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
+                            addedTokens = Math.ceil(contentToAdd.length / 4);
                             logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (clipped): ${file.path}`);
                         }
                     }
@@ -115,7 +124,6 @@ export class ContextAssembler {
                     }
 
                     // Use pre-fetched headers for a "Table of Contents" view.
-                    const meta = metadataMap[doc.path];
                     const headers = meta?.headers || [];
 
                     if (headers.length > 0) {
@@ -124,6 +132,7 @@ export class ContextAssembler {
                         contentToAdd = "... (Note details available via search or tools if needed) ...";
                     }
                     structuralCount++;
+                    addedTokens = Math.ceil(contentToAdd.length / 4);
                     logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
                 } else {
                     // Scenario: Below threshold, skip entirely to avoid bloat.
@@ -135,8 +144,8 @@ export class ContextAssembler {
                     const header = `\n--- Document: ${doc.path} (Relevance: ${doc.score.toFixed(2)}) ---\n`;
                     constructedContext += header + contentToAdd + "\n";
                     // Update usage
-                    const addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
-                    currentUsageTokens += addedTokens;
+                    // Add header tokens approx
+                    currentUsageTokens += addedTokens + Math.ceil(header.length / 4);
                     includedCount++;
                 }
 
