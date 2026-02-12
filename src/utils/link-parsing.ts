@@ -5,12 +5,12 @@
 
 /**
  * Fast 32-bit hash (DJB2) for use as a content anchor.
- * @param text - The text to hash (only first 100 characters used for performance).
+ * @param text - The text to hash (only first 4096 characters used for performance).
  * @returns A 32-bit unsigned integer.
  */
 export function fastHash(text: string): number {
     let hash = 5381;
-    for (let i = 0; i < Math.min(text.length, 100); i++) {
+    for (let i = 0; i < Math.min(text.length, 4096); i++) {
         hash = (hash * 33) ^ text.charCodeAt(i);
     }
     return hash >>> 0;
