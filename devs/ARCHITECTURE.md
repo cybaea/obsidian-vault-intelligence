@@ -566,7 +566,10 @@ Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`),
 
 ### Testing strategy
 
--   Unit tests: Not fully established.
+-   **Automated tests**:
+    -   Unit tests for utilities (eg link parsing).
+    -   Regression tests for worker-side token accumulation logic (`tests/worker_accumulation.test.ts`).
+    -   Lifecycle and sharding integration tests for `GraphService`.
 -   Manual testing:
     -   Use the "Debug Sidebar" (in Dev settings) to inspect the Worker state.
     -   Use `npm run dev` to watch for changes and hot-reload.

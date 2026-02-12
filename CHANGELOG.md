@@ -22,6 +22,9 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Standardized token estimation**: Replaced hardcoded math with `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` across all services, ensuring perfectly consistent context budgeting.
+-   **Sharded storage integrity**: Fixed an IDB key collision in the indexing worker that was causing "split-brain" state issues during background sync.
+-   **Regression safety**: Introduced a mandatory `Token Accumulation Test` in the worker suite to verify the stability of our two-pass token counting logic.
 -   **Model-specific sharding**: Implemented sharded storage in `PersistenceManager` to namespace graph and vector state by model hash and dimension, preventing cross-model data corruption.
 -   **Token-driven RAG architecture**: Refactored `ContextAssembler` and `SearchOrchestrator` to aggregate `tokenCount` directly from API usage metadata and worker outputs, replacing character-count heuristics.
 -   **IDB isolation (Split-brain fix)**: Separated IndexedDB namespacing for the Main-thread buffer (`orama_index_buffer_`) and Worker-thread hot store (`orama_index_`), eliminating split-brain collisions during background sync.
