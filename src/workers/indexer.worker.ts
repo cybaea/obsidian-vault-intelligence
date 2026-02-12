@@ -997,7 +997,7 @@ async function recreateOrama() {
                 end: 'number',
                 id: 'enum',
                 mtime: 'number',
-                params: 'string[]',
+                params: 'enum[]',
                 path: 'enum',
                 start: 'number',
                 status: 'enum',
