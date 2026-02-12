@@ -196,15 +196,15 @@ export const GRAPH_CONSTANTS = {
     /** Scoring for Explorer (Vector + Graph) enhanced similarity */
     ENHANCED_SIMILAR_WEIGHTS: {
         /** 
-         * Boost applied when a result is found via both vector AND graph.
-         * Increased to 0.2 to ensure content-relevant connections significantly outrank generic siblings.
+         * Multiplicative boost applied when a result is found via both vector AND graph.
+         * A 1.15 multiplier provides a 15% boost to semantic scores for connected notes.
          */
-        HYBRID_BOOST: 0.2,
+        HYBRID_MULTIPLIER: 1.15,
         /** 
-         * Floor score for neighbors. 
-         * Kept low (0.1) to ensure visibility but allow worker's hub penalty to suppress noisy nodes.
+         * Cap on purely structural neighbors (anchors) that failed the semantic threshold.
+         * These act as discovery fallbacks at the bottom of the list.
          */
-        NEIGHBOR_FLOOR: 0.1
+        MAX_PURE_NEIGHBORS: 3
     },
     /** Length of fallback excerpt when no vector match is found */
     FALLBACK_EXCERPT_LENGTH: 300,

@@ -289,7 +289,7 @@ const IndexerWorker: WorkerAPI = {
             const hydrationResults = await search(orama, {
                 limit: idsToHydrate.length * 2,
                 where: {
-                    path: { in: idsToHydrate }
+                    id: { in: idsToHydrate }
                 }
             });
 
@@ -488,7 +488,7 @@ const IndexerWorker: WorkerAPI = {
         return Array.from(results.values());
     },
 
-    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0, onlyPaths?: string[]): Promise<GraphSearchResult[]> {
+    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0): Promise<GraphSearchResult[]> {
         if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
         const normalizedPath = workerNormalizePath(path);
@@ -520,21 +520,12 @@ const IndexerWorker: WorkerAPI = {
             for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
         }
 
-        const whereClause: Record<string, unknown> = { path: { nin: [normalizedPath] } };
-
-        // If targeted paths are provided, scope the search strictly to them
-        if (onlyPaths && onlyPaths.length > 0) {
-            whereClause.path = { in: onlyPaths.map(workerNormalizePath) };
-        }
-
         const results = await search(orama, {
-            // Use DEEP limit for targeted search to avoid starvation (deduplication happening before we find all files)
-            limit: onlyPaths ? WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP : limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
+            limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
-            // If targeted, we can be more permissive if needed, but strict is usually fine for vector search
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: { property: 'embedding', value: centroid },
-            where: whereClause
+            where: { path: { nin: [normalizedPath] } }
         });
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
@@ -556,7 +547,7 @@ const IndexerWorker: WorkerAPI = {
         if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
-            properties: ['title', 'content', 'context', 'params', 'status'],
+            properties: ['title', 'content', 'context'],
             term: stripStopWords(query),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
@@ -990,12 +981,12 @@ async function recreateOrama() {
                 created: 'number',
                 embedding: `vector[${config.embeddingDimension}]`,
                 end: 'number',
-                id: 'string',
+                id: 'enum',
                 mtime: 'number',
                 params: 'string[]',
-                path: 'string',
+                path: 'enum',
                 start: 'number',
-                status: 'string',
+                status: 'enum',
                 title: 'string',
                 tokenCount: 'number',
             }

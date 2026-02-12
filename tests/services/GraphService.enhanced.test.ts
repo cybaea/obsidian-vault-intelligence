@@ -5,6 +5,7 @@
 import { Plugin } from 'obsidian';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { GRAPH_CONSTANTS } from '../../src/constants';
 import { GraphService } from '../../src/services/GraphService';
 import { GraphSearchResult } from '../../src/types/graph';
 
@@ -31,6 +32,7 @@ const mockSettings = {
 
 describe('GraphService.getGraphEnhancedSimilar', () => {
     let graphService: GraphService;
+    const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
 
     beforeEach(() => {
         graphService = new GraphService(
@@ -45,23 +47,32 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         // Mock internal methods
         graphService.getSimilar = vi.fn();
         graphService.getNeighbors = vi.fn();
+
+        // Inject mock hydrator
+        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mocking internal service */
+        (graphService as any).hydrator = {
+            hydrate: vi.fn().mockImplementation((results) => Promise.resolve({
+                driftDetected: [],
+                hydrated: results
+            }))
+        };
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
-    it('should boost score when a file is both a vector match and a neighbor', async () => {
-        const filePath = 'folder/note.md';
+    it('should apply multiplicative boost when a file is both a vector match and a neighbor', async () => {
+        const filePath = 'source.md';
 
         // Mock Vector Results (Content match)
         const vectorResults: GraphSearchResult[] = [
-            { path: 'folder/other.md', score: 0.8 } as GraphSearchResult
+            { path: 'hybrid.md', score: 0.8 } as GraphSearchResult
         ];
 
         // Mock Neighbor Results (Graph connection)
         const neighborResults: GraphSearchResult[] = [
-            { path: 'folder/other.md', score: 0.1 } as GraphSearchResult // Low score to trigger floor
+            { path: 'hybrid.md', score: 0.5 } as GraphSearchResult
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
@@ -70,57 +81,22 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
         expect(results).toHaveLength(1);
-        expect(results[0]!.path).toBe('folder/other.md');
+        expect(results[0]!.path).toBe('hybrid.md');
 
-        // Expected: Max(NeighborFloor(0.1), VectorScore(0.8) + Boost(0.2)) = 1.0
-        expect(results[0]!.score).toBeCloseTo(1.0);
+        // Expected Score: 0.8 * 1.15 = 0.92
+        expect(results[0]!.score).toBeCloseTo(0.92);
+        expect(results[0]!.description).toBe("(Enhanced semantic connection)");
     });
 
-    it('should apply a floor score of 0.1 to pure neighbors and show them if they exceed it', async () => {
-        // Use permissive settings to verify scoring math without filtering
-        const permissiveSettings = { ...mockSettings, minSimilarityScore: 0.0 };
-        const localGraphService = new GraphService(
-            mockPlugin,
-            mockVaultManager,
-            mockGeminiService,
-            mockEmbeddingService,
-            mockPersistenceManager,
-            permissiveSettings
-        );
-        localGraphService.getSimilar = vi.fn().mockResolvedValue([]);
-        localGraphService.getNeighbors = vi.fn();
-        // Mock hydrator for local service
-        interface TestableGraphService {
-            hydrator: any;
-        }
-        (localGraphService as unknown as TestableGraphService).hydrator =
-            (graphService as unknown as TestableGraphService).hydrator;
-
-        const filePath = 'folder/note.md';
-
-        // Neighbor match with score > 0.1
-        const neighborResults: GraphSearchResult[] = [
-            { path: 'folder/linked.md', score: 0.15 } as GraphSearchResult
-        ];
-        vi.spyOn(localGraphService, 'getNeighbors').mockResolvedValue(neighborResults);
-
-        const results = await localGraphService.getGraphEnhancedSimilar(filePath, 10);
-
-        expect(results).toHaveLength(1);
-        expect(results[0]!.path).toBe('folder/linked.md');
-        expect(results[0]!.score).toBe(0.15);
-    });
-
-    it('should prioritise hybrid matches over pure vector matches if score is higher', async () => {
-        const filePath = 'folder/source.md';
+    it('should cap boosted scores at 1.0', async () => {
+        const filePath = 'source.md';
 
         const vectorResults: GraphSearchResult[] = [
-            { path: 'folder/vector_only.md', score: 0.85 } as GraphSearchResult,
-            { path: 'folder/hybrid.md', score: 0.8 } as GraphSearchResult
+            { path: 'hybrid-top.md', score: 0.95 } as GraphSearchResult
         ];
 
         const neighborResults: GraphSearchResult[] = [
-            { path: 'folder/hybrid.md', score: 0.1 } as GraphSearchResult
+            { path: 'hybrid-top.md', score: 0.5 } as GraphSearchResult
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
@@ -128,66 +104,105 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
-        // Hybrid: max(0.1, 0.8 + 0.2) = 1.0
-        // Vector Only: 0.85
-        // Order: Hybrid > Vector Only
-        expect(results[0]!.path).toBe('folder/hybrid.md');
-        expect(results[0]!.score).toBeCloseTo(1.0);
-
-        expect(results[1]!.path).toBe('folder/vector_only.md');
-        expect(results[1]!.score).toBe(0.85);
+        // Expected: min(1.0, 0.95 * 1.15) = 1.0
+        expect(results[0]!.score).toBe(1.0);
     });
 
-    it('should exclude the source file itself', async () => {
-        const filePath = 'folder/self.md';
+    it('should append pure neighbors as anchors at the bottom with hydration', async () => {
+        const filePath = 'source.md';
+        const minScore = 0.5;
+
+        // Vector returns something else
+        const vectorResults: GraphSearchResult[] = [
+            { path: 'vector-only.md', score: 0.8 } as GraphSearchResult
+        ];
+
+        // Neighbor returns a sibling not in vectors
+        const neighborResults: GraphSearchResult[] = [
+            { path: 'pure-neighbor.md', score: 0.3 } as GraphSearchResult
+        ];
+
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighborResults);
+
+        // Mock hydrator to ensure it was called for the anchor
+        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mocking internal service */
+        const hydrateSpy = vi.spyOn((graphService as any).hydrator, 'hydrate');
+
+        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
+
+        expect(results).toHaveLength(2);
+
+        // Pure neighbor should be at the bottom
+        const anchor = results.find(r => r.path === 'pure-neighbor.md');
+        expect(anchor).toBeDefined();
+
+        // Expected Score: minScore - 0.01 = 0.49
+        expect(anchor!.score).toBe(minScore - 0.01);
+        expect(anchor!.description).toBe("(Structural neighbor)");
+
+        // Verify hydrator was called for the anchor
+        expect(hydrateSpy).toHaveBeenCalled();
+        const callArgs = hydrateSpy.mock.calls[0]![0] as GraphSearchResult[];
+        expect(callArgs.some(r => r.path === 'pure-neighbor.md')).toBe(true);
+    });
+
+    it('should respect MAX_PURE_NEIGHBORS cap', async () => {
+        const filePath = 'source.md';
+
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([]);
+
+        // Return 5 neighbors, cap is 3
+        const neighborResults: GraphSearchResult[] = [
+            { path: 'n1.md', score: 0.5 },
+            { path: 'n2.md', score: 0.4 },
+            { path: 'n3.md', score: 0.3 },
+            { path: 'n4.md', score: 0.2 },
+            { path: 'n5.md', score: 0.1 }
+        ] as GraphSearchResult[];
+
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighborResults);
+
+        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
+
+        // Cap is 3
+        expect(results).toHaveLength(weights.MAX_PURE_NEIGHBORS);
+        // Should take the top 3 by neighbor score
+        expect(results.map(r => r.path)).toContain('n1.md');
+        expect(results.map(r => r.path)).toContain('n2.md');
+        expect(results.map(r => r.path)).toContain('n3.md');
+    });
+
+    it('should exclude the source file itself from all sources', async () => {
+        const filePath = 'source.md';
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue([{ path: filePath, score: 1.0 } as GraphSearchResult]);
-        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([{ path: filePath, score: 1.0 } as GraphSearchResult]);
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([{ path: filePath, score: 0.5 } as GraphSearchResult]);
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
-        expect(results).toHaveLength(0);
+        expect(results.some(r => r.path === filePath)).toBe(false);
     });
-    it('should filter out noise but keep significant graph neighbors', async () => {
-        const filePath = 'folder/source.md';
 
-        // 1. Setup: minScore is 0.5 (from mockSettings)
-        // 2. Setup Neighbors:
-        //    - "Good" Sibling: Score 0.25 (below minScore, but > floor 0.1) -> SHOULD KEEP
-        //    - "Bad" Sibling (Hub): Score 0.05 -> Bumped to Floor 0.1 -> Equal to floor -> SHOULD DROP
-        const neighbors: GraphSearchResult[] = [
-            { path: 'good.md', score: 0.25 } as GraphSearchResult,
-            { path: 'bad.md', score: 0.05 } as GraphSearchResult
+    it('should prioritize hybrid matches over vector matches if boosted score is higher', async () => {
+        const filePath = 'source.md';
+
+        // Vector match A: 0.9 (pure)
+        // Vector match B: 0.8 (hybrid) -> 0.8 * 1.15 = 0.92
+        const vectorResults: GraphSearchResult[] = [
+            { path: 'pure-vector.md', score: 0.9 } as GraphSearchResult,
+            { path: 'hybrid.md', score: 0.8 } as GraphSearchResult
         ];
-        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighbors);
-        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([]); // No vectors
+
+        const neighborResults: GraphSearchResult[] = [
+            { path: 'hybrid.md', score: 0.5 } as GraphSearchResult
+        ];
+
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighborResults);
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
-        // Expectation:
-        // 'good.md' kept because 0.25 > 0.1 (Floor)
-        // 'bad.md' dropped because 0.1 !> 0.1 (Floor) AND < 0.5 (MinScore)
-
-        expect(results).toHaveLength(1);
-        expect(results[0]!.path).toBe('good.md');
-    });
-    it('should allow strong vector matches to bypass strict minSimilarityScore via the symmetric noise floor', async () => {
-        const filePath = 'folder/source.md';
-
-        // 1. Setup: minScore is 0.5 (from mockSettings)
-        // 2. Setup Vector:
-        //    - "Strong Vector": Score 0.45 (below minScore 0.5, but > floor 0.1) -> SHOULD KEEP
-        const vectors: GraphSearchResult[] = [
-            { path: 'vector_match.md', score: 0.45 } as GraphSearchResult
-        ];
-        vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectors);
-        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([]);
-
-        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
-
-        // Expectation:
-        // 'vector_match.md' kept because 0.45 > 0.1 (Floor) even though it is < 0.5 (MinScore)
-        expect(results).toHaveLength(1);
-        expect(results[0]!.path).toBe('vector_match.md');
-        expect(results[0]!.score).toBe(0.45);
+        expect(results[0]!.path).toBe('hybrid.md');
+        expect(results[1]!.path).toBe('pure-vector.md');
     });
 });

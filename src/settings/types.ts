@@ -151,7 +151,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     groundingModel: 'gemini-2.5-flash-lite',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-    indexVersion: 4, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture
+    indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
