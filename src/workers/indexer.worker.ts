@@ -466,7 +466,10 @@ const IndexerWorker: WorkerAPI = {
                         if (sibling === normalizedPath || results.has(sibling)) continue;
                         let score = options?.decay ?? ONTOLOGY_CONSTANTS.SIBLING_DECAY;
                         if (ONTOLOGY_CONSTANTS.HUB_PENALTY_ENABLED) {
-                            score = score / Math.max(1, Math.log10(degree + 1));
+                            // Using Math.log (Natural Log) is the Information Retrieval standard (e.g. TF-IDF).
+                            // It is ~2.3x more aggressive than log10, effectively suppressed "noisy" hubs 
+                            // with 10-15 connections in both small and large vaults.
+                            score = score / Math.max(1, Math.log(degree + 1));
                         }
                         const attr = graph.getNodeAttributes(sibling) as GraphNodeData;
                         if (!attr.mtime || !attr.size || attr.type !== 'file') continue;

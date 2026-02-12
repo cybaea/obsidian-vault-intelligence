@@ -531,6 +531,8 @@ export class GraphService extends Events {
         // Initialize map with Neighbors (Floor Score)
         for (const n of neighborResults) {
             if (n.path === path) continue;
+            // Respect the worker's score (which might include hub penalty usually < 0.25)
+            // But ensure a tiny floor so they aren't totally invisible if penalty is extreme.
             mergedMap.set(n.path, {
                 ...n,
                 score: Math.max(n.score, weights.NEIGHBOR_FLOOR)
@@ -549,8 +551,18 @@ export class GraphService extends Events {
         const mergedList = Array.from(mergedMap.values());
         const { hydrated: finalHydrated } = await this.hydrator.hydrate(mergedList);
 
+        // Identify which paths originated from the graph (neighbors)
+        // We want to be lenient with these if they are "good" neighbors (score > floor), 
+        // even if they don't meet the strict vector similarity threshold.
+        const graphPaths = new Set(neighborResults.map(n => n.path));
+
         return finalHydrated
-            .filter(r => r.score >= this.settings.minSimilarityScore)
+            .filter(r => {
+                // Symmetric Filter: Both vector and structural matches are welcome if they beat the noise floor.
+                // This prevents strict vector settings (e.g. 0.5) from hiding good vector matches (e.g. 0.45)
+                // while lenient structural floors (0.1) let noisy siblings through.
+                return r.score > weights.NEIGHBOR_FLOOR;
+            })
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
     }

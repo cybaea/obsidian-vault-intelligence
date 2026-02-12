@@ -72,28 +72,43 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         expect(results).toHaveLength(1);
         expect(results[0]!.path).toBe('folder/other.md');
 
-        // Expected: Max(NeighborFloor(0.65), VectorScore(0.8) + Boost(0.1)) = 0.9
-        expect(results[0]!.score).toBeCloseTo(0.9);
+        // Expected: Max(NeighborFloor(0.1), VectorScore(0.8) + Boost(0.2)) = 1.0
+        expect(results[0]!.score).toBeCloseTo(1.0);
     });
 
-    it('should apply a floor score of 0.65 to pure neighbors', async () => {
+    it('should apply a floor score of 0.1 to pure neighbors and show them if they exceed it', async () => {
+        // Use permissive settings to verify scoring math without filtering
+        const permissiveSettings = { ...mockSettings, minSimilarityScore: 0.0 };
+        const localGraphService = new GraphService(
+            mockPlugin,
+            mockVaultManager,
+            mockGeminiService,
+            mockEmbeddingService,
+            mockPersistenceManager,
+            permissiveSettings
+        );
+        localGraphService.getSimilar = vi.fn().mockResolvedValue([]);
+        localGraphService.getNeighbors = vi.fn();
+        // Mock hydrator for local service
+        interface TestableGraphService {
+            hydrator: any;
+        }
+        (localGraphService as unknown as TestableGraphService).hydrator =
+            (graphService as unknown as TestableGraphService).hydrator;
+
         const filePath = 'folder/note.md';
 
-        // No vector matches
-        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([]);
-
-        // Only neighbor match (e.g. valid topic link)
+        // Neighbor match with score > 0.1
         const neighborResults: GraphSearchResult[] = [
-            { path: 'folder/linked.md', score: 0.1 } as GraphSearchResult // Very low score
+            { path: 'folder/linked.md', score: 0.15 } as GraphSearchResult
         ];
-        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighborResults);
+        vi.spyOn(localGraphService, 'getNeighbors').mockResolvedValue(neighborResults);
 
-        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
+        const results = await localGraphService.getGraphEnhancedSimilar(filePath, 10);
 
         expect(results).toHaveLength(1);
         expect(results[0]!.path).toBe('folder/linked.md');
-        // Logic: Math.max(n.score, 0.65) -> Math.max(0.1, 0.65) = 0.65
-        expect(results[0]!.score).toBe(0.65);
+        expect(results[0]!.score).toBe(0.15);
     });
 
     it('should prioritise hybrid matches over pure vector matches if score is higher', async () => {
@@ -113,11 +128,11 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
-        // Hybrid: max(0.65, 0.8 + 0.1) = 0.9
+        // Hybrid: max(0.1, 0.8 + 0.2) = 1.0
         // Vector Only: 0.85
         // Order: Hybrid > Vector Only
         expect(results[0]!.path).toBe('folder/hybrid.md');
-        expect(results[0]!.score).toBeCloseTo(0.9);
+        expect(results[0]!.score).toBeCloseTo(1.0);
 
         expect(results[1]!.path).toBe('folder/vector_only.md');
         expect(results[1]!.score).toBe(0.85);
@@ -131,5 +146,48 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
         expect(results).toHaveLength(0);
+    });
+    it('should filter out noise but keep significant graph neighbors', async () => {
+        const filePath = 'folder/source.md';
+
+        // 1. Setup: minScore is 0.5 (from mockSettings)
+        // 2. Setup Neighbors:
+        //    - "Good" Sibling: Score 0.25 (below minScore, but > floor 0.1) -> SHOULD KEEP
+        //    - "Bad" Sibling (Hub): Score 0.05 -> Bumped to Floor 0.1 -> Equal to floor -> SHOULD DROP
+        const neighbors: GraphSearchResult[] = [
+            { path: 'good.md', score: 0.25 } as GraphSearchResult,
+            { path: 'bad.md', score: 0.05 } as GraphSearchResult
+        ];
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighbors);
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([]); // No vectors
+
+        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
+
+        // Expectation:
+        // 'good.md' kept because 0.25 > 0.1 (Floor)
+        // 'bad.md' dropped because 0.1 !> 0.1 (Floor) AND < 0.5 (MinScore)
+
+        expect(results).toHaveLength(1);
+        expect(results[0]!.path).toBe('good.md');
+    });
+    it('should allow strong vector matches to bypass strict minSimilarityScore via the symmetric noise floor', async () => {
+        const filePath = 'folder/source.md';
+
+        // 1. Setup: minScore is 0.5 (from mockSettings)
+        // 2. Setup Vector:
+        //    - "Strong Vector": Score 0.45 (below minScore 0.5, but > floor 0.1) -> SHOULD KEEP
+        const vectors: GraphSearchResult[] = [
+            { path: 'vector_match.md', score: 0.45 } as GraphSearchResult
+        ];
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectors);
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([]);
+
+        const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
+
+        // Expectation:
+        // 'vector_match.md' kept because 0.45 > 0.1 (Floor) even though it is < 0.5 (MinScore)
+        expect(results).toHaveLength(1);
+        expect(results[0]!.path).toBe('vector_match.md');
+        expect(results[0]!.score).toBe(0.45);
     });
 });
