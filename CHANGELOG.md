@@ -13,6 +13,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Memory leak fix**: Ensured `index-ready` event listeners in `SimilarNotesView` are properly unregistered using Obsidian's `registerEvent` lifecycle hook, preventing listener accumulation when panes are frequently opened and closed.
+
 ## [6.0.0] - 2026-02-12
 
 ### User features
