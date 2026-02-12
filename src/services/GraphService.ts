@@ -131,7 +131,8 @@ export class GraphService extends Events {
                 googleApiKey: this.settings.googleApiKey,
                 indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
                 minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
-                ontologyPath: this.settings.ontologyPath
+                ontologyPath: this.settings.ontologyPath,
+                sanitizedModelId: this.persistenceManager.getSanitizedModelId(this.settings.embeddingModel, this.settings.embeddingDimension)
             };
 
             // 2. Spawn and Initialize worker via WorkerManager
@@ -313,7 +314,7 @@ export class GraphService extends Events {
         try {
             // Returns Uint8Array (MessagePack)
             const stateBuffer = await this.api.saveIndex();
-            await this.persistenceManager.saveState(stateBuffer);
+            await this.persistenceManager.saveState(stateBuffer, this.settings.embeddingModel, this.settings.embeddingDimension);
         } catch (error) {
             logger.error("[GraphService] Save failed:", error);
         }
@@ -327,7 +328,7 @@ export class GraphService extends Events {
     private async loadState(): Promise<boolean> {
         if (!this.api) return false;
 
-        const stateData = await this.persistenceManager.loadState();
+        const stateData = await this.persistenceManager.loadState(this.settings.embeddingModel, this.settings.embeddingDimension);
         if (!stateData) {
             logger.info("[GraphService] No existing state found (checked adapter). Starting fresh scan.");
             return false;
@@ -606,6 +607,9 @@ export class GraphService extends Events {
         // 1. Get Hollow Hits from Worker
         const hollowHits = await this.api.buildPriorityPayload(queryVector, query) as GraphSearchResult[];
 
+        // Note: buildPriorityPayload in worker now returns GraphSearchResult[] which includes tokenCount if available
+        // BUT we need to ensure the Hydrator respects or passes it through.
+
         // 2. Hydrate on Main Thread using ResultHydrator
         const { driftDetected, hydrated } = await this.hydrator.hydrate(hollowHits);
 
@@ -754,7 +758,8 @@ export class GraphService extends Events {
                 googleApiKey: settings.googleApiKey,
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
-                ontologyPath: settings.ontologyPath
+                ontologyPath: settings.ontologyPath,
+                sanitizedModelId: this.persistenceManager.getSanitizedModelId(settings.embeddingModel, settings.embeddingDimension)
             });
         }
     }

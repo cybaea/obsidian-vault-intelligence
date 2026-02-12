@@ -21,14 +21,17 @@ export class ContextAssembler {
      * Dynamically assembles context from search results based on the provided token budget.
      * Use relative score gaps to determine context density.
      */
-    public async assemble(results: VaultSearchResult[], query: string, budgetChars: number): Promise<{ context: string; usedFiles: string[] }> {
+    public async assemble(results: VaultSearchResult[], query: string, budgetTokens: number): Promise<{ context: string; usedFiles: string[] }> {
+        // Fallback for character estimation if needed
+        const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
         // Starvation Protection
-        const singleDocSoftLimit = Math.floor(budgetChars * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
+        const singleDocSoftLimitTokens = Math.floor(budgetTokens * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
+        const singleDocSoftLimitChars = Math.floor(budgetChars * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
 
-        logger.debug(`[ContextAssembler] Budget: ${budgetChars} chars. Soft Cap: ${singleDocSoftLimit} chars.`);
+        logger.debug(`[ContextAssembler] Budget: ${budgetTokens} tokens. Soft Cap: ${singleDocSoftLimitTokens} tokens.`);
 
         let constructedContext = "";
-        let currentUsage = 0;
+        let currentUsageTokens = 0;
         let includedCount = 0;
         let structuralCount = 0;
 
@@ -48,8 +51,8 @@ export class ContextAssembler {
 
         for (const doc of sortedResults) {
             // Check if we are already full or hit a safety limit
-            if (currentUsage >= budgetChars || includedCount >= maxFiles) {
-                const reason = currentUsage >= budgetChars ? "Budget exhausted" : `Max document safety limit (${maxFiles}) reached`;
+            if (currentUsageTokens >= budgetTokens || includedCount >= maxFiles) {
+                const reason = currentUsageTokens >= budgetTokens ? "Budget exhausted" : `Max document safety limit (${maxFiles}) reached`;
                 logger.info(`[ContextAssembler] Stop assembly: ${reason} after ${includedCount} documents.`);
                 break;
             }
@@ -73,19 +76,20 @@ export class ContextAssembler {
 
                 if (relativeRelevance >= primaryThreshold) {
                     // Scenario: Primary relevance.
-                    const isNotTooHuge = content.length < singleDocSoftLimit;
-                    const fitsInBudget = (currentUsage + content.length) < budgetChars;
+                    const docTokens = doc.tokenCount || Math.ceil(content.length / 4);
+                    const isNotTooHuge = docTokens < singleDocSoftLimitTokens;
+                    const fitsInBudget = (currentUsageTokens + docTokens) < budgetTokens;
 
                     if (isNotTooHuge && fitsInBudget) {
                         contentToAdd = content;
-                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path}`);
+                        logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${docTokens} tokens)`);
                     } else if (doc.excerpt) {
                         // Fallback: Use the relevant chunk found by the worker
                         contentToAdd = doc.excerpt;
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
-                        const availableSpace = Math.min(singleDocSoftLimit, budgetChars - currentUsage);
-                        contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
+                        const availableChars = Math.min(singleDocSoftLimitChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) clipped: ${file.path}`);
                     }
                 } else if (relativeRelevance >= supportingThreshold) {
@@ -94,11 +98,11 @@ export class ContextAssembler {
                         contentToAdd = doc.excerpt;
                         logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (from worker): ${file.path}`);
                     } else {
-                        const supportWindow = Math.floor(singleDocSoftLimit / 2);
-                        const availableSpace = Math.min(supportWindow, budgetChars - currentUsage);
+                        const supportWindowChars = Math.floor(singleDocSoftLimitChars / 2);
+                        const availableChars = Math.min(supportWindowChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
 
-                        if (availableSpace > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
-                            contentToAdd = this.clipContent(content, query, availableSpace, !!doc.isKeywordMatch);
+                        if (availableChars > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
+                            contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
                             logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (clipped): ${file.path}`);
                         }
                     }
@@ -130,7 +134,9 @@ export class ContextAssembler {
                 if (contentToAdd) {
                     const header = `\n--- Document: ${doc.path} (Relevance: ${doc.score.toFixed(2)}) ---\n`;
                     constructedContext += header + contentToAdd + "\n";
-                    currentUsage += contentToAdd.length;
+                    // Update usage
+                    const addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / 4);
+                    currentUsageTokens += addedTokens;
                     includedCount++;
                 }
 

@@ -172,9 +172,16 @@ export interface IVaultIntelligencePlugin {
     app: App;
     embeddingService: IEmbeddingService;
     graphService: {
+        commitConfigChange(): void;
         scanAll(forceWipe?: boolean): Promise<void>;
         updateConfig(settings: VaultIntelligenceSettings): Promise<void>;
-        commitConfigChange(): void;
+    };
+    manifest: { id: string };
+    persistenceManager: {
+        deleteState(fileName: string): Promise<void>;
+        getSanitizedModelId(modelId: string, dimension: number): string;
+        listAvailableStates(): Promise<string[]>;
+        purgeAllData(): Promise<void>;
     };
     saveSettings(): Promise<void>;
     settings: VaultIntelligenceSettings;

@@ -114,7 +114,7 @@ interface FeatureExtractorPipeline {
 }
 
 // Type for our unified extractor function
-type ChunkedExtractor = (text: string) => Promise<number[][]>;
+type ChunkedExtractor = (text: string) => Promise<{ vectors: number[][], tokenCount: number }>;
 
 // --- 5. Global Error Handling ---
 // Catch errors from sub-workers (like ONNX) or unhandled rejections
@@ -251,7 +251,7 @@ class PipelineSingleton {
                 await yieldToEventLoop();
             }
 
-            if (input_ids.length === 0) return [];
+            if (input_ids.length === 0) return { tokenCount: 0, vectors: [] };
 
             const vectors: number[][] = [];
             for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
@@ -273,7 +273,10 @@ class PipelineSingleton {
                 await yieldToEventLoop();
             }
 
-            return vectors;
+            return {
+                tokenCount: input_ids.length,
+                vectors: vectors
+            };
         };
     }
 
@@ -307,7 +310,7 @@ class PipelineSingleton {
                 await yieldToEventLoop();
             }
 
-            if (input_ids.length === 0) return [];
+            if (input_ids.length === 0) return { tokenCount: 0, vectors: [] };
 
             const vectors: number[][] = [];
             const idsArray = input_ids;
@@ -328,7 +331,10 @@ class PipelineSingleton {
                 await yieldToEventLoop();
             }
 
-            return vectors;
+            return {
+                tokenCount: input_ids.length,
+                vectors: vectors
+            };
         };
     }
 }
@@ -402,13 +408,13 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
         try {
             const extractor = await PipelineSingleton.getInstance(model, quantized);
-            const vectors = await extractor(text);
+            const { tokenCount, vectors } = await extractor(text);
 
-            logger.debug(`[Worker] Generated ${vectors.length} vectors for ID ${id}`);
+            logger.debug(`[Worker] Generated ${vectors.length} vectors (${tokenCount} tokens) for ID ${id}`);
 
             const response: WorkerSuccessResponse = {
                 id,
-                output: vectors,
+                output: { tokenCount, vectors },
                 status: 'success'
             };
             ctx.postMessage(response);

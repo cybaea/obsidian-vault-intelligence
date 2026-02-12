@@ -46,7 +46,7 @@ export class GeminiService {
         return this.settings.embeddingModel;
     }
 
-    public async generateContent(prompt: string): Promise<string> {
+    public async generateContent(prompt: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -55,7 +55,11 @@ export class GeminiService {
                 model: this.settings.chatModel
             });
 
-            return response.text || "";
+            const text = response.text || "";
+            const usage = (response as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }).usageMetadata;
+            const tokenCount = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+
+            return { text, tokenCount };
         });
     }
 
@@ -69,7 +73,7 @@ export class GeminiService {
         prompt: string,
         schema: Record<string, unknown>,
         options: { model?: string; systemInstruction?: string; tools?: Tool[] } = {}
-    ): Promise<string> {
+    ): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -86,7 +90,11 @@ export class GeminiService {
                 model: modelId
             });
 
-            return response.text || "";
+            const text = response.text || "";
+            const usage = (response as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } }).usageMetadata;
+            const tokenCount = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+
+            return { text, tokenCount };
         });
     }
 
@@ -96,7 +104,7 @@ export class GeminiService {
      * @param query - The search query.
      * @returns A synthesis of search results including facts and dates.
      */
-    public async searchWithGrounding(query: string): Promise<string> {
+    public async searchWithGrounding(query: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -111,7 +119,11 @@ export class GeminiService {
                 model: groundingModel
             });
 
-            return response.text || "No search results could be generated.";
+            const text = response.text || "No search results could be generated.";
+            const usage = (response as { usageMetadata?: { candidatesTokenCount?: number; promptTokenCount?: number } }).usageMetadata;
+            const tokenCount = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+
+            return { text, tokenCount };
         });
     }
 
@@ -122,12 +134,12 @@ export class GeminiService {
      * @param query - The problem statement or logic task.
      * @returns The text response, including code blocks and execution results.
      */
-    public async solveWithCode(query: string): Promise<string> {
+    public async solveWithCode(query: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
             if (!this.settings.enableCodeExecution || !this.settings.codeModel) {
-                return "Code execution is currently disabled in settings.";
+                return { text: "Code execution is currently disabled in settings.", tokenCount: 0 };
             }
 
             const codeModel = this.settings.codeModel;
@@ -143,7 +155,7 @@ export class GeminiService {
             // FIX: Manually parse parts to avoid SDK warning about non-text parts.
             // This also ensures the Main Agent sees the code and the result.
             const parts = response.candidates?.[0]?.content?.parts;
-            if (!parts) return "No result generated.";
+            if (!parts) return { text: "No result generated.", tokenCount: 0 };
 
             let resultString = "";
 
@@ -164,7 +176,10 @@ export class GeminiService {
                 }
             }
 
-            return resultString.trim() || "No result generated from code execution.";
+            const usage = (response as { usageMetadata?: { candidatesTokenCount?: number; promptTokenCount?: number } }).usageMetadata;
+            const tokenCount = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+
+            return { text: resultString.trim() || "No result generated from code execution.", tokenCount };
         });
     }
 
@@ -192,7 +207,7 @@ export class GeminiService {
         });
     }
 
-    public async embedText(text: string, options: EmbedOptions = {}): Promise<number[]> {
+    public async embedText(text: string, options: EmbedOptions = {}): Promise<{ values: number[], tokenCount: number }> {
         return this.retryOperation(async () => {
             if (!this.client) throw new Error("GenAI client not initialized.");
 
@@ -230,7 +245,17 @@ export class GeminiService {
                 throw new Error("No embedding values found.");
             }
 
-            return firstEmbedding.values;
+            // Extract token count with strict defensive coalescing
+            const usage = (result as { usageMetadata?: { promptTokenCount?: number } }).usageMetadata;
+            const count = usage?.promptTokenCount || firstEmbedding.statistics?.tokenCount;
+            const tokens = (typeof count === 'number' && !isNaN(count) && count > 0)
+                ? count
+                : Math.ceil(text.length / 4); // Heuristic fallback
+
+            return {
+                tokenCount: tokens,
+                values: firstEmbedding.values
+            };
         });
     }
 
@@ -303,12 +328,12 @@ export class GeminiService {
             };
 
             // CASTING: The SDK types might be strict. We pass it as unknown if needed.
-            const response = await this.generateStructuredContent(prompt, schema as unknown as Record<string, unknown>, {
+            const { text } = await this.generateStructuredContent(prompt, schema as unknown as Record<string, unknown>, {
                 model: this.settings.reRankingModel || this.settings.chatModel
             });
 
             try {
-                const parsed = JSON.parse(response) as unknown;
+                const parsed = JSON.parse(text) as unknown;
                 // Validation: ensure it's an array
                 if (Array.isArray(parsed)) return parsed as unknown[];
                 return [];

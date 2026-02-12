@@ -18,6 +18,7 @@ export interface GraphNodeData {
     size: number;
     tags?: string[];
     title?: string;
+    tokenCount?: number; // New: total tokens for the document
     type: NodeType;
 }
 
@@ -44,6 +45,7 @@ export interface GraphSearchResult {
     score: number;
     start?: number;
     title?: string;
+    tokenCount?: number; // New: tokens for the specific result/chunk
 }
 
 /**
@@ -61,6 +63,7 @@ export interface WorkerConfig {
     indexingDelayMs: number;
     minSimilarityScore: number;
     ontologyPath: string;
+    sanitizedModelId: string;
 }
 
 /**

@@ -43,12 +43,12 @@ export class RoutingEmbeddingService implements IEmbeddingService {
         return this.geminiService;
     }
 
-    async embedQuery(text: string, priority?: EmbeddingPriority): Promise<number[]> {
+    async embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }> {
         logger.debug(`[RoutingEmbeddingService] Routing query to ${this.settings.embeddingProvider}`);
         return this.currentService.embedQuery(text, priority);
     }
 
-    async embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<number[][]> {
+    async embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }> {
         logger.debug(`[RoutingEmbeddingService] Routing document to ${this.settings.embeddingProvider}`);
         return this.currentService.embedDocument(text, title, priority);
     }

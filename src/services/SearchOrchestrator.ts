@@ -85,7 +85,8 @@ export class SearchOrchestrator {
             isKeywordMatch: false,
             isTitleMatch: false,
             path: r.path,
-            score: r.score
+            score: r.score,
+            tokenCount: r.tokenCount
         }));
 
         const kResults: VaultSearchResult[] = keywordResults.map(r => ({
@@ -93,7 +94,8 @@ export class SearchOrchestrator {
             isKeywordMatch: true,
             isTitleMatch: false,
             path: r.path,
-            score: r.score
+            score: r.score,
+            tokenCount: r.tokenCount
         }));
 
         const merged = this.mergeAndRank(vResults, kResults, limit);
@@ -109,7 +111,7 @@ export class SearchOrchestrator {
 
         if (this.settings.enableDualLoop) {
             // Dual-Loop: Reflex (Loop 1) is handled by UI. This is Analyst (Loop 2).
-            const queryVector = await this.embeddingService.embedQuery(query);
+            const { vector: queryVector } = await this.embeddingService.embedQuery(query);
 
             // 1. Build Payload (Graph + Vector + Keyword)
             const payload = await this.graphService.buildPriorityPayload(queryVector, query);
@@ -119,11 +121,12 @@ export class SearchOrchestrator {
 
             // 3. Map to VaultSearchResult
             return reranked.map((item: unknown) => {
-                const r = item as { id: string, score: number, reasoning: string };
+                const r = item as { id: string, reasoning: string, score: number, tokenCount?: number };
                 return {
                     content: r.reasoning,
                     path: r.id.split('#')[0], // Simple path extraction
                     score: r.score,
+                    tokenCount: r.tokenCount
                 } as VaultSearchResult;
             });
         }

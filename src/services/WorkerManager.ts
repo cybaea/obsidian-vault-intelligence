@@ -59,8 +59,8 @@ export class WorkerManager {
                 return await this.embeddingService.embedQuery(text);
             }
             // Default: Embed as document (for indexing)
-            const vectors = await this.embeddingService.embedDocument(text, title);
-            return vectors[0];
+            const { tokenCount, vectors } = await this.embeddingService.embedDocument(text, title);
+            return { tokenCount, vector: vectors[0] || [] };
         });
 
         return await api.initialize(config, fetcher, embedder);

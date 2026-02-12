@@ -6,4 +6,5 @@ export interface VaultSearchResult {
     isTitleMatch?: boolean;
     path: string;
     score: number;
+    tokenCount?: number;
 }
