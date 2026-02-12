@@ -101,3 +101,4 @@ Translate technical changes into compelling narratives. You are not just listing
 2. Read `CHANGELOG.md`.
 3. Apply your reasoning to find the Pillars.
 4. Generate the three files.
+5. Link the GitHub release notes in our VitePress documentation.
