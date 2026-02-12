@@ -45,6 +45,7 @@ Configure how connections and similar notes are discovered.
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
 | Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
 | Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) and local models to improve retrieval accuracy. Supports values up to `2048` for Gemini English-only vaults. |
+| Slim-Sync | _Enabled_ | Automatically activated. Reduces the disk footprint of your searchable index by up to 90%, making it safe for mobile sync (Obsidian Sync, iCloud, etc.) without hitting storage limits. |
 | Re-index vault | None | Wipe and rebuild all embeddings. **Note:** The plugin now manages this automatically; re-indexing is queued when you change critical embedding settings (provider, model, or chunk size) and triggers when you close the settings dialog. |
 
 ## Gardener
@@ -61,6 +62,16 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 | Excluded folders | _Default_ | Folders the gardener should ignore. |
 | Recent note limit | `10` | Max notes to scan in a single session. |
 | Context budget | `100,000` | Max token usage for a single gardener analysis. |
+
+## Storage (Mobile-Ready)
+
+Manage local vector databases and sharded storage to maintain vault performance and sync reliability.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Active database shards | _Dynamic_ | Displays a list of stored indexes. The plugin uses **Model-Specific Sharding** to isolate data for different embedding models, preventing corruption when switching between Local and Gemini providers. |
+| Delete shard | `None` | Remove inactive indexes to free up disk space. You cannot delete the currently active shard. |
+| Purge all data | `None` | A "nuclear" reset that completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data. |
 
 ## Performance and System
 

@@ -57,7 +57,13 @@ export default withMermaid(defineConfig({
         'devs/settings_best_practices.md',
         'devs/docs-recommendations.md',
         'devs/2026-agent-support.md',
-        'devs/web-worker-embedding.md'
+        'devs/web-worker-embedding.md',
+        'releases/announcement-*.md',
+        'releases/mastodon-*.md',
+        'releases/about.md',
+        'README.md',
+        'README_DOC.md',
+        'docs/My ontology system.md'
     ],
     vite: {
         build: {
@@ -115,10 +121,22 @@ export default withMermaid(defineConfig({
                 ]
             },
             {
+                text: 'Release History',
+                items: [
+                    { text: '5.2.0 — Performance Update', link: '/releases/release-5.2.0' },
+                    { text: '5.1.0 — Multilingual Mastery', link: '/releases/release-5.1.0' },
+                    { text: '5.0.0 — The Search Evolution', link: '/releases/release-5.0.0' },
+                    { text: '4.3.1 — Reliability Fixes', link: '/releases/release-4.3.1' },
+                    { text: '4.3.0 — The Agentic Shift', link: '/releases/release-4.3.0' }
+                ]
+            },
+            {
                 text: 'Development',
                 items: [
                     { text: 'Contributing', link: '/CONTRIBUTING' },
                     { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
+                    { text: 'Standards & SOA', link: '/devs/ARCHITECTURE_AND_STANDARDS' },
+                    { text: 'Reference Links', link: '/devs/REFERENCE_LINKS' },
                     { text: 'Shadow Graph Technical', link: '/devs/shadow-graph-technical' },
                     { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
                     { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
