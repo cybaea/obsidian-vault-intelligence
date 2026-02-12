@@ -80,7 +80,7 @@ export interface WorkerAPI {
     getFileState(path: string): Promise<{ mtime: number, size: number, hash: string } | null>;
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
-    getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]>;
+    getSimilar(path: string, limit?: number, minScore?: number, onlyPaths?: string[]): Promise<GraphSearchResult[]>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;

@@ -197,6 +197,8 @@ export const GRAPH_CONSTANTS = {
         HYBRID_BOOST: 0.1,
         NEIGHBOR_FLOOR: 0.65
     },
+    /** Length of fallback excerpt when no vector match is found */
+    FALLBACK_EXCERPT_LENGTH: 300,
     /** Search range (in characters) around original offsets for drift alignment */
     HYDRATION_SEARCH_RANGE: 5000,
     /** Throttle/Idle time before auto-saving graph state (ms) */

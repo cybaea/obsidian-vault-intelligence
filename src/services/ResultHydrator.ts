@@ -81,7 +81,9 @@ export class ResultHydrator {
 
         // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
         if (!expectedHash && !start && !end) {
-            return body.substring(0, 300).trim() + "...";
+            // Strip markdown-style links/images for cleaner UI if it's a raw fallback
+            const cleanBody = body.replace(/!\[\[.*?\]\]/g, '').replace(/!\[.*?\]\(.*?\)/g, '');
+            return cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim() + "...";
         }
 
         // 1. Direct match check (worker start/end is relative to full file content)

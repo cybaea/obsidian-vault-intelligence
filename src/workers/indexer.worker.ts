@@ -485,7 +485,7 @@ const IndexerWorker: WorkerAPI = {
         return Array.from(results.values());
     },
 
-    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
+    async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0, onlyPaths?: string[]): Promise<GraphSearchResult[]> {
         if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
         if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
         const normalizedPath = workerNormalizePath(path);
@@ -517,15 +517,24 @@ const IndexerWorker: WorkerAPI = {
             for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
         }
 
+        const whereClause: Record<string, unknown> = { path: { nin: [normalizedPath] } };
+
+        // If targeted paths are provided, scope the search strictly to them
+        if (onlyPaths && onlyPaths.length > 0) {
+            whereClause.path = { in: onlyPaths.map(workerNormalizePath) };
+        }
+
         const results = await search(orama, {
-            limit: WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP,
+            // Use DEEP limit for targeted search to avoid starvation (deduplication happening before we find all files)
+            limit: onlyPaths ? WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEEP : limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
+            // If targeted, we can be more permissive if needed, but strict is usually fine for vector search
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: { property: 'embedding', value: centroid },
-            where: { path: { nin: [normalizedPath] } }
+            where: whereClause
         });
 
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
+        return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
 
     async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) {

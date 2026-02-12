@@ -10,6 +10,11 @@ import { GraphSearchResult } from '../../src/types/graph';
 
 // Mock dependencies
 const mockPlugin = {
+    app: {
+        vault: {
+            getAbstractFileByPath: vi.fn()
+        }
+    },
     settings: {
         similarNotesLimit: 10
     }
@@ -20,6 +25,7 @@ const mockGeminiService = {} as any;
 const mockEmbeddingService = {} as any;
 const mockPersistenceManager = {} as any;
 const mockSettings = {
+    minSimilarityScore: 0.5,
     similarNotesLimit: 10
 } as any;
 

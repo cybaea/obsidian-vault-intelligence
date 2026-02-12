@@ -437,7 +437,7 @@ export class GraphService extends Events {
         return hydrated;
     }
 
-    public async getSimilar(path: string, limit?: number): Promise<GraphSearchResult[]> {
+    public async getSimilar(path: string, limit?: number, minScore?: number, onlyPaths?: string[]): Promise<GraphSearchResult[]> {
         if (!this.api) return [];
 
         // Ensure the source file is indexed before looking for similar files
@@ -468,14 +468,15 @@ export class GraphService extends Events {
         }
 
         if (!this.api) return [];
-        const rawResults = await this.api.getSimilar(path, limit);
+        const rawResults = await this.api.getSimilar(path, limit, minScore, onlyPaths);
         const { driftDetected, hydrated } = await this.hydrator.hydrate(rawResults);
 
         for (const file of driftDetected) {
             void this.debounceUpdate(file.path, file);
         }
 
-        return hydrated;
+        const threshold = minScore ?? this.settings.minSimilarityScore;
+        return hydrated.filter(r => r.score >= threshold);
     }
 
     /**
@@ -486,15 +487,48 @@ export class GraphService extends Events {
      * @returns Hybrid results ranked by merged score.
      */
     public async getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]> {
+        // 1. Parallel Fetch: Neighbors + Global Vectors (Top 50, minScore 0)
         const [vectorResults, neighborResults] = await Promise.all([
-            this.getSimilar(path, limit),
+            this.getSimilar(path, 50, 0),
             this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
         ]);
 
         const mergedMap = new Map<string, GraphSearchResult>();
         const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
 
-        // 1. Process Neighbors (Baseline Graph Context)
+        // 2. Identify "Missing" Neighbors (Neighbors that didn't appear in the top 50 global vectors)
+        // We want to fetch excerpts for these specifically.
+        const vectorPathSet = new Set(vectorResults.map(v => v.path));
+        const missingNeighborPaths = neighborResults
+            .filter(n => !vectorPathSet.has(n.path) && n.path !== path)
+            .map(n => n.path);
+
+        // 3. Targeted Fetch for Missing Neighbors
+        let targetedVectors: GraphSearchResult[] = [];
+        if (missingNeighborPaths.length > 0) {
+            // Targeted search: ask for 1 result per missing neighbor (effectively) 
+            // but rely on worker's deep limit to find the best chunk.
+            targetedVectors = await this.getSimilar(path, missingNeighborPaths.length, 0, missingNeighborPaths);
+        }
+
+        // 4. Merge All Sources
+        // Helper to process a vector result (whether global or targeted)
+        const processVector = (v: GraphSearchResult) => {
+            if (v.path === path) return;
+            const existing = mergedMap.get(v.path);
+            if (existing) {
+                // Merge Logic: Use Vector Excerpt + Neighbor Description + Boosted Score
+                mergedMap.set(v.path, {
+                    ...v,
+                    description: existing.description,
+                    score: Math.max(existing.score, v.score + weights.HYBRID_BOOST)
+                });
+            } else {
+                mergedMap.set(v.path, v);
+            }
+        };
+
+        // Initialize map with Neighbors (Floor Score)
         for (const n of neighborResults) {
             if (n.path === path) continue;
             mergedMap.set(n.path, {
@@ -503,23 +537,20 @@ export class GraphService extends Events {
             });
         }
 
-        // 2. Blend with Vector similarity
-        for (const v of vectorResults) {
-            if (v.path === path) continue;
-            const existing = mergedMap.get(v.path);
-            if (existing) {
-                // If in both, take the better of (neighbor floor, vector match + boost)
-                // Also PREFER the vector properties (anchorHash, offsets) for clean snippets
-                mergedMap.set(v.path, {
-                    ...v,
-                    score: Math.max(existing.score, v.score + weights.HYBRID_BOOST)
-                });
-            } else {
-                mergedMap.set(v.path, v);
-            }
-        }
+        // Merge Global Vectors
+        for (const v of vectorResults) processVector(v);
 
-        return Array.from(mergedMap.values())
+        // Merge Targeted Vectors (Hydrate the neighbors that were missing)
+        for (const v of targetedVectors) processVector(v);
+
+        // 5. Final Filter & Sort
+        // Safety Net: Hydrate final list to ensure any neighbor that STILL lacks an excerpt gets a fallback
+        // (This happens if targeted search found nothing, e.g. empty file or very short file)
+        const mergedList = Array.from(mergedMap.values());
+        const { hydrated: finalHydrated } = await this.hydrator.hydrate(mergedList);
+
+        return finalHydrated
+            .filter(r => r.score >= this.settings.minSimilarityScore)
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
     }
