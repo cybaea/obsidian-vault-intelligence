@@ -117,12 +117,17 @@ export class ResultHydrator {
         return clean;
     }
 
+    private sanitizeExcalidrawContent(content: string): string {
+        return content.replace(/```compressed-json[\s\S]*?```/g, '');
+    }
+
     /**
      * Aligns search results with current file content using hash anchors.
      * This handles "drift" where the file has changed but the index hasn't caught up.
      */
     private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
-        const content = await this.vaultManager.readFile(file);
+        let content = await this.vaultManager.readFile(file);
+        content = this.sanitizeExcalidrawContent(content);
         const { body } = splitFrontmatter(content);
 
         // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
@@ -133,23 +138,21 @@ export class ResultHydrator {
         }
 
         // 1. Direct match check (worker start/end is relative to full file content)
-        const snippet = content.substring(start, end).trim();
-        if (fastHash(snippet) === expectedHash) return snippet;
+        const snippet = content.substring(start, end);
+        if (fastHash(snippet) === expectedHash) return snippet.trim();
 
         // 2. Drift Detection: Look for anchor in a sliding window
         const searchRange = GRAPH_CONSTANTS.HYDRATION_SEARCH_RANGE;
         const searchStart = Math.max(0, start - searchRange);
         const searchEnd = Math.min(content.length, end + searchRange);
         const window = content.substring(searchStart, searchEnd);
+        const chunkLength = end - start;
 
-        const lines = window.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line) continue;
-
-            if (fastHash(line) === expectedHash) {
-                const actualStart = window.indexOf(line);
-                return window.substring(actualStart, actualStart + (end - start)).trim();
+        // Slide a window of the exact chunk length across the search range
+        for (let i = 0; i <= window.length - chunkLength; i++) {
+            const candidate = window.substring(i, i + chunkLength);
+            if (fastHash(candidate) === expectedHash) {
+                return candidate.trim();
             }
         }
 

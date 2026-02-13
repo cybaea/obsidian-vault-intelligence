@@ -595,8 +595,25 @@ const IndexerWorker: WorkerAPI = {
                 await recreateOrama();
                 return false;
             }
+
             try {
-                load(orama, parsed.orama);
+                // Try to load FULL index from Hot Store first!
+                let loadedFull = false;
+                try {
+                    const fullRaw = await storage.get(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`);
+                    if (fullRaw) {
+                        load(orama, fullRaw as RawData);
+                        workerLogger.info("[loadIndex] Restored FULL index from Hot Store.");
+                        loadedFull = true;
+                    }
+                } catch (e) {
+                    workerLogger.warn("[loadIndex] Failed to read Hot Store, falling back to SLIM index.", e);
+                }
+
+                if (!loadedFull) {
+                    workerLogger.info("[loadIndex] Hot Store empty or failed, loading SLIM index.");
+                    load(orama, parsed.orama);
+                }
             } catch (e) {
                 workerLogger.warn("Orama load failed", e);
                 return false;

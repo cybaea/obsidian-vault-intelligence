@@ -258,6 +258,7 @@ export class GraphService extends Events {
                 logger.debug(`[GraphService] Debounce finished for ${path} (${isActive ? 'Active' : 'Background'}). Updating index.`);
                 await this.api.updateFile(path, content, mtime, size, basename, links);
                 this.requestSave();
+                this.trigger('index-updated');
             });
         }, delay);
 
