@@ -7,13 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 New features are added in the "Unreleased" section.
 
-### [Unreleased]
+## [Unreleased]
 
 ### User features
 
 -   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in an infinite "Content drifted" loading loop immediately after restarting Obsidian.
 -   **UI performance**: Resolved severe visual flickering in the sidebar that occurred when multiple notes were syncing or re-indexing in the background.
-
 
 ### Developer features
 
