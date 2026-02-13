@@ -7,7 +7,7 @@ import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_C
 import { STORES, StorageProvider } from '../services/StorageProvider';
 import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig } from '../types/graph';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
-import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
+import { extractLinks, fastHash, resolvePath, sanitizeExcalidrawContent, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
 let graph: Graph;
 let orama: AnyOrama;
@@ -782,11 +782,10 @@ const IndexerWorker: WorkerAPI = {
         if (content.trim().length === 0) return;
 
         const cleanlyContent = sanitizeExcalidrawContent(content);
-        const { body, frontmatter } = splitFrontmatter(cleanlyContent);
+        const { body, bodyOffset, frontmatter } = splitFrontmatter(cleanlyContent);
         const parsedFM = parseYaml(frontmatter);
         const context = generateContextString(title, parsedFM, config);
 
-        const bodyOffset = cleanlyContent.indexOf(body);
         const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
 
         const batchedDocs: OramaDocument[] = [];
@@ -930,9 +929,7 @@ function ensureArray(val: unknown): unknown[] {
     return Array.isArray(val) ? val : [val];
 }
 
-function sanitizeExcalidrawContent(content: string): string {
-    return content.replace(/```compressed-json[\s\S]*?```/g, '');
-}
+
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);

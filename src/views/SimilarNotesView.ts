@@ -126,6 +126,6 @@ export class SimilarNotesView extends ItemView {
     // Helper to just refresh the view
     public async updateView() {
         const file = this.plugin.app.workspace.getActiveFile();
-        await this.updateForFile(file);
+        await this.updateForFile(file, true);
     }
 }

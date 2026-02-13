@@ -79,16 +79,16 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>, basePa
  * @param text - The full markdown file content.
  * @returns An object containing the frontmatter string and the body string.
  */
-export function splitFrontmatter(text: string): { frontmatter: string, body: string } {
+export function splitFrontmatter(text: string): { frontmatter: string, body: string, bodyOffset: number } {
     if (!text.startsWith("---")) {
-        return { body: text, frontmatter: "" };
+        return { body: text, bodyOffset: 0, frontmatter: "" };
     }
 
     const firstLineEnd = text.indexOf("\n");
-    if (firstLineEnd === -1) return { body: text, frontmatter: "" };
+    if (firstLineEnd === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     const secondSeparator = text.indexOf("\n---", firstLineEnd);
-    if (secondSeparator === -1) return { body: text, frontmatter: "" };
+    if (secondSeparator === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     // Find the end of the second separator line
     let bodyStart = secondSeparator + 4; // Length of "\n---"
@@ -101,6 +101,7 @@ export function splitFrontmatter(text: string): { frontmatter: string, body: str
 
     return {
         body: text.substring(bodyStart),
+        bodyOffset: bodyStart,
         frontmatter: text.substring(0, bodyStart).trim()
     };
 }
@@ -239,6 +240,16 @@ export function extractLinks(text: string): string[] {
         i++;
     }
 
+
     return links;
+}
+
+/**
+ * Strips Excalidraw compressed JSON blocks from content.
+ * @param content - The raw file content.
+ * @returns The content with the compressed JSON block removed.
+ */
+export function sanitizeExcalidrawContent(content: string): string {
+    return content.replace(/```compressed-json[\s\S]*?```/g, (match) => " ".repeat(match.length));
 }
 

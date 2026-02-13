@@ -2,7 +2,7 @@ import { App, TFile } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult } from "../types/graph";
-import { fastHash, splitFrontmatter } from "../utils/link-parsing";
+import { fastHash, sanitizeExcalidrawContent, splitFrontmatter } from "../utils/link-parsing";
 import { logger } from "../utils/logger";
 import { VaultManager } from "./VaultManager";
 
@@ -122,37 +122,45 @@ export class ResultHydrator {
      * This handles "drift" where the file has changed but the index hasn't caught up.
      */
     private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
-        const content = await this.vaultManager.readFile(file);
-        const { body } = splitFrontmatter(content);
+        const rawContent = await this.vaultManager.readFile(file);
+
+        // 1. Sanitize to match Worker's view of the file
+        const content = sanitizeExcalidrawContent(rawContent);
+        // Note: We don't split frontmatter here because the worker offsets 
+        // already account for the bodyOffset. We just need to ensure the full 
+        // sanitized content is searchable.
 
         // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
         if (!expectedHash && !start && !end) {
-            // Strip markdown-style links/images for cleaner UI if it's a raw fallback
+            const { body } = splitFrontmatter(content);
             const cleanBody = body.replace(/!\[\[.*?\]\]/g, '').replace(/!\[.*?\]\(.*?\)/g, '');
             return cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim() + "...";
         }
 
-        // 1. Direct match check (worker start/end is relative to full file content)
-        const snippet = content.substring(start, end).trim();
-        if (fastHash(snippet) === expectedHash) return snippet;
+        // 2. Direct match check
+        const targetLen = end - start;
+        const snippet = content.substring(start, end);
+        const actualHash = fastHash(snippet);
+        if (actualHash === expectedHash) return snippet;
 
-        // 2. Drift Detection: Look for anchor in a sliding window
-        const searchRange = GRAPH_CONSTANTS.HYDRATION_SEARCH_RANGE;
-        const searchStart = Math.max(0, start - searchRange);
-        const searchEnd = Math.min(content.length, end + searchRange);
-        const window = content.substring(searchStart, searchEnd);
+        logger.debug(`[ResultHydrator] Direct match failed for ${file.path}. Expected hash: ${expectedHash}, Actual: ${actualHash}, Offsets: [${start}, ${end}], Length: ${targetLen}`);
 
-        const lines = window.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line) continue;
+        // 3. Sliding Window Healing: Look for a chunk of targetLen with matching hash
+        const searchRange = GRAPH_CONSTANTS.HYDRATION_SEARCH_RANGE || 2000;
+        const scanStart = Math.max(0, start - searchRange);
+        const scanEnd = Math.min(content.length, end + searchRange);
 
-            if (fastHash(line) === expectedHash) {
-                const actualStart = window.indexOf(line);
-                return window.substring(actualStart, actualStart + (end - start)).trim();
+        // Performance Optimization: If targetLen is huge, we might want to skip this
+        // for average chunks (usually < 2000 chars), this is fine.
+        for (let i = scanStart; i <= scanEnd - targetLen; i++) {
+            const candidate = content.substring(i, i + targetLen);
+            if (fastHash(candidate) === expectedHash) {
+                logger.debug(`[ResultHydrator] Healed drift for ${file.path} at new offset ${i}`);
+                return candidate;
             }
         }
 
+        logger.warn(`[ResultHydrator] Content drift detected (deep) for ${file.path}. Could not heal via sliding window.`);
         return null; // Deep drift
     }
 }

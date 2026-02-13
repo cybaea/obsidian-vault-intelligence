@@ -11,6 +11,8 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Content drift fix**: Resolved a persistent issue where notes were incorrectly marked as "Content drifted" in the Similar Notes view, causing unnecessary re-indexing loops on plugin reload.
+
 ### Developer features
 
 -   **Batched debouncing**: Replaced per-file modification timers with a single queue-based debouncer in `GraphService`, preventing resource sprawl during large sync operations (ie Git pulls).
