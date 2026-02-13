@@ -221,6 +221,43 @@ a.similar-notes-link:hover {
     opacity: 0.8;
 }
 
+.scanning-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: var(--size-4-2) 0;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.scanning-indicator::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-accent);
+    animation: vi-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes vi-pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+}
+
 /* ------------------------------------ */
 
 /* Force the System Instruction setting to stack vertically */

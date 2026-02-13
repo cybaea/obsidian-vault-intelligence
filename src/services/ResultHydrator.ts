@@ -143,7 +143,14 @@ export class ResultHydrator {
         const actualHash = fastHash(snippet);
         if (actualHash === expectedHash) return snippet;
 
-        logger.debug(`[ResultHydrator] Direct match failed for ${file.path}. Expected hash: ${expectedHash}, Actual: ${actualHash}, Offsets: [${start}, ${end}], Length: ${targetLen}`);
+        // DIAGNOSTIC LOGGING (only on mismatch)
+        const escapedSnippet = snippet.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        logger.debug(`[ResultHydrator] Direct match failed for ${file.path}. Expected hash: ${expectedHash}, Actual: ${actualHash}, Offsets: [${start}, ${end}], Length: ${targetLen}, Trimmed: "${snippet.trim()}"`);
+        logger.debug(`[ResultHydrator] Failed Snippet Content: "${escapedSnippet}"`);
+
+        // Check if body offset calc matches what we might expect
+        const { bodyOffset } = splitFrontmatter(content);
+        logger.debug(`[ResultHydrator] Recalculated bodyOffset: ${bodyOffset}. Relative chunk start: ${start - bodyOffset}`);
 
         // 3. Sliding Window Healing: Look for a chunk of targetLen with matching hash
         const searchRange = GRAPH_CONSTANTS.HYDRATION_SEARCH_RANGE || 2000;

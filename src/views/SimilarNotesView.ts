@@ -26,6 +26,19 @@ export class SimilarNotesView extends ItemView {
                 void this.updateView();
             })
         );
+
+        // Progressive refresh as files are indexed
+        this.registerEvent(
+            this.graphService.on('file-indexed', (path: string) => {
+                const activeFile = this.plugin.app.workspace.getActiveFile();
+                // Refresh if the indexed file is the one we are looking at,
+                // or if we are currently showing a "Loading" state for any file.
+                if (path === activeFile?.path || this.contentEl.querySelector(".loading-text")) {
+                    logger.debug(`[SimilarNotesView] Granular refresh for ${path}`);
+                    void this.updateView();
+                }
+            })
+        );
     }
 
     getViewType() {
@@ -63,7 +76,13 @@ export class SimilarNotesView extends ItemView {
 
         container.createEl("h4", { text: `Similar to: ${file.basename}` });
 
-        if (!this.graphService.isReady || this.graphService.isScanning) {
+        // Add indicator if background scanning is active
+        if (this.graphService.isScanning) {
+            const indicator = container.createDiv({ cls: "scanning-indicator" });
+            indicator.createSpan({ text: "Updating vault index..." });
+        }
+
+        if (!this.graphService.isReady) {
             container.createEl("p", { cls: "loading-text", text: "Loading connections..." });
             return;
         }

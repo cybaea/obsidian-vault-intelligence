@@ -105,6 +105,7 @@ interface OramaHit {
 }
 
 interface SerializedIndexState {
+    dataVersion: number;
     embeddingChunkSize?: number;
     embeddingDimension: number;
     embeddingModel: string;
@@ -590,8 +591,14 @@ const IndexerWorker: WorkerAPI = {
             const loadedModel = parsed.embeddingModel;
             const expectedModel = config.embeddingModel;
 
+            if (parsed.dataVersion !== GRAPH_CONSTANTS.DATA_VERSION) {
+                workerLogger.warn(`Index version mismatch: ${parsed.dataVersion} vs ${GRAPH_CONSTANTS.DATA_VERSION}`);
+                await recreateOrama();
+                return false;
+            }
+
             if (loadedModel !== expectedModel || loadedDimension !== expectedDimension) {
-                workerLogger.warn(`Index mismatch: ${loadedModel} vs ${expectedModel}`);
+                workerLogger.warn(`Index model/dimension mismatch: ${loadedModel} vs ${expectedModel}`);
                 await recreateOrama();
                 return false;
             }
@@ -674,6 +681,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         const serialized: SerializedIndexState = {
+            dataVersion: GRAPH_CONSTANTS.DATA_VERSION,
             embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,

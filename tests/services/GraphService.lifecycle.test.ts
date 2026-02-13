@@ -47,10 +47,12 @@ const mockGeminiService = {} as any;
 const mockEmbeddingService = {} as any;
 
 const mockPersistenceManager = {
+    checkDataVersion: vi.fn().mockResolvedValue(true),
     ensureGitignore: vi.fn(),
     getSanitizedModelId: vi.fn((model, dim) => `sanitized-${model}-${dim}`),
-    loadState: vi.fn().mockResolvedValue(null), // Default to fresh start
+    loadState: vi.fn().mockResolvedValue(null),
     saveState: vi.fn(),
+    updateDataVersion: vi.fn(),
 };
 
 const mockWorkerApi = {

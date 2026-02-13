@@ -190,6 +190,8 @@ export const GRAPH_CONSTANTS = {
     ACTIVE_FILE_INDEXING_DELAY_MS: 30000,
     /** Default directory for index storage (deprecated) */
     DATA_DIR: "data",
+    /** Version for the persistent data format. Increment to force a full re-index. */
+    DATA_VERSION: 4,
     /** Default indexing delay if not configured (5s) */
     DEFAULT_INDEXING_DELAY_MS: 5000,
     /** Scoring for Explorer (Vector + Graph) enhanced similarity */
@@ -233,7 +235,7 @@ export const GRAPH_CONSTANTS = {
         CENTRALITY: 0.2,
         /** Vector Similarity weight */
         SIMILARITY: 0.6
-    }
+    },
 };
 
 export const ONTOLOGY_CONSTANTS = {

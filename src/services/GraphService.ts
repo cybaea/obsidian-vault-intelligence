@@ -292,6 +292,7 @@ export class GraphService extends Events {
 
                     logger.debug(`[GraphService] Updating index for ${path}.`);
                     await this.api.updateFile(path, content, mtime, size, basename, links);
+                    this.trigger('file-indexed', path);
                 } catch (error) {
                     logger.error(`[GraphService] Failed to index ${path} in batch`, error);
                 }
@@ -386,6 +387,13 @@ export class GraphService extends Events {
      * @returns true if migration (full scan) is needed.
      */
     private async loadState(): Promise<boolean> {
+        // 1. Check Data Version First
+        const isCompatibleVersion = await this.persistenceManager.checkDataVersion(GRAPH_CONSTANTS.DATA_VERSION);
+        if (!isCompatibleVersion) {
+            logger.info("[GraphService] Data version mismatch. Forcing full re-index.");
+            return true; // FORCE WIPE
+        }
+
         if (!this.api || !this.activeModelId || !this.activeDimension) return false;
 
         const stateData = await this.persistenceManager.loadState(this.activeModelId, this.activeDimension);
@@ -708,9 +716,10 @@ export class GraphService extends Events {
         this._isScanning = true;
         try {
             if (shouldWipe) {
-                logger.info("[GraphService] Force resetting Graph and Orama index before scan.");
+                logger.info("[GraphService] Performing CLEAN RE-INDEX (Force Reset).");
                 await this.api.fullReset();
-
+                // ATOMIC COMMIT: Stamp the new version ONLY after the reset is complete
+                await this.persistenceManager.updateDataVersion(GRAPH_CONSTANTS.DATA_VERSION);
                 // Align committed snapshot with current settings after wipe
                 this.committedSettings = {
                     embeddingChunkSize: this.settings.embeddingChunkSize,
@@ -725,8 +734,9 @@ export class GraphService extends Events {
 
             const files = this.vaultManager.getMarkdownFiles();
             const states = await this.api.getFileStates();
+            const stateCount = Object.keys(states).length;
 
-            logger.info(`[GraphService] Comparing ${files.length} files against index.`);
+            logger.info(`[GraphService] Comparing ${files.length} vault files against ${stateCount} indexed nodes.`);
             if (shouldWipe) {
                 new Notice(`GraphService: scanning ${files.length} files`);
             }
@@ -764,6 +774,7 @@ export class GraphService extends Events {
                         const links = this.getResolvedLinks(file);
                         await this.api.updateFile(file.path, content, mtime, size, basename, links);
                         count++;
+                        this.trigger('file-indexed', file.path);
 
                         if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
                             logger.debug(`[GraphService] Processed ${count} files...`);
@@ -795,6 +806,7 @@ export class GraphService extends Events {
             }
         } finally {
             this._isScanning = false;
+            logger.info("[GraphService] Triggering 'index-ready' event.");
             this.trigger('index-ready');
         }
     }

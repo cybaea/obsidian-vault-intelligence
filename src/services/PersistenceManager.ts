@@ -241,6 +241,41 @@ export class PersistenceManager {
         }
     }
 
+    /**
+     * Checks if the stored data version matches the current plugin version.
+     * @returns True if versions match, false if migration/wipe is needed.
+     */
+    public async checkDataVersion(currentVersion: number): Promise<boolean> {
+        const versionPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/data_version`);
+
+        if (!(await this.plugin.app.vault.adapter.exists(versionPath))) {
+            return false;
+        }
+
+        try {
+            const versionStr = await this.plugin.app.vault.adapter.read(versionPath);
+            const version = parseInt(versionStr, 10);
+            return version === currentVersion;
+        } catch (error) {
+            logger.warn("[PersistenceManager] Failed to read data version:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Updates the stored data version to the current plugin version.
+     */
+    public async updateDataVersion(version: number): Promise<void> {
+        const versionPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/data_version`);
+        try {
+            await this.ensureDataFolder();
+            await this.plugin.app.vault.adapter.write(versionPath, version.toString());
+            logger.debug(`[PersistenceManager] Updated data version to ${version}.`);
+        } catch (error) {
+            logger.error("[PersistenceManager] Failed to update data version:", error);
+        }
+    }
+
     public async wipeState(modelId: string, dimension: number): Promise<void> {
         const sanitizedId = this.getSanitizedModelId(modelId, dimension);
         const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
@@ -282,7 +317,7 @@ export class PersistenceManager {
         const match = fileName.match(/graph-state-(.+)\.msgpack/);
         if (match && match[1]) {
             await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${match[1]}`);
-            await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`); // ADD THIS LINE TO FIX LEAK
+            await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`);
         }
     }
 

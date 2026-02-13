@@ -11,7 +11,9 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Content drift fix**: Resolved a persistent issue where notes were incorrectly marked as "Content drifted" in the Similar Notes view, causing unnecessary re-indexing loops on plugin reload.
+-   **Content Drift**: Implemented a robust `DATA_VERSION` strategy and standardised on **trimmed content hashing**. This ensures anchor stability across different line endings and whitespace variations, resolving persistent drift warnings.
+-   **Indexer Worker**: Added internal version validation to ensure the persistent Orama index matches the current plugin version.
+-   **Drift Diagnostics**: Added verbose logging to `ResultHydrator` to capture exact content mismatches during drift detection.
 
 ### Developer features
 
@@ -42,6 +44,10 @@ New features are added in the "Unreleased" section.
 -   **IDB isolation (Split-brain fix)**: Separated IndexedDB namespacing for the Main-thread buffer (`orama_index_buffer_`) and Worker-thread hot store (`orama_index_`), eliminating split-brain collisions during background sync.
 -   **Hybrid Slim-Sync architecture**: Implemented a "Hot/Cold" storage strategy. The full index is stored in IndexedDB for performance, while a "slim" (content-stripped) copy is synced to the vault for cross-device compatibility.
 -   **Main-thread hydration**: Refactored `GraphService` to perform note content hydration on the main thread, overcoming worker memory limits and enabling RAG for stripped indices.
+-   Fixed "Content drifted" false positives caused by untrimmed hashes in the Orama index.
+-   Implemented **Atomic Re-indexing**: the data version is only updated after a successful full scan, preventing skipped files if the initial re-index is interrupted.
+-   Improved diagnostic logging for indexing scans and drift detection.
+-   Fixed a minor storage leak in the persistence manager's IDB cleanup.
 -   **Robust MessagePack decoding**: Implemented `decodeMulti` in persistence logic to handle multi-stage decoding for complex state objects.
 -   **Memory-efficient serialization**: Eliminated memory spikes during index saving by replacing deep cloning with typed, iterative state hollowing.
 -   **Standardized token estimation**: Replaced hardcoded math with `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` across all services, ensuring perfectly consistent context budgeting.
