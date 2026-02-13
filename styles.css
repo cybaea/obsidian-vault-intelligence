@@ -154,6 +154,13 @@
 
 /* Similar notes styles                 */
 
+.similar-notes-description {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 .similar-notes-list {
     list-style-type: none;
     padding-left: 0;
