@@ -13,7 +13,9 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **Memory leak fix**: Ensured `index-ready` event listeners in `SimilarNotesView` are properly unregistered using Obsidian's `registerEvent` lifecycle hook, preventing listener accumulation when panes are frequently opened and closed.
+-   **Batched debouncing**: Replaced per-file modification timers with a single queue-based debouncer in `GraphService`, preventing resource sprawl during large sync operations (ie Git pulls).
+-   **Timer preemption**: Implemented logic to automatically prioritize background sync batches by preempting long active-file debounces when multiple files change.
+-   **Memory leak fix**: Ensured `index-ready` event listeners in `SimilarNotesView` are properly unregistered using Obsidian's `registerEvent` lifecycle hook.
 
 ## [6.0.0] - 2026-02-12
 

@@ -67,8 +67,11 @@ export class GraphService extends Events {
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
-    // Map to track per-file debounce timers for modification events
-    private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    // Batched debouncer state
+    private pendingUpdates: Set<string> = new Set();
+    private batchTimer: ReturnType<typeof setTimeout> | null = null;
+    private isBatchHighPriority = false;
+    private activeTimerDelay = Infinity;
 
 
 
@@ -227,41 +230,74 @@ export class GraphService extends Events {
     }
 
     /**
-     * Debounces and enqueues an indexing update for a specific file.
-     * Uses a longer timeout for the active file (default 30s) to avoid redundant embeddings while typing.
+     * Debounces and batches indexing updates.
+     * Uses a longer timeout if only the active file is changing.
      */
-    private debounceUpdate(path: string, file: TFile) {
-        const existing = this.debounceTimers.get(path);
-        if (existing) {
-            clearTimeout(existing);
-        }
+    private debounceUpdate(path: string, _file: TFile) {
+        this.pendingUpdates.add(path);
 
         const activeFile = this.plugin.app.workspace.getActiveFile();
         const isActive = activeFile?.path === path;
 
-        const delay = isActive
-            ? GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS
-            : (this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS);
+        // If even one file is NOT active, the whole batch gets the shorter background delay
+        if (!isActive) {
+            this.isBatchHighPriority = true;
+        }
 
-        const timer = setTimeout(() => {
-            this.debounceTimers.delete(path);
-            void this.enqueueIndexingTask(async () => {
-                if (!this.api) return;
-                // Double check if file still exists and not excluded
+        const targetDelay = this.isBatchHighPriority
+            ? (this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS)
+            : GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS;
+
+        // Timer Preemption: If we have a long timer but now need a short one, reset it.
+        if (this.batchTimer) {
+            if (this.isBatchHighPriority && this.activeTimerDelay > targetDelay) {
+                clearTimeout(this.batchTimer);
+                this.batchTimer = null;
+            } else {
+                // Current timer is already short enough or we are still in long-delay mode
+                return;
+            }
+        }
+
+        this.activeTimerDelay = targetDelay;
+        this.batchTimer = setTimeout(() => this.processBatch(), targetDelay);
+    }
+
+    /**
+     * Processes the accumulated batch of file updates.
+     */
+    private processBatch() {
+        const paths = Array.from(this.pendingUpdates);
+        this.pendingUpdates.clear();
+        this.batchTimer = null;
+        this.isBatchHighPriority = false;
+        this.activeTimerDelay = Infinity;
+
+        if (paths.length === 0) return;
+
+        void this.enqueueIndexingTask(async () => {
+            if (!this.api) return;
+
+            logger.debug(`[GraphService] Processing batch of ${paths.length} files.`);
+
+            for (const path of paths) {
+                // 1. Double check if file still exists and not excluded (respecting settings changes)
                 const currentFile = this.vaultManager.getFileByPath(path);
-                if (!currentFile || this.isPathExcluded(path)) return;
+                if (!currentFile || this.isPathExcluded(path)) continue;
 
-                const content = await this.vaultManager.readFile(currentFile);
-                const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
-                const links = this.getResolvedLinks(currentFile);
+                try {
+                    const content = await this.vaultManager.readFile(currentFile);
+                    const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
+                    const links = this.getResolvedLinks(currentFile);
 
-                logger.debug(`[GraphService] Debounce finished for ${path} (${isActive ? 'Active' : 'Background'}). Updating index.`);
-                await this.api.updateFile(path, content, mtime, size, basename, links);
-                this.requestSave();
-            });
-        }, delay);
-
-        this.debounceTimers.set(path, timer);
+                    logger.debug(`[GraphService] Updating index for ${path}.`);
+                    await this.api.updateFile(path, content, mtime, size, basename, links);
+                } catch (error) {
+                    logger.error(`[GraphService] Failed to index ${path} in batch`, error);
+                }
+            }
+            this.requestSave();
+        });
     }
 
     /**
@@ -873,11 +909,12 @@ export class GraphService extends Events {
      * Terminates the worker and cleans up resources.
      */
     public shutdown() {
-        // Clear all pending debounce timers
-        if (this.debounceTimers.size > 0) {
-            this.debounceTimers.forEach((timer) => clearTimeout(timer));
-            this.debounceTimers.clear();
+        // Clear batched debouncer
+        if (this.batchTimer) {
+            clearTimeout(this.batchTimer);
+            this.batchTimer = null;
         }
+        this.pendingUpdates.clear();
 
         if (this.workerManager) {
             this.workerManager.terminate();
