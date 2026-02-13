@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [6.0.1] - 2026-02-13
+
+### User features
+
 -   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in a "Content drifted" display immediately after restarting Obsidian.
 
 ### Developer features
