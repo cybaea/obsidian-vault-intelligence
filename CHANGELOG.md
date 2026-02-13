@@ -11,8 +11,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in an infinite "Content drifted" loading loop immediately after restarting Obsidian.
--   **UI performance**: Resolved severe visual flickering in the sidebar that occurred when multiple notes were syncing or re-indexing in the background.
+-   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in a "Content drifted" display immediately after restarting Obsidian.
 
 ### Developer features
 
