@@ -117,12 +117,17 @@ export class ResultHydrator {
         return clean;
     }
 
+    private sanitizeExcalidrawContent(content: string): string {
+        return content.replace(/```compressed-json[\s\S]*?```/g, '');
+    }
+
     /**
      * Aligns search results with current file content using hash anchors.
      * This handles "drift" where the file has changed but the index hasn't caught up.
      */
     private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
-        const content = await this.vaultManager.readFile(file);
+        let content = await this.vaultManager.readFile(file);
+        content = this.sanitizeExcalidrawContent(content);
         const { body } = splitFrontmatter(content);
 
         // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body

@@ -21,19 +21,24 @@ export class SimilarNotesView extends ItemView {
         this.icon = "layout-grid";
 
         // Refresh when graph is ready
-        this.plugin.graphService.on('index-ready', () => {
-            const file = this.plugin.app.workspace.getActiveFile();
-            void this.updateForFile(file, true); // Force refresh
-        });
-
-        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-        this.plugin.graphService.on('index-updated', () => {
-            if (refreshTimer) clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(() => {
+        this.registerEvent(
+            this.plugin.graphService.on('index-ready', () => {
                 const file = this.plugin.app.workspace.getActiveFile();
                 void this.updateForFile(file, true); // Force refresh
-            }, 1000); // Debounce UI refresh by 1s to stop flicker
-        });
+            })
+        );
+
+        // Refresh instantly when a background update finishes (Debounced & Memory-safe)
+        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        this.registerEvent(
+            this.plugin.graphService.on('index-updated', () => {
+                if (refreshTimer) clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(() => {
+                    const file = this.plugin.app.workspace.getActiveFile();
+                    void this.updateForFile(file, true); // Force refresh
+                }, 1000); // Debounce UI refresh by 1s to stop flicker
+            })
+        );
     }
 
     getViewType() {
