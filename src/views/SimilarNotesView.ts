@@ -22,7 +22,17 @@ export class SimilarNotesView extends ItemView {
 
         // Refresh when graph is ready
         this.plugin.graphService.on('index-ready', () => {
-            void this.updateView();
+            const file = this.plugin.app.workspace.getActiveFile();
+            void this.updateForFile(file, true); // Force refresh
+        });
+
+        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        this.plugin.graphService.on('index-updated', () => {
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+                const file = this.plugin.app.workspace.getActiveFile();
+                void this.updateForFile(file, true); // Force refresh
+            }, 1000); // Debounce UI refresh by 1s to stop flicker
         });
     }
 

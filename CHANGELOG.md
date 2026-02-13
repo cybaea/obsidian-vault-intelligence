@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 New features are added in the "Unreleased" section.
 
-## [Unreleased]
+### [Unreleased]
 
 ### User features
 
+-   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in an infinite "Content drifted" loading loop immediately after restarting Obsidian.
+-   **UI performance**: Resolved severe visual flickering in the sidebar that occurred when multiple notes were syncing or re-indexing in the background.
+
+
 ### Developer features
+
+-   **Hot Store hydration fix**: Fixed a regression in `IndexerWorker.loadIndex` where the "slim" vault index was loaded instead of the full IndexedDB "Hot Store" index on startup, which caused all search results to return empty text excerpts.
+-   **Drift recovery accuracy**: Corrected the `ResultHydrator.anchoredAlignment` sliding window algorithm to use exact chunk-length hashing rather than line-by-line hashing, allowing it to successfully recover drifted text.
+-   **Repaint debouncing**: Added a 1-second debounce to the `index-updated` event listener in `SimilarNotesView` to efficiently batch UI repaints and prevent layout thrashing.
 
 ## [6.0.0] - 2026-02-12
 
