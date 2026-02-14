@@ -9,6 +9,10 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### Breaking changes
+
+-   Legacy database migration (v5.x and earlier) has been removed to improve performance and code health. Users upgrading from older versions must re-index their vault manually via **Settings > Explorer > Re-index vault**.
+
 ### User features
 
 ### Developer features
@@ -17,6 +21,7 @@ New features are added in the "Unreleased" section.
 -   **Atomic frontmatter preservation**: Refactored `FileTools.updateNote` to use a single, atomic `vault.process` operation. This fixes a critical race condition where frontmatter could be erased due to a stale `MetadataCache` and eliminates an inefficient "double-write" pattern. Verified with a new comprehensive atomic-consistency test suite.
 -   **Path security hardening**: Implemented a robust path normalization and exclusion check in `ToolRegistry.ts`. This fixes a critical vulnerability where path traversal (ie `../`), extension bypasses, and rename operations could be used to access or modify files in excluded folders. Verified with a new comprehensive security test suite.
 -   **Persistence Manager resilience**: Isolated volatile IndexedDB ("Hot Store") operations in `saveState`, `loadState`, `deleteState`, and `purgeAllData` with dedicated try/catch blocks. This prevents IndexedDB failures (eg QuotaExceeded or Private Browsing restrictions) from blocking critical file system operations or causing infinite re-index loops. Verified with a new resilience test suite.
+-   Improved type safety in `PersistenceManager.loadState`.
 
 ## [6.0.2] - 2026-02-14
 

@@ -1,4 +1,3 @@
-import { decodeMulti } from "@msgpack/msgpack";
 import { Plugin, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
@@ -49,10 +48,6 @@ export class PersistenceManager {
 
             logger.info(`[PersistenceManager] Sharded State persisted (IDB + Vault): ${sanitizedId}`);
 
-            // 3. One-time Migration & Cleanup
-            await this.handleMigrations(modelId, dimension);
-            await this.cleanupLegacyState();
-
         } catch (error) {
             logger.error("[PersistenceManager] Save failed:", error);
             throw error;
@@ -66,14 +61,11 @@ export class PersistenceManager {
      * @param dimension The dimension of the model.
      * @returns The state data as Uint8Array (for msgpack) or string (for legacy JSON), or null if none.
      */
-    public async loadState(modelId: string, dimension: number): Promise<Uint8Array | string | null> {
+    public async loadState(modelId: string, dimension: number): Promise<Uint8Array | null> {
         const sanitizedId = this.getSanitizedModelId(modelId, dimension);
         const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
 
-        // 1. Check for legacy file needing migration (Sync Conflict / Legacy Boot)
-        await this.handleMigrations(modelId, dimension);
-
-        // 2. Try "Hot Store" (IndexedDB) first (Namespaced)
+        // 1. Try "Hot Store" (IndexedDB) first (Namespaced)
         try {
             const hotState = await this.storage.get(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`);
             if (hotState instanceof Uint8Array) {
@@ -84,7 +76,7 @@ export class PersistenceManager {
             logger.warn(`[PersistenceManager] No state for ${sanitizedId} in Hot Store (IDB), checking Cold Store (Vault).`);
         }
 
-        // 3. Fallback to "Cold Store" (Vault File) - Sync Source
+        // 2. Fallback to "Cold Store" (Vault File) - Sync Source
         if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
             try {
                 const stateBuffer = await this.plugin.app.vault.adapter.readBinary(vaultPath);
@@ -104,86 +96,10 @@ export class PersistenceManager {
             }
         }
 
-        // 4. Final Fallback: Handle original legacy data locations and JSON
-        return await this.loadLegacyJSON();
-    }
-
-    /**
-     * Handles migration and sync-conflict resolution.
-     * Inspects legacy or generic files to identify their true model ID.
-     */
-    private async handleMigrations(currentModelId: string, currentDimension: number) {
-        const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
-        if (!(await this.plugin.app.vault.adapter.exists(legacyPath))) return;
-
-        try {
-            // Peek inside the legacy file to see who it belongs to
-            const buffer = await this.plugin.app.vault.adapter.readBinary(legacyPath);
-            // Use decodeMulti to gracefully handle extra padding bytes found in some environments
-            const generator = decodeMulti(new Uint8Array(buffer));
-            const state = generator.next().value as { embeddingDimension?: number; embeddingModel?: string };
-
-            // Expected metadata fields in SerializedIndexState (Top Level)
-            const actualModelId = state.embeddingModel;
-            const actualDimension = state.embeddingDimension;
-
-            if (actualModelId && actualDimension) {
-                const targetSanitizedId = this.getSanitizedModelId(actualModelId, actualDimension);
-                const targetPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${targetSanitizedId}.msgpack`);
-
-                // DIMENSION SAFETY / GHOST MIGRATION GUARD
-                const alreadyExists = await this.plugin.app.vault.adapter.exists(targetPath);
-                if (!alreadyExists) {
-                    logger.info(`[PersistenceManager] Migrating legacy file to sharded format: ${targetSanitizedId}`);
-                    // We can just rename it
-                    await this.plugin.app.vault.adapter.writeBinary(targetPath, buffer);
-                } else {
-                    logger.info(`[PersistenceManager] Stale legacy file found but healthy shard exists. Deleting legacy.`);
-                }
-
-                // Always delete the generic legacy file after handling
-                await this.plugin.app.vault.adapter.remove(legacyPath);
-            } else {
-                logger.warn("[PersistenceManager] Found malformed legacy state file. Removing.");
-                await this.plugin.app.vault.adapter.remove(legacyPath);
-            }
-        } catch (e) {
-            logger.error("[PersistenceManager] Migration peek failed:", e);
-            // If it's totally unreadable, we must remove it to prevent boot loops
-            await this.plugin.app.vault.adapter.remove(legacyPath);
-        }
-    }
-
-    private async loadLegacyJSON(): Promise<string | null> {
-        const legacyVaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
-        const pluginDataPath = normalizePath(`${this.plugin.manifest.dir}/${GRAPH_CONSTANTS.DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
-
-        // Check for state in the plugin folder (Legacy)
-        if (await this.plugin.app.vault.adapter.exists(pluginDataPath)) {
-            try {
-                const stateBuffer = await this.plugin.app.vault.adapter.readBinary(pluginDataPath);
-                logger.info("[PersistenceManager] Migrating index from plugin folder to vault.");
-                // Note: We don't have modelId/dim here easily, so we just move it to the generic path 
-                // and let 'handleMigrations' deal with it on next boot/save.
-                const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.STATE_FILE}`);
-                await this.ensureDataFolder();
-                await this.plugin.app.vault.adapter.writeBinary(legacyPath, stateBuffer);
-                await this.plugin.app.vault.adapter.remove(pluginDataPath);
-            } catch (error) {
-                logger.error("[PersistenceManager] Migration failed (Plugin Folder):", error);
-            }
-        }
-
-        // Fallback to Legacy JSON
-        if (await this.plugin.app.vault.adapter.exists(legacyVaultPath)) {
-            try {
-                return await this.plugin.app.vault.adapter.read(legacyVaultPath);
-            } catch (error) {
-                logger.error("[PersistenceManager] Legacy JSON load failed:", error);
-            }
-        }
         return null;
     }
+
+
 
     private fastHash(str: string): string {
         let hash = 0;
@@ -201,16 +117,7 @@ export class PersistenceManager {
         return `${base}-${dimension}-${hash}`;
     }
 
-    /**
-     * Removes the legacy JSON state file if it exists.
-     */
-    private async cleanupLegacyState() {
-        const legacyPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/${GRAPH_CONSTANTS.legacy_STATE_FILE}`);
-        if (await this.plugin.app.vault.adapter.exists(legacyPath)) {
-            await this.plugin.app.vault.adapter.remove(legacyPath);
-            logger.debug("[PersistenceManager] Legacy JSON state removed.");
-        }
-    }
+
 
     private async ensureDataFolder() {
         const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);

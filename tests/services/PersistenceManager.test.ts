@@ -8,7 +8,6 @@ import { Plugin } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PersistenceManager } from '../../src/services/PersistenceManager';
-import { StorageProvider } from '../../src/services/StorageProvider';
 
 // Mock dependencies
 const mockPlugin = {

@@ -446,21 +446,13 @@ export class GraphService extends Events {
         }
 
         try {
-            // If it's a Buffer/Uint8Array, treat as msgpack
-            // If string, legacy JSON
-            let success = false;
-            await Promise.resolve();
-            if (typeof stateData === 'string') {
-                success = await this.api.loadIndex(stateData);
-                if (success) logger.info("[GraphService] State loaded (Legacy JSON).");
-            } else {
-                success = await this.api.loadIndex(stateData);
-                if (success) logger.info("[GraphService] State loaded (MessagePack).");
+            const success = await this.api.loadIndex(stateData);
+            if (success) {
+                logger.info("[GraphService] State loaded (MessagePack).");
+                return false;
             }
 
-            if (success) return false;
-
-            logger.warn("[GraphService] State incompatible or corrupted. Triggering migration.");
+            logger.warn("[GraphService] State incompatible or corrupted. Triggering re-index.");
             return true;
         } catch (error) {
             logger.error("[GraphService] Load failed during worker ingestion:", error);
