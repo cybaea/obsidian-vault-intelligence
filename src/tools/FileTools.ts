@@ -1,5 +1,7 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 
+import { splitFrontmatter } from "../utils/link-parsing";
+
 export class FileTools {
     private app: App;
 
@@ -46,38 +48,6 @@ export class FileTools {
         return sanitized;
     }
 
-    /**
-     * Separates existing frontmatter from the document body using Obsidian's MetadataCache.
-     */
-    private async splitFile(file: TFile): Promise<{ frontmatter: string, body: string }> {
-        const content = await this.app.vault.read(file);
-        const cache = this.app.metadataCache.getFileCache(file);
-        const pos = cache?.frontmatterPosition;
-
-        if (!pos) {
-            return { body: content, frontmatter: "" };
-        }
-
-        const frontmatter = content.substring(0, pos.end.offset);
-        const body = content.substring(pos.end.offset);
-
-        return { body, frontmatter };
-    }
-
-    /**
-     * Ensures a note has a YAML frontmatter block. Prepends an empty one if missing.
-     */
-    private async ensureFrontmatter(file: TFile): Promise<void> {
-        const cache = this.app.metadataCache.getFileCache(file);
-        if (cache?.frontmatterPosition) {
-            return;
-        }
-
-        await this.app.vault.process(file, (content) => {
-            if (content.startsWith("---")) return content; // Safety check
-            return "---\n---\n" + content;
-        });
-    }
 
     private sanitizeContent(content: string): string {
         return this.sanitizeAgentOutput(content);
@@ -133,32 +103,41 @@ export class FileTools {
             throw new Error(`Note not found: ${normalizedPath}`);
         }
 
-        // 1. Ensure frontmatter exists so we have a clean boundary
-        await this.ensureFrontmatter(file);
-
-        // 2. Split file into frontmatter and body
-        const { body, frontmatter } = await this.splitFile(file);
         const sanitized = this.sanitizeContent(content);
 
-        let newBody: string;
-        const trimmedBody = body.trim();
+        await this.app.vault.process(file, (oldContent) => {
+            // 1. Synchronously split the file FIRST
+            // splitFrontmatter safely handles missing blocks, horizontal rules, and malformed YAML
+            let { body, frontmatter } = splitFrontmatter(oldContent);
 
-        switch (mode) {
-            case "append":
-                newBody = (trimmedBody ? trimmedBody + "\n\n" : "") + sanitized;
-                break;
-            case "prepend":
-                newBody = sanitized + (trimmedBody ? "\n\n" + trimmedBody : "");
-                break;
-            case "overwrite":
-                newBody = sanitized;
-                break;
-            default:
-                throw new Error(`Invalid update mode: ${mode as string}`);
-        }
+            // 2. Ensure frontmatter exists
+            // If splitFrontmatter couldn't find a valid block, we inject a blank one
+            if (!frontmatter) {
+                frontmatter = "---\n---";
+            }
 
-        const finalContent = frontmatter.trimEnd() + "\n\n" + newBody.trimStart();
-        await this.app.vault.modify(file, finalContent);
+            // 3. Apply the update mode
+            let newBody: string;
+            const trimmedBody = body.trim();
+
+            switch (mode) {
+                case "append":
+                    newBody = (trimmedBody ? trimmedBody + "\n\n" : "") + sanitized;
+                    break;
+                case "prepend":
+                    newBody = sanitized + (trimmedBody ? "\n\n" + trimmedBody : "");
+                    break;
+                case "overwrite":
+                    newBody = sanitized;
+                    break;
+                default:
+                    throw new Error(`Invalid update mode: ${mode as string}`);
+            }
+
+            // 4. Return the final string to be written exactly once
+            return frontmatter.trimEnd() + "\n\n" + newBody.trimStart();
+        });
+
         return `Successfully updated note: ${normalizedPath} (body ${mode})`;
     }
 
