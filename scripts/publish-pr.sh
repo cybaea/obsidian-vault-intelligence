@@ -78,17 +78,20 @@ fi
 # 5. Local Sync and Cleanup
 echo "🧹 Cleaning up local workspace..."
 if [ "$DRY_RUN" = false ]; then
-    git checkout "$DEFAULT_BRANCH"
+    # Ensure we are on the default branch (gh might have already switched us)
+    git checkout "$DEFAULT_BRANCH" >/dev/null 2>&1 || true
+    
     # --prune removes the stale origin/feature-branch reference
     git pull origin "$DEFAULT_BRANCH" --prune
     
-    # Must use -D (force delete) because squash merges rewrite commit hashes,
-    # causing standard -d to fail and trigger the exit trap.
-    git branch -D "$CURRENT_BRANCH"
+    # Only try to delete the local branch if `gh` didn't already delete it
+    if git show-ref --verify --quiet "refs/heads/$CURRENT_BRANCH"; then
+        git branch -D "$CURRENT_BRANCH"
+    fi
 else
     echo "[DRY RUN] git checkout $DEFAULT_BRANCH"
     echo "[DRY RUN] git pull origin $DEFAULT_BRANCH --prune"
-    echo "[DRY RUN] git branch -D $CURRENT_BRANCH"
+    echo "[DRY RUN] if branch exists; then git branch -D $CURRENT_BRANCH; fi"
 fi
 
 echo "✅ PR merged! Your local $DEFAULT_BRANCH is perfectly synced."
