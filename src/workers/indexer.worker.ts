@@ -654,18 +654,6 @@ const IndexerWorker: WorkerAPI = {
         }
     },
 
-    async renameFile(oldPath: string, newPath: string) {
-        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
-        const normalizedOld = workerNormalizePath(oldPath);
-        const normalizedNew = workerNormalizePath(newPath);
-        if (graph.hasNode(normalizedOld)) {
-            const attr = graph.getNodeAttributes(normalizedOld);
-            graph.dropNode(normalizedOld);
-            graph.addNode(normalizedNew, { ...(attr as GraphNodeData), path: normalizedNew });
-        }
-        await IndexerWorker.deleteFile(normalizedOld);
-    },
-
     async saveIndex(): Promise<Uint8Array> {
         const { save } = await import('@orama/orama');
 
@@ -848,7 +836,6 @@ const IndexerWorker: WorkerAPI = {
                 embedding: vector,
                 end: chunk.end + bodyOffset,
                 id: chunkId,
-                links: links,
                 mtime: mtime,
                 params: [], // Simplified for now
                 path: normalizedPath,
