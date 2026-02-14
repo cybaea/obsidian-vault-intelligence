@@ -5,7 +5,7 @@ import Graph from 'graphology';
 
 import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
-import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig } from '../types/graph';
+import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig, type FileUpdateData } from '../types/graph';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
 import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
@@ -846,6 +846,19 @@ const IndexerWorker: WorkerAPI = {
 
         // Patch the graph node with the final token count
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, totalTokens);
+    },
+
+    async updateFiles(files: FileUpdateData[]) {
+        for (const file of files) {
+            await IndexerWorker.updateFile(
+                file.path,
+                file.content,
+                file.mtime,
+                file.size,
+                file.title,
+                file.links
+            );
+        }
     }
 };
 
