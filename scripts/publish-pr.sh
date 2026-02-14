@@ -59,7 +59,7 @@ else
     fi
 fi
 
-# 3. Watch Checks
+# 3. Watch Checks (Blocks until CI passes)
 echo "⏳ Waiting for CI checks to pass..."
 if [ "$DRY_RUN" = false ]; then
     gh pr checks --watch
@@ -67,7 +67,7 @@ else
     echo "[DRY RUN] gh pr checks --watch (Simulated success)"
 fi
 
-# 4. Merge
+# 4. Merge Synchronously
 echo "🔀 Merging pull request..."
 if [ "$DRY_RUN" = false ]; then
     gh pr merge --squash --delete-branch
@@ -75,16 +75,20 @@ else
     echo "[DRY RUN] gh pr merge --squash --delete-branch"
 fi
 
-# 5. Local Cleanup
-echo "🧹 Cleaning up local branch..."
+# 5. Local Sync and Cleanup
+echo "🧹 Cleaning up local workspace..."
 if [ "$DRY_RUN" = false ]; then
     git checkout "$DEFAULT_BRANCH"
-    git pull origin "$DEFAULT_BRANCH"
-    git branch -d "$CURRENT_BRANCH"
+    # --prune removes the stale origin/feature-branch reference
+    git pull origin "$DEFAULT_BRANCH" --prune
+    
+    # Must use -D (force delete) because squash merges rewrite commit hashes,
+    # causing standard -d to fail and trigger the exit trap.
+    git branch -D "$CURRENT_BRANCH"
 else
     echo "[DRY RUN] git checkout $DEFAULT_BRANCH"
-    echo "[DRY RUN] git pull origin $DEFAULT_BRANCH"
-    echo "[DRY RUN] git branch -d $CURRENT_BRANCH"
+    echo "[DRY RUN] git pull origin $DEFAULT_BRANCH --prune"
+    echo "[DRY RUN] git branch -D $CURRENT_BRANCH"
 fi
 
-echo "✅ Successfully published and merged $CURRENT_BRANCH into $DEFAULT_BRANCH!"
+echo "✅ PR merged! Your local $DEFAULT_BRANCH is perfectly synced."
