@@ -122,15 +122,22 @@ const workerLogger = {
 // 2. Semantic Splitter (Header-Based with Fallback)
 function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): Array<{ text: string, start: number, end: number }> {
     const chunks: Array<{ text: string, start: number, end: number }> = [];
-    const regex = /(^#{1,6}\s[^\n]*)([\s\S]*?)(?=^#{1,6}\s|$)/gm;
 
     const pushChunk = (t: string, s: number, e: number) => {
         if (!t.trim()) return;
         if (t.length > maxChunkSize) {
-            const subChunks = recursiveCharacterSplitter(t, maxChunkSize, Math.floor(maxChunkSize * 0.1));
+            const overlap = Math.floor(maxChunkSize * 0.1);
+            const subChunks = recursiveCharacterSplitter(t, maxChunkSize, overlap);
+
             let subOffset = 0;
             for (const sub of subChunks) {
-                const actualInSub = t.indexOf(sub, subOffset);
+                // Step back by the overlap (plus a tiny safety buffer) so indexOf catches it
+                const searchStart = Math.max(0, subOffset - overlap - 10);
+                let actualInSub = t.indexOf(sub, searchStart);
+
+                // Fallback in case of identical repetitive text strings 
+                if (actualInSub === -1) actualInSub = subOffset;
+
                 chunks.push({
                     end: s + actualInSub + sub.length,
                     start: s + actualInSub,
@@ -143,39 +150,51 @@ function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONST
         }
     };
 
-    const firstHeaderMatch = text.match(/^#{1,6}\s/m);
-    let scanIndex = 0;
+    // Find all header start positions lightning-fast
+    // Matches start of string or newline, followed by 1-6 hashes and a space
+    const headerRegex = /(?:^|\n)(#{1,6}\s)/g;
+    const headerIndices: number[] = [];
+    let match: RegExpExecArray | null;
 
-    if (firstHeaderMatch && firstHeaderMatch.index !== undefined) {
-        if (firstHeaderMatch.index > 0) {
-            pushChunk(text.substring(0, firstHeaderMatch.index), 0, firstHeaderMatch.index);
-        }
-        scanIndex = firstHeaderMatch.index;
-    } else {
+    while ((match = headerRegex.exec(text)) !== null) {
+        // If the match starts with \n, the actual header text starts at index + 1
+        const actualIndex = match.index + (match[0].startsWith('\n') ? 1 : 0);
+        headerIndices.push(actualIndex);
+    }
+
+    if (headerIndices.length === 0) {
+        // No headers found, treat the whole text as one chunk
         pushChunk(text, 0, text.length);
         return chunks;
     }
 
-    regex.lastIndex = scanIndex;
-    let match;
+    // If there's text before the first header, push it as an intro chunk
+    if (headerIndices[0]! > 0) {
+        pushChunk(text.substring(0, headerIndices[0]), 0, headerIndices[0]!);
+    }
+
+    // Iterate through headers and slice the text between them
     let currentChunkText = "";
     let currentChunkStart = -1;
 
-    while ((match = regex.exec(text)) !== null) {
-        const sectionText = match[0];
-        const sectionStart = match.index;
+    for (let i = 0; i < headerIndices.length; i++) {
+        const startIdx = headerIndices[i]!;
+        const endIdx = (i + 1 < headerIndices.length) ? headerIndices[i + 1]! : text.length;
+        const sectionText = text.substring(startIdx, endIdx);
 
-        if (currentChunkStart === -1) currentChunkStart = sectionStart;
+        if (currentChunkStart === -1) currentChunkStart = startIdx;
 
+        // If combining this section with the current chunk exceeds max size, push the current chunk
         if (currentChunkText.length > 0 && (currentChunkText.length + sectionText.length) > maxChunkSize) {
             pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
             currentChunkText = sectionText;
-            currentChunkStart = sectionStart;
+            currentChunkStart = startIdx;
         } else {
             currentChunkText += sectionText;
         }
     }
 
+    // Push the final chunk
     if (currentChunkText.length > 0) {
         pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
     }
