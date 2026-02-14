@@ -20,7 +20,8 @@
 		"docs:preview": "vitepress preview",
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
-		"release:prep": "node scripts/release-prep.mjs"
+		"release:prep": "node scripts/release-prep.mjs",
+		"publish-pr": "bash scripts/publish-pr.sh"
 	},
 	"keywords": [
 		"obsidian",
