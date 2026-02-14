@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [6.0.2] - 2026-02-14
+
+### User features
+
 -   **Regex performance optimization**: Completely rewrote the `semanticSplit` function in the Indexer Worker to use index-scanning instead of a lazy-lookahead Regex. This eliminates a CPU-bound loop that caused the worker to freeze when indexing massively large markdown files (5MB+) lacking headers.
 -   **Ghost node prevention**: Fixed a bug where file renames could result in "ghost nodes" and indexing drifts. The `onRename` handler now explicitly deletes the old path before enqueuing a re-index for the new path.
 -   **Indexer schema hardening**: Resolved a schema leak in the Orama worker where undefined properties were being passed to the index, potentially causing hydration failures.
