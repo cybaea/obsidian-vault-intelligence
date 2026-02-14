@@ -3,7 +3,7 @@ import { Plugin, Notice, TFile, Events } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
-import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData } from "../types/graph";
+import { WorkerAPI, WorkerConfig, GraphSearchResult, GraphNodeData, FileUpdateData } from "../types/graph";
 import { logger } from "../utils/logger";
 import { GeminiService } from "./GeminiService";
 import { IEmbeddingService } from "./IEmbeddingService";
@@ -67,8 +67,12 @@ export class GraphService extends Events {
     // Serial queue to handle API rate limiting across all indexing tasks
     private processingQueue: Promise<unknown> = Promise.resolve();
 
-    // Map to track per-file debounce timers for modification events
-    private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    // Batching state
+    private pendingBackgroundUpdates: Map<string, TFile> = new Map();
+    private backgroundBatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    private pendingActiveUpdate: { path: string, file: TFile } | null = null;
+    private activeFileTimer: ReturnType<typeof setTimeout> | null = null;
 
 
 
@@ -229,40 +233,106 @@ export class GraphService extends Events {
     /**
      * Debounces and enqueues an indexing update for a specific file.
      * Uses a longer timeout for the active file (default 30s) to avoid redundant embeddings while typing.
+     * Background files are batched to reduce IPC overhead.
      */
     private debounceUpdate(path: string, file: TFile) {
-        const existing = this.debounceTimers.get(path);
-        if (existing) {
-            clearTimeout(existing);
-        }
-
         const activeFile = this.plugin.app.workspace.getActiveFile();
         const isActive = activeFile?.path === path;
 
-        const delay = isActive
-            ? GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS
-            : (this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS);
+        if (isActive) {
+            // 1. Active File Logic
+            if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
 
-        const timer = setTimeout(() => {
-            this.debounceTimers.delete(path);
-            void this.enqueueIndexingTask(async () => {
-                if (!this.api) return;
-                // Double check if file still exists and not excluded
-                const currentFile = this.vaultManager.getFileByPath(path);
-                if (!currentFile || this.isPathExcluded(path)) return;
+            // If we already have a PENDING active update for a DIFFERENT file,
+            // we must downgrade it to background to ensure it's not lost.
+            if (this.pendingActiveUpdate && this.pendingActiveUpdate.path !== path) {
+                this.pendingBackgroundUpdates.set(this.pendingActiveUpdate.path, this.pendingActiveUpdate.file);
+                this.scheduleBackgroundBatch();
+            }
+
+            // Rip it out of the background queue if it was there
+            this.pendingBackgroundUpdates.delete(path);
+
+            this.pendingActiveUpdate = { file, path };
+            this.activeFileTimer = setTimeout(() => {
+                const update = this.pendingActiveUpdate;
+                this.pendingActiveUpdate = null;
+                this.activeFileTimer = null;
+
+                if (update) void this.processChunkInWorker([update.file]);
+            }, GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS);
+
+        } else {
+            // 2. Background File Logic
+            // If it's the current active file's pending update, don't move it to background
+            if (this.pendingActiveUpdate?.path === path) return;
+
+            this.pendingBackgroundUpdates.set(path, file);
+            this.scheduleBackgroundBatch();
+        }
+    }
+
+    /**
+     * Helper to schedule the background batch processing.
+     */
+    private scheduleBackgroundBatch() {
+        if (!this.backgroundBatchTimer) {
+            const delay = this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS;
+            this.backgroundBatchTimer = setTimeout(() => {
+                this.backgroundBatchTimer = null;
+                const files = Array.from(this.pendingBackgroundUpdates.values());
+                this.pendingBackgroundUpdates.clear();
+
+                // Cap batches at 50 files or ~5MB to prevent memory spikes
+                let currentChunk: TFile[] = [];
+                let currentSize = 0;
+
+                for (const f of files) {
+                    currentChunk.push(f);
+                    currentSize += f.stat.size;
+
+                    if (currentChunk.length >= 50 || currentSize >= 5 * 1024 * 1024) {
+                        void this.processChunkInWorker(currentChunk);
+                        currentChunk = [];
+                        currentSize = 0;
+                    }
+                }
+                if (currentChunk.length > 0) void this.processChunkInWorker(currentChunk);
+
+            }, delay);
+        }
+    }
+
+    /**
+     * Helper to read file contents and send them to the worker in a single IPC batch.
+     */
+    private processChunkInWorker(chunk: TFile[]) {
+        if (chunk.length === 0) return;
+
+        void this.enqueueIndexingTask(async () => {
+            if (!this.api) return;
+
+            const filesData: FileUpdateData[] = [];
+
+            for (const file of chunk) {
+                // Skip if deleted or excluded
+                const currentFile = this.vaultManager.getFileByPath(file.path);
+                if (!currentFile || this.isPathExcluded(file.path)) continue;
 
                 const content = await this.vaultManager.readFile(currentFile);
                 const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
                 const links = this.getResolvedLinks(currentFile);
 
-                logger.debug(`[GraphService] Debounce finished for ${path} (${isActive ? 'Active' : 'Background'}). Updating index.`);
-                await this.api.updateFile(path, content, mtime, size, basename, links);
+                filesData.push({ content, links, mtime, path: file.path, size, title: basename });
+            }
+
+            if (filesData.length > 0) {
+                logger.debug(`[GraphService] Sending IPC batch of ${filesData.length} files to worker.`);
+                await this.api.updateFiles(filesData);
                 this.requestSave();
                 this.trigger('index-updated');
-            });
-        }, delay);
-
-        this.debounceTimers.set(path, timer);
+            }
+        });
     }
 
     /**
@@ -699,47 +769,41 @@ export class GraphService extends Events {
             let count = 0;
             let skipCount = 0;
 
+            let currentChunk: TFile[] = [];
+            let currentSize = 0;
+
+            const flushScanChunk = () => {
+                const chunkToProcess = [...currentChunk];
+                count += chunkToProcess.length;
+                void this.processChunkInWorker(chunkToProcess);
+
+                if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0 || count % 50 === 0) {
+                    logger.debug(`[GraphService] Queued ${count} files for scanning...`);
+                }
+                currentChunk = [];
+                currentSize = 0;
+            };
+
             for (const file of files) {
                 if (this.isPathExcluded(file.path)) continue;
 
                 const state = states[file.path];
-                const { basename, mtime, size } = this.vaultManager.getFileStat(file);
+                const { mtime, size } = this.vaultManager.getFileStat(file);
 
-                // OPTIMIZATION: Robust Change Detection
-                // We compare both mtime and size to detect changes.
-                // NOTE: We deliberately use a "Peeking" architecture here (Main thread fetches state projection)
-                // rather than a "Pull" architecture (Worker requests file content). 
-                // Why?
-                // 1. Performance: Transferring a simplified state object (~1MB for 20k files) is much faster
-                //    than 20k async round-trips for the worker to "ask" for file content.
-                // 2. Simplicity: The Main Thread is the authority on the File System. The Worker is the authority
-                //    on the Index. It is cleaner for the Main Thread to say "Here is the truth" than for
-                //    the Worker to try to discover it through a narrow communication channel.
                 if (!shouldWipe && state && state.mtime === mtime && state.size === size) {
                     skipCount++;
                     continue;
                 }
 
-                // Use the same enqueue mechanism so that multiple scanAll or interleaved onModify calls 
-                // all respect the same serial throttle.
-                void this.enqueueIndexingTask(async () => {
-                    if (!this.api) return;
-                    try {
-                        const content = await this.vaultManager.readFile(file);
-                        const links = this.getResolvedLinks(file);
-                        await this.api.updateFile(file.path, content, mtime, size, basename, links);
-                        count++;
+                currentChunk.push(file);
+                currentSize += size;
 
-                        if (count % GRAPH_CONSTANTS.SCAN_LOG_BATCH_SIZE === 0) {
-                            logger.debug(`[GraphService] Processed ${count} files...`);
-                            this.requestSave();
-                        }
-                    } catch (error) {
-                        logger.error(`[GraphService] Failed to index ${file.path}`, error);
-                        // if (String(error).includes("API key")) throw error; // Don't crash loop on API key
-                    }
-                });
+                // Flush if we hit 50 files or 5MB
+                if (currentChunk.length >= 50 || currentSize >= 5 * 1024 * 1024) {
+                    flushScanChunk();
+                }
             }
+            if (currentChunk.length > 0) flushScanChunk();
 
             if (skipCount > 0) {
                 logger.info(`[GraphService] Skipped ${skipCount} unchanged files.`);
@@ -874,11 +938,13 @@ export class GraphService extends Events {
      * Terminates the worker and cleans up resources.
      */
     public shutdown() {
-        // Clear all pending debounce timers
-        if (this.debounceTimers.size > 0) {
-            this.debounceTimers.forEach((timer) => clearTimeout(timer));
-            this.debounceTimers.clear();
-        }
+        if (this.backgroundBatchTimer) clearTimeout(this.backgroundBatchTimer);
+        this.backgroundBatchTimer = null;
+        this.pendingBackgroundUpdates.clear();
+
+        if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
+        this.activeFileTimer = null;
+        this.pendingActiveUpdate = null;
 
         if (this.workerManager) {
             this.workerManager.terminate();

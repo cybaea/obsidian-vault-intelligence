@@ -36,7 +36,7 @@ export class SimilarNotesView extends ItemView {
                 refreshTimer = setTimeout(() => {
                     const file = this.plugin.app.workspace.getActiveFile();
                     void this.updateForFile(file, true); // Force refresh
-                }, 1000); // Debounce UI refresh by 1s to stop flicker
+                }, 2000); // Debounce UI refresh by 1s to stop flicker
             })
         );
     }

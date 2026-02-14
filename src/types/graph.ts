@@ -7,6 +7,18 @@ export type NodeType = 'file' | 'topic' | 'concept' | 'person';
 export type EdgeType = 'link' | 'semantic';
 
 /**
+ * Data for a single file update batch.
+ */
+export interface FileUpdateData {
+    content: string;
+    links?: string[];
+    mtime: number;
+    path: string;
+    size: number;
+    title: string;
+}
+
+/**
  * Data stored in each graph node.
  */
 export interface GraphNodeData {
@@ -92,4 +104,5 @@ export interface WorkerAPI {
     updateAliasMap(map: Record<string, string>): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
     updateFile(path: string, content: string, mtime: number, size: number, title: string, links?: string[]): Promise<void>;
+    updateFiles(files: FileUpdateData[]): Promise<void>;
 }

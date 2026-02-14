@@ -13,6 +13,10 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Chunked batch updates**: Refactored `GraphService` to batch background file updates and `scanAll` indexing into chunks of 50 files or 5MB. This significantly reduces IPC overhead and prevents memory spikes.
+-   **Active-file prioritisation**: Implemented a dual-timer strategy (30s for active, batched for background) to prioritise the current note while ensuring background syncs are efficient.
+-   **Atomic tab switching**: Added safeguards to ensure pending active updates are downgraded to background batches during tab transitions, eliminating data loss.
+
 ## [6.0.1] - 2026-02-13
 
 ### User features
