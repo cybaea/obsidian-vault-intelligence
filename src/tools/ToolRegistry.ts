@@ -237,9 +237,15 @@ export class ToolRegistry {
                     return await this.executeWriteOperation(name, args, createdFiles, isWriteEnabled);
 
                 case AGENT_CONSTANTS.TOOLS.LIST_FOLDER:
+                    if (this.isPathExcluded(args.folderPath as string, false)) {
+                        return { error: `Permission Denied: Agent is not allowed to list excluded folder: ${String(args.folderPath)}` };
+                    }
                     return { result: this.fileTools.listFolder(args.folderPath as string) };
 
                 case AGENT_CONSTANTS.TOOLS.READ_NOTE:
+                    if (this.isPathExcluded(args.path as string, true)) {
+                        return { error: `Permission Denied: Agent is not allowed to read excluded note: ${String(args.path)}` };
+                    }
                     return { result: await this.fileTools.readNote(args.path as string) };
 
                 default:
@@ -324,14 +330,13 @@ export class ToolRegistry {
             return { error: "Agent write access is disabled. The user must enable 'Write' in the chat view or globally in plugin settings." };
         }
 
-        const targetPath = (args.path as string || args.newPath as string || "").toLowerCase();
-        const isExcluded = this.settings.excludedFolders.some(folder => {
-            const normalizedFolder = folder.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
-            return targetPath.startsWith(normalizedFolder + "/") || targetPath === normalizedFolder;
-        });
+        const isNote = name !== AGENT_CONSTANTS.TOOLS.CREATE_FOLDER;
+        const pathsToCheck = [args.path as string, args.newPath as string].filter(p => p && p.trim().length > 0);
+
+        const isExcluded = pathsToCheck.some(p => this.isPathExcluded(p, isNote));
 
         if (isExcluded) {
-            return { error: `Permission Denied: Agent is not allowed to write to excluded folder: ${targetPath}` };
+            return { error: `Permission Denied: Agent is not allowed to perform write or move operations involving excluded paths.` };
         }
 
         let action: "create" | "update" | "rename" | "folder";
@@ -394,5 +399,21 @@ export class ToolRegistry {
                 throw new Error("Invalid write tool");
         }
         return { result: successMessage };
+    }
+
+    private isPathExcluded(rawPath: string | undefined, isNote: boolean): boolean {
+        if (!rawPath || rawPath.trim().length === 0) return false;
+
+        let processedPath = rawPath.replace(/^\/+/, "");
+        if (isNote && !processedPath.toLowerCase().endsWith(".md")) {
+            processedPath += ".md";
+        }
+
+        const targetPath = normalizePath(processedPath).toLowerCase();
+
+        return this.settings.excludedFolders.some(folder => {
+            const normalizedFolder = folder.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
+            return targetPath.startsWith(normalizedFolder + "/") || targetPath === normalizedFolder;
+        });
     }
 }

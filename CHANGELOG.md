@@ -13,6 +13,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Path security hardening**: Implemented a robust path normalization and exclusion check in `ToolRegistry.ts`. This fixes a critical vulnerability where path traversal (ie `../`), extension bypasses, and rename operations could be used to access or modify files in excluded folders. Verified with a new comprehensive security test suite.
+
 ## [6.0.2] - 2026-02-14
 
 ### User features
