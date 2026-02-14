@@ -241,18 +241,7 @@ export class PersistenceManager {
         }
     }
 
-    public async wipeState(modelId: string, dimension: number): Promise<void> {
-        const sanitizedId = this.getSanitizedModelId(modelId, dimension);
-        const vaultPath = normalizePath(`${GRAPH_CONSTANTS.VAULT_DATA_DIR}/graph-state-${sanitizedId}.msgpack`);
 
-        // 1. Wipe Hot Store (Namespaced)
-        await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`);
-
-        // 2. Wipe Cold Store (Sharded)
-        if (await this.plugin.app.vault.adapter.exists(vaultPath)) {
-            await this.plugin.app.vault.adapter.remove(vaultPath);
-        }
-    }
 
     /**
      * Lists all available model database files in the vault.
