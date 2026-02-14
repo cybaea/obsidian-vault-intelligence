@@ -145,7 +145,6 @@ describe('GraphService Lifecycle & Sharding', () => {
         const testable = graphService as unknown as TestableGraphService;
 
         // Simulate user changing settings through UI (but not committed yet)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Settings object is untyped
         testable.settings.embeddingModel = 'new-model';
 
         // Trigger a save
@@ -199,7 +198,6 @@ describe('GraphService Lifecycle & Sharding', () => {
         try {
             await zombieTask;
         } catch (e: any) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Error object is untyped
             expect(e.message).toContain("TaskDropped");
         }
 
@@ -226,9 +224,7 @@ describe('GraphService Lifecycle & Sharding', () => {
         const configCall = calls[0]?.[0];
 
         expect(configCall).toBeDefined();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mock calls array is untyped
         expect(configCall.embeddingModel).toBeUndefined();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mock calls array is untyped
         expect(configCall.sanitizedModelId).toBeUndefined();
 
         // 2. Commit change
