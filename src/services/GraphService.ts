@@ -221,12 +221,18 @@ export class GraphService extends Events {
                 return;
             }
 
-            // Case 2: Standard rename (managed by worker updateFile subsequently)
+            // Case 2: Standard rename (Delete old, Debounce new)
             void this.enqueueIndexingTask(async () => {
                 if (!this.api) return;
-                await this.api.renameFile(oldPath, newPath);
+                await this.api.deleteFile(oldPath);
                 this.requestSave();
             });
+
+            // Queue re-indexing for the new path
+            const renamedFile = this.vaultManager.getFileByPath(newPath);
+            if (renamedFile) {
+                this.debounceUpdate(newPath, renamedFile);
+            }
         });
     }
 

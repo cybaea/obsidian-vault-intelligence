@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking internal services for tests requires any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
+/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
 import { Plugin } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +27,8 @@ interface TestableGraphService {
 const mockPlugin = {
     app: {
         metadataCache: {
+            getFileCache: vi.fn().mockReturnValue({ links: [] }),
+            getFirstLinkpathDest: vi.fn(),
             on: vi.fn()
         },
         vault: {
@@ -37,10 +41,13 @@ const mockPlugin = {
 } as unknown as Plugin;
 
 const mockVaultManager = {
+    getFileByPath: vi.fn(),
+    getFileStat: vi.fn().mockReturnValue({ basename: 'test', mtime: 1000, size: 100 }),
     getMarkdownFiles: vi.fn().mockReturnValue([]),
     onDelete: vi.fn(),
     onModify: vi.fn(),
     onRename: vi.fn(),
+    readFile: vi.fn().mockResolvedValue('test content'),
 } as any;
 
 const mockGeminiService = {} as any;
@@ -54,20 +61,23 @@ const mockPersistenceManager = {
 };
 
 const mockWorkerApi = {
+    deleteFile: vi.fn(),
     fullReset: vi.fn(),
     getFileStates: vi.fn().mockResolvedValue({}),
+    initialize: vi.fn().mockResolvedValue(true),
     loadIndex: vi.fn().mockResolvedValue(true),
     pruneOrphans: vi.fn(),
     saveIndex: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
     updateAliasMap: vi.fn(),
     updateConfig: vi.fn(),
     updateFile: vi.fn(),
+    updateFiles: vi.fn(),
 };
 
 // Mock WorkerManager (we need to intercept its creation)
 const mockWorkerManager = {
     getApi: vi.fn().mockReturnValue(mockWorkerApi),
-    initializeWorker: vi.fn(),
+    initializeWorker: vi.fn().mockResolvedValue(undefined),
     terminate: vi.fn(),
 };
 
@@ -91,7 +101,8 @@ describe('GraphService Lifecycle & Sharding', () => {
             embeddingDimension: 768,
             embeddingModel: 'old-model',
             embeddingProvider: 'google',
-            indexingDelayMs: 100
+            indexingDelayMs: 100,
+            indexingExclusionPaths: []
         };
 
         graphService = new GraphService(
@@ -105,10 +116,14 @@ describe('GraphService Lifecycle & Sharding', () => {
 
         // Inject mock worker manager
         (graphService as unknown as TestableGraphService).workerManager = mockWorkerManager;
+
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
+        graphService.shutdown();
         vi.clearAllMocks();
+        vi.useRealTimers();
     });
 
     it('should freeze active model state upon initialization', async () => {
@@ -235,5 +250,33 @@ describe('GraphService Lifecycle & Sharding', () => {
 
         // 5. Scan (Delta)
         expect(mockWorkerApi.getFileStates).toHaveBeenCalled();
+    });
+
+    it('should trigger delete and re-index on file rename', async () => {
+        await graphService.initialize();
+        const testable = graphService as unknown as TestableGraphService;
+
+        // Mock getFileByPath to return a dummy file for the new path
+        const mockNewFile = { path: 'new-path.md', stat: { size: 100 } } as any;
+        mockVaultManager.getFileByPath.mockReturnValue(mockNewFile);
+
+        // Simulation of rename event
+        const onRenameCallback = mockVaultManager.onRename.mock.calls[0][0];
+        onRenameCallback('old-path.md', 'new-path.md');
+
+        // wait for deleteFile
+        await vi.waitFor(() => {
+            expect(mockWorkerApi.deleteFile).toHaveBeenCalledWith('old-path.md');
+        });
+
+        // 2. Advance timers to trigger the debouncer
+        vi.advanceTimersByTime(200);
+
+        // wait for updateFiles
+        await vi.waitFor(() => {
+            expect(mockWorkerApi.updateFiles).toHaveBeenCalled();
+        });
+
+        expect(testable.workerSessionId).toBeGreaterThan(0);
     });
 });

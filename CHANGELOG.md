@@ -11,13 +11,14 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
-### Developer features
-
 -   **Regex performance optimization**: Completely rewrote the `semanticSplit` function in the Indexer Worker to use index-scanning instead of a lazy-lookahead Regex. This eliminates a CPU-bound loop that caused the worker to freeze when indexing massively large markdown files (5MB+) lacking headers.
+-   **Ghost node prevention**: Fixed a bug where file renames could result in "ghost nodes" and indexing drifts. The `onRename` handler now explicitly deletes the old path before enqueuing a re-index for the new path.
+-   **Indexer schema hardening**: Resolved a schema leak in the Orama worker where undefined properties were being passed to the index, potentially causing hydration failures.
 
 -   **Chunked batch updates**: Refactored `GraphService` to batch background file updates and `scanAll` indexing into chunks of 50 files or 5MB. This significantly reduces IPC overhead and prevents memory spikes.
 -   **Active-file prioritisation**: Implemented a dual-timer strategy (30s for active, batched for background) to prioritise the current note while ensuring background syncs are efficient.
 -   **Atomic tab switching**: Added safeguards to ensure pending active updates are downgraded to background batches during tab transitions, eliminating data loss.
+-   **Ghost node prevention**: Fixed a critical edge case where renaming a file without altering its contents permanently dropped its text from the semantic index. File renames now automatically trigger a targeted background re-embed.
 
 ## [6.0.1] - 2026-02-13
 
