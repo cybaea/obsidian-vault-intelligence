@@ -395,9 +395,9 @@ export class GraphService extends Events {
     }
 
     /**
-     * Forces an immediate save of the graph state, clearing any pending debounce.
-     * Useful for clean shutdowns.
-     */
+         * Forces an immediate save of the graph state, clearing any pending debounce.
+         * Useful for clean shutdowns.
+         */
     public async forceSave() {
         if (this.saveTimeout !== undefined) {
             // Clear both standard timeout and RequestIdleCallback handle (treated as number in many envs)
@@ -407,18 +407,28 @@ export class GraphService extends Events {
         await this.saveState();
     }
 
+    private savePromise: Promise<void> | null = null;
+
     /**
      * Internal method to fetch state from worker and write via PersistenceManager.
      */
     private async saveState() {
-        if (!this.api || !this.activeModelId || !this.activeDimension) return;
-        try {
-            // Returns Uint8Array (MessagePack)
-            const stateBuffer = await this.api.saveIndex();
-            await this.persistenceManager.saveState(stateBuffer, this.activeModelId, this.activeDimension);
-        } catch (error) {
-            logger.error("[GraphService] Save failed:", error);
-        }
+        const { activeDimension, activeModelId, api } = this;
+        if (!api || !activeModelId || !activeDimension) return;
+        if (this.savePromise) return this.savePromise; // Lock acquired
+
+        this.savePromise = (async () => {
+            try {
+                // Returns Uint8Array (MessagePack)
+                const stateBuffer = await api.saveIndex();
+                await this.persistenceManager.saveState(stateBuffer, activeModelId, activeDimension);
+            } catch (error) {
+                logger.error("[GraphService] Save failed:", error);
+            } finally {
+                this.savePromise = null; // Lock released
+            }
+        })();
+        return this.savePromise;
     }
 
     /**

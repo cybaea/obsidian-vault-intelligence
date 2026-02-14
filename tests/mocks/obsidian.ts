@@ -15,13 +15,35 @@ export class ItemView {
 }
 
 export class WorkspaceLeaf { }
+export class AbstractInputSuggest<T> {
+    constructor(_app: App, _inputEl: HTMLInputElement | HTMLTextAreaElement) { }
+}
+
+export function normalizePath(path: string): string {
+    const segments = path.replace(/\\/g, '/').split('/');
+    const result: string[] = [];
+    for (const segment of segments) {
+        if (segment === '..') {
+            result.pop();
+        } else if (segment !== '.' && segment !== '') {
+            result.push(segment);
+        }
+    }
+    return result.join('/');
+}
+
 export class TFile {
     basename: string = "";
     extension: string = "";
     path: string = "";
 }
 export class TFolder { }
-export class App { }
+export class App {
+    vault: any;
+    workspace: any;
+    metadataCache: any;
+    fileManager: any;
+}
 export class Plugin {
     app: App = new App();
     manifest: any = {};
@@ -34,6 +56,22 @@ export class Plugin {
     saveSettings(): Promise<void> { return Promise.resolve(); }
 }
 
+export class PluginSettingTab {
+    constructor(_app: App, _plugin: Plugin) { }
+    display(): void { }
+}
+
+export class Setting {
+    constructor(_containerEl: HTMLElement) { }
+    setName(_name: string): this { return this; }
+    setDesc(_desc: string): this { return this; }
+    addText(_cb: (text: any) => any): this { return this; }
+    addToggle(_cb: (toggle: any) => any): this { return this; }
+    addButton(_cb: (button: any) => any): this { return this; }
+    addDropdown(_cb: (dropdown: any) => any): this { return this; }
+    addSlider(_cb: (slider: any) => any): this { return this; }
+}
+
 export class Notice {
     constructor(_message: string, _duration?: number) { }
 }
@@ -43,9 +81,15 @@ export class Events {
     trigger(_event: string, ..._args: any[]): void { }
 }
 
+export const Platform = {
+    isMobile: false
+};
+
 // Global mocks for Node environment
 const g = typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : window);
 if (g) {
+    (g as any).self = g;
+    (g as any).addEventListener = () => { };
     (g as any).Worker = class {
         onmessage = (_ev: MessageEvent) => { };
         postMessage = (_msg: any) => { };
