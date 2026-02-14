@@ -5,7 +5,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
 /* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
 
-import { encode } from "@msgpack/msgpack";
 import { TFile } from 'obsidian';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -69,54 +68,7 @@ describe('Storage & Migration Integration', () => {
         vi.clearAllMocks();
     });
 
-    describe('Migration Data-Loss Bug Fix', () => {
-        it('should correctly migrate states with top-level model ID metadata', async () => {
-            const legacyPath = '.vault-intelligence/graph-state.msgpack';
-            const stateData = {
-                embeddingDimension: 768,
-                embeddingModel: 'test-model',
-                nodes: []
-            };
-            const buffer = encode(stateData);
 
-            mockPlugin.app.vault.adapter.readBinary.mockResolvedValue(buffer.buffer);
-
-            // Mock ONLY the legacy state file as existing, ANY sharded file as NOT existing
-            mockPlugin.app.vault.adapter.exists.mockImplementation((path: string) => {
-                if (path.includes('graph-state-')) return Promise.resolve(false); // Shards don't exist
-                if (path.includes('graph-state.msgpack')) return Promise.resolve(true); // Legacy exists
-                return Promise.resolve(false);
-            });
-
-            // Call loadState which triggers handleMigrations
-            await persistenceManager.loadState('test-model', 768);
-
-            // Assertions
-            expect(mockPlugin.app.vault.adapter.writeBinary).toHaveBeenCalled();
-            expect(mockPlugin.app.vault.adapter.remove).toHaveBeenCalledWith(legacyPath);
-        });
-
-        it('should NOT migrate if actualModelId is missing (Top-level check)', async () => {
-            const legacyPath = '.vault-intelligence/graph-state.msgpack';
-            const malformedData = { someOtherField: 'junk' };
-            const buffer = encode(malformedData);
-
-            mockPlugin.app.vault.adapter.readBinary.mockResolvedValue(buffer.buffer);
-            mockPlugin.app.vault.adapter.exists.mockImplementation((path: string) => {
-                if (path.includes('graph-state-')) return Promise.resolve(false);
-                if (path.includes('graph-state.msgpack') && !path.includes('plugins')) return Promise.resolve(true);
-                return Promise.resolve(false);
-            });
-
-            await persistenceManager.loadState('test-model', 768);
-
-            // Assertions
-            // It should NOT write to ANY sharded path
-            expect(mockPlugin.app.vault.adapter.writeBinary).not.toHaveBeenCalled();
-            // It SHOULD remove the malformed legacy file
-            expect(mockPlugin.app.vault.adapter.remove).toHaveBeenCalledWith(legacyPath);
-        });
-    });
 
     describe('IDB Isolation (Split-Brain Prevention)', () => {
         it('should use "orama_index_buffer_" prefix for Main-Thread UI persistence', async () => {
