@@ -34,7 +34,11 @@ export class PersistenceManager {
 
             // 1. Save to "Hot Store" (IndexedDB) for fast local access
             // We namespace the key to ensure multiple models don't overwrite each other
-            await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, stateBuffer);
+            try {
+                await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, stateBuffer);
+            } catch (e) {
+                logger.warn(`[PersistenceManager] Failed to write to Hot Store (IDB) for ${sanitizedId}. Proceeding to Cold Store.`, e);
+            }
 
             // 2. Save to "Cold Store" (Vault File) for cross-device sync
             const bufferToWrite = stateBuffer.byteLength === stateBuffer.buffer.byteLength
@@ -88,7 +92,11 @@ export class PersistenceManager {
                 logger.info(`[PersistenceManager] Loaded from Cold Store (Vault): ${uint8.byteLength} bytes`);
 
                 // Hydrate Hot Store
-                await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, uint8);
+                try {
+                    await this.storage.put(STORES.VECTORS, `orama_index_buffer_${sanitizedId}`, uint8);
+                } catch (e) {
+                    logger.warn(`[PersistenceManager] Failed to hydrate Hot Store (IDB) for ${sanitizedId}. Returning Cold Store data anyway.`, e);
+                }
 
                 return uint8;
             } catch (error) {
@@ -270,8 +278,12 @@ export class PersistenceManager {
         // Filename: graph-state-<sanitizedId>.msgpack
         const match = fileName.match(/graph-state-(.+)\.msgpack/);
         if (match && match[1]) {
-            await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${match[1]}`);
-            await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`); // ADD THIS LINE TO FIX LEAK
+            try {
+                await this.storage.delete(STORES.VECTORS, `orama_index_buffer_${match[1]}`);
+                await this.storage.delete(STORES.VECTORS, `orama_index_${match[1]}`); // ADD THIS LINE TO FIX LEAK
+            } catch (e) {
+                logger.warn(`[PersistenceManager] Failed to delete ${match[1]} from Hot Store (IDB).`, e);
+            }
         }
     }
 
@@ -283,7 +295,11 @@ export class PersistenceManager {
         const dataFolder = normalizePath(GRAPH_CONSTANTS.VAULT_DATA_DIR);
 
         // 1. Optimal IDB Wipe (Full reset)
-        await this.storage.clear();
+        try {
+            await this.storage.clear();
+        } catch (e) {
+            logger.warn("[PersistenceManager] Failed to clear Hot Store (IDB) during purge. Proceeding to wipe Vault data.", e);
+        }
 
         // 2. Vault Wipe
         if (await this.plugin.app.vault.adapter.exists(dataFolder)) {
