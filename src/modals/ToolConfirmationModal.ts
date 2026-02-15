@@ -1,4 +1,4 @@
-import { App, Modal, ButtonComponent, MarkdownRenderer, TextComponent, Component } from "obsidian";
+import { App, Modal, ButtonComponent, TextComponent } from "obsidian";
 
 import { FolderSuggest } from "../views/FolderSuggest";
 
@@ -14,7 +14,6 @@ export interface ToolConfirmationDetails {
 export class ToolConfirmationModal extends Modal {
     private details: ToolConfirmationDetails;
     private resolve: (value: ToolConfirmationDetails | null) => void;
-    private renderComponent: Component;
 
     constructor(app: App, details: ToolConfirmationDetails, resolve: (value: ToolConfirmationDetails | null) => void) {
         super(app);
@@ -85,16 +84,15 @@ export class ToolConfirmationModal extends Modal {
         }
 
         if (this.details.content) {
-            contentEl.createEl("h4", { text: "Note content or updates" });
-            const previewContainer = contentEl.createDiv({ cls: "confirmation-preview" });
+            contentEl.createEl("h4", { text: "Note content or updates (review carefully)" });
+            const previewContainer = contentEl.createDiv({ cls: "confirmation-preview-raw" });
             const previewText = this.details.content.length > 2000
                 ? this.details.content.substring(0, 2000) + "\n\n... (truncated)"
                 : this.details.content;
 
-            this.renderComponent = new Component();
-            this.renderComponent.load();
-
-            void MarkdownRenderer.render(this.app, previewText, previewContainer, "", this.renderComponent);
+            // Use a <pre> block instead of MarkdownRenderer to expose ALL syntax and HTML tags
+            const preEl = previewContainer.createEl("pre", { cls: "confirmation-raw-code" });
+            preEl.createEl("code", { cls: "language-markdown", text: previewText });
         }
 
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
@@ -116,9 +114,6 @@ export class ToolConfirmationModal extends Modal {
     }
 
     onClose() {
-        if (this.renderComponent) {
-            this.renderComponent.unload();
-        }
         this.resolve(null);
         this.contentEl.empty();
     }
