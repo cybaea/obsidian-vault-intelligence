@@ -397,15 +397,17 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		}
 	}
 
-	async saveSettings() {
+	async saveSettings(requiresWorkerRestart = false) {
 		await this.saveData(this.settings);
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
 
-		this.initDebouncedHandlers();
-
 		if (this.graphSyncOrchestrator) {
-			await this.graphSyncOrchestrator.commitConfigChange();
+			if (requiresWorkerRestart) {
+				await this.graphSyncOrchestrator.commitConfigChange();
+			} else {
+				await this.graphSyncOrchestrator.updateConfig(this.settings);
+			}
 		}
 	}
 

@@ -285,8 +285,10 @@ export class GraphSyncOrchestrator {
         } catch (error) {
             logger.error("[GraphSyncOrchestrator] Scan failed:", error);
         } finally {
-            this._isScanning = false;
-            this.abortController = null;
+            if (this.abortController?.signal === signal) {
+                this._isScanning = false;
+                this.abortController = null;
+            }
         }
     }
 
@@ -400,6 +402,9 @@ export class GraphSyncOrchestrator {
         if (allPending.length > 0) {
             await this.processChunkInWorker(allPending);
         }
+
+        // Ensure all queued mutations finish before dumping the state to disk
+        await this.workerManager.waitForIdle();
         await this.saveState();
         this.workerManager.terminate();
     }

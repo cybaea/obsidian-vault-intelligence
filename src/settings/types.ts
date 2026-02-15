@@ -180,6 +180,6 @@ export interface IVaultIntelligencePlugin {
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
     persistenceManager: PersistenceManager;
-    saveSettings(): Promise<void>;
+    saveSettings(requiresWorkerRestart?: boolean): Promise<void>;
     settings: VaultIntelligenceSettings;
 }

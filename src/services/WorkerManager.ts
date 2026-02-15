@@ -139,6 +139,13 @@ export class WorkerManager {
         return this.api;
     }
 
+    /**
+     * Waits for all currently queued mutations to complete.
+     */
+    public async waitForIdle(): Promise<void> {
+        await this.mutationQueue;
+    }
+
     public get activeModel(): { id: string | null; dimension: number | null; sessionId: number } {
         return {
             dimension: this.activeDimension,
