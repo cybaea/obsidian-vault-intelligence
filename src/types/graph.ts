@@ -44,20 +44,26 @@ export interface GraphEdgeData {
 }
 
 /**
- * Search results from the Shadow Graph.
+ * Raw search results from the Shadow Graph (Worker -> Main bridge).
  */
-export interface GraphSearchResult {
+export interface SerializableGraphSearchResult {
     anchorHash?: number;
-    content?: string; // New: hold full/chunk text for RAG/hydration
-    description?: string; // New: hold relationship metadata (e.g., "(Sibling via ...)")
+    description?: string; // Metadata about relationship (e.g. "(Sibling via ...)")
     end?: number;
     excerpt?: string;
-    id?: string; // New: Orama document ID (path#chunk)
+    id?: string; // Orama document ID (path#chunk)
     path: string;
     score: number;
     start?: number;
     title?: string;
-    tokenCount?: number; // New: tokens for the specific result/chunk
+    tokenCount?: number;
+}
+
+/**
+ * Search results from the Shadow Graph.
+ */
+export interface GraphSearchResult extends SerializableGraphSearchResult {
+    content?: string; // hold full/chunk text for RAG/hydration
 }
 
 /**
@@ -91,15 +97,15 @@ export interface WorkerAPI {
     getCentrality(path: string): Promise<number>;
     getFileState(path: string): Promise<{ mtime: number, size: number, hash: string } | null>;
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
-    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<GraphSearchResult[]>;
-    getSimilar(path: string, limit?: number, minScore?: number): Promise<GraphSearchResult[]>;
+    getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<SerializableGraphSearchResult[]>;
+    getSimilar(path: string, limit?: number, minScore?: number): Promise<SerializableGraphSearchResult[]>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
-    keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]>;
+    keywordSearch(query: string, limit?: number): Promise<SerializableGraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;
     pruneOrphans(paths: string[]): Promise<void>;
     saveIndex(): Promise<Uint8Array>; // Returns serialized graph/index
-    search(query: string, limit?: number): Promise<GraphSearchResult[]>;
-    searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]>;
+    search(query: string, limit?: number): Promise<SerializableGraphSearchResult[]>;
+    searchInPaths(query: string, paths: string[], limit?: number): Promise<SerializableGraphSearchResult[]>;
     updateAliasMap(map: Record<string, string>): Promise<void>;
     updateConfig(config: Partial<WorkerConfig>): Promise<void>;
     updateFile(path: string, content: string, mtime: number, size: number, title: string, links?: string[]): Promise<void>;

@@ -1,7 +1,10 @@
 import { App, Platform } from "obsidian";
 
 import { SEARCH_CONSTANTS, GRAPH_CONSTANTS } from "../constants";
+import { GraphService } from "../services/GraphService";
+import { GraphSyncOrchestrator } from "../services/GraphSyncOrchestrator";
 import { IEmbeddingService } from "../services/IEmbeddingService";
+import { PersistenceManager } from "../services/PersistenceManager";
 import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local';
@@ -173,18 +176,10 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 export interface IVaultIntelligencePlugin {
     app: App;
     embeddingService: IEmbeddingService;
-    graphService: {
-        commitConfigChange(): void;
-        scanAll(forceWipe?: boolean): Promise<void>;
-        updateConfig(settings: VaultIntelligenceSettings): Promise<void>;
-    };
+    graphService: GraphService;
+    graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
-    persistenceManager: {
-        deleteState(fileName: string): Promise<void>;
-        getSanitizedModelId(modelId: string, dimension: number): string;
-        listAvailableStates(): Promise<string[]>;
-        purgeAllData(): Promise<void>;
-    };
+    persistenceManager: PersistenceManager;
     saveSettings(): Promise<void>;
     settings: VaultIntelligenceSettings;
 }

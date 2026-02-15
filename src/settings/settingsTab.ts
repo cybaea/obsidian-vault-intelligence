@@ -67,7 +67,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
     }
 
     override hide(): void {
-        void this.plugin.graphService.commitConfigChange();
+        void this.plugin.graphSyncOrchestrator.commitConfigChange();
         super.hide();
     }
 

@@ -6,6 +6,7 @@ import { GardenerService, GardenerPlanSchema } from "./services/GardenerService"
 import { GardenerStateService } from "./services/GardenerStateService";
 import { GeminiService } from "./services/GeminiService";
 import { GraphService } from "./services/GraphService";
+import { GraphSyncOrchestrator } from "./services/GraphSyncOrchestrator";
 import { IEmbeddingService } from "./services/IEmbeddingService";
 import { MetadataManager } from "./services/MetadataManager";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
@@ -13,6 +14,7 @@ import { OntologyService } from "./services/OntologyService";
 import { PersistenceManager } from "./services/PersistenceManager";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
+import { WorkerManager } from "./services/WorkerManager";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
@@ -113,6 +115,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	ontologyService: OntologyService;
 	gardenerService: GardenerService;
 	gardenerStateService: GardenerStateService;
+	workerManager: WorkerManager;
+	graphSyncOrchestrator: GraphSyncOrchestrator;
 	private needsReindex = false;
 
 	private initDebouncedHandlers() {
@@ -167,8 +171,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 3. Initialize Graph Infrastructure
 		this.vaultManager = new VaultManager(this.app);
 		this.persistenceManager = new PersistenceManager(this);
-		this.graphService = new GraphService(this, this.vaultManager, this.geminiService, this.embeddingService, this.persistenceManager, this.settings);
+		this.workerManager = new WorkerManager(this.app, this.embeddingService);
 
+		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager);
 
 		// 4. Initialize Gardener Infrastructure (Stage 2)
 		this.metadataManager = new MetadataManager(this.app);
@@ -176,14 +181,29 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.gardenerStateService = new GardenerStateService(this.app, this);
 		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
 
+		// 5. Initialize GraphSyncOrchestrator (now that dependencies are ready)
+		this.graphSyncOrchestrator = new GraphSyncOrchestrator(
+			this.app,
+			this.vaultManager,
+			this.workerManager,
+			this.persistenceManager,
+			this.settings,
+			this.ontologyService,
+			this.graphService // EventBus
+		);
+
+		// 6. Late binding of providers to Facade
+		this.graphService.setProviders(
+			() => this.workerManager.getApi() !== null,
+			() => this.graphSyncOrchestrator.isScanning
+		);
+
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(async () => {
 			// Defer heavy initialization until layout is ready to unblock UI
-			await this.graphService.initialize();
+			await this.graphSyncOrchestrator.startNode();
 			await this.ontologyService.initialize();
 			await this.gardenerStateService.loadState();
-
-			await this.graphService.scanAll(this.needsReindex);
 		});
 
 		// Ribbon Icon
@@ -318,10 +338,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-misused-promises -- Obsidian lifecycle requires async onunload for graceful shutdown and persistence
 	async onunload() {
-		if (this.graphService) {
-			// Await the final save to ensure data is retrieved from worker before termination
-			await this.graphService.forceSave();
-			this.graphService.shutdown();
+		if (this.graphSyncOrchestrator) {
+			await this.graphSyncOrchestrator.flushAndShutdown();
 		}
 
 		if (this.embeddingService instanceof RoutingEmbeddingService) {
@@ -386,8 +404,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		this.initDebouncedHandlers();
 
-		if (this.graphService) {
-			await this.graphService.updateConfig(this.settings);
+		if (this.graphSyncOrchestrator) {
+			await this.graphSyncOrchestrator.commitConfigChange();
 		}
 	}
 
