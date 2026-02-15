@@ -22,7 +22,7 @@ export class SimilarNotesView extends ItemView {
 
         // Refresh when graph is ready
         this.registerEvent(
-            this.plugin.graphService.on('index-ready', () => {
+            this.plugin.graphService.on('graph:index-ready', () => {
                 const file = this.plugin.app.workspace.getActiveFile();
                 void this.updateForFile(file, true); // Force refresh
             })
@@ -31,7 +31,7 @@ export class SimilarNotesView extends ItemView {
         // Refresh instantly when a background update finishes (Debounced & Memory-safe)
         let refreshTimer: ReturnType<typeof setTimeout> | null = null;
         this.registerEvent(
-            this.plugin.graphService.on('index-updated', () => {
+            this.plugin.graphService.on('graph:index-updated', () => {
                 if (refreshTimer) clearTimeout(refreshTimer);
                 refreshTimer = setTimeout(() => {
                     const file = this.plugin.app.workspace.getActiveFile();

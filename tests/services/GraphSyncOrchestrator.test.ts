@@ -44,6 +44,7 @@ const mockWorkerManager = {
     getApi: vi.fn().mockReturnValue({}),
     initializeWorker: vi.fn().mockResolvedValue(undefined),
     terminate: vi.fn(),
+    waitForIdle: vi.fn().mockResolvedValue(undefined),
 } as any;
 
 const mockPersistenceManager = {
@@ -70,6 +71,7 @@ const mockWorkerApi = {
     updateAliasMap: vi.fn(),
     updateConfig: vi.fn(),
     updateFiles: vi.fn(),
+    pruneOrphans: vi.fn(),
 };
 
 describe('GraphSyncOrchestrator', () => {
@@ -160,5 +162,33 @@ describe('GraphSyncOrchestrator', () => {
         expect(mockPersistenceManager.saveState).toHaveBeenCalled();
         expect(mockWorkerManager.terminate).toHaveBeenCalled();
         expect(mockWorkerManager.initializeWorker).toHaveBeenCalledTimes(2);
+    });
+
+    it('should only register events once even if startNode is called multiple times', async () => {
+        await orchestrator.startNode();
+        // Reset the mock to ensure previous calls don't count, though we expect 1 call total if logic works
+        // But since we already called startNode in beforeEach or just now? 
+        // Actually startNode called mockVaultManager.onModify once.
+        // Let's call startNode again.
+        await orchestrator.startNode();
+
+        // Should still be 1 if the flag works
+        expect(mockVaultManager.onModify).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear drift quarantine on file modification', async () => {
+        await orchestrator.startNode();
+
+        // Simulate quarantine
+        (orchestrator as any).driftQuarantine.set('test.md', 3);
+        expect((orchestrator as any).driftQuarantine.has('test.md')).toBe(true);
+
+        // Trigger modify
+        const modifyCallback = mockVaultManager.onModify.mock.calls[0][0];
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast
+        const mockFile = { path: 'test.md', stat: { size: 100 } } as unknown as TFile;
+        modifyCallback(mockFile);
+
+        expect((orchestrator as any).driftQuarantine.has('test.md')).toBe(false);
     });
 });

@@ -24,6 +24,7 @@ export class GraphSyncOrchestrator {
     private needsForcedScan = false;
     private reindexQueued = false;
     private abortController: AbortController | null = null;
+    private eventsRegistered = false;
 
     // Batching state
     private pendingBackgroundUpdates: Map<string, TFile> = new Map();
@@ -102,7 +103,11 @@ export class GraphSyncOrchestrator {
     }
 
     private registerEvents() {
+        if (this.eventsRegistered) return;
+        this.eventsRegistered = true;
+
         this.vaultManager.onModify((file) => {
+            this.driftQuarantine.delete(file.path);
             if (this.isPathExcluded(file.path)) {
                 void this.workerManager.executeMutation(api => api.deleteFile(file.path));
                 this.requestSave();
@@ -112,11 +117,14 @@ export class GraphSyncOrchestrator {
         });
 
         this.vaultManager.onDelete((path) => {
+            this.driftQuarantine.delete(path);
             void this.workerManager.executeMutation(api => api.deleteFile(path));
             this.requestSave();
         });
 
         this.vaultManager.onRename((oldPath, newPath) => {
+            this.driftQuarantine.delete(oldPath);
+            this.driftQuarantine.delete(newPath);
             void this.workerManager.executeMutation(api => api.deleteFile(oldPath));
             const renamedFile = this.vaultManager.getFileByPath(newPath);
             if (renamedFile && !this.isPathExcluded(newPath)) {
@@ -202,25 +210,30 @@ export class GraphSyncOrchestrator {
 
     private async processChunkInWorker(chunk: TFile[]) {
         if (chunk.length === 0) return;
-        await this.workerManager.executeMutation(async (api) => {
-            const filesData: FileUpdateData[] = [];
-            for (const file of chunk) {
-                const currentFile = this.vaultManager.getFileByPath(file.path);
-                if (!currentFile || this.isPathExcluded(file.path)) continue;
+        try {
+            await this.workerManager.executeMutation(async (api) => {
+                const filesData: FileUpdateData[] = [];
+                for (const file of chunk) {
+                    const currentFile = this.vaultManager.getFileByPath(file.path);
+                    if (!currentFile || this.isPathExcluded(file.path)) continue;
 
-                const content = await this.vaultManager.readFile(currentFile);
-                const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
+                    const content = await this.vaultManager.readFile(currentFile);
+                    const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
 
-                // Helper to resolve links within the Orchestrator
-                const links = this.getResolvedLinks(currentFile);
-                filesData.push({ content, links, mtime, path: file.path, size, title: basename });
-            }
-            if (filesData.length > 0) {
-                await api.updateFiles(filesData);
-                this.requestSave();
-                this.eventBus.trigger('graph:index-updated');
-            }
-        });
+                    // Helper to resolve links within the Orchestrator
+                    const links = this.getResolvedLinks(currentFile);
+                    filesData.push({ content, links, mtime, path: file.path, size, title: basename });
+                }
+                if (filesData.length > 0) {
+                    await api.updateFiles(filesData);
+                    this.requestSave();
+                    this.eventBus.trigger('graph:index-updated');
+                }
+            });
+        } catch (e) {
+            if (e instanceof Error && e.message.includes("TaskDropped")) return;
+            logger.error("[GraphSyncOrchestrator] Chunk processing failed:", e);
+        }
     }
 
     private getResolvedLinks(file: TFile): string[] {
@@ -278,7 +291,14 @@ export class GraphSyncOrchestrator {
                 void this.processChunkInWorker(currentChunk);
             }
 
+            // WAIT for the mutation queue to finish processing all chunks
+            await this.workerManager.waitForIdle();
+
             if (!signal.aborted) {
+                // Prune orphans (nodes that exist in graph but not in vault)
+                const validPaths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
+                await this.workerManager.executeMutation(api => api.pruneOrphans(validPaths));
+
                 logger.info("[GraphSyncOrchestrator] Scan complete.");
                 this.eventBus.trigger('graph:index-ready');
             }
@@ -379,6 +399,16 @@ export class GraphSyncOrchestrator {
         this.cancelPendingSave();
         if (this.abortController) this.abortController.abort();
 
+        // Flush timers and wait for pending mutations to finish!
+        if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
+        if (this.backgroundBatchTimer) clearTimeout(this.backgroundBatchTimer);
+        const allPending = [...Array.from(this.pendingBackgroundUpdates.values())];
+        if (this.pendingActiveUpdate) allPending.push(this.pendingActiveUpdate.file);
+        if (allPending.length > 0) {
+            await this.processChunkInWorker(allPending);
+        }
+        await this.workerManager.waitForIdle();
+
         const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
         if (oldDimension && oldModelId) {
             await this.saveState();
@@ -399,14 +429,19 @@ export class GraphSyncOrchestrator {
         const allPending = [...Array.from(this.pendingBackgroundUpdates.values())];
         if (this.pendingActiveUpdate) allPending.push(this.pendingActiveUpdate.file);
 
-        if (allPending.length > 0) {
-            await this.processChunkInWorker(allPending);
-        }
+        try {
+            if (allPending.length > 0) {
+                await this.processChunkInWorker(allPending);
+            }
 
-        // Ensure all queued mutations finish before dumping the state to disk
-        await this.workerManager.waitForIdle();
-        await this.saveState();
-        this.workerManager.terminate();
+            // Ensure all queued mutations finish before dumping the state to disk
+            await this.workerManager.waitForIdle();
+            await this.saveState();
+        } catch (e) {
+            logger.error("[GraphSyncOrchestrator] Error during flushAndShutdown", e);
+        } finally {
+            this.workerManager.terminate();
+        }
     }
 
     public get isScanning(): boolean { return this._isScanning; }

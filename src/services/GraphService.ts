@@ -65,36 +65,53 @@ export class GraphService extends Events {
      * Semantically searches the vault using vector embeddings.
      */
     public async search(query: string, limit?: number): Promise<GraphSearchResult[]> {
-        const rawResults = await this.workerManager.executeQuery(api => api.search(query, limit));
-        return this.hydrateAndHandleDrift(rawResults);
+        try {
+            const rawResults = await this.workerManager.executeQuery(api => api.search(query, limit));
+            return this.hydrateAndHandleDrift(rawResults);
+        } catch (e) {
+            // logger.debug("[GraphService] Search unavailable (worker restarting?):", e);
+            return [];
+        }
     }
 
     /**
      * Performs a keyword search on the Orama index.
      */
     public async keywordSearch(query: string, limit?: number): Promise<GraphSearchResult[]> {
-        const rawResults = await this.workerManager.executeQuery(api => api.keywordSearch(query, limit));
-        return this.hydrateAndHandleDrift(rawResults);
+        try {
+            const rawResults = await this.workerManager.executeQuery(api => api.keywordSearch(query, limit));
+            return this.hydrateAndHandleDrift(rawResults);
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
      * Semantically searches the vault within specific file paths.
      */
     public async searchInPaths(query: string, paths: string[], limit?: number): Promise<GraphSearchResult[]> {
-        const rawResults = await this.workerManager.executeQuery(api => api.searchInPaths(query, paths, limit));
-        return this.hydrateAndHandleDrift(rawResults);
+        try {
+            const rawResults = await this.workerManager.executeQuery(api => api.searchInPaths(query, paths, limit));
+            return this.hydrateAndHandleDrift(rawResults);
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
      * Gets similar notes based on vector distance.
      */
     public async getSimilar(path: string, limit?: number, minScore?: number): Promise<GraphSearchResult[]> {
-        const rawResults = await this.workerManager.executeQuery(api => api.getSimilar(path, limit, minScore));
-        const hydrated = await this.hydrateAndHandleDrift(rawResults);
+        try {
+            const rawResults = await this.workerManager.executeQuery(api => api.getSimilar(path, limit, minScore));
+            const hydrated = await this.hydrateAndHandleDrift(rawResults);
 
-        // Use default threshold if not provided
-        const threshold = minScore ?? 0.5; // Default floor
-        return hydrated.filter(r => r.score >= threshold);
+            // Use default threshold if not provided
+            const threshold = minScore ?? 0.5; // Default floor
+            return hydrated.filter(r => r.score >= threshold);
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
@@ -149,35 +166,51 @@ export class GraphService extends Events {
      * Gets direct neighbors of a file in the graph.
      */
     public async getNeighbors(path: string, options?: GraphTraversalOptions): Promise<GraphSearchResult[]> {
-        const neighbors = await this.workerManager.executeQuery(api => api.getNeighbors(path, options));
-        return this.hydrateAndHandleDrift(neighbors);
+        try {
+            const neighbors = await this.workerManager.executeQuery(api => api.getNeighbors(path, options));
+            return this.hydrateAndHandleDrift(neighbors);
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
      * Gets structural importance metrics for a node.
      */
     public async getCentrality(path: string): Promise<number> {
-        return await this.workerManager.executeQuery(api => api.getCentrality(path));
+        try {
+            return await this.workerManager.executeQuery(api => api.getCentrality(path));
+        } catch (e) {
+            return 0;
+        }
     }
 
     /**
      * Gets metadata for multiple nodes in a single worker call.
      */
     public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[], tokenCount?: number }>> {
-        return await this.workerManager.executeQuery(api => api.getBatchMetadata(paths));
+        try {
+            return await this.workerManager.executeQuery(api => api.getBatchMetadata(paths));
+        } catch (e) {
+            return {};
+        }
     }
 
     /**
      * Builds the priority payload for Dual-Loop Search (RAG).
      */
     public async buildPriorityPayload(queryVector: number[], query: string): Promise<GraphSearchResult[]> {
-        const hollowHits = await this.workerManager.executeQuery(api => api.buildPriorityPayload(queryVector, query)) as GraphSearchResult[];
-        const hydrated = await this.hydrateAndHandleDrift(hollowHits);
+        try {
+            const hollowHits = await this.workerManager.executeQuery(api => api.buildPriorityPayload(queryVector, query)) as GraphSearchResult[];
+            const hydrated = await this.hydrateAndHandleDrift(hollowHits);
 
-        return hydrated.map(item => ({
-            ...item,
-            content: item.excerpt
-        }));
+            return hydrated.map(item => ({
+                ...item,
+                content: item.excerpt
+            }));
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
