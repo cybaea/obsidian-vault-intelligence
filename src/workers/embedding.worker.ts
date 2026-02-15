@@ -48,7 +48,31 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
 
     return new Promise((resolve, reject) => {
         const requestId = fetchRequestId++;
-        pendingFetches.set(requestId, { reject, resolve });
+
+        // --- Smart Timeout Implementation ---
+        // 1. Determine timeout based on context (Model weights vs API/Metadata)
+        // Allow 15 minutes for model assets (.onnx, .bin, .wasm, etc.) to support slow connections
+        const IS_HEAVY_ASSET = url.toLowerCase().match(/\.(onnx|bin|wasm|msgpack)$/) || url.includes('huggingface.co');
+        const TIMEOUT_MS = IS_HEAVY_ASSET ? 900000 : 30000;
+
+        const timeoutId = setTimeout(() => {
+            if (pendingFetches.has(requestId)) {
+                pendingFetches.delete(requestId);
+                reject(new Error(`Fetch proxy request ${requestId} (${url}) timed out after ${TIMEOUT_MS / 1000}s.`));
+            }
+        }, TIMEOUT_MS);
+
+        const wrappedResolve = (resp: Response) => {
+            clearTimeout(timeoutId);
+            resolve(resp);
+        };
+
+        const wrappedReject = (err: Error) => {
+            clearTimeout(timeoutId);
+            reject(err);
+        };
+
+        pendingFetches.set(requestId, { reject: wrappedReject, resolve: wrappedResolve });
 
         // Properly convert Headers to Record
         const headers: Record<string, string> = {};

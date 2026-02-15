@@ -2,6 +2,7 @@ import { requestUrl } from "obsidian";
 
 import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
+import { isExternalUrl } from "../utils/url";
 
 export interface Tool {
     description: string;
@@ -58,11 +59,15 @@ export class UrlReaderTool implements Tool {
     description = "Read the content of a specific URL. Args: { url: string }";
 
     async execute(args: Record<string, unknown>): Promise<string> {
-        const url = args.url as string | undefined;
-        if (!url) return "Error: No URL provided.";
+        const urlString = args.url as string | undefined;
+        if (!urlString) return "Error: No URL provided.";
+
+        if (!isExternalUrl(urlString)) {
+            return "Error: Access to local network, private IP addresses, or restricted protocols is strictly forbidden for security reasons.";
+        }
 
         try {
-            const response = await requestUrl({ url });
+            const response = await requestUrl({ url: urlString });
             // Simple HTML to text or just return raw up to limit
             return response.text.substring(0, 5000) + "... (truncated)";
         } catch (e: unknown) {
