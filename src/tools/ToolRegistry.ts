@@ -1,8 +1,7 @@
 import { Tool, FunctionDeclaration, Type } from "@google/genai";
 import { App, normalizePath, TFile, requestUrl } from "obsidian";
 
-import { AGENT_CONSTANTS } from "../constants";
-import { SEARCH_CONSTANTS } from "../constants";
+import { AGENT_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GeminiService } from "../services/GeminiService";
@@ -10,6 +9,7 @@ import { GraphService } from "../services/GraphService";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
 import { logger } from "../utils/logger";
+import { isExternalUrl } from "../utils/url";
 import { FileTools } from "./FileTools";
 
 export interface ToolExecutionParams {
@@ -310,8 +310,13 @@ export class ToolRegistry {
     }
 
     private async executeUrlReader(args: Record<string, unknown>) {
-        // Dynamic import logic removed - using static requestUrl
         const url = args.url as string;
+        if (!url) return { error: "URL argument is required." };
+
+        if (!isExternalUrl(url, this.settings.allowLocalNetworkAccess)) {
+            return { error: "Access to local network, private IP addresses, or restricted protocols is forbidden for security reasons. You can enable 'Local Network Access' in Advanced Settings if this is intended." };
+        }
+
         const res = await requestUrl({ url });
         return { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
     }

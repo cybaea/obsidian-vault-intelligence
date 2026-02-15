@@ -15,9 +15,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **SSRF opt-in security**: Implemented an explicit "Allow Local Network Access" toggle in Advanced settings. This allows power users to grant the agent access to local services (eg Ollama or internal dashboards) while maintaining perfect protection for everyone else. Found and fixed a critical vulnerability where the live agent was bypassing existing SSRF checks.
+
 ### Developer features
 
--   **SSRF protection**: Implemented strict URL validation in `UrlReaderTool` to prevent Server-Side Request Forgery (SSRF). The new `isExternalUrl` utility strictly blocks requests to local, private, and loopback IP addresses (ie `localhost`, `127.x`, `0.0.0.0`, `[::1]`) and cloud metadata services. Verified with a new comprehensive URL security test suite.
+-   **SSRF protection**: Implemented strict URL validation in `UrlReaderTool` to prevent server-side request forgery (SSRF). The new `isExternalUrl` utility strictly blocks requests to local, private, and loopback IP addresses (ie `localhost`, `127.x`, `0.0.0.0`, `[::1]`) and cloud metadata services by default. Always blocks metadata services even when opt-in is enabled. Verified with a new comprehensive URL security test suite.
 -   **Prompt injection hardening**: Replaced the `MarkdownRenderer` in the `ToolConfirmationModal` with a raw `<pre><code>` block. This prevents malicious content from hiding instructions using CSS (the "confused deputy" attack) by ensuring all markdown and HTML tags are visibly exposed to the user before confirmation. Removed associated `Component` lifecycle management to simplify the modal and prevent dead code.
 -   **Worker promise leak fix**: Implemented a context-aware "Smart Timeout" for the embedding worker fetch proxy. It allows up to 15 minutes for large model asset downloads while maintaining a strict 30-second limit for standard API calls, preventing permanent memory leaks from hung requests without impacting operation on slow connections.
 -   **Storage leak fix**: Resolved a hidden storage leak in `PersistenceManager` by removing the unused `wipeState` method.
