@@ -8,6 +8,7 @@ export enum LogLevel {
 export class Logger {
     private static instance: Logger;
     private level: LogLevel = LogLevel.WARN;
+    private silent: boolean = false;
 
     private constructor() { }
 
@@ -22,26 +23,30 @@ export class Logger {
         this.level = level;
     }
 
+    public setSilent(silent: boolean) {
+        this.silent = silent;
+    }
+
     public debug(message: string, ...args: unknown[]) {
-        if (this.level <= LogLevel.DEBUG) {
+        if (!this.silent && this.level <= LogLevel.DEBUG) {
             console.debug(`[VaultIntelligence:DEBUG] ${message}`, ...args);
         }
     }
 
     public info(message: string, ...args: unknown[]) {
-        if (this.level <= LogLevel.INFO) {
+        if (!this.silent && this.level <= LogLevel.INFO) {
             console.warn(`[VaultIntelligence:INFO] ${message}`, ...args);
         }
     }
 
     public warn(message: string, ...args: unknown[]) {
-        if (this.level <= LogLevel.WARN) {
+        if (!this.silent && this.level <= LogLevel.WARN) {
             console.warn(`[VaultIntelligence:WARN] ${message}`, ...args);
         }
     }
 
     public error(message: string, ...args: unknown[]) {
-        if (this.level <= LogLevel.ERROR) {
+        if (!this.silent && this.level <= LogLevel.ERROR) {
             console.error(`[VaultIntelligence:ERROR] ${message}`, ...args);
         }
     }

@@ -19,6 +19,14 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Service-Oriented Architecture (SOA) Refactor**: Major architectural overhaul of the graph indexing system.
+    -   Introduced `GraphSyncOrchestrator` to handle all background maintenance, vault event debouncing, and model lifecycle management.
+    -   Refactored `GraphService` into a specialized, read-only facade that proxies queries to the worker, improving separation of concerns and testability.
+    -   Consolidated model state persistence and worker configuration into the orchestrator.
+-   **Red Team Repairs**: Addressed critical race conditions in `GraphSyncOrchestrator`, including event listener leaks, premature scan completion, and dropped mutations during config changes.
+-   **Event Hygiene**: Namespaced all graph events (`graph:index-ready`) to prevent collisions and implemented strict event registration gating.
+-   **Orphan Pruning**: Restored `pruneOrphans` logic to `scanAll` to ensure deleted files are removed from the index during full scans.
+-   **Error Masking**: Implemented defensive `try/catch` facades in `GraphService` to gracefully handle worker restarts without throwing uncaught errors to the UI.
 -   **SSRF protection**: Implemented strict URL validation in `UrlReaderTool` to prevent server-side request forgery (SSRF). The new `isExternalUrl` utility strictly blocks requests to local, private, and loopback IP addresses (ie `localhost`, `127.x`, `0.0.0.0`, `[::1]`) and cloud metadata services by default. Always blocks metadata services even when opt-in is enabled. Verified with a new comprehensive URL security test suite.
 -   **Prompt injection hardening**: Replaced the `MarkdownRenderer` in the `ToolConfirmationModal` with a raw `<pre><code>` block. This prevents malicious content from hiding instructions using CSS (the "confused deputy" attack) by ensuring all markdown and HTML tags are visibly exposed to the user before confirmation. Removed associated `Component` lifecycle management to simplify the modal and prevent dead code.
 -   **Worker promise leak fix**: Implemented a context-aware "Smart Timeout" for the embedding worker fetch proxy. It allows up to 15 minutes for large model asset downloads while maintaining a strict 30-second limit for standard API calls, preventing permanent memory leaks from hung requests without impacting operation on slow connections.

@@ -60,8 +60,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
                         }
 
-                        await plugin.saveSettings();
-                        await plugin.graphService.updateConfig(plugin.settings);
+                        await plugin.saveSettings(true);
                         containerEl.empty();
                         renderExplorerSettings(context);
                     })();
@@ -99,8 +98,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             if (modelDef?.dimensions) {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
                             }
-                            await plugin.saveSettings();
-                            await plugin.graphService.updateConfig(plugin.settings);
+                            await plugin.saveSettings(true);
                         }
                         containerEl.empty();
                         renderExplorerSettings(context);
@@ -119,8 +117,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .setValue(current)
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
-                            await plugin.saveSettings();
-                            await plugin.graphService.updateConfig(plugin.settings);
+                            await plugin.saveSettings(true);
                         }));
             }
         } else {
@@ -157,8 +154,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice("This dimension works best with text-embedding-004. Please check your model selection.");
                             }
 
-                            await plugin.saveSettings();
-                            await plugin.graphService.updateConfig(plugin.settings);
+                            await plugin.saveSettings(true);
                             containerEl.empty();
                             renderExplorerSettings(context);
                         }
@@ -184,8 +180,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (modelDef?.dimensions) {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
-                        await plugin.saveSettings();
-                        await plugin.graphService.updateConfig(plugin.settings);
+                        await plugin.saveSettings(true);
                     }
                     containerEl.empty();
                     renderExplorerSettings(context);
@@ -208,8 +203,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     .onChange((value) => {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
-                            await plugin.saveSettings();
-                            await plugin.graphService.updateConfig(plugin.settings);
+                            await plugin.saveSettings(true);
                         })();
                     }))
                 .addButton(btn => btn
@@ -224,8 +218,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice(`Valid! Dims: ${result.recommendedDims}`);
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
-                                    await plugin.saveSettings();
-                                    await plugin.graphService.updateConfig(plugin.settings);
+                                    await plugin.saveSettings(true);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
                                 }
@@ -246,8 +239,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         const num = parseInt(value);
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
-                            await plugin.saveSettings();
-                            await plugin.graphService.updateConfig(plugin.settings);
+                            await plugin.saveSettings(true);
                         }
                     }));
         }
@@ -341,7 +333,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         }, 5000);
                     } else {
                         try {
-                            await plugin.graphService.scanAll(true);
+                            await plugin.graphSyncOrchestrator.scanAll(true);
                         } catch (e) {
                             const message = e instanceof Error ? e.message : String(e);
                             new Notice(`Re-indexing failed: ${message}`);

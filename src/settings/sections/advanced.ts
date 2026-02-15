@@ -75,11 +75,13 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .addOption('2048', `2048 (${gemini} english only)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
-                const num = parseInt(value);
-                plugin.settings.embeddingChunkSize = num;
-                await plugin.saveSettings();
-                // GraphService will auto-detect change and re-index
-                await plugin.graphService.updateConfig(plugin.settings);
+                const suggested = parseInt(value);
+                if (suggested !== plugin.settings.embeddingChunkSize) {
+                    plugin.settings.embeddingChunkSize = suggested;
+                    await plugin.saveSettings();
+                    // Notify GraphSyncOrchestrator to queue update
+                    await plugin.graphSyncOrchestrator.updateConfig(plugin.settings);
+                }
             }));
 
     if (plugin.settings.embeddingProvider === 'local') {

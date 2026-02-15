@@ -22,12 +22,13 @@ const mockPlugin = {
 } as unknown as Plugin;
 
 const mockVaultManager = {} as any;
-const mockGeminiService = {} as any;
-const mockEmbeddingService = {} as any;
-const mockPersistenceManager = {} as any;
-const mockSettings = {
-    minSimilarityScore: 0.5,
-    similarNotesLimit: 10
+
+const mockWorkerManager = {
+    executeMutation: vi.fn(),
+    executeQuery: vi.fn(),
+    getApi: vi.fn().mockReturnValue({}),
+    initializeWorker: vi.fn().mockResolvedValue(true),
+    terminate: vi.fn(),
 } as any;
 
 describe('GraphService.getGraphEnhancedSimilar', () => {
@@ -36,12 +37,9 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
     beforeEach(() => {
         graphService = new GraphService(
-            mockPlugin,
+            mockPlugin.app,
             mockVaultManager,
-            mockGeminiService,
-            mockEmbeddingService,
-            mockPersistenceManager,
-            mockSettings
+            mockWorkerManager
         );
 
         // Mock internal methods

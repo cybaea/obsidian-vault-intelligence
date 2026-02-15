@@ -119,8 +119,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                             const suggested = isComplexLanguage(val) ? 512 : 1024;
                             if (suggested !== plugin.settings.embeddingChunkSize) {
                                 plugin.settings.embeddingChunkSize = suggested;
-                                // Notify GraphService to queue re-index if needed
-                                await plugin.graphService.updateConfig(plugin.settings);
+                                // Notify GraphSyncOrchestrator to queue update
+                                await plugin.graphSyncOrchestrator.updateConfig(plugin.settings);
                             }
                         }
 
