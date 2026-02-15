@@ -194,7 +194,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// 6. Late binding of providers to Facade
 		this.graphService.setProviders(
-			() => this.workerManager.getApi() !== null,
+			() => this.graphSyncOrchestrator.isNodeRunning,
 			() => this.graphSyncOrchestrator.isScanning
 		);
 

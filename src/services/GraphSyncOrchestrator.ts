@@ -300,6 +300,7 @@ export class GraphSyncOrchestrator {
                 await this.workerManager.executeMutation(api => api.pruneOrphans(validPaths));
 
                 logger.info("[GraphSyncOrchestrator] Scan complete.");
+                this._isScanning = false;
                 this.eventBus.trigger('graph:index-ready');
             }
         } catch (error) {

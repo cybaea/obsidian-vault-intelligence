@@ -164,10 +164,6 @@
     padding-bottom: var(--size-2-1);
 }
 
-div.workspace-leaf-content[data-type="similar-notes-view"] {
-    font-size: var(--font-ui-normal);
-}
-
 .similar-notes-description {
     font-size: var(--font-ui-smaller);
     margin-top: 0;

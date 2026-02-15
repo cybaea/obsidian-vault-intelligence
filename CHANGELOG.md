@@ -15,6 +15,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Explorer stability fix**: Resolved a race condition that prevented the "Similar notes" view from loading results automatically after a plugin reload. Added a helpful "Open a note" message when no file is active to improve onboarding.
 -   **SSRF opt-in security**: Implemented an explicit "Allow Local Network Access" toggle in Advanced settings. This allows power users to grant the agent access to local services (eg Ollama or internal dashboards) while maintaining perfect protection for everyone else. Found and fixed a critical vulnerability where the live agent was bypassing existing SSRF checks.
 
 ### Developer features
