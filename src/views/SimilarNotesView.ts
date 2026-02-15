@@ -72,11 +72,16 @@ export class SimilarNotesView extends ItemView {
 
         const container = this.contentEl;
         container.empty();
-        if (!file) return;
+
+        if (!file) {
+            container.createEl("h4", { text: "Explorer" });
+            container.createEl("p", { text: "Open a note to see similar connections." });
+            return;
+        }
 
         container.createEl("h4", { text: `Similar to: ${file.basename}` });
 
-        if (!this.graphService.isReady || this.graphService.isScanning) {
+        if (!this.plugin.graphSyncOrchestrator.isNodeRunning || this.graphService.isScanning) {
             container.createEl("p", { cls: "loading-text", text: "Loading connections..." });
             return;
         }
