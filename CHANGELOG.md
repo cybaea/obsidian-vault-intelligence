@@ -9,6 +9,12 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### User features
+
+### Developer features
+
+## [7.0.0] - 2026-02-15
+
 ### Breaking changes
 
 -   Legacy database migration (v5.x and earlier) has been removed to improve performance and code health. Users upgrading from older versions must re-index their vault manually via **Settings > Explorer > Re-index vault**.
