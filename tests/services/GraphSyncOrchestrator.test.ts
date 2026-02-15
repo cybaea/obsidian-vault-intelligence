@@ -67,11 +67,11 @@ const mockWorkerApi = {
     fullReset: vi.fn(),
     getFileStates: vi.fn().mockResolvedValue({}),
     loadIndex: vi.fn().mockResolvedValue(true),
+    pruneOrphans: vi.fn(),
     saveIndex: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
     updateAliasMap: vi.fn(),
     updateConfig: vi.fn(),
     updateFiles: vi.fn(),
-    pruneOrphans: vi.fn(),
 };
 
 describe('GraphSyncOrchestrator', () => {
@@ -185,7 +185,7 @@ describe('GraphSyncOrchestrator', () => {
 
         // Trigger modify
         const modifyCallback = mockVaultManager.onModify.mock.calls[0][0];
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for test
         const mockFile = { path: 'test.md', stat: { size: 100 } } as unknown as TFile;
         modifyCallback(mockFile);
 

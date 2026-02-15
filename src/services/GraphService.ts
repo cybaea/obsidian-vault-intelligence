@@ -68,8 +68,7 @@ export class GraphService extends Events {
         try {
             const rawResults = await this.workerManager.executeQuery(api => api.search(query, limit));
             return this.hydrateAndHandleDrift(rawResults);
-        } catch (e) {
-            // logger.debug("[GraphService] Search unavailable (worker restarting?):", e);
+        } catch {
             return [];
         }
     }
@@ -81,7 +80,7 @@ export class GraphService extends Events {
         try {
             const rawResults = await this.workerManager.executeQuery(api => api.keywordSearch(query, limit));
             return this.hydrateAndHandleDrift(rawResults);
-        } catch (e) {
+        } catch {
             return [];
         }
     }
@@ -93,7 +92,7 @@ export class GraphService extends Events {
         try {
             const rawResults = await this.workerManager.executeQuery(api => api.searchInPaths(query, paths, limit));
             return this.hydrateAndHandleDrift(rawResults);
-        } catch (e) {
+        } catch {
             return [];
         }
     }
@@ -109,7 +108,7 @@ export class GraphService extends Events {
             // Use default threshold if not provided
             const threshold = minScore ?? 0.5; // Default floor
             return hydrated.filter(r => r.score >= threshold);
-        } catch (e) {
+        } catch {
             return [];
         }
     }
@@ -169,7 +168,7 @@ export class GraphService extends Events {
         try {
             const neighbors = await this.workerManager.executeQuery(api => api.getNeighbors(path, options));
             return this.hydrateAndHandleDrift(neighbors);
-        } catch (e) {
+        } catch {
             return [];
         }
     }
@@ -180,7 +179,7 @@ export class GraphService extends Events {
     public async getCentrality(path: string): Promise<number> {
         try {
             return await this.workerManager.executeQuery(api => api.getCentrality(path));
-        } catch (e) {
+        } catch {
             return 0;
         }
     }
@@ -191,7 +190,7 @@ export class GraphService extends Events {
     public async getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string; headers?: string[], tokenCount?: number }>> {
         try {
             return await this.workerManager.executeQuery(api => api.getBatchMetadata(paths));
-        } catch (e) {
+        } catch {
             return {};
         }
     }
@@ -208,7 +207,7 @@ export class GraphService extends Events {
                 ...item,
                 content: item.excerpt
             }));
-        } catch (e) {
+        } catch {
             return [];
         }
     }

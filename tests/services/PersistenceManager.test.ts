@@ -8,6 +8,7 @@ import { Plugin } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PersistenceManager } from '../../src/services/PersistenceManager';
+import { logger } from '../../src/utils/logger';
 
 // Mock dependencies
 const mockPlugin = {
@@ -48,12 +49,17 @@ describe('PersistenceManager Resilience', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        // Spy on logger to suppress expected warnings/errors during resilience tests
+        vi.spyOn(logger, 'warn').mockImplementation(() => { });
+        vi.spyOn(logger, 'error').mockImplementation(() => { });
+
         persistenceManager = new PersistenceManager(mockPlugin);
         // Get the instance of the mocked StorageProvider
         mockStorage = (persistenceManager as any).storage;
     });
 
     afterEach(() => {
+        vi.restoreAllMocks(); // Restore logger
         vi.clearAllMocks();
     });
 
