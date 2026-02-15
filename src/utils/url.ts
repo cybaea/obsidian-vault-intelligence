@@ -24,23 +24,32 @@ export function isSafeUrl(url: string): boolean {
 
 /**
  * Validates if a URL is safe to fetch from a server-side context (SSRF protection).
- * Strictly blocks local, private, and loopback addresses.
+ * Strictly blocks local, private, and loopback addresses by default.
  * 
  * @param urlString The URL to validate
- * @returns true if the URL is external and non-private
+ * @param allowLocal If true, allows access to private IP ranges and localhost
+ * @returns true if the URL is external and non-private (or local access is allowed)
  */
-export function isExternalUrl(urlString: string): boolean {
+export function isExternalUrl(urlString: string, allowLocal: boolean = false): boolean {
     try {
         const url = new URL(urlString);
 
-        // 1. Strict Protocol Allowlist
+        // 1. Strict Protocol Allowlist (ALWAYS BLOCKED if not http/https)
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
             return false;
         }
 
         const host = url.hostname.toLowerCase();
 
-        // 2. Exact Loopback / Any Address Matches
+        // 2. Cloud Metadata Service (ALWAYS BLOCKED regardless of setting)
+        if (host === '169.254.169.254') return false;
+
+        // 3. Opt-In Bypass (Power user accepts the risk for localhost/private network)
+        if (allowLocal) return true;
+
+        // 4. Default Blocklist (Runs only if allowLocal is false)
+
+        // Exact Loopback / Any Address Matches
         const blockedHosts = [
             'localhost',
             '127.0.0.1',
@@ -54,16 +63,13 @@ export function isExternalUrl(urlString: string): boolean {
         ];
         if (blockedHosts.includes(host)) return false;
 
-        // 3. Metadata Service
-        if (host === '169.254.169.254') return false;
+        // Loopback Ranges (127.0.0.0/8)
+        if (host.startsWith('127.')) return false;
 
-        // 4. Private IP Ranges (IPv4)
+        // Private IP Ranges (IPv4)
         // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
         const isPrivate = /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host);
         if (isPrivate) return false;
-
-        // 5. Loopback Ranges (127.0.0.0/8)
-        if (host.startsWith('127.')) return false;
 
         return true;
     } catch {

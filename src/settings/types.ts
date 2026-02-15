@@ -9,6 +9,7 @@ export type EmbeddingProvider = 'gemini' | 'local';
 export interface VaultIntelligenceSettings {
     // New: Language Support
     agentLanguage: string;
+    allowLocalNetworkAccess: boolean;
     authorName: string;
     chatModel: string;
     codeModel: string;
@@ -120,6 +121,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 
 export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
+    allowLocalNetworkAccess: false,
     authorName: 'Me',
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',

@@ -304,4 +304,26 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                     console.debug("[VaultIntelligence] Raw models:", raw);
                 }
             }));
+
+    // --- 6. Security (Proactive SSRF Protection) ---
+    new Setting(containerEl)
+        .setName('Security')
+        .setHeading();
+
+    const securityDesc = document.createDocumentFragment();
+    securityDesc.appendText('Allows the agent to access localhost and private network IPs. ');
+    securityDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Warning: This makes you vulnerable to SSRF attacks if the agent reads malicious notes or prompt injections. Use with caution.' });
+    });
+
+    new Setting(containerEl)
+        .setName('Allow local network access (advanced/risky)')
+        .setDesc(securityDesc)
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.allowLocalNetworkAccess)
+            .onChange(async (value) => {
+                plugin.settings.allowLocalNetworkAccess = value;
+                await plugin.saveSettings();
+            }));
 }
