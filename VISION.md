@@ -1,6 +1,3 @@
----
-ulid: 01KHKRCZ8JTH4Q7G313X82Z2QH
----
 # Vault Intelligence: The Architecture of an Agentic Knowledge Graph
 
 **Version**: 7.0.x | **Status**: Active Evolution
