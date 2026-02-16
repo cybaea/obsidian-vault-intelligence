@@ -65,7 +65,7 @@ if [ "$DRY_RUN" = false ]; then
     # Robust wait for checks to be registered and start
     echo "  🔍 Waiting for GitHub to register CI jobs..."
     sleep 5
-    MAX_RETRIES=6 # 30 seconds total
+    MAX_RETRIES=20 # 100 seconds total
     RETRY_COUNT=0
     while true; do
         # Look for any check that isn't skipped
@@ -77,8 +77,9 @@ if [ "$DRY_RUN" = false ]; then
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
         if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            echo "  ⚠️ No active CI checks found after 1 minute. Proceeding anyway (it might be a documentation-only change or CI might be delayed)."
-            break
+            echo "  ❌ No active CI checks found after ~100 seconds. Aborting to prevent unsafe merge."
+            echo "     Please check the PR manually: $(gh pr view --json url -q .url)"
+            exit 1
         fi
         
         echo "  ... still waiting for jobs to appear (attempt $RETRY_COUNT/$MAX_RETRIES) ..."
