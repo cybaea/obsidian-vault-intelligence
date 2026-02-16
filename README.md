@@ -36,7 +36,7 @@ To make this seamless, Vault Intelligence uses a "Slim-Sync" Hybrid Architecture
 -   **Zero Sync Bloat**: Full vector indexes are kept in your device's local IndexedDB, while only a feather-light blueprint is synced across your devices.
 -   **Dynamic Context**: An "Accordion" assembly system dynamically scales from reading full documents to just reading headers, ensuring the AI never hallucinates due to context overload.
 
-📖 **[Read our Vision & Roadmap (`VISION.md`)](VISION.md)** to understand our philosophy, our pivot to local LLMs, and where we are heading next.
+📖 **[Read our Vision & Roadmap](https://cybaea.github.io/obsidian-vault-intelligence/VISION.html)** to understand our philosophy, our pivot to local LLMs, and where we are heading next.
 
 ---
 
