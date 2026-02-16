@@ -62,6 +62,29 @@ fi
 # 3. Watch Checks (Blocks until CI passes)
 echo "⏳ Waiting for CI checks to pass..."
 if [ "$DRY_RUN" = false ]; then
+    # Robust wait for checks to be registered and start
+    echo "  🔍 Waiting for GitHub to register CI jobs..."
+    sleep 5
+    MAX_RETRIES=6 # 30 seconds total
+    RETRY_COUNT=0
+    while true; do
+        # Look for any check that isn't skipped
+        CHECKS=$(gh pr checks --json state,name --jq '.[] | select(.state != "SKIPPED")' 2>/dev/null || echo "")
+        if [ -n "$CHECKS" ]; then
+            echo "  ✅ CI jobs detected. Starting watch..."
+            break
+        fi
+        
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+            echo "  ⚠️ No active CI checks found after 1 minute. Proceeding anyway (it might be a documentation-only change or CI might be delayed)."
+            break
+        fi
+        
+        echo "  ... still waiting for jobs to appear (attempt $RETRY_COUNT/$MAX_RETRIES) ..."
+        sleep 5
+    done
+
     gh pr checks --watch
 else
     echo "[DRY RUN] gh pr checks --watch (Simulated success)"

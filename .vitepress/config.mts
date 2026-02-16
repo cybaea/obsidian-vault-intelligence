@@ -138,6 +138,7 @@ export default withMermaid(defineConfig({
                     text: 'Development',
                     items: [
                         { text: 'Contributing', link: '/CONTRIBUTING' },
+                        { text: 'Project Vision', link: '/VISION' },
                         { text: 'System Architecture', link: '/devs/ARCHITECTURE' },
                         { text: 'Standards & SOA', link: '/devs/ARCHITECTURE_AND_STANDARDS' },
                         { text: 'Reference Links', link: '/devs/REFERENCE_LINKS' },
