@@ -52,7 +52,7 @@
 		"eslint-plugin-perfectionist": "^5.4.0",
 		"globals": "17.3.0",
 		"jiti": "2.6.1",
-		"markdownlint-cli2": "^0.20.0",
+		"markdownlint-cli2": "^0.21.0",
 		"mermaid": "^11.12.2",
 		"obsidian": "^1.11.4",
 		"obsidian-dev-skills": "^1.0.8",
