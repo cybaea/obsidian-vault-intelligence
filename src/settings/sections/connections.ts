@@ -97,13 +97,19 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 plugin.settings.googleApiKey = value;
                 await plugin.saveSettings();
 
-                // Validation/Feedback hook if the value looks like a key
-                if (value.startsWith('AIza')) {
+                // Validation/Feedback hook: resolver the key for validation if it's a secret ID or raw key
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- geminiService is any to avoid circular dependency
+                const actualKey: string | null = (value === 'vault-intelligence-api-key')
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- geminiService is any to avoid circular dependency
+                    ? await plugin.geminiService.getApiKey()
+                    : value;
+
+                if (actualKey && actualKey.startsWith('AIza')) {
                     try {
-                        await ModelRegistry.fetchModels(plugin.app, value, 0);
+                        await ModelRegistry.fetchModels(plugin.app, actualKey, 0);
                         new Notice("API key valid. Models loaded.");
                     } catch {
-                        if (value.length > 30) new Notice("Failed to load models.");
+                        if (actualKey.length > 30) new Notice("Failed to load models.");
                     }
                 }
             }));

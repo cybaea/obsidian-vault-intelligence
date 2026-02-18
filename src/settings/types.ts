@@ -178,6 +178,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 export interface IVaultIntelligencePlugin {
     app: App;
     embeddingService: IEmbeddingService;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Used to avoid circular dependency with GeminiService.ts
+    geminiService: any;
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
