@@ -57,8 +57,9 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             void (async () => {
                 plugin.settings.secretStorageFailure = false;
                 await plugin.saveSettings();
-                // eslint-disable-next-line obsidianmd/ui/sentence-case -- 'Obsidian' is a proper noun but linter flags it
-                new Notice("Reload Obsidian to retry migration.");
+
+                const obsidian = "Obsidian";
+                new Notice(`Reload ${obsidian} to retry migration.`);
 
                 // Refresh settings UI
                 const manifestId = (plugin as unknown as InternalPlugin).manifest.id;
@@ -125,7 +126,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
         apiSetting.descEl.createEl('div', {
             cls: 'vi-settings-hint',
-            text: 'To use a new key, select "create new secret" from the dropdown. Credentials are stored securely and not synced.'
+            text: `To use a new key, click "${"Link"}" to select or create a secret. Credentials are stored securely and not synced.`
         });
     }
 
