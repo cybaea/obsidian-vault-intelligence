@@ -57,6 +57,7 @@ export interface VaultIntelligenceSettings {
     queueDelayMs: number;
     reRankingModel: string;
     searchCentralityLimit: number;
+    secretStorageFailure: boolean;
     similarNotesLimit: number;
     systemInstruction: string | null;
     vaultSearchResultsLimit: number;
@@ -168,6 +169,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     queueDelayMs: 100,
     reRankingModel: 'gemini-flash-latest',
     searchCentralityLimit: 50,
+    secretStorageFailure: false,
     similarNotesLimit: 20,
     systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25
@@ -176,6 +178,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 export interface IVaultIntelligencePlugin {
     app: App;
     embeddingService: IEmbeddingService;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Used to avoid circular dependency with GeminiService.ts
+    geminiService: any;
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };

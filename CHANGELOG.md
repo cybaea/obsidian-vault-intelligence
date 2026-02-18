@@ -13,6 +13,12 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Secure API key storage**: Migrated Google Gemini API keys from plain text `data.json` to Obsidian's native `SecretStorage` API (v1.11.4+).
+    -   **JIT initialization**: Refactored `GeminiService` to use asynchronous just-in-time client instantiation, preventing "Async Constructor" race conditions during plugin load.
+    -   **Stable secret IDs**: Mandated a persistent secret ID (`vault-intelligence-api-key`) to prevent sync-induced "ping-pong" conflicts between multiple devices.
+    -   **Robust Linux fallback**: Implemented a fail-safe migration handler that automatically detects and suppresses repeated keyring failures on minimal Linux environments, falling back to secure-ish plain text only when necessary.
+    -   **Improved UI security**: Replaced the standard text input with Obsidian's `SecretComponent`, providing clear visual feedback on encryption status and better UX for managing credentials.
+
 ## [7.0.0] - 2026-02-15
 
 ### Breaking changes
