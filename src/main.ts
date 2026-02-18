@@ -148,14 +148,17 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		logger.setLevel(this.settings.logLevel);
 
 		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
-		this.geminiService = new GeminiService(this.settings);
+		this.geminiService = new GeminiService(this.settings, this.app);
 
-		// 1b. Fetch available models asynchronously
+		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey) {
 			void (async () => {
-				await ModelRegistry.fetchModels(this.app, this.settings.googleApiKey, this.settings.modelCacheDurationDays);
-				// Re-sanitize after fetch completes in case dynamic limits are different
-				await this.sanitizeBudgets();
+				const apiKey = await this.geminiService.getApiKey();
+				if (apiKey) {
+					await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays);
+					// Re-sanitize after fetch completes in case dynamic limits are different
+					await this.sanitizeBudgets();
+				}
 			})();
 		}
 
@@ -371,6 +374,29 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (this.settings.gardenerSystemInstruction === LEGACY_GARDENER_SYSTEM_PROMPT) {
 			logger.info("Migrating legacy gardener prompt to default-by-reference (null)");
 			this.settings.gardenerSystemInstruction = null;
+		}
+
+		// --- SecretStorage Migration (v7.0.0) ---
+		if (this.settings.googleApiKey && this.settings.googleApiKey.startsWith('AIza') && !this.settings.secretStorageFailure) {
+			try {
+				logger.info("[SecretStorage] Migrating API key to secure storage...");
+				// @ts-ignore - SecretStorage is v1.11.4+
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- Accessing Obsidian v1.11.4+ SecretStorage API which is not in current types
+				if ((this.app as any).secretStorage) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any -- Accessing Obsidian v1.11.4+ SecretStorage API which is not in current types
+					await (this.app as any).secretStorage.save('vault-intelligence-api-key', this.settings.googleApiKey);
+					this.settings.googleApiKey = 'vault-intelligence-api-key';
+					await this.saveData(this.settings);
+				} else {
+					throw new Error("SecretStorage API not available.");
+				}
+			} catch (error) {
+				logger.error("[SecretStorage] Migration failed:", error);
+				// Suppress future attempts to avoid "Nag Loop" on broken Linux systems
+				this.settings.secretStorageFailure = true;
+				await this.saveData(this.settings);
+				new Notice("Secure storage unavailable. Storing API key as plain text.");
+			}
 		}
 
 		await this.sanitizeBudgets();
