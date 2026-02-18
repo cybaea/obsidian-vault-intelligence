@@ -52,13 +52,22 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             }));
 
     // --- 2. API Key Setting ---
-    new Setting(containerEl).setName('Connection settings').setHeading();
+    new Setting(containerEl).setName('Connection settings').setHeading()
+        .setDesc(getApiKeyDescription(plugin.app, plugin.settings.secretStorageFailure, () => {
+            void (async () => {
+                plugin.settings.secretStorageFailure = false;
+                await plugin.saveSettings();
+                // eslint-disable-next-line obsidianmd/ui/sentence-case -- 'Obsidian' is a proper noun but linter flags it
+                new Notice("Reload Obsidian to retry migration.");
 
-    const apiKeyDesc = getApiKeyDescription(plugin.app, plugin.settings.secretStorageFailure);
+                // Refresh settings UI
+                const manifestId = (plugin as unknown as InternalPlugin).manifest.id;
+                (plugin.app as unknown as InternalApp).setting.openTabById(manifestId);
+            })();
+        }));
 
     const apiSetting = new Setting(containerEl)
         .setName('Google API key')
-        .setDesc(apiKeyDesc)
         .setClass('vault-intelligence-api-setting');
 
     if (plugin.settings.secretStorageFailure) {
@@ -97,11 +106,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 plugin.settings.googleApiKey = value;
                 await plugin.saveSettings();
 
-                // Validation/Feedback hook: resolver the key for validation if it's a secret ID or raw key
+                // Validation/Feedback hook: resolve the key for validation if it's a secret ID or raw key
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- geminiService is any to avoid circular dependency
                 const actualKey: string | null = (value === 'vault-intelligence-api-key')
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- geminiService is any to avoid circular dependency
-                    ? await plugin.geminiService.getApiKey()
+                    ? plugin.geminiService.getApiKey()
                     : value;
 
                 if (actualKey && actualKey.startsWith('AIza')) {
@@ -156,7 +165,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 /**
  * Helper for API Key Description
  */
-function getApiKeyDescription(app: App, storeFailure: boolean): DocumentFragment {
+function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
     const fragment = document.createDocumentFragment();
 
@@ -182,6 +191,11 @@ function getApiKeyDescription(app: App, storeFailure: boolean): DocumentFragment
             div.createSpan({}, (textSpan) => {
                 textSpan.createEl('strong', { text: 'Security note: ' });
                 textSpan.append(`Secure storage is unavailable on this system. Key is stored in plain text in ${configDir}/ folder.`);
+            });
+            div.createEl('button', { cls: 'mod-cta', text: 'Retry secure storage' }, (btn) => {
+                btn.onclick = () => {
+                    void onRetry();
+                };
             });
         });
     } else {

@@ -153,7 +153,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey) {
 			void (async () => {
-				const apiKey = await this.geminiService.getApiKey();
+				const apiKey = this.geminiService.getApiKey(); // Synchronous call
 				if (apiKey) {
 					await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays);
 					// Re-sanitize after fetch completes in case dynamic limits are different
@@ -380,13 +380,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (this.settings.googleApiKey && this.settings.googleApiKey.startsWith('AIza') && !this.settings.secretStorageFailure) {
 			try {
 				logger.info("[SecretStorage] Migrating API key to secure storage...");
-				// @ts-ignore - SecretStorage is v1.11.4+
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- Accessing Obsidian v1.11.4+ SecretStorage API which is not in current types
-				if ((this.app as any).secretStorage) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any -- Accessing Obsidian v1.11.4+ SecretStorage API which is not in current types
-					await (this.app as any).secretStorage.save('vault-intelligence-api-key', this.settings.googleApiKey);
+				// SecretStorage is synchronous in v1.11.4+
+				// @ts-ignore - Types might be lagging strictly in some environments
+				if (this.app.secretStorage && this.app.secretStorage.setSecret) {
+					this.app.secretStorage.setSecret('vault-intelligence-api-key', this.settings.googleApiKey);
 					this.settings.googleApiKey = 'vault-intelligence-api-key';
 					await this.saveData(this.settings);
+					logger.info("[SecretStorage] Migration successful.");
 				} else {
 					throw new Error("SecretStorage API not available.");
 				}

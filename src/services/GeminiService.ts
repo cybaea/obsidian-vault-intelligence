@@ -26,7 +26,7 @@ export class GeminiService {
      * Handles SecretStorage ID lookup vs Legacy plain text fallback.
      * Public to allow ModelRegistry access in main.ts.
      */
-    public async getApiKey(): Promise<string | null> {
+    public getApiKey(): string | null {
         const storedValue = this.settings.googleApiKey;
         if (!storedValue) return null;
 
@@ -38,8 +38,9 @@ export class GeminiService {
         // SecretStorage Lookup
         if (storedValue === 'vault-intelligence-api-key') {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any -- Accessing Obsidian v1.11.4+ SecretStorage API which is not in current types
-                return await (this.app as any).secretStorage.getSecret(storedValue);
+                // SecretStorage is synchronous in v1.11.4+
+                // @ts-ignore - Types might be lagging strictly in some environments, but we checked d.ts
+                return this.app.secretStorage.getSecret(storedValue);
             } catch (error) {
                 logger.error("Failed to retrieve secret from storage:", error);
                 return null;
@@ -49,10 +50,10 @@ export class GeminiService {
         return null;
     }
 
-    private async getClient(): Promise<GoogleGenAI | null> {
+    private getClient(): GoogleGenAI | null {
         if (this.client) return this.client;
 
-        const apiKey = await this.getApiKey();
+        const apiKey = this.getApiKey();
         if (!apiKey) {
             logger.warn("Google API Key is missing or could not be retrieved.");
             return null;
@@ -83,7 +84,7 @@ export class GeminiService {
 
     public async generateContent(prompt: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             const response = await client.models.generateContent({
@@ -111,7 +112,7 @@ export class GeminiService {
         options: { model?: string; systemInstruction?: string; tools?: Tool[] } = {}
     ): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             const modelId = options.model || this.settings.chatModel;
@@ -143,7 +144,7 @@ export class GeminiService {
      */
     public async searchWithGrounding(query: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             const prompt = `Search for: "${query}". List key facts, dates, and details. Be concise.`;
@@ -174,7 +175,7 @@ export class GeminiService {
      */
     public async solveWithCode(query: string): Promise<{ text: string, tokenCount: number }> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             if (!this.settings.enableCodeExecution || !this.settings.codeModel) {
@@ -232,7 +233,7 @@ export class GeminiService {
      */
     public async startChat(history: Content[], tools?: Tool[], systemInstruction: string = "", modelId?: string) {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             const chat = client.chats.create({
@@ -249,7 +250,7 @@ export class GeminiService {
 
     public async embedText(text: string, options: EmbedOptions = {}): Promise<{ values: number[], tokenCount: number }> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             const config: EmbedContentConfig = {};
@@ -329,7 +330,7 @@ export class GeminiService {
      */
     public async reRank(query: string, payload: unknown[]): Promise<unknown[]> {
         return this.retryOperation(async () => {
-            const client = await this.getClient();
+            const client = this.getClient();
             if (!client) throw new Error("GenAI client could not be initialized.");
 
             // Truncate payload if too huge (should be handled by packer budget, but safety first)
