@@ -628,7 +628,8 @@ const IndexerWorker: WorkerAPI = {
                     if (subgraph.hasNode(neighbor)) {
                         // Prevent self loops and duplicate edges
                         if (node !== neighbor && !subgraph.hasEdge(node, neighbor)) {
-                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: 1, type: 'line' });
+                            // Weight 3.0 ensures standard links pull strongly to the center
+                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: 1, type: 'line', weight: 3.0 });
                         }
                     }
                 });
@@ -662,12 +663,17 @@ const IndexerWorker: WorkerAPI = {
                 }
 
                 if (subgraph.hasNode(path)) {
+                    // Physics weight scaled by similarity score (ranges from roughly 2.0 to 6.0)
+                    // High-score semantic nodes will be violently pulled towards the center
+                    const physicsWeight = 2.0 + (item.score * 4.0);
+
                     if (!subgraph.hasEdge(normalizedCenter, path)) {
-                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 2, type: 'line', zIndex: 1 });
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 2, type: 'line', weight: physicsWeight, zIndex: 1 });
                     } else {
                         // Upgrade existing structural edge so Graphology doesn't throw a collision error
                         const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
-                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 2, zIndex: 1 });
+                        // If it already had a weight (e.g. from structural), take the max
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 2, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
                     }
                 }
             }

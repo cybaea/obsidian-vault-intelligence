@@ -109,7 +109,7 @@ export class SemanticGraphView extends ItemView {
             defaultNodeType: "circle",
             edgeLabelColor: { color: this.themeColors.label || "#fff" }, // Brighter text for dark mode
             edgeLabelFont: "var(--font-interface)",
-            edgeLabelSize: 14, // Increased size for readability
+            edgeLabelSize: 18, // Extra large size for easy reading on all resolutions
             labelColor: { color: this.themeColors.label || "#fff" }, // Use normal text color for better contrast
             labelFont: "var(--font-interface)",
             labelRenderedSizeThreshold: 2, // CRITICAL FIX: Render labels much earlier when zoomed out
