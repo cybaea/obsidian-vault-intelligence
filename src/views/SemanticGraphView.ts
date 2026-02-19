@@ -119,9 +119,6 @@ export class SemanticGraphView extends ItemView {
         slider.addEventListener("input", (e) => {
             this.attractionMultiplier = parseFloat((e.target as HTMLInputElement).value);
             sliderLabel.setText(this.attractionMultiplier.toFixed(1));
-        });
-
-        slider.addEventListener("change", () => {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile) void this.updateForFile(activeFile, true);
         });
