@@ -107,11 +107,8 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 plugin.settings.googleApiKey = value;
                 await plugin.saveSettings();
 
-                // Validation/Feedback hook: resolve the key for validation if it's a secret ID or raw key
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- geminiService is any to avoid circular dependency
                 const actualKey: string | null = (value === 'vault-intelligence-api-key')
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- geminiService is any to avoid circular dependency
-                    ? plugin.geminiService.getApiKey()
+                    ? await plugin.geminiService.getApiKey()
                     : value;
 
                 if (actualKey && actualKey.startsWith('AIza')) {
@@ -144,7 +141,10 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 btn.setDisabled(true);
                 btn.setButtonText("Refreshing...");
                 try {
-                    await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, 0, true); // bypass cache, throw on error
+                    const apiKey = await plugin.geminiService.getApiKey();
+                    if (!apiKey) throw new Error("API key not found.");
+
+                    await ModelRegistry.fetchModels(plugin.app, apiKey, 0, true);
                     new Notice("Model list refreshed");
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);

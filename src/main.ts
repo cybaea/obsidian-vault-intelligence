@@ -153,7 +153,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey) {
 			void (async () => {
-				const apiKey = this.geminiService.getApiKey(); // Synchronous call
+				const apiKey = await this.geminiService.getApiKey(); // Asynchronous call
 				if (apiKey) {
 					await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays);
 					// Re-sanitize after fetch completes in case dynamic limits are different

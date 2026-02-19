@@ -77,7 +77,6 @@ export interface WorkerConfig {
     embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
-    googleApiKey: string;
     indexingDelayMs: number;
     minSimilarityScore: number;
     ontologyPath: string;
