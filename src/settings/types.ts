@@ -1,5 +1,7 @@
 import { App, Platform } from "obsidian";
 
+import type { GeminiService } from "../services/GeminiService";
+
 import { SEARCH_CONSTANTS, GRAPH_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { GraphSyncOrchestrator } from "../services/GraphSyncOrchestrator";
@@ -178,8 +180,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 export interface IVaultIntelligencePlugin {
     app: App;
     embeddingService: IEmbeddingService;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Used to avoid circular dependency with GeminiService.ts
-    geminiService: any;
+    geminiService: GeminiService;
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };

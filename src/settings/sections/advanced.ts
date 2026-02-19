@@ -298,8 +298,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .setIcon('terminal')
             .onClick(async () => {
                 let raw = ModelRegistry.getRawResponse();
-                if (!raw && plugin.settings.googleApiKey) {
-                    await ModelRegistry.fetchModels(plugin.app, plugin.settings.googleApiKey, 0);
+                const apiKey = await plugin.geminiService.getApiKey();
+                if (!raw && apiKey) {
+                    await ModelRegistry.fetchModels(plugin.app, apiKey, 0);
                     raw = ModelRegistry.getRawResponse();
                 }
                 if (raw) {
