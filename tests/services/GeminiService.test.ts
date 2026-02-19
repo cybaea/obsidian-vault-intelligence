@@ -1,8 +1,15 @@
-import { App } from 'obsidian';
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { App, Notice } from 'obsidian';
+import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { GeminiService } from '../../src/services/GeminiService';
 import { VaultIntelligenceSettings } from '../../src/settings';
+
+vi.mock('obsidian', () => {
+    return {
+        App: vi.fn(),
+        Notice: vi.fn(),
+    };
+});
 
 describe('GeminiService', () => {
     let service: GeminiService;
@@ -11,10 +18,12 @@ describe('GeminiService', () => {
     let mockGetSecret: Mock;
 
     beforeEach(() => {
+        vi.clearAllMocks();
         mockSettings = {
+            geminiRetries: 1,
             googleApiKey: '',
             secretStorageFailure: false,
-        } as VaultIntelligenceSettings;
+        } as unknown as VaultIntelligenceSettings;
 
         mockGetSecret = vi.fn();
 
@@ -81,6 +90,34 @@ describe('GeminiService', () => {
             const key = await service.getApiKey();
 
             expect(key).toBeNull();
+        });
+    });
+
+    describe('getClient UX Polish', () => {
+        it('should show a Notice if API key is missing from storage but secret ID exists', async () => {
+            mockSettings.googleApiKey = 'vault-intelligence-api-key';
+            mockGetSecret.mockReturnValue(null);
+
+            // Trigger getClient
+            await service.generateContent('test').catch(() => { });
+
+            expect(Notice).toHaveBeenCalledWith(expect.stringContaining("keychain"));
+        });
+
+        it('should NOT show a Notice if API key is simply missing (empty settings)', async () => {
+            mockSettings.googleApiKey = '';
+
+            await service.generateContent('test').catch(() => { });
+
+            expect(Notice).not.toHaveBeenCalled();
+        });
+
+        it('should NOT show a Notice if using a raw AIza key', async () => {
+            mockSettings.googleApiKey = 'AIzaRawKey';
+
+            await service.generateContent('test').catch(() => { });
+
+            expect(Notice).not.toHaveBeenCalled();
         });
     });
 });

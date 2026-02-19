@@ -1,5 +1,5 @@
 import { GoogleGenAI, Content, Tool, EmbedContentConfig } from "@google/genai";
-import { App } from "obsidian";
+import { App, Notice } from "obsidian";
 
 import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
@@ -56,6 +56,10 @@ export class GeminiService {
 
         const apiKey = await this.getApiKey();
         if (!apiKey) {
+            // UX Polish: Detect "Sync Gap" (Key exists in settings as a Secret ID, but not in local storage)
+            if (this.settings.googleApiKey && !this.settings.googleApiKey.startsWith('AIza')) {
+                new Notice("API key not found in this device's keychain. Please re-select it in settings.");
+            }
             logger.warn("Google API Key is missing or could not be retrieved.");
             return null;
         }
