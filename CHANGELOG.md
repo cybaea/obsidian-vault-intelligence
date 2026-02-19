@@ -9,7 +9,15 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### Breaking changes
+
+-   **Minimum Obsidian Version**: The minimum required version of Obsidian has been bumped to **v1.11.4** to support the native `SecretStorage` API. Users on older versions will not be able to install or update to this version.
+-   **API Key Synchronization**: To improve security, your Google Gemini API key is now stored in your device's secure OS keychain (e.g., macOS Keychain, Windows Credential Manager) rather than in plain text. Because of this, **API keys will no longer sync across devices via Obsidian Sync or iCloud**. You will need to manually enter your API key once on each device you use.
+
 ### User features
+
+-   **Improved Security**: Upgraded the plugin to use Obsidian's native Secure Storage. Your API keys are now encrypted and stored safely in your operating system's keychain rather than sitting in plain text in your vault folder. 
+-   **Linux Compatibility**: Added an intelligent fallback mechanism for Linux users. If your system (e.g., Flatpak or minimal distros) does not have a reachable keychain, the plugin will gracefully fall back to the legacy plain-text storage rather than crashing or nagging you.
 
 ### Developer features
 
@@ -18,6 +26,8 @@ New features are added in the "Unreleased" section.
     -   **Stable secret IDs**: Mandated a persistent secret ID (`vault-intelligence-api-key`) to prevent sync-induced "ping-pong" conflicts between multiple devices.
     -   **Robust Linux fallback**: Implemented a fail-safe migration handler that automatically detects and suppresses repeated keyring failures on minimal Linux environments, falling back to secure-ish plain text only when necessary.
     -   **Improved UI security**: Replaced the standard text input with Obsidian's `SecretComponent`, providing clear visual feedback on encryption status and better UX for managing credentials.
+    -   **Worker Security Isolation**: Removed the API key from the `WorkerConfig` interface and all Web Worker memory spaces. The background indexer now relies entirely on the main thread for all authenticated API proxying, adhering to the principle of least privilege.
+-   **Strict Typing & Linting**: Eliminated `any` typings and ESLint bypasses around the `GeminiService` by utilizing `import type` to resolve circular dependencies, ensuring 100% strict type safety.
 
 ## [7.0.0] - 2026-02-15
 
