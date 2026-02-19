@@ -37,6 +37,7 @@ export class SemanticGraphView extends ItemView {
     private isVisible = false;
     private pendingUpdatePath: string | null = null;
     private contextPaths: Set<string> = new Set();
+    private hoveredNode: string | null = null;
     private themeColors: Record<string, string> = {};
     private updateTimer: ReturnType<typeof setTimeout> | null = null;
     private wrapperEl: HTMLElement;
@@ -103,11 +104,15 @@ export class SemanticGraphView extends ItemView {
             allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
             defaultEdgeType: "line",
             defaultNodeType: "circle",
+            edgeLabelColor: { color: "var(--text-muted)" },
+            edgeLabelFont: "var(--font-interface)",
+            edgeLabelSize: 10,
             labelColor: { color: "var(--text-normal)" }, // Use normal text color for better contrast
             labelFont: "var(--font-interface)",
             labelRenderedSizeThreshold: 2, // CRITICAL FIX: Render labels much earlier when zoomed out
             labelSize: 24, // Significantly larger text per user request
             labelWeight: "600", // Semi-bold for readability
+            renderEdgeLabels: true,
             renderLabels: true
         });
 
@@ -168,6 +173,12 @@ export class SemanticGraphView extends ItemView {
             // Sigma v3 event payload extraction
             const nodeEvent = event as unknown as { event: { original?: MouseEvent } | MouseEvent; node: string };
             const path = nodeEvent.node;
+
+            if (this.hoveredNode !== path) {
+                this.hoveredNode = path;
+                this.sigmaInstance?.refresh();
+            }
+
             const file = this.app.vault.getAbstractFileByPath(path);
 
             let nativeEvent: MouseEvent | undefined;
@@ -188,6 +199,13 @@ export class SemanticGraphView extends ItemView {
                     targetEl: null
                 };
                 this.app.workspace.trigger("hover-link", payload);
+            }
+        });
+
+        this.sigmaInstance.on("leaveNode", () => {
+            if (this.hoveredNode) {
+                this.hoveredNode = null;
+                this.sigmaInstance?.refresh();
             }
         });
 
@@ -289,14 +307,19 @@ export class SemanticGraphView extends ItemView {
             }
 
             // Visual RAG Highlighting logic
-            if (this.contextPaths.size > 0) {
-                if (this.contextPaths.has(node)) {
-                    res.color = this.themeColors.highlight || "#ff0";
-                    res.size = ((res.size as number) || 5) * 1.5;
-                    res.zIndex = 10;
+            if (this.contextPaths.size > 0 && !this.contextPaths.has(node)) {
+                res.color = this.adjustAlpha(res.color as string, 0.2); // Dim others
+                res.label = undefined; // Hide labels for non-context nodes
+            }
+
+            // Interactive Node Hovering
+            if (this.hoveredNode) {
+                if (node === this.hoveredNode || this.graph.hasEdge(node, this.hoveredNode) || this.graph.hasEdge(this.hoveredNode, node)) {
+                    res.highlighted = true;
                 } else {
-                    res.color = this.adjustAlpha(res.color as string, 0.2); // Dim others
-                    res.label = ""; // Hide labels for non-context nodes
+                    res.color = this.adjustAlpha(res.color as string, 0.2);
+                    res.label = undefined;
+                    res.highlighted = false;
                 }
             }
 
@@ -311,8 +334,7 @@ export class SemanticGraphView extends ItemView {
             // --- Enhanced Hover State ---
             if (res.highlighted) {
                 res.color = this.themeColors.highlight || "#ff0";
-                const currentSize = (res.size as number) || 5;
-                res.size = currentSize * 1.8; // Boost size on hover
+                res.size = ((res.size as number) || 5) * 1.8; // Boost size on hover
                 res.zIndex = 20;
                 res.label = data.label as string | undefined; // Safe cast, show full label
             }
@@ -322,6 +344,9 @@ export class SemanticGraphView extends ItemView {
 
         this.sigmaInstance?.setSetting("edgeReducer", (edge, data) => {
             const res = { ...data };
+            const extremities = this.graph.extremities(edge);
+            const u = extremities[0];
+            const v = extremities[1];
 
             // Ensure semantic edges glow
             if (data.edgeType === 'semantic') {
@@ -330,15 +355,34 @@ export class SemanticGraphView extends ItemView {
                 res.color = this.themeColors.edge || "#888";
             }
 
-            // Dim edges not connected to highlighted nodes
+            // Dim edges not connected to global highlighted nodes
             if (this.contextPaths.size > 0) {
-                const extremities = this.graph.extremities(edge);
-                const u = extremities[0];
-                const v = extremities[1];
                 if (!this.contextPaths.has(u) && !this.contextPaths.has(v)) {
                     res.color = this.adjustAlpha(res.color as string, 0.1);
                 }
             }
+
+            // Local Neighborhood Edge Hover Annotations
+            if (this.hoveredNode) {
+                if (u === this.hoveredNode || v === this.hoveredNode) {
+                    // Show context label for the active edge
+                    if (data.edgeType === 'semantic') {
+                        const scorePart = data.score ? ` (${Math.round((data.score as number) * 100)}%)` : '';
+                        res.label = `Semantic Match${scorePart}`;
+                        res.color = this.themeColors.highlight;
+                    } else {
+                        res.label = `Linked`;
+                        res.color = this.themeColors.edge;
+                    }
+                    res.size = (res.size as number || 1) * 1.5;
+                    res.zIndex = 10;
+                } else {
+                    // Dim edges safely away from hover
+                    res.color = this.adjustAlpha(res.color as string, 0.1);
+                    res.label = undefined;
+                }
+            }
+
             return res;
         });
     }

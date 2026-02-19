@@ -651,11 +651,11 @@ const IndexerWorker: WorkerAPI = {
 
                 if (subgraph.hasNode(path)) {
                     if (!subgraph.hasEdge(normalizedCenter, path)) {
-                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', size: 2, type: 'line', zIndex: 1 });
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 2, type: 'line', zIndex: 1 });
                     } else {
                         // Upgrade existing structural edge so Graphology doesn't throw a collision error
                         const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
-                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', size: 2, zIndex: 1 });
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 2, zIndex: 1 });
                     }
                 }
             }
