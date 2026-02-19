@@ -18,9 +18,13 @@ export class SemanticGraphView extends ItemView {
     private plugin: IVaultIntelligencePlugin;
     private graphService: GraphService;
     private containerResizer: ResizeObserver | null = null;
+    private visibilityObserver: IntersectionObserver | null = null;
+    private isVisible = false;
+    private pendingUpdatePath: string | null = null;
     private contextPaths: Set<string> = new Set();
     private themeColors: Record<string, string> = {};
     private updateTimer: ReturnType<typeof setTimeout> | null = null;
+    private wrapperEl: HTMLElement;
 
     constructor(leaf: WorkspaceLeaf, plugin: IVaultIntelligencePlugin, graphService: GraphService) {
         super(leaf);
@@ -31,7 +35,7 @@ export class SemanticGraphView extends ItemView {
         this.registerEvent(
             this.graphService.on('graph:index-updated', () => {
                 const file = this.app.workspace.getActiveFile();
-                void this.updateForFile(file, true); // Force repaint
+                void this.updateForFile(file, true);
             })
         );
         this.registerEvent(
@@ -54,7 +58,7 @@ export class SemanticGraphView extends ItemView {
         return "network";
     }
 
-    private wrapperEl: HTMLElement;
+
 
     async onOpen() {
         await Promise.resolve();
@@ -77,20 +81,44 @@ export class SemanticGraphView extends ItemView {
             width: "100%"
         });
 
-        // 2. Observer: Initialize Sigma ONLY when container has dimensions
+        // Initialize Sigma with the graphology instance
+        this.sigmaInstance = new Sigma(this.graph, this.wrapperEl, {
+            allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
+            defaultEdgeType: "line",
+            defaultNodeType: "circle",
+            labelColor: { color: "var(--text-muted)" }, // Uses Obsidian's native variable
+            labelFont: "inherit",
+            labelSize: 12,
+            labelWeight: "normal",
+            renderLabels: true
+        });
+
+        // Initialize theme colors and reducers
+        this.resolveThemeColors();
+
+        // Container resize observer to keep WebGL viewport matched
         this.containerResizer = new ResizeObserver(() => {
+            // Only refresh if the container has dimensions (prevents 0x0 crash)
             if (this.wrapperEl.clientWidth > 0 && this.wrapperEl.clientHeight > 0) {
-                if (!this.sigmaInstance) {
-                    console.debug(`[SemanticGraphView] Container ready (${this.wrapperEl.clientWidth}x${this.wrapperEl.clientHeight}). Initializing WebGL.`);
-                    this.initSigma();
-                    const activeFile = this.app.workspace.getActiveFile();
-                    if (activeFile) void this.updateForFile(activeFile, true);
-                } else {
-                    this.sigmaInstance.refresh();
-                }
+                this.sigmaInstance?.refresh();
             }
         });
         this.containerResizer.observe(this.wrapperEl);
+
+        // Visibility observer to resolve the "hidden tab" update deadlock
+        this.visibilityObserver = new IntersectionObserver((entries) => {
+            const isIntersecting = entries[0]?.isIntersecting;
+            this.isVisible = !!isIntersecting;
+            if (this.isVisible) {
+                this.sigmaInstance?.refresh();
+                if (this.pendingUpdatePath) {
+                    const file = this.app.vault.getAbstractFileByPath(this.pendingUpdatePath);
+                    this.pendingUpdatePath = null;
+                    if (file instanceof TFile) void this.updateForFile(file, true);
+                }
+            }
+        });
+        this.visibilityObserver.observe(this.contentEl);
 
         this.registerEvent(
             this.graphService.on("vault-intelligence:context-highlight", (paths: string[]) => {
@@ -107,52 +135,18 @@ export class SemanticGraphView extends ItemView {
                 }
             })
         );
+
+        // Sync with active file on first open if visible
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile) {
+            if (this.contentEl.clientWidth > 0) {
+                void this.updateForFile(activeFile);
+            } else {
+                this.pendingUpdatePath = activeFile.path;
+            }
+        }
     }
 
-    private initSigma() {
-        this.sigmaInstance = new Sigma(this.graph, this.wrapperEl, {
-            defaultEdgeType: "line",
-            defaultNodeType: "circle",
-            labelColor: { color: "#888" },
-            labelFont: "inherit",
-            labelSize: 12,
-            labelWeight: "normal",
-            renderLabels: true
-        });
-
-        this.resolveThemeColors();
-
-        this.sigmaInstance.on("clickNode", (event) => {
-            const nodeEvent = event as { node: string };
-            const file = this.app.vault.getAbstractFileByPath(nodeEvent.node);
-            if (file instanceof TFile) {
-                const leaf = this.app.workspace.getLeaf(false);
-                void leaf.openFile(file);
-            }
-        });
-
-        this.sigmaInstance.on("enterNode", (event) => {
-            const nodeEvent = event as unknown as { event: MouseEvent; node: string };
-            const file = this.app.vault.getAbstractFileByPath(nodeEvent.node);
-            if (file instanceof TFile) {
-                (this.app.workspace as Events).trigger("hover-link", {
-                    event: nodeEvent.event,
-                    hoverParent: this.wrapperEl,
-                    linktext: nodeEvent.node,
-                    source: VIEW_TYPES.SEMANTIC_GRAPH,
-                    sourcePath: this.currentFilePath || "",
-                    targetEl: null
-                });
-            }
-        });
-
-        this.sigmaInstance.on("clickStage", () => {
-            if (this.contextPaths.size > 0) {
-                this.contextPaths.clear();
-                this.sigmaInstance?.refresh();
-            }
-        });
-    }
 
     /**
      * Resolves Obsidian CSS variables into absolute colors for Sigma WebGL shaders.
@@ -166,7 +160,6 @@ export class SemanticGraphView extends ItemView {
             document.body.appendChild(tempEl);
             const computedColor = getComputedStyle(tempEl).color;
             tempEl.remove();
-
             // If the computed color is empty or transparent, use fallback
             return computedColor && computedColor !== 'rgba(0, 0, 0, 0)' && computedColor !== 'transparent' ? computedColor : fallback;
         };
@@ -185,12 +178,12 @@ export class SemanticGraphView extends ItemView {
             const type = data.nodeType as string;
 
             // Core type-based coloring
-            res.color = this.themeColors[type] || this.themeColors.structural;
+            res.color = this.themeColors[type] || this.themeColors.structural || "#888";
 
             // Visual RAG Highlighting logic
             if (this.contextPaths.size > 0) {
                 if (this.contextPaths.has(node)) {
-                    res.color = this.themeColors.highlight;
+                    res.color = this.themeColors.highlight || "#ff0";
                     res.size = ((res.size as number) || 5) * 1.5;
                     res.zIndex = 10;
                 } else {
@@ -198,16 +191,18 @@ export class SemanticGraphView extends ItemView {
                     res.label = ""; // Hide labels for non-context nodes
                 }
             }
-
             return res;
         });
 
         this.sigmaInstance?.setSetting("edgeReducer", (edge, data) => {
             const res = { ...data };
-            res.color = this.themeColors.edge;
 
-            // Optional: apply different styles based on edgeType if needed in the future
-            // const edgeType = data.edgeType as string; 
+            // Ensure semantic edges glow
+            if (data.edgeType === 'semantic') {
+                res.color = this.adjustAlpha(this.themeColors.highlight || "#ff0", 0.5);
+            } else {
+                res.color = this.themeColors.edge || "#888";
+            }
 
             // Dim edges not connected to highlighted nodes
             if (this.contextPaths.size > 0) {
@@ -225,6 +220,17 @@ export class SemanticGraphView extends ItemView {
      */
     private adjustAlpha(color: string, alpha: number): string {
         if (!color) return `rgba(150, 150, 150, ${alpha})`;
+
+        // Handle Hex colors
+        if (color.startsWith('#')) {
+            let hex = color.substring(1);
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         if (color.startsWith("rgba")) {
             return color.replace(/[\d.]+\)$/g, `${alpha})`);
         }
@@ -297,9 +303,10 @@ export class SemanticGraphView extends ItemView {
 
                     // Center the camera on the active node!
                     if (this.graph.hasNode(file.path)) {
-                        const pos = this.graph.getNodeAttributes(file.path);
+                        const pos = this.graph.getNodeAttributes(file.path) as { x: number, y: number };
                         const camera = this.sigmaInstance?.getCamera();
-                        if (camera && pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+                        // CRITICAL FIX: Protect camera matrix against NaN coordinates
+                        if (camera && pos && typeof pos.x === 'number' && !isNaN(pos.x) && typeof pos.y === 'number' && !isNaN(pos.y)) {
                             // Animate if we already had a position, otherwise instantly snap
                             if (existingPositions[file.path]) {
                                 void camera.animate({ ratio: 1.2, x: pos.x, y: pos.y }, { duration: 500 });
@@ -318,6 +325,7 @@ export class SemanticGraphView extends ItemView {
     async onClose() {
         await Promise.resolve();
         this.containerResizer?.disconnect();
+        this.visibilityObserver?.disconnect();
         this.sigmaInstance?.kill();
         this.sigmaInstance = null;
     }

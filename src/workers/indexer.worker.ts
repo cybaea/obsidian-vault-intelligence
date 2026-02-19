@@ -587,13 +587,16 @@ const IndexerWorker: WorkerAPI = {
             if (subgraph.hasNode(node)) return;
             const attr = graph.hasNode(node) ? graph.getNodeAttributes(node) as GraphNodeData : undefined;
             const pos = existingPositions?.[node];
+
             subgraph.addNode(node, {
                 color: "#ccc", // Placeholder for main thread resolution
                 label: attr?.title || node.split('/').pop()?.replace('.md', '') || node,
                 nodeType: type,
                 size: type === 'center' ? 10 : (type === 'structural' ? 5 : 4),
-                x: pos?.x ?? (Math.random() * 100),
-                y: pos?.y ?? (Math.random() * 100)
+                // CRITICAL FIX: Seed randomly around (0,0) to prevent FA2 gravity implosions
+                // Also ensures NaN positions are never injected into the physics engine
+                x: (pos && typeof pos.x === 'number' && !isNaN(pos.x)) ? pos.x : ((Math.random() - 0.5) * 100),
+                y: (pos && typeof pos.y === 'number' && !isNaN(pos.y)) ? pos.y : ((Math.random() - 0.5) * 100)
             });
         };
 
@@ -602,7 +605,6 @@ const IndexerWorker: WorkerAPI = {
         if (graph.hasNode(normalizedCenter)) {
             while (queue.length > 0 && subgraph.order < structuralLimit) {
                 const [node, depth] = queue.shift()!;
-
                 if (depth >= 2) continue;
 
                 graph.forEachNeighbor(node, (neighbor) => {
@@ -615,7 +617,8 @@ const IndexerWorker: WorkerAPI = {
                     }
 
                     if (subgraph.hasNode(neighbor)) {
-                        if (!subgraph.hasEdge(node, neighbor)) {
+                        // Prevent self loops and duplicate edges
+                        if (node !== neighbor && !subgraph.hasEdge(node, neighbor)) {
                             subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: 1, type: 'line' });
                         }
                     }
@@ -623,47 +626,49 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
-        const semanticLimit = limit - subgraph.order;
+        // Semantic Injection
+        const semanticLimit = Math.min(limit - subgraph.order, Math.max(3, Math.floor(limit * 0.10)));
         if (semanticLimit > 0) {
             const similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
             for (const item of similar) {
                 const path = item.path;
+
+                // CRITICAL FIX: Prevent fatal Graphology error by skipping self-loops
+                if (path === normalizedCenter) continue;
+
                 if (!subgraph.hasNode(path)) {
                     addNodeToSubgraph(path, 'semantic');
                 }
-                if (subgraph.hasNode(path) && !subgraph.hasEdge(normalizedCenter, path)) {
-                    subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', size: 2, type: 'line', zIndex: 1 });
+
+                if (subgraph.hasNode(path)) {
+                    if (!subgraph.hasEdge(normalizedCenter, path)) {
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', size: 2, type: 'line', zIndex: 1 });
+                    } else {
+                        // Upgrade existing structural edge so Graphology doesn't throw a collision error
+                        const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', size: 2, zIndex: 1 });
+                    }
                 }
             }
         }
 
         if (subgraph.order <= 1) return subgraph.export();
 
+        // Layout: Single block execution to preserve physics momentum.
+        // For ~250 nodes this executes synchronously in under ~15ms, zero UI thread blocking.
         const maxIterations = Math.min(300, Math.max(100, subgraph.order));
         const layoutSettings = { gravity: 1.5, linLogMode: true, strongGravityMode: true };
 
+        // Abort if stale before starting expensive layout
+        if (latestGraphUpdateId !== updateId) {
+            workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath}`);
+            return null;
+        }
+
         try {
-            for (let i = 0; i < maxIterations; i++) {
-                if (latestGraphUpdateId !== updateId) {
-                    workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath} (${updateId} < ${latestGraphUpdateId})`);
-                    return null;
-                }
-
-                forceAtlas2.assign(subgraph, { iterations: 1, settings: layoutSettings });
-
-                if (i % 20 === 0) {
-                    await new Promise(r => setTimeout(r, 0));
-                }
-            }
+            forceAtlas2.assign(subgraph, { iterations: maxIterations, settings: layoutSettings });
         } catch (e) {
-            workerLogger.error(`[getSubgraph] FA2 Layout failed. Falling back to circle layout:`, e);
-            let i = 0;
-            subgraph.forEachNode((n) => {
-                const angle = (i / subgraph.order) * 2 * Math.PI;
-                subgraph.setNodeAttribute(n, 'x', Math.cos(angle) * 100);
-                subgraph.setNodeAttribute(n, 'y', Math.sin(angle) * 100);
-                i++;
-            });
+            workerLogger.error(`[getSubgraph] FA2 Layout failed:`, e);
         }
 
         return subgraph.export();

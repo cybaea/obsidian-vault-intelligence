@@ -9,6 +9,15 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### Fixed
+
+- Deep hardening of Semantic Galaxy rendering:
+    - Fixed WebGL "0x0 death" in background tabs using `allowInvalidContainer` and `IntersectionObserver`.
+    - Fixed physics engine "implosions" (NaN coordinates) using symmetric coordinate seeding and strict self-loop protection.
+    - Fixed camera animation crashes by implementing multi-layer NaN guards for WebGL matrices.
+    - Improved theme color resilience with robust CSS variable resolution and Hex color support.
+    - Fixed Sigma v3 event payload extraction for native Obsidian hover previews.
+
 ### Breaking changes
 
 -   **Minimum Obsidian Version**: The minimum required version of Obsidian has been bumped to **v1.11.4** to support the native `SecretStorage` API. Users on older versions will not be able to install or update to this version.
