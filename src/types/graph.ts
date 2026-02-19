@@ -82,7 +82,9 @@ export interface WorkerConfig {
     minSimilarityScore: number;
     ontologyPath: string;
     sanitizedModelId: string;
+    semanticEdgeThickness: number;
     semanticGraphNodeLimit: number;
+    structuralEdgeThickness: number;
 }
 
 /**

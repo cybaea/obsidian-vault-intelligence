@@ -629,7 +629,7 @@ const IndexerWorker: WorkerAPI = {
                         // Prevent self loops and duplicate edges
                         if (node !== neighbor && !subgraph.hasEdge(node, neighbor)) {
                             // Weight 3.0 ensures standard links pull strongly to the center
-                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: 1, type: 'line', weight: 3.0 });
+                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: config.structuralEdgeThickness || 1.0, type: 'line', weight: 3.0 });
                         }
                     }
                 });
@@ -668,12 +668,12 @@ const IndexerWorker: WorkerAPI = {
                     const physicsWeight = 2.0 + (item.score * 4.0);
 
                     if (!subgraph.hasEdge(normalizedCenter, path)) {
-                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 0.5, type: 'line', weight: physicsWeight, zIndex: 0 });
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: config.semanticEdgeThickness || 0.5, type: 'line', weight: physicsWeight, zIndex: 0 });
                     } else {
                         // Upgrade existing structural edge so Graphology doesn't throw a collision error
                         const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
                         // If it already had a weight (e.g. from structural), take the max
-                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 1, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: config.structuralEdgeThickness || 1.0, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
                     }
                 }
             }
@@ -688,7 +688,7 @@ const IndexerWorker: WorkerAPI = {
                 // Check master graph for connection
                 if (graph.hasNode(u) && graph.hasNode(v) && graph.hasEdge(u, v)) {
                     if (!subgraph.hasEdge(u, v) && !subgraph.hasEdge(v, u)) {
-                        subgraph.addEdge(u, v, { edgeType: 'structural', size: 0.5, type: 'line', weight: 1.5, zIndex: 0 }); // Thinner lines, but pull together
+                        subgraph.addEdge(u, v, { edgeType: 'structural', size: (config.structuralEdgeThickness || 1.0) * 0.5, type: 'line', weight: 1.5, zIndex: 0 }); // Thinner lines, but pull together
                     }
                 }
             }

@@ -315,6 +315,30 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             }));
 
     new Setting(containerEl)
+        .setName('Structural edge thickness')
+        .setDesc('Visual weight of explicit wikilinks in the semantic galaxy.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 5.0, 0.1)
+            .setValue(plugin.settings.structuralEdgeThickness)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.structuralEdgeThickness = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
+        .setName('Semantic edge thickness')
+        .setDesc('Visual weight of implied AI relationships in the semantic galaxy.')
+        .addSlider(slider => slider
+            .setLimits(0.1, 5.0, 0.1)
+            .setValue(plugin.settings.semanticEdgeThickness)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.semanticEdgeThickness = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
         .setName('Keyword match weight')
         .setDesc('Calibration for keyword vs vector search. Higher values make keyword matches more conservative.')
         .addSlider(slider => slider
