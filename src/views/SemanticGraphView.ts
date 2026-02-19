@@ -1,5 +1,5 @@
 import Graph from "graphology";
-import { Events, ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
 import Sigma from "sigma";
 
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
@@ -62,6 +62,8 @@ export class SemanticGraphView extends ItemView {
 
     async onOpen() {
         await Promise.resolve();
+        // Reset path to ensure updateForFile doesn't return early if view is reused
+        this.currentFilePath = null;
 
         // 1. Strict Obsidian Flexbox Container
         this.contentEl.empty();
@@ -135,6 +137,50 @@ export class SemanticGraphView extends ItemView {
                 }
             })
         );
+
+        // --- Restore Missing Sigma Event Listeners ---
+        this.sigmaInstance.on("clickNode", (event) => {
+            const nodeEvent = event as { node: string };
+            const file = this.app.vault.getAbstractFileByPath(nodeEvent.node);
+            if (file instanceof TFile) {
+                const leaf = this.app.workspace.getLeaf(false);
+                void leaf.openFile(file);
+            }
+        });
+
+        this.sigmaInstance.on("enterNode", (event) => {
+            // Sigma v3 event payload extraction
+            const nodeEvent = event as unknown as { event: { original?: MouseEvent } | MouseEvent; node: string };
+            const path = nodeEvent.node;
+            const file = this.app.vault.getAbstractFileByPath(path);
+
+            let nativeEvent: MouseEvent | undefined;
+            if (nodeEvent.event && 'original' in nodeEvent.event) {
+                nativeEvent = (nodeEvent.event as { original: MouseEvent }).original;
+            } else if (nodeEvent.event instanceof MouseEvent) {
+                nativeEvent = nodeEvent.event;
+            }
+
+            if (file instanceof TFile && nativeEvent) {
+                // Trigger native Obsidian hover preview
+                const payload = {
+                    event: nativeEvent,
+                    hoverParent: this.wrapperEl,
+                    linktext: path,
+                    source: VIEW_TYPES.SEMANTIC_GRAPH,
+                    sourcePath: this.currentFilePath || "",
+                    targetEl: null
+                };
+                this.app.workspace.trigger("hover-link", payload);
+            }
+        });
+
+        this.sigmaInstance.on("clickStage", () => {
+            if (this.contextPaths.size > 0) {
+                this.contextPaths.clear();
+                this.sigmaInstance?.refresh();
+            }
+        });
 
         // Sync with active file on first open if visible
         const activeFile = this.app.workspace.getActiveFile();

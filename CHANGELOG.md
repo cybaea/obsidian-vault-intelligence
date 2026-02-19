@@ -11,12 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### Fixed
 
-- Deep hardening of Semantic Galaxy rendering:
-    - Fixed WebGL "0x0 death" in background tabs using `allowInvalidContainer` and `IntersectionObserver`.
-    - Fixed physics engine "implosions" (NaN coordinates) using symmetric coordinate seeding and strict self-loop protection.
-    - Fixed camera animation crashes by implementing multi-layer NaN guards for WebGL matrices.
-    - Improved theme color resilience with robust CSS variable resolution and Hex color support.
-    - Fixed Sigma v3 event payload extraction for native Obsidian hover previews.
+-   Deep hardening of Semantic Galaxy rendering:
+    -   Fixed WebGL "0x0 death" in background tabs using `allowInvalidContainer` and `IntersectionObserver`.
+    -   Fixed physics engine "implosions" (NaN coordinates) using symmetric coordinate seeding and strict self-loop protection.
+    -   Fixed camera animation crashes by implementing multi-layer NaN guards for WebGL matrices.
+    -   Improved theme color resilience with robust CSS variable resolution and Hex color support.
+    -   Fixed Sigma v3 event payload extraction for native Obsidian hover previews.
 
 ### Breaking changes
 
