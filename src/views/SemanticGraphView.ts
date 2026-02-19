@@ -88,10 +88,10 @@ export class SemanticGraphView extends ItemView {
             allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
             defaultEdgeType: "line",
             defaultNodeType: "circle",
-            labelColor: { color: "var(--text-muted)" }, // Uses Obsidian's native variable
-            labelFont: "inherit",
-            labelSize: 12,
-            labelWeight: "normal",
+            labelColor: { color: "var(--text-normal)" }, // Use normal text color for better contrast
+            labelFont: "var(--font-interface)",
+            labelSize: 14, // Slightly larger labels
+            labelWeight: "600", // Semi-bold for readability
             renderLabels: true
         });
 
@@ -214,9 +214,13 @@ export class SemanticGraphView extends ItemView {
             center: getComputedColor("--text-accent", "rgb(100, 100, 255)"),
             edge: getComputedColor("--background-modifier-border", "rgb(100, 100, 100)"),
             highlight: getComputedColor("--interactive-accent", "rgb(255, 200, 0)"),
+            label: getComputedColor("--text-normal", "rgb(255, 255, 255)"),
             semantic: getComputedColor("--text-faint", "rgb(150, 150, 150)"),
             structural: getComputedColor("--text-muted", "rgb(200, 200, 200)")
         };
+
+        // Apply updated label color to settings
+        this.sigmaInstance?.setSetting("labelColor", { color: this.themeColors.label || "#888" });
 
         // Apply visual logic via Sigma reducers (state-driven rendering)
         this.sigmaInstance?.setSetting("nodeReducer", (node, data) => {
@@ -237,6 +241,16 @@ export class SemanticGraphView extends ItemView {
                     res.label = ""; // Hide labels for non-context nodes
                 }
             }
+
+            // --- Enhanced Hover State ---
+            if (res.highlighted) {
+                res.color = this.themeColors.highlight || "#ff0";
+                const currentSize = (res.size as number) || 5;
+                res.size = currentSize * 1.8; // Boost size on hover
+                res.zIndex = 20;
+                res.label = data.label as string | undefined; // Safe cast
+            }
+
             return res;
         });
 
@@ -252,7 +266,9 @@ export class SemanticGraphView extends ItemView {
 
             // Dim edges not connected to highlighted nodes
             if (this.contextPaths.size > 0) {
-                const [u, v] = this.graph.extremities(edge);
+                const extremities = this.graph.extremities(edge);
+                const u = extremities[0];
+                const v = extremities[1];
                 if (!this.contextPaths.has(u) && !this.contextPaths.has(v)) {
                     res.color = this.adjustAlpha(res.color as string, 0.1);
                 }
@@ -347,17 +363,22 @@ export class SemanticGraphView extends ItemView {
                         this.sigmaInstance?.refresh();
                     }
 
-                    // Center the camera on the active node!
+                    // Smart Camera: Fit view for small graphs, center for large
                     if (this.graph.hasNode(file.path)) {
                         const pos = this.graph.getNodeAttributes(file.path) as { x: number, y: number };
                         const camera = this.sigmaInstance?.getCamera();
-                        // CRITICAL FIX: Protect camera matrix against NaN coordinates
+
                         if (camera && pos && typeof pos.x === 'number' && !isNaN(pos.x) && typeof pos.y === 'number' && !isNaN(pos.y)) {
-                            // Animate if we already had a position, otherwise instantly snap
-                            if (existingPositions[file.path]) {
-                                void camera.animate({ ratio: 1.2, x: pos.x, y: pos.y }, { duration: 500 });
+                            if (this.graph.order < 15) {
+                                // For small clusters, fit the whole thing
+                                void camera.animatedReset({ duration: 500 });
                             } else {
-                                camera.setState({ ratio: 1.2, x: pos.x, y: pos.y });
+                                // For larger graphs, center on the active node
+                                if (existingPositions[file.path]) {
+                                    void camera.animate({ ratio: 1.2, x: pos.x, y: pos.y }, { duration: 500 });
+                                } else {
+                                    camera.setState({ ratio: 1.2, x: pos.x, y: pos.y });
+                                }
                             }
                         }
                     }
