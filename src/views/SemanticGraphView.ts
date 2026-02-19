@@ -66,9 +66,9 @@ export class SemanticGraphView extends ItemView {
             backgroundColor: "transparent",
             height: "100%",
             overflow: "hidden",
+            padding: "0", // Prevent Obsidian's default padding from breaking the canvas
             position: "relative",
-            width: "100%",
-            padding: "0" // Prevent Obsidian's default padding from breaking the canvas
+            width: "100%"
         });
 
         // Initialize Sigma with the graphology instance
@@ -305,9 +305,9 @@ export class SemanticGraphView extends ItemView {
                         if (camera && pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
                             // Animate if we already had a position, otherwise instantly snap
                             if (existingPositions[file.path]) {
-                                void camera.animate({ x: pos.x, y: pos.y, ratio: 1.2 }, { duration: 500 });
+                                void camera.animate({ ratio: 1.2, x: pos.x, y: pos.y }, { duration: 500 });
                             } else {
-                                camera.setState({ x: pos.x, y: pos.y, ratio: 1.2 });
+                                camera.setState({ ratio: 1.2, x: pos.x, y: pos.y });
                             }
                         }
                     }
