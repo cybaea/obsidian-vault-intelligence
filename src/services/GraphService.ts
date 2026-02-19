@@ -177,9 +177,9 @@ export class GraphService extends Events {
     /**
      * Gets a subgraph centered around a file with pre-calculated layout.
      */
-    public async getSemanticSubgraph(path: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>): Promise<Graph | null> {
+    public async getSemanticSubgraph(path: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>, attractionMultiplier: number = 1.0): Promise<Graph | null> {
         try {
-            const raw = await this.workerManager.executeQuery(api => api.getSubgraph(path, updateId, existingPositions));
+            const raw = await this.workerManager.executeQuery(api => api.getSubgraph(path, updateId, existingPositions, attractionMultiplier));
 
             // FIX: Gracefully handle null from aborted layout
             if (!raw) return null;

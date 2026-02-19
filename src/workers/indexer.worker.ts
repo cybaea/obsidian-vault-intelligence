@@ -566,7 +566,7 @@ const IndexerWorker: WorkerAPI = {
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
 
-    async getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>): Promise<unknown> {
+    async getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>, attractionMultiplier: number = 1.0): Promise<unknown> {
         if (!graph || !orama) return null;
         latestGraphUpdateId = updateId;
 
@@ -699,7 +699,7 @@ const IndexerWorker: WorkerAPI = {
         // Layout: Single block execution to preserve physics momentum.
         // For ~250 nodes this executes synchronously in under ~15ms, zero UI thread blocking.
         const maxIterations = Math.min(300, Math.max(100, subgraph.order));
-        const layoutSettings = { edgeWeightInfluence: 2.0, gravity: 1.5, linLogMode: true, scalingRatio: 2.0, strongGravityMode: true };
+        const layoutSettings = { edgeWeightInfluence: 2.0 * attractionMultiplier, gravity: 1.5, linLogMode: true, scalingRatio: 2.0, strongGravityMode: true };
 
         // Abort if stale before starting expensive layout
         if (latestGraphUpdateId !== updateId) {

@@ -40,7 +40,8 @@ export class SemanticGraphView extends ItemView {
     private hoveredNode: string | null = null;
     private themeColors: Record<string, string> = {};
     private updateTimer: ReturnType<typeof setTimeout> | null = null;
-    private wrapperEl: HTMLElement;
+    private wrapperEl!: HTMLElement;
+    public attractionMultiplier: number = 1.0;
 
     constructor(leaf: WorkspaceLeaf, plugin: IVaultIntelligencePlugin, graphService: GraphService) {
         super(leaf);
@@ -88,6 +89,39 @@ export class SemanticGraphView extends ItemView {
             flexDirection: "column",
             overflow: "hidden",
             padding: "0"
+        });
+
+        // Top Bar Controls
+        const topBar = this.contentEl.createDiv({ cls: "semantic-graph-controls" });
+        topBar.setCssStyles({
+            alignItems: "center",
+            borderBottom: "1px solid var(--background-modifier-border)",
+            display: "flex",
+            flexShrink: "0",
+            gap: "var(--size-4-2)",
+            justifyContent: "flex-end",
+            padding: "var(--size-4-1) var(--size-4-2)"
+        });
+
+        topBar.createSpan({ attr: { style: "font-size: var(--font-ui-small);" }, cls: "text-muted", text: "Attraction" });
+        const slider = topBar.createEl("input", {
+            attr: {
+                max: "5.0",
+                min: "0.1",
+                step: "0.1",
+                title: "Adjust how strongly similar notes pull together",
+            },
+            type: "range"
+        });
+        slider.value = this.attractionMultiplier.toString();
+
+        slider.addEventListener("input", (e) => {
+            this.attractionMultiplier = parseFloat((e.target as HTMLInputElement).value);
+        });
+
+        slider.addEventListener("change", () => {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) void this.updateForFile(activeFile, true);
         });
 
         this.wrapperEl = this.contentEl.createDiv({ cls: "semantic-graph-wrapper" });
@@ -449,7 +483,7 @@ export class SemanticGraphView extends ItemView {
                 });
 
                 try {
-                    const sub = await this.graphService.getSemanticSubgraph(file.path, myUpdateId, existingPositions);
+                    const sub = await this.graphService.getSemanticSubgraph(file.path, myUpdateId, existingPositions, this.attractionMultiplier);
 
                     // Verify we are still on the same update request
                     if (this.lastUpdateId !== myUpdateId) return;

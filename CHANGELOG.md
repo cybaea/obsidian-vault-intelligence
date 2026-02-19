@@ -29,6 +29,8 @@ New features are added in the "Unreleased" section.
     -   **Visual RAG**: The graph now reacts to the Researcher agent. When the AI mentions files in its response, those notes are automatically highlighted in the galaxy, providing instant spatial context for the agent's reasoning.
     -   **Structural & Semantic Discovery**: The view blends structural Wikilinks (BFS) with semantic vector similarities, allowing you to discover both explicit and hidden connections in your knowledge base.
     -   **Fluid Interaction**: Supports smart-panning, node-hover previews (native Obsidian hover), and click-to-navigate functionality.
+    -   **Interactive Layout Controls**: Added a real-time "Attraction" slider to the graph view. Note clustering is driven by mathematical semantic scores; highly-related concepts will physically pull together, and the slider lets you tune this gravity.
+    -   **Adaptive Rendering**: Edge labels dynamically scale and shift coloring to support high contrast modes like Obsidian Dark Mode natively.
 -   **Improved Security**: Upgraded the plugin to use Obsidian's native Secure Storage. Your API keys are now encrypted and stored safely in your operating system's keychain rather than sitting in plain text in your vault folder. 
 -   **Linux Compatibility**: Added an intelligent fallback mechanism for Linux users. If your system (e.g., Flatpak or minimal distros) does not have a reachable keychain, the plugin will gracefully fall back to the legacy plain-text storage rather than crashing or nagging you.
 
