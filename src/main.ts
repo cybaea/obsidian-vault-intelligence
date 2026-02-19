@@ -21,6 +21,10 @@ import { logger } from "./utils/logger";
 import { ResearchChatView } from "./views/ResearchChatView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
 
+interface InternalSecretStorage {
+	setSecret(key: string, value: string): void;
+}
+
 // Legacy prompts for migration detection (v4.2.0)
 const LEGACY_SYSTEM_PROMPT = `
 Role: You are an intelligent research assistant embedded within the user's Obsidian vault.
@@ -339,12 +343,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 * Obsidian plugin lifecycle method called when the plugin is unloaded.
 	 * Ensures clean shutdown of workers and saves final state.
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-misused-promises -- Obsidian lifecycle requires async onunload for graceful shutdown and persistence
-	async onunload() {
+	onunload() {
 		if (this.graphSyncOrchestrator) {
-			await this.graphSyncOrchestrator.flushAndShutdown();
+			this.graphSyncOrchestrator.flushAndShutdown().catch((e: unknown) => {
+				logger.error("Error during graph shutdown", e);
+			});
 		}
-
+		// Terminate
 		if (this.embeddingService instanceof RoutingEmbeddingService) {
 			this.embeddingService.terminate();
 		}
@@ -381,9 +386,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			try {
 				logger.info("[SecretStorage] Migrating API key to secure storage...");
 				// SecretStorage is synchronous in v1.11.4+
-				// @ts-ignore - Types might be lagging strictly in some environments
-				if (this.app.secretStorage && this.app.secretStorage.setSecret) {
-					this.app.secretStorage.setSecret('vault-intelligence-api-key', this.settings.googleApiKey);
+				const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+
+				if (storage && storage.setSecret) {
+					storage.setSecret('vault-intelligence-api-key', this.settings.googleApiKey);
 					this.settings.googleApiKey = 'vault-intelligence-api-key';
 					await this.saveData(this.settings);
 					logger.info("[SecretStorage] Migration successful.");
