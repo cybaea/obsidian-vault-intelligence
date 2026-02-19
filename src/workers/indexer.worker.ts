@@ -670,7 +670,7 @@ const IndexerWorker: WorkerAPI = {
                 // Check master graph for connection
                 if (graph.hasNode(u) && graph.hasNode(v) && graph.hasEdge(u, v)) {
                     if (!subgraph.hasEdge(u, v) && !subgraph.hasEdge(v, u)) {
-                        subgraph.addEdge(u, v, { edgeType: 'structural', size: 0.5, type: 'line', zIndex: 0 }); // Thinner lines for secondary connections
+                        subgraph.addEdge(u, v, { edgeType: 'structural', size: 0.5, type: 'line', weight: 1.5, zIndex: 0 }); // Thinner lines, but pull together
                     }
                 }
             }
@@ -681,7 +681,7 @@ const IndexerWorker: WorkerAPI = {
         // Layout: Single block execution to preserve physics momentum.
         // For ~250 nodes this executes synchronously in under ~15ms, zero UI thread blocking.
         const maxIterations = Math.min(300, Math.max(100, subgraph.order));
-        const layoutSettings = { gravity: 1.5, linLogMode: true, strongGravityMode: true };
+        const layoutSettings = { edgeWeightInfluence: 2.0, gravity: 1.5, linLogMode: true, scalingRatio: 2.0, strongGravityMode: true };
 
         // Abort if stale before starting expensive layout
         if (latestGraphUpdateId !== updateId) {
@@ -1112,7 +1112,7 @@ function updateGraphNode(path: string, content: string, mtime: number, size: num
     let topics: string[] = [];
     const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic', 'tags_list', 'author'];
     for (const key of propertyKeys) {
-        if (key.includes('topic') && fm[key]) {
+        if (fm[key]) {
             topics = [...topics, ...ensureArray(fm[key])].filter(t => typeof t === 'string').map(t => sanitizeProperty(t));
         }
     }

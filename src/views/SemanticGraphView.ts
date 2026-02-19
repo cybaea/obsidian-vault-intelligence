@@ -105,6 +105,7 @@ export class SemanticGraphView extends ItemView {
             defaultNodeType: "circle",
             labelColor: { color: "var(--text-normal)" }, // Use normal text color for better contrast
             labelFont: "var(--font-interface)",
+            labelRenderedSizeThreshold: 2, // CRITICAL FIX: Render labels much earlier when zoomed out
             labelSize: 24, // Significantly larger text per user request
             labelWeight: "600", // Semi-bold for readability
             renderLabels: true
