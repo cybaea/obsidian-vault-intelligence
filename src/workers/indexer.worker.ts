@@ -588,11 +588,20 @@ const IndexerWorker: WorkerAPI = {
             const attr = graph.hasNode(node) ? graph.getNodeAttributes(node) as GraphNodeData : undefined;
             const pos = existingPositions?.[node];
 
+            // Extract dominant topic for coloring
+            let mainTopic = "default";
+            if (attr?.topics && attr.topics.length > 0) {
+                mainTopic = attr.topics[0] || "default";
+            } else if (attr?.tags && attr.tags.length > 0) {
+                mainTopic = attr.tags[0] || "default"; // fallback to tag
+            }
+
             subgraph.addNode(node, {
                 color: "#ccc", // Placeholder for main thread resolution
                 label: attr?.title || node.split('/').pop()?.replace('.md', '') || node,
                 nodeType: type,
                 size: type === 'center' ? 10 : (type === 'structural' ? 5 : 4),
+                topics: [mainTopic], // Pass topic to UI
                 // CRITICAL FIX: Seed randomly around (0,0) to prevent FA2 gravity implosions
                 // Also ensures NaN positions are never injected into the physics engine
                 x: (pos && typeof pos.x === 'number' && !isNaN(pos.x)) ? pos.x : ((Math.random() - 0.5) * 100),
@@ -652,6 +661,21 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
+        // Relational Clustering: Connect neighbors to each other if they are linked in the master graph
+        const subgraphNodes = subgraph.nodes();
+        for (let i = 0; i < subgraphNodes.length; i++) {
+            const u = subgraphNodes[i];
+            for (let j = i + 1; j < subgraphNodes.length; j++) {
+                const v = subgraphNodes[j];
+                // Check master graph for connection
+                if (graph.hasNode(u) && graph.hasNode(v) && graph.hasEdge(u, v)) {
+                    if (!subgraph.hasEdge(u, v) && !subgraph.hasEdge(v, u)) {
+                        subgraph.addEdge(u, v, { edgeType: 'structural', size: 0.5, type: 'line', zIndex: 0 }); // Thinner lines for secondary connections
+                    }
+                }
+            }
+        }
+
         if (subgraph.order <= 1) return subgraph.export();
 
         // Layout: Single block execution to preserve physics momentum.
@@ -661,7 +685,7 @@ const IndexerWorker: WorkerAPI = {
 
         // Abort if stale before starting expensive layout
         if (latestGraphUpdateId !== updateId) {
-            workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath}`);
+            workerLogger.debug(`[getSubgraph] Aborting stale layout for \${centerPath}`);
             return null;
         }
 
@@ -1082,10 +1106,23 @@ function sanitizeExcalidrawContent(content: string): string {
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);
+    const fm = parseYaml(splitFrontmatter(content).frontmatter);
+
+    // Extract topics for UI coloring
+    let topics: string[] = [];
+    const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic', 'tags_list', 'author'];
+    for (const key of propertyKeys) {
+        if (key.includes('topic') && fm[key]) {
+            topics = [...topics, ...ensureArray(fm[key])].filter(t => typeof t === 'string').map(t => sanitizeProperty(t));
+        }
+    }
+    // Remove duplicates
+    topics = [...new Set(topics.filter(Boolean))];
+
     if (!graph.hasNode(path)) {
-        graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, type: 'file' });
+        graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, topics, type: 'file' });
     } else {
-        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount }));
+        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount, topics }));
     }
 }
 

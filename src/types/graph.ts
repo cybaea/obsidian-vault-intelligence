@@ -31,6 +31,7 @@ export interface GraphNodeData {
     tags?: string[];
     title?: string;
     tokenCount?: number; // New: total tokens for the document
+    topics?: string[]; // Extracted from frontmatter for UI coloring
     type: NodeType;
 }
 

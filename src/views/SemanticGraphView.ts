@@ -1,5 +1,5 @@
 import Graph from "graphology";
-import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, TFile, WorkspaceLeaf } from "obsidian";
 import Sigma from "sigma";
 
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
@@ -90,7 +90,7 @@ export class SemanticGraphView extends ItemView {
             defaultNodeType: "circle",
             labelColor: { color: "var(--text-normal)" }, // Use normal text color for better contrast
             labelFont: "var(--font-interface)",
-            labelSize: 14, // Slightly larger labels
+            labelSize: 24, // Significantly larger text per user request
             labelWeight: "600", // Semi-bold for readability
             renderLabels: true
         });
@@ -182,6 +182,31 @@ export class SemanticGraphView extends ItemView {
             }
         });
 
+        // Add Context Menu for User Controls (Fit, Centre)
+        this.wrapperEl.addEventListener('contextmenu', (event: MouseEvent) => {
+            event.preventDefault();
+            const configMenu = new Menu();
+
+            configMenu.addItem((item) => {
+                item.setTitle("Centre on active note")
+                    .setIcon("crosshair")
+                    .onClick(() => {
+                        const activeFile = this.app.workspace.getActiveFile();
+                        if (activeFile) void this.updateForFile(activeFile, true);
+                    });
+            });
+
+            configMenu.addItem((item) => {
+                item.setTitle("Fit graph to view")
+                    .setIcon("maximize")
+                    .onClick(() => {
+                        void this.sigmaInstance?.getCamera().animatedReset({ duration: 500 });
+                    });
+            });
+
+            configMenu.showAtMouseEvent(event);
+        });
+
         // Sync with active file on first open if visible
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile) {
@@ -230,6 +255,20 @@ export class SemanticGraphView extends ItemView {
             // Core type-based coloring
             res.color = this.themeColors[type] || this.themeColors.structural || "#888";
 
+            // Topic Coloring Override
+            if (data.topics && Array.isArray(data.topics) && data.topics.length > 0) {
+                const topic = data.topics[0] as string;
+                if (topic !== "default") {
+                    // Generate a stable color based on string hash
+                    let hashStr = 0;
+                    for (let i = 0; i < topic.length; i++) {
+                        hashStr = topic.charCodeAt(i) + ((hashStr << 5) - hashStr);
+                    }
+                    const hue = Math.abs(hashStr) % 360;
+                    res.color = `hsl(${hue}, 65%, 55%)`; // Vibrant but readable
+                }
+            }
+
             // Visual RAG Highlighting logic
             if (this.contextPaths.size > 0) {
                 if (this.contextPaths.has(node)) {
@@ -242,13 +281,21 @@ export class SemanticGraphView extends ItemView {
                 }
             }
 
+            // --- Label Truncation ---
+            if (res.label && !res.highlighted) {
+                const lbl = res.label as string;
+                if (lbl.length > 30) {
+                    res.label = lbl.substring(0, 30) + '...';
+                }
+            }
+
             // --- Enhanced Hover State ---
             if (res.highlighted) {
                 res.color = this.themeColors.highlight || "#ff0";
                 const currentSize = (res.size as number) || 5;
                 res.size = currentSize * 1.8; // Boost size on hover
                 res.zIndex = 20;
-                res.label = data.label as string | undefined; // Safe cast
+                res.label = data.label as string | undefined; // Safe cast, show full label
             }
 
             return res;
