@@ -18,11 +18,9 @@ export class SemanticGraphView extends ItemView {
     private plugin: IVaultIntelligencePlugin;
     private graphService: GraphService;
     private containerResizer: ResizeObserver | null = null;
-    private visibilityObserver: IntersectionObserver | null = null;
-    private isVisible = false;
-    private pendingUpdatePath: string | null = null;
     private contextPaths: Set<string> = new Set();
     private themeColors: Record<string, string> = {};
+    private updateTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: IVaultIntelligencePlugin, graphService: GraphService) {
         super(leaf);
@@ -58,7 +56,7 @@ export class SemanticGraphView extends ItemView {
 
     async onOpen() {
         await Promise.resolve();
-        // FIX 1: Use the official Obsidian content element
+
         const container = this.contentEl;
         container.empty();
         container.addClass("semantic-graph-container");
@@ -66,7 +64,7 @@ export class SemanticGraphView extends ItemView {
             backgroundColor: "transparent",
             height: "100%",
             overflow: "hidden",
-            padding: "0", // Prevent Obsidian's default padding from breaking the canvas
+            padding: "0",
             position: "relative",
             width: "100%"
         });
@@ -87,27 +85,18 @@ export class SemanticGraphView extends ItemView {
 
         // Container resize observer to keep WebGL viewport matched
         this.containerResizer = new ResizeObserver(() => {
-            if (this.isVisible) this.sigmaInstance?.refresh();
-        });
-        this.containerResizer.observe(container);
-
-        // Visibility observer to pause/resume rendering and updates
-        this.visibilityObserver = new IntersectionObserver(([entry]) => {
-            this.isVisible = entry?.isIntersecting ?? false;
-            if (this.isVisible && this.pendingUpdatePath) {
-                const file = this.app.vault.getAbstractFileByPath(this.pendingUpdatePath);
-                if (file instanceof TFile) {
-                    void this.updateForFile(file);
-                }
-                this.pendingUpdatePath = null;
+            // Only refresh if the container has width (prevents 0x0 crash)
+            if (this.contentEl.clientWidth > 0) {
+                this.sigmaInstance?.refresh();
             }
         });
-        this.visibilityObserver.observe(this.containerEl);
+        this.containerResizer.observe(container);
 
         // --- Sigma Event Handlers ---
 
         this.sigmaInstance.on("clickNode", (event) => {
-            const path = event.node;
+            const nodeEvent = event as { node: string };
+            const path = nodeEvent.node;
             const file = this.app.vault.getAbstractFileByPath(path);
             if (file instanceof TFile) {
                 // Focus the file in the workspace
@@ -117,12 +106,13 @@ export class SemanticGraphView extends ItemView {
         });
 
         this.sigmaInstance.on("enterNode", (event) => {
-            const path = event.node;
+            const nodeEvent = event as unknown as { event: MouseEvent; node: string };
+            const path = nodeEvent.node;
             const file = this.app.vault.getAbstractFileByPath(path);
             if (file instanceof TFile) {
                 // Trigger native Obsidian hover preview
                 const payload = {
-                    event: (event as unknown as { event: MouseEvent }).event, // Sigma v3 original event
+                    event: nodeEvent.event,
                     hoverParent: container,
                     linktext: path,
                     source: VIEW_TYPES.SEMANTIC_GRAPH,
@@ -167,25 +157,26 @@ export class SemanticGraphView extends ItemView {
      * Resolves Obsidian CSS variables into absolute colors for Sigma WebGL shaders.
      */
     private resolveThemeColors() {
-        const dummy = document.createElement("div");
-        this.containerEl.appendChild(dummy);
+        // Robust color resolution
+        const getComputedColor = (cssVar: string, fallback: string) => {
+            const tempEl = document.body.createDiv();
+            // Apply the var to color, if invalid, it will fallback to empty string
+            tempEl.style.color = `var(${cssVar})`;
+            document.body.appendChild(tempEl);
+            const computedColor = getComputedStyle(tempEl).color;
+            tempEl.remove();
 
-        const getRGB = (varName: string, fallback: string) => {
-            dummy.style.color = fallback;
-            dummy.style.color = `var(${varName}, ${fallback})`;
-            const color = getComputedStyle(dummy).color;
-            return color || fallback;
+            // If the computed color is empty or transparent, use fallback
+            return computedColor && computedColor !== 'rgba(0, 0, 0, 0)' && computedColor !== 'transparent' ? computedColor : fallback;
         };
 
         this.themeColors = {
-            center: getRGB("--text-accent", "rgb(100, 100, 255)"),
-            edge: getRGB("--background-modifier-border", "rgb(100, 100, 100)"),
-            highlight: getRGB("--interactive-accent", "rgb(255, 200, 0)"),
-            semantic: getRGB("--text-faint", "rgb(150, 150, 150)"),
-            structural: getRGB("--text-muted", "rgb(200, 200, 200)")
+            center: getComputedColor("--text-accent", "rgb(100, 100, 255)"),
+            edge: getComputedColor("--background-modifier-border", "rgb(100, 100, 100)"),
+            highlight: getComputedColor("--interactive-accent", "rgb(255, 200, 0)"),
+            semantic: getComputedColor("--text-faint", "rgb(150, 150, 150)"),
+            structural: getComputedColor("--text-muted", "rgb(200, 200, 200)")
         };
-
-        this.containerEl.removeChild(dummy);
 
         // Apply visual logic via Sigma reducers (state-driven rendering)
         this.sigmaInstance?.setSetting("nodeReducer", (node, data) => {
@@ -239,8 +230,6 @@ export class SemanticGraphView extends ItemView {
         return color; // Fallback
     }
 
-    private updateTimer: ReturnType<typeof setTimeout> | null = null;
-
     /**
      * Updates the graph view for a specific file.
      * Includes debouncing, race protection, and smart panning.
@@ -258,12 +247,6 @@ export class SemanticGraphView extends ItemView {
                 this.lastUpdateId++;
                 const myUpdateId = this.lastUpdateId;
 
-                // Don't update if hidden (tab in background)
-                if (!this.isVisible) {
-                    this.pendingUpdatePath = file.path;
-                    return;
-                }
-
                 this.currentFilePath = file.path;
 
                 // Smart Pan: If node already exists, instantly animate camera to it
@@ -271,7 +254,7 @@ export class SemanticGraphView extends ItemView {
                     const camera = this.sigmaInstance?.getCamera();
                     const pos = this.graph.getNodeAttributes(file.path);
                     if (camera && pos) {
-                        void camera.animate({ x: pos.x as number, y: pos.y as number }, { duration: 600 });
+                        void camera.animate({ ratio: 1.2, x: pos.x as number, y: pos.y as number }, { duration: 600 });
                     }
                 }
 
@@ -287,7 +270,7 @@ export class SemanticGraphView extends ItemView {
                     // Verify we are still on the same update request
                     if (this.lastUpdateId !== myUpdateId) return;
 
-                    // FIX 3: Ignore empty aborts safely
+                    // Ignore empty aborts safely
                     if (!sub || sub.order === 0) {
                         if (this.graph.order === 0) this.sigmaInstance?.refresh();
                         return;
@@ -296,9 +279,13 @@ export class SemanticGraphView extends ItemView {
                     // Atomic graph swap
                     this.graph.clear();
                     this.graph.import(sub);
-                    this.sigmaInstance?.refresh();
 
-                    // FIX 4: Center the camera on the active node!
+                    // Only refresh if the container is visible (has width)
+                    if (this.contentEl.clientWidth > 0) {
+                        this.sigmaInstance?.refresh();
+                    }
+
+                    // Center the camera on the active node!
                     if (this.graph.hasNode(file.path)) {
                         const pos = this.graph.getNodeAttributes(file.path);
                         const camera = this.sigmaInstance?.getCamera();
@@ -318,12 +305,9 @@ export class SemanticGraphView extends ItemView {
         }, 150);
     }
 
-
-
     async onClose() {
         await Promise.resolve();
         this.containerResizer?.disconnect();
-        this.visibilityObserver?.disconnect();
         this.sigmaInstance?.kill();
         this.sigmaInstance = null;
     }
