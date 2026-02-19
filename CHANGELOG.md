@@ -17,6 +17,7 @@ New features are added in the "Unreleased" section.
     -   Fixed camera animation crashes by implementing multi-layer NaN guards for WebGL matrices.
     -   Improved theme color resilience with robust CSS variable resolution and Hex color support.
     -   Fixed Sigma v3 event payload extraction for native Obsidian hover previews.
+-   **Researcher UI**: Fixed a bug where the model selection dropdown would fail to display newly available models (like Gemini 3.1 Pro) after a fresh API fetch. The dropdown now dynamically updates across all views in real-time.
 
 ### Breaking changes
 
