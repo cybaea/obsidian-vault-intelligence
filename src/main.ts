@@ -19,6 +19,7 @@ import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTa
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
 import { ResearchChatView } from "./views/ResearchChatView";
+import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
 
 interface InternalSecretStorage {
@@ -218,6 +219,14 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			const menu = new Menu();
 			menu.addItem((item) =>
 				item
+					.setTitle(UI_STRINGS.EXPLORER_TITLE)
+					.setIcon('layout-grid')
+					.onClick(() => {
+						void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
+					})
+			);
+			menu.addItem((item) =>
+				item
 					.setTitle(UI_STRINGS.RESEARCHER_TITLE)
 					.setIcon('message-circle')
 					.onClick(() => {
@@ -226,10 +235,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			);
 			menu.addItem((item) =>
 				item
-					.setTitle(UI_STRINGS.EXPLORER_TITLE)
-					.setIcon('layout-grid')
+					.setTitle(UI_STRINGS.SEMANTIC_GRAPH_TITLE)
+					.setIcon('network')
 					.onClick(() => {
-						void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
+						void this.activateView(VIEW_TYPES.SEMANTIC_GRAPH);
 					})
 			);
 			menu.showAtMouseEvent(evt);
@@ -237,30 +246,30 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		// Register Views
 		this.registerView(
+			VIEW_TYPES.RESEARCH_CHAT,
+			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.graphService, this.embeddingService)
+		);
+		this.registerView(
+			VIEW_TYPES.SEMANTIC_GRAPH,
+			(leaf) => new SemanticGraphView(leaf, this, this.graphService)
+		);
+		this.registerView(
 			VIEW_TYPES.SIMILAR_NOTES,
 			(leaf) => new SimilarNotesView(leaf, this, this.graphService)
 		);
 
-		this.registerView(
-			VIEW_TYPES.RESEARCH_CHAT,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.graphService, this.embeddingService)
-		);
-
 		// Commands
 		this.addCommand({
-			callback: () => {
-				void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
+			callback: async () => {
+				try {
+					await this.gardenerService.purgeOldPlans();
+					new Notice(UI_STRINGS.NOTICE_GARDENER_PURGED);
+				} catch (error: unknown) {
+					new Notice(`${UI_STRINGS.NOTICE_PURGE_FAILED}${error instanceof Error ? error.message : String(error)}`);
+				}
 			},
-			id: 'open-similar-notes-view',
-			name: 'Explorer: view similar notes'
-		});
-
-		this.addCommand({
-			callback: () => {
-				void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
-			},
-			id: 'open-research-chat-view',
-			name: 'Researcher: chat with vault'
+			id: 'gardener-purge-plans',
+			name: UI_STRINGS.GARDENER_TITLE_PURGE
 		});
 
 		this.addCommand({
@@ -281,16 +290,27 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		});
 
 		this.addCommand({
-			callback: async () => {
-				try {
-					await this.gardenerService.purgeOldPlans();
-					new Notice(UI_STRINGS.NOTICE_GARDENER_PURGED);
-				} catch (error: unknown) {
-					new Notice(`${UI_STRINGS.NOTICE_PURGE_FAILED}${error instanceof Error ? error.message : String(error)}`);
-				}
+			callback: () => {
+				void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
 			},
-			id: 'gardener-purge-plans',
-			name: UI_STRINGS.GARDENER_TITLE_PURGE
+			id: 'open-research-chat-view',
+			name: 'Researcher: chat with vault'
+		});
+
+		this.addCommand({
+			callback: () => {
+				void this.activateView(VIEW_TYPES.SEMANTIC_GRAPH);
+			},
+			id: 'open-semantic-graph-view',
+			name: 'Explorer: view semantic galaxy'
+		});
+
+		this.addCommand({
+			callback: () => {
+				void this.activateView(VIEW_TYPES.SIMILAR_NOTES);
+			},
+			id: 'open-similar-notes-view',
+			name: 'Explorer: view similar notes'
 		});
 
 		this.addCommand({

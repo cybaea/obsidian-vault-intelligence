@@ -60,6 +60,7 @@ export interface VaultIntelligenceSettings {
     reRankingModel: string;
     searchCentralityLimit: number;
     secretStorageFailure: boolean;
+    semanticGraphNodeLimit: number;
     similarNotesLimit: number;
     systemInstruction: string | null;
     vaultSearchResultsLimit: number;
@@ -172,6 +173,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     reRankingModel: 'gemini-flash-latest',
     searchCentralityLimit: 50,
     secretStorageFailure: false,
+    semanticGraphNodeLimit: 250,
     similarNotesLimit: 20,
     systemInstruction: null, // Use default by reference
     vaultSearchResultsLimit: 25

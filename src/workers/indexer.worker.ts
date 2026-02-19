@@ -2,6 +2,7 @@ import { decode, encode } from '@msgpack/msgpack';
 import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
+import forceAtlas2 from 'graphology-layout-forceatlas2';
 
 import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
@@ -14,6 +15,7 @@ let orama: AnyOrama;
 let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
+let latestGraphUpdateId = 0;
 let currentStopWords: string[] = []; // Loaded dynamically
 const storage = new StorageProvider();
 
@@ -562,6 +564,101 @@ const IndexerWorker: WorkerAPI = {
         });
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
+    },
+
+    async getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>): Promise<unknown> {
+        if (!graph || !orama) return null;
+        latestGraphUpdateId = updateId;
+
+        const normalizedCenter = workerNormalizePath(centerPath);
+        if (!graph.hasNode(normalizedCenter)) return "";
+
+        const limit = config.semanticGraphNodeLimit || 250;
+        const structuralLimit = Math.floor(limit * 0.8);
+
+        // BFS for structural neighbors
+        const subgraph = new Graph({ type: 'undirected' });
+        const queue: [string, number][] = [[normalizedCenter, 0]];
+        const visited = new Set<string>();
+        visited.add(normalizedCenter);
+
+        // Helper to add node to subgraph with unified attributes
+        const addNodeToSubgraph = (node: string, type: 'center' | 'structural' | 'semantic') => {
+            if (subgraph.hasNode(node)) return;
+            const attr = graph.getNodeAttributes(node) as GraphNodeData;
+            const pos = existingPositions?.[node];
+            subgraph.addNode(node, {
+                color: "#ccc", // Placeholder for main thread resolution
+                label: attr.title || node.split('/').pop()?.replace('.md', '') || node,
+                nodeType: type,
+                size: type === 'center' ? 10 : (type === 'structural' ? 5 : 4),
+                x: pos?.x ?? (Math.random() * 100),
+                y: pos?.y ?? (Math.random() * 100)
+            });
+        };
+
+        addNodeToSubgraph(normalizedCenter, 'center');
+
+        while (queue.length > 0 && subgraph.order < structuralLimit) {
+            const [node, depth] = queue.shift()!;
+
+            // Limit depth to 2 to keep it local
+            if (depth >= 2) continue;
+
+            graph.forEachNeighbor(node, (neighbor) => {
+                if (subgraph.order < structuralLimit && !subgraph.hasNode(neighbor)) {
+                    addNodeToSubgraph(neighbor, 'structural');
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push([neighbor, depth + 1]);
+                    }
+                }
+
+                if (subgraph.hasNode(neighbor)) {
+                    if (!subgraph.hasEdge(node, neighbor)) {
+                        subgraph.addEdge(node, neighbor, { size: 1, type: 'structural' });
+                    }
+                }
+            });
+        }
+
+        // Semantic Injection
+        const semanticLimit = limit - subgraph.order;
+        if (semanticLimit > 0) {
+            const similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
+            for (const item of similar) {
+                const path = item.path;
+                if (!subgraph.hasNode(path)) {
+                    addNodeToSubgraph(path, 'semantic');
+                }
+                if (subgraph.hasNode(path) && !subgraph.hasEdge(normalizedCenter, path)) {
+                    subgraph.addEdge(normalizedCenter, path, { size: 2, type: 'semantic', zIndex: 1 });
+                }
+            }
+        }
+
+        if (subgraph.order <= 1) return subgraph.export();
+
+        // Layout with yielding
+        const maxIterations = Math.min(300, Math.max(100, subgraph.order));
+        const layoutSettings = { gravity: 1.5, linLogMode: true, strongGravityMode: true };
+
+        for (let i = 0; i < maxIterations; i++) {
+            // Check if a newer update has been requested
+            if (latestGraphUpdateId !== updateId) {
+                workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath} (${updateId} < ${latestGraphUpdateId})`);
+                return "";
+            }
+
+            forceAtlas2.assign(subgraph, { iterations: 1, settings: layoutSettings });
+
+            // Yield to event loop periodically
+            if (i % 20 === 0) {
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
+
+        return subgraph.export();
     },
 
     async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) {

@@ -16,11 +16,21 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Semantic Galaxy View**: Replaced the static relationship list with a high-performance, interactive 3D-like graph view. The "Semantic Galaxy" visualises your vault's relationships in real-time, centering on your active note.
+    -   **Visual RAG**: The graph now reacts to the Researcher agent. When the AI mentions files in its response, those notes are automatically highlighted in the galaxy, providing instant spatial context for the agent's reasoning.
+    -   **Structural & Semantic Discovery**: The view blends structural Wikilinks (BFS) with semantic vector similarities, allowing you to discover both explicit and hidden connections in your knowledge base.
+    -   **Fluid Interaction**: Supports smart-panning, node-hover previews (native Obsidian hover), and click-to-navigate functionality.
 -   **Improved Security**: Upgraded the plugin to use Obsidian's native Secure Storage. Your API keys are now encrypted and stored safely in your operating system's keychain rather than sitting in plain text in your vault folder. 
 -   **Linux Compatibility**: Added an intelligent fallback mechanism for Linux users. If your system (e.g., Flatpak or minimal distros) does not have a reachable keychain, the plugin will gracefully fall back to the legacy plain-text storage rather than crashing or nagging you.
 
 ### Developer features
 
+-   **High-performance WebGL Graphing**: Integrated Sigma.js and Graphology into the Obsidian UI. Implemented a Singleton-like Sigma managed instance with `IntersectionObserver` to ensure zero CPU/GPU overhead when the view is not visible.
+-   **Yielding Worker Layout**: Refactored the ForceAtlas2 layout engine to run in the background worker with a yielding strategy (via `setTimeout(0)`), ensuring the main thread stays 100% responsive during complex graph calculations.
+-   **BFS Subgraph Extraction**: Implemented a "Quota-limited BFS" algorithm in the indexer worker to extract local subgraphs (max 250 nodes) centered on active files, ensuring consistent performance regardless of vault size.
+-   **Semantic Injection**: Added logic to inject top-K semantic neighbors into the structural graph, bridging the gap between vector search and graph theory.
+-   **Smart Layout Seeding**: Implemented positional seeding to prevent graph "jumping" during updates by reusing previous node coordinates where available.
+-   **Internal Event Bus**: Leveraged `GraphService` as a centralized, type-safe internal event bus for Visual RAG orchestration, eliminating `any` casts and collisions on `app.workspace`.
 -   **Secure API key storage**: Migrated Google Gemini API keys from plain text `data.json` to Obsidian's native `SecretStorage` API (v1.11.4+).
     -   **JIT initialization**: Refactored `GeminiService` to use asynchronous just-in-time client instantiation, preventing "Async Constructor" race conditions during plugin load.
     -   **Stable secret IDs**: Mandated a persistent secret ID (`vault-intelligence-api-key`) to prevent sync-induced "ping-pong" conflicts between multiple devices.

@@ -81,6 +81,7 @@ export interface WorkerConfig {
     minSimilarityScore: number;
     ontologyPath: string;
     sanitizedModelId: string;
+    semanticGraphNodeLimit: number;
 }
 
 /**
@@ -98,6 +99,7 @@ export interface WorkerAPI {
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<SerializableGraphSearchResult[]>;
     getSimilar(path: string, limit?: number, minScore?: number): Promise<SerializableGraphSearchResult[]>;
+    getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>): Promise<unknown>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<SerializableGraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;

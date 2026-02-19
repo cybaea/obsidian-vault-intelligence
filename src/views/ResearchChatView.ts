@@ -207,7 +207,12 @@ export class ResearchChatView extends ItemView {
 
             this.isThinking = false;
             this.addMessage("model", response.text, undefined, response.files, response.createdFiles);
-        } catch (e: unknown) {
+
+            // Trigger Visual RAG: Highlight relevant nodes in Semantic Galaxy
+            if (response.files && response.files.length > 0) {
+                this.graphService.trigger("vault-intelligence:context-highlight", response.files);
+            }
+        } catch (e) {
             this.isThinking = false;
             const message = e instanceof Error ? e.message : String(e);
             new Notice(`Error: ${message}`);

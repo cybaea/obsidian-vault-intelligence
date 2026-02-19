@@ -303,6 +303,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             }));
 
     new Setting(containerEl)
+        .setName('Semantic graph node limit')
+        .setDesc('Maximum number of nodes to render in the semantic galaxy view.')
+        .addSlider(slider => slider
+            .setLimits(50, 1000, 50)
+            .setValue(plugin.settings.semanticGraphNodeLimit)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.semanticGraphNodeLimit = value;
+                await plugin.saveSettings();
+            }));
+
+    new Setting(containerEl)
         .setName('Keyword match weight')
         .setDesc('Calibration for keyword vs vector search. Higher values make keyword matches more conservative.')
         .addSlider(slider => slider

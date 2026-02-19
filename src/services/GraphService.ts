@@ -1,3 +1,4 @@
+import Graph from "graphology";
 import { Events, App } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
@@ -170,6 +171,23 @@ export class GraphService extends Events {
             return this.hydrateAndHandleDrift(neighbors);
         } catch {
             return [];
+        }
+    }
+
+    /**
+     * Gets a subgraph centered around a file with pre-calculated layout.
+     */
+    public async getSemanticSubgraph(path: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>): Promise<Graph> {
+        try {
+            const raw = await this.workerManager.executeQuery(api => api.getSubgraph(path, updateId, existingPositions));
+            const sub = new Graph({ type: 'undirected' });
+            if (raw) {
+                sub.import(raw as Parameters<typeof sub.import>[0]);
+            }
+            return sub;
+        } catch (e) {
+            console.error(`[GraphService] Failed to get semantic subgraph for ${path}`, e);
+            return new Graph({ type: 'undirected' });
         }
     }
 
