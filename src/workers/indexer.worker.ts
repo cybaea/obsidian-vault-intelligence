@@ -571,7 +571,7 @@ const IndexerWorker: WorkerAPI = {
         latestGraphUpdateId = updateId;
 
         const normalizedCenter = workerNormalizePath(centerPath);
-        if (!graph.hasNode(normalizedCenter)) return "";
+        // if (!graph.hasNode(normalizedCenter)) return "";
 
         const limit = config.semanticGraphNodeLimit || 250;
         const structuralLimit = Math.floor(limit * 0.8);
@@ -585,11 +585,11 @@ const IndexerWorker: WorkerAPI = {
         // Helper to add node to subgraph with unified attributes
         const addNodeToSubgraph = (node: string, type: 'center' | 'structural' | 'semantic') => {
             if (subgraph.hasNode(node)) return;
-            const attr = graph.getNodeAttributes(node) as GraphNodeData;
+            const attr = graph.hasNode(node) ? graph.getNodeAttributes(node) as GraphNodeData : undefined;
             const pos = existingPositions?.[node];
             subgraph.addNode(node, {
                 color: "#ccc", // Placeholder for main thread resolution
-                label: attr.title || node.split('/').pop()?.replace('.md', '') || node,
+                label: attr?.title || node.split('/').pop()?.replace('.md', '') || node,
                 nodeType: type,
                 size: type === 'center' ? 10 : (type === 'structural' ? 5 : 4),
                 x: pos?.x ?? (Math.random() * 100),
@@ -599,27 +599,30 @@ const IndexerWorker: WorkerAPI = {
 
         addNodeToSubgraph(normalizedCenter, 'center');
 
-        while (queue.length > 0 && subgraph.order < structuralLimit) {
-            const [node, depth] = queue.shift()!;
+        if (graph.hasNode(normalizedCenter)) {
 
-            // Limit depth to 2 to keep it local
-            if (depth >= 2) continue;
+            while (queue.length > 0 && subgraph.order < structuralLimit) {
+                const [node, depth] = queue.shift()!;
 
-            graph.forEachNeighbor(node, (neighbor) => {
-                if (subgraph.order < structuralLimit && !subgraph.hasNode(neighbor)) {
-                    addNodeToSubgraph(neighbor, 'structural');
-                    if (!visited.has(neighbor)) {
-                        visited.add(neighbor);
-                        queue.push([neighbor, depth + 1]);
+                // Limit depth to 2 to keep it local
+                if (depth >= 2) continue;
+
+                graph.forEachNeighbor(node, (neighbor) => {
+                    if (subgraph.order < structuralLimit && !subgraph.hasNode(neighbor)) {
+                        addNodeToSubgraph(neighbor, 'structural');
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push([neighbor, depth + 1]);
+                        }
                     }
-                }
 
-                if (subgraph.hasNode(neighbor)) {
-                    if (!subgraph.hasEdge(node, neighbor)) {
-                        subgraph.addEdge(node, neighbor, { size: 1, type: 'structural' });
+                    if (subgraph.hasNode(neighbor)) {
+                        if (!subgraph.hasEdge(node, neighbor)) {
+                            subgraph.addEdge(node, neighbor, { size: 1, type: 'structural' });
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Semantic Injection
@@ -647,7 +650,7 @@ const IndexerWorker: WorkerAPI = {
             // Check if a newer update has been requested
             if (latestGraphUpdateId !== updateId) {
                 workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath} (${updateId} < ${latestGraphUpdateId})`);
-                return "";
+                return null;
             }
 
             forceAtlas2.assign(subgraph, { iterations: 1, settings: layoutSettings });

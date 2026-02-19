@@ -258,6 +258,27 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			(leaf) => new SimilarNotesView(leaf, this, this.graphService)
 		);
 
+		// Event listeners for UI updates
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => {
+				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
+				leaves.forEach(leaf => {
+					if (leaf.view instanceof SimilarNotesView) {
+						void leaf.view.updateView();
+					}
+				});
+
+				// FIX: Hook up the Semantic Graph to active-leaf-change
+				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
+				graphLeaves.forEach(leaf => {
+					if (leaf.view instanceof SemanticGraphView) {
+						const file = this.app.workspace.getActiveFile();
+						void leaf.view.updateForFile(file);
+					}
+				});
+			})
+		);
+
 		// Commands
 		this.addCommand({
 			callback: async () => {
@@ -351,6 +372,15 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				leaves.forEach(leaf => {
 					if (leaf.view instanceof SimilarNotesView) {
 						void leaf.view.updateView();
+					}
+				});
+
+				// Notify Semantic Galaxy to update on file change
+				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
+				graphLeaves.forEach(leaf => {
+					if (leaf.view instanceof SemanticGraphView) {
+						const file = this.app.workspace.getActiveFile();
+						void leaf.view.updateForFile(file);
 					}
 				});
 			})

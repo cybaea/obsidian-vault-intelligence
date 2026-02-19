@@ -28,6 +28,20 @@ export class SemanticGraphView extends ItemView {
         super(leaf);
         this.plugin = plugin;
         this.graphService = graphService;
+
+        // Auto-refresh graph when a background index finishes
+        this.registerEvent(
+            this.graphService.on('graph:index-updated', () => {
+                const file = this.app.workspace.getActiveFile();
+                void this.updateForFile(file, true); // Force repaint
+            })
+        );
+        this.registerEvent(
+            this.graphService.on('graph:index-ready', () => {
+                const file = this.app.workspace.getActiveFile();
+                void this.updateForFile(file, true);
+            })
+        );
     }
 
     getViewType(): string {
@@ -44,8 +58,8 @@ export class SemanticGraphView extends ItemView {
 
     async onOpen() {
         await Promise.resolve();
-        // Container setup
-        const container = this.containerEl.children[1] as HTMLElement;
+        // FIX 1: Use the official Obsidian content element
+        const container = this.contentEl;
         container.empty();
         container.addClass("semantic-graph-container");
         container.setCssStyles({
@@ -53,7 +67,8 @@ export class SemanticGraphView extends ItemView {
             height: "100%",
             overflow: "hidden",
             position: "relative",
-            width: "100%"
+            width: "100%",
+            padding: "0" // Prevent Obsidian's default padding from breaking the canvas
         });
 
         // Initialize Sigma with the graphology instance
@@ -155,17 +170,19 @@ export class SemanticGraphView extends ItemView {
         const dummy = document.createElement("div");
         this.containerEl.appendChild(dummy);
 
-        const getRGB = (varName: string) => {
-            dummy.style.color = `var(${varName})`;
-            return getComputedStyle(dummy).color;
+        const getRGB = (varName: string, fallback: string) => {
+            dummy.style.color = fallback;
+            dummy.style.color = `var(${varName}, ${fallback})`;
+            const color = getComputedStyle(dummy).color;
+            return color || fallback;
         };
 
         this.themeColors = {
-            center: getRGB("--text-accent"),
-            edge: getRGB("--divider-color"),
-            highlight: getRGB("--interactive-accent"),
-            semantic: getRGB("--text-faint"),
-            structural: getRGB("--text-muted")
+            center: getRGB("--text-accent", "rgb(100, 100, 255)"),
+            edge: getRGB("--background-modifier-border", "rgb(100, 100, 100)"),
+            highlight: getRGB("--interactive-accent", "rgb(255, 200, 0)"),
+            semantic: getRGB("--text-faint", "rgb(150, 150, 150)"),
+            structural: getRGB("--text-muted", "rgb(200, 200, 200)")
         };
 
         this.containerEl.removeChild(dummy);
@@ -212,62 +229,96 @@ export class SemanticGraphView extends ItemView {
      * Helper to dim colors for background nodes.
      */
     private adjustAlpha(color: string, alpha: number): string {
-        // Simple regex to inject alpha into rgb/rgba
+        if (!color) return `rgba(150, 150, 150, ${alpha})`;
         if (color.startsWith("rgba")) {
             return color.replace(/[\d.]+\)$/g, `${alpha})`);
         }
-        return color.replace("rgb", "rgba").replace(")", `, ${alpha})`);
+        if (color.startsWith("rgb")) {
+            return color.replace("rgb", "rgba").replace(")", `, ${alpha})`);
+        }
+        return color; // Fallback
     }
+
+    private updateTimer: ReturnType<typeof setTimeout> | null = null;
 
     /**
      * Updates the graph view for a specific file.
      * Includes debouncing, race protection, and smart panning.
      */
-    async updateForFile(file: TFile | null) {
+    updateForFile(file: TFile | null, force = false) {
         if (!file || file.extension !== 'md') return;
 
-        this.lastUpdateId++;
-        const myUpdateId = this.lastUpdateId;
+        // Skip if same file unless forced
+        if (!force && this.currentFilePath === file.path) return;
 
-        // Don't update if hidden (tab in background)
-        if (!this.isVisible) {
-            this.pendingUpdatePath = file.path;
-            return;
-        }
+        if (this.updateTimer) clearTimeout(this.updateTimer);
 
-        this.currentFilePath = file.path;
+        this.updateTimer = setTimeout(() => {
+            void (async () => {
+                this.lastUpdateId++;
+                const myUpdateId = this.lastUpdateId;
 
-        // Smart Pan: If node already exists, instantly animate camera to it
-        if (this.graph.hasNode(file.path)) {
-            const camera = this.sigmaInstance?.getCamera();
-            const pos = this.graph.getNodeAttributes(file.path);
-            if (camera && pos) {
-                void camera.animate({ x: pos.x as number, y: pos.y as number }, { duration: 600 });
-            }
-        }
+                // Don't update if hidden (tab in background)
+                if (!this.isVisible) {
+                    this.pendingUpdatePath = file.path;
+                    return;
+                }
 
-        // Fetch new subgraph from worker
-        // We pass current node positions to the worker so it can "seed" the force layout,
-        // preventing graph rotation/drifting and maintaining mental maps.
-        const existingPositions: Record<string, { x: number, y: number }> = {};
-        this.graph.forEachNode((node, attr) => {
-            existingPositions[node] = { x: attr.x as number, y: attr.y as number };
-        });
+                this.currentFilePath = file.path;
 
-        try {
-            const sub = await this.graphService.getSemanticSubgraph(file.path, myUpdateId, existingPositions);
+                // Smart Pan: If node already exists, instantly animate camera to it
+                if (this.graph.hasNode(file.path)) {
+                    const camera = this.sigmaInstance?.getCamera();
+                    const pos = this.graph.getNodeAttributes(file.path);
+                    if (camera && pos) {
+                        void camera.animate({ x: pos.x as number, y: pos.y as number }, { duration: 600 });
+                    }
+                }
 
-            // Verify we are still on the same update request (debounce/concurrency)
-            if (this.lastUpdateId !== myUpdateId) return;
+                // Fetch new subgraph from worker
+                const existingPositions: Record<string, { x: number, y: number }> = {};
+                this.graph.forEachNode((node, attr) => {
+                    existingPositions[node] = { x: attr.x as number, y: attr.y as number };
+                });
 
-            // Atomic graph swap
-            this.graph.clear();
-            this.graph.import(sub);
-            this.sigmaInstance?.refresh();
-        } catch (e) {
-            console.error("[SemanticGraphView] Failed to update graph", e);
-        }
+                try {
+                    const sub = await this.graphService.getSemanticSubgraph(file.path, myUpdateId, existingPositions);
+
+                    // Verify we are still on the same update request
+                    if (this.lastUpdateId !== myUpdateId) return;
+
+                    // FIX 3: Ignore empty aborts safely
+                    if (!sub || sub.order === 0) {
+                        if (this.graph.order === 0) this.sigmaInstance?.refresh();
+                        return;
+                    }
+
+                    // Atomic graph swap
+                    this.graph.clear();
+                    this.graph.import(sub);
+                    this.sigmaInstance?.refresh();
+
+                    // FIX 4: Center the camera on the active node!
+                    if (this.graph.hasNode(file.path)) {
+                        const pos = this.graph.getNodeAttributes(file.path);
+                        const camera = this.sigmaInstance?.getCamera();
+                        if (camera && pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+                            // Animate if we already had a position, otherwise instantly snap
+                            if (existingPositions[file.path]) {
+                                void camera.animate({ x: pos.x, y: pos.y, ratio: 1.2 }, { duration: 500 });
+                            } else {
+                                camera.setState({ x: pos.x, y: pos.y, ratio: 1.2 });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("[SemanticGraphView] Failed to update graph", e);
+                }
+            })();
+        }, 150);
     }
+
+
 
     async onClose() {
         await Promise.resolve();
