@@ -668,12 +668,12 @@ const IndexerWorker: WorkerAPI = {
                     const physicsWeight = 2.0 + (item.score * 4.0);
 
                     if (!subgraph.hasEdge(normalizedCenter, path)) {
-                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 2, type: 'line', weight: physicsWeight, zIndex: 1 });
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: 0.5, type: 'line', weight: physicsWeight, zIndex: 0 });
                     } else {
                         // Upgrade existing structural edge so Graphology doesn't throw a collision error
                         const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
                         // If it already had a weight (e.g. from structural), take the max
-                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 2, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: 1, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
                     }
                 }
             }
@@ -699,7 +699,9 @@ const IndexerWorker: WorkerAPI = {
         // Layout: Single block execution to preserve physics momentum.
         // For ~250 nodes this executes synchronously in under ~15ms, zero UI thread blocking.
         const maxIterations = Math.min(300, Math.max(100, subgraph.order));
-        const layoutSettings = { edgeWeightInfluence: 2.0 * attractionMultiplier, gravity: 1.5, linLogMode: true, scalingRatio: 2.0, strongGravityMode: true };
+        // scalingRatio determines repulsion. We scale it up with attraction to prevent crushing the graph into a 1D line under heavy edge weights.
+        // Disable strongGravityMode which causes nodes with many edges to aggressively clump and collapse.
+        const layoutSettings = { edgeWeightInfluence: 2.0 * attractionMultiplier, gravity: 1.5, linLogMode: true, scalingRatio: 2.0 * Math.max(1.0, attractionMultiplier * 0.8), strongGravityMode: false };
 
         // Abort if stale before starting expensive layout
         if (latestGraphUpdateId !== updateId) {

@@ -104,6 +104,7 @@ export class SemanticGraphView extends ItemView {
         });
 
         topBar.createSpan({ attr: { style: "font-size: var(--font-ui-small);" }, cls: "text-muted", text: "Attraction" });
+        const sliderLabel = topBar.createSpan({ attr: { style: "font-size: var(--font-ui-small); width: 1.5em; text-align: right;" }, cls: "text-muted", text: this.attractionMultiplier.toFixed(1) });
         const slider = topBar.createEl("input", {
             attr: {
                 max: "5.0",
@@ -117,11 +118,21 @@ export class SemanticGraphView extends ItemView {
 
         slider.addEventListener("input", (e) => {
             this.attractionMultiplier = parseFloat((e.target as HTMLInputElement).value);
+            sliderLabel.setText(this.attractionMultiplier.toFixed(1));
         });
 
         slider.addEventListener("change", () => {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile) void this.updateForFile(activeFile, true);
+        });
+
+        const reshuffleBtn = topBar.createEl("button", {
+            attr: { title: "Reshuffle graph layout" },
+            text: "Reshuffle"
+        });
+        reshuffleBtn.addEventListener("click", () => {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) void this.updateForFile(activeFile, true, true);
         });
 
         this.wrapperEl = this.contentEl.createDiv({ cls: "semantic-graph-wrapper" });
@@ -384,9 +395,9 @@ export class SemanticGraphView extends ItemView {
             const u = extremities[0];
             const v = extremities[1];
 
-            // Ensure semantic edges glow
+            // Ensure semantic edges are subtle by default to prevent dominating the display
             if (data.edgeType === 'semantic') {
-                res.color = this.adjustAlpha(this.themeColors.highlight || "#ff0", 0.5);
+                res.color = this.adjustAlpha(this.themeColors.semantic || "#888", 0.4);
             } else {
                 res.color = this.themeColors.edge || "#888";
             }
@@ -452,7 +463,7 @@ export class SemanticGraphView extends ItemView {
      * Updates the graph view for a specific file.
      * Includes debouncing, race protection, and smart panning.
      */
-    updateForFile(file: TFile | null, force = false) {
+    updateForFile(file: TFile | null, force = false, ignorePositions = false) {
         if (!file || file.extension !== 'md') return;
 
         // Skip if same file unless forced
@@ -478,9 +489,11 @@ export class SemanticGraphView extends ItemView {
 
                 // Fetch new subgraph from worker
                 const existingPositions: Record<string, { x: number, y: number }> = {};
-                this.graph.forEachNode((node, attr) => {
-                    existingPositions[node] = { x: attr.x as number, y: attr.y as number };
-                });
+                if (!ignorePositions) {
+                    this.graph.forEachNode((node, attr) => {
+                        existingPositions[node] = { x: attr.x as number, y: attr.y as number };
+                    });
+                }
 
                 try {
                     const sub = await this.graphService.getSemanticSubgraph(file.path, myUpdateId, existingPositions, this.attractionMultiplier);
