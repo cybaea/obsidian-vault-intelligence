@@ -272,6 +272,7 @@ export const UI_CONSTANTS = {
 
 export const VIEW_TYPES = {
     RESEARCH_CHAT: "research-chat-view",
+    SEMANTIC_GRAPH: "semantic-graph-view",
     SIMILAR_NOTES: "similar-notes-view"
 };
 
@@ -362,7 +363,8 @@ export const UI_STRINGS = {
     RESEARCHER_SYSTEM_NOTE_PREFIX: "*System Note:* ",
     RESEARCHER_TITLE: "Researcher: chat with vault",
     RIBBON_ICON: "brain-circuit",
-    RIBBON_TOOLTIP: "Vault intelligence"
+    RIBBON_TOOLTIP: "Vault intelligence",
+    SEMANTIC_GRAPH_TITLE: "Semantic Galaxy"
 };
 
 const DOCS_BASE = "https://cybaea.github.io/obsidian-vault-intelligence/";

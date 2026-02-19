@@ -31,6 +31,7 @@ export interface GraphNodeData {
     tags?: string[];
     title?: string;
     tokenCount?: number; // New: total tokens for the document
+    topics?: string[]; // Extracted from frontmatter for UI coloring
     type: NodeType;
 }
 
@@ -81,6 +82,9 @@ export interface WorkerConfig {
     minSimilarityScore: number;
     ontologyPath: string;
     sanitizedModelId: string;
+    semanticEdgeThickness: number;
+    semanticGraphNodeLimit: number;
+    structuralEdgeThickness: number;
 }
 
 /**
@@ -98,6 +102,7 @@ export interface WorkerAPI {
     getFileStates(): Promise<Record<string, { mtime: number, size: number, hash: string }>>;
     getNeighbors(path: string, options?: { direction?: 'both' | 'inbound' | 'outbound'; mode?: 'simple' | 'ontology'; decay?: number }): Promise<SerializableGraphSearchResult[]>;
     getSimilar(path: string, limit?: number, minScore?: number): Promise<SerializableGraphSearchResult[]>;
+    getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>, attractionMultiplier?: number): Promise<unknown>;
     initialize(config: WorkerConfig, fetcher: unknown, embedder: unknown): Promise<boolean>;
     keywordSearch(query: string, limit?: number): Promise<SerializableGraphSearchResult[]>;
     loadIndex(data: string | Uint8Array): Promise<boolean>;

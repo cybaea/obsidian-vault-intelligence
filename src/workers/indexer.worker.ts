@@ -2,6 +2,7 @@ import { decode, encode } from '@msgpack/msgpack';
 import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
+import forceAtlas2 from 'graphology-layout-forceatlas2';
 
 import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
@@ -14,6 +15,7 @@ let orama: AnyOrama;
 let config: WorkerConfig;
 let embedderProxy: ((text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
+let latestGraphUpdateId = 0;
 let currentStopWords: string[] = []; // Loaded dynamically
 const storage = new StorageProvider();
 
@@ -564,6 +566,158 @@ const IndexerWorker: WorkerAPI = {
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
 
+    async getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>, attractionMultiplier: number = 1.0): Promise<unknown> {
+        if (!graph || !orama) return null;
+        latestGraphUpdateId = updateId;
+
+        const normalizedCenter = workerNormalizePath(centerPath);
+        // if (!graph.hasNode(normalizedCenter)) return "";
+
+        const limit = config.semanticGraphNodeLimit || 250;
+        const structuralLimit = Math.floor(limit * 0.8);
+
+        // BFS for structural neighbors
+        const subgraph = new Graph({ type: 'undirected' });
+        const queue: [string, number][] = [[normalizedCenter, 0]];
+        const visited = new Set<string>();
+        visited.add(normalizedCenter);
+
+        // Helper to add node to subgraph with unified attributes
+        const addNodeToSubgraph = (node: string, type: 'center' | 'structural' | 'semantic') => {
+            if (subgraph.hasNode(node)) return;
+            const attr = graph.hasNode(node) ? graph.getNodeAttributes(node) as GraphNodeData : undefined;
+            const pos = existingPositions?.[node];
+
+            // Extract dominant topic for coloring
+            let mainTopic = "default";
+            if (attr?.topics && attr.topics.length > 0) {
+                mainTopic = attr.topics[0] || "default";
+            } else if (attr?.tags && attr.tags.length > 0) {
+                mainTopic = attr.tags[0] || "default"; // fallback to tag
+            }
+
+            subgraph.addNode(node, {
+                color: "#ccc", // Placeholder for main thread resolution
+                label: attr?.title || node.split('/').pop()?.replace('.md', '') || node,
+                nodeType: type,
+                size: type === 'center' ? 10 : (type === 'structural' ? 5 : 4),
+                topics: [mainTopic], // Pass topic to UI
+                // CRITICAL FIX: Seed randomly around (0,0) to prevent FA2 gravity implosions
+                // Also ensures NaN positions are never injected into the physics engine
+                x: (pos && typeof pos.x === 'number' && !isNaN(pos.x)) ? pos.x : ((Math.random() - 0.5) * 100),
+                y: (pos && typeof pos.y === 'number' && !isNaN(pos.y)) ? pos.y : ((Math.random() - 0.5) * 100)
+            });
+        };
+
+        addNodeToSubgraph(normalizedCenter, 'center');
+
+        if (graph.hasNode(normalizedCenter)) {
+            while (queue.length > 0 && subgraph.order < structuralLimit) {
+                const [node, depth] = queue.shift()!;
+                if (depth >= 2) continue;
+
+                graph.forEachNeighbor(node, (neighbor) => {
+                    if (subgraph.order < structuralLimit && !subgraph.hasNode(neighbor)) {
+                        addNodeToSubgraph(neighbor, 'structural');
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            queue.push([neighbor, depth + 1]);
+                        }
+                    }
+
+                    if (subgraph.hasNode(neighbor)) {
+                        // Prevent self loops and duplicate edges
+                        if (node !== neighbor && !subgraph.hasEdge(node, neighbor)) {
+                            // Weight 3.0 ensures standard links pull strongly to the center
+                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: config.structuralEdgeThickness || 1.0, type: 'line', weight: 3.0 });
+                        }
+                    }
+                });
+            }
+        }
+
+        // Semantic Injection
+        const semanticLimit = Math.min(limit - subgraph.order, Math.max(3, Math.floor(limit * 0.10)));
+        if (semanticLimit > 0) {
+            let similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
+
+            // Fallback to BM25 keyword search if embeddings are missing/disabled
+            if (similar.length === 0) {
+                const centerAttr = graph.hasNode(normalizedCenter) ? graph.getNodeAttributes(normalizedCenter) as GraphNodeData : null;
+                const fallbackQuery = [centerAttr?.title, ...(centerAttr?.topics || []), ...(centerAttr?.tags || [])].filter(Boolean).join(" ");
+                if (fallbackQuery.trim().length > 0) {
+                    similar = await IndexerWorker.keywordSearch(fallbackQuery, semanticLimit);
+                    // Artificially assign a score to keyword matches so the UI handles it gracefully
+                    similar.forEach(s => s.score = s.score && s.score <= 1.0 ? s.score : 0.85);
+                }
+            }
+
+            for (const item of similar) {
+                const path = item.path;
+
+                // CRITICAL FIX: Prevent fatal Graphology error by skipping self-loops
+                if (path === normalizedCenter) continue;
+
+                if (!subgraph.hasNode(path)) {
+                    addNodeToSubgraph(path, 'semantic');
+                }
+
+                if (subgraph.hasNode(path)) {
+                    // Physics weight scaled by similarity score (ranges from roughly 2.0 to 6.0)
+                    // High-score semantic nodes will be violently pulled towards the center
+                    const physicsWeight = 2.0 + (item.score * 4.0);
+
+                    if (!subgraph.hasEdge(normalizedCenter, path)) {
+                        subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', score: item.score, size: config.semanticEdgeThickness || 0.5, type: 'line', weight: physicsWeight, zIndex: 0 });
+                    } else {
+                        // Upgrade existing structural edge so Graphology doesn't throw a collision error
+                        const edge = subgraph.edge(normalizedCenter, path) || subgraph.edge(path, normalizedCenter);
+                        // If it already had a weight (e.g. from structural), take the max
+                        if (edge) subgraph.mergeEdgeAttributes(edge, { edgeType: 'semantic', score: item.score, size: config.structuralEdgeThickness || 1.0, weight: Math.max((subgraph.getEdgeAttribute(edge, 'weight') as number) || 1, physicsWeight), zIndex: 1 });
+                    }
+                }
+            }
+        }
+
+        // Relational Clustering: Connect neighbors to each other if they are linked in the master graph
+        const subgraphNodes = subgraph.nodes();
+        for (let i = 0; i < subgraphNodes.length; i++) {
+            const u = subgraphNodes[i];
+            for (let j = i + 1; j < subgraphNodes.length; j++) {
+                const v = subgraphNodes[j];
+                // Check master graph for connection
+                if (graph.hasNode(u) && graph.hasNode(v) && graph.hasEdge(u, v)) {
+                    if (!subgraph.hasEdge(u, v) && !subgraph.hasEdge(v, u)) {
+                        subgraph.addEdge(u, v, { edgeType: 'structural', size: (config.structuralEdgeThickness || 1.0) * 0.5, type: 'line', weight: 1.5, zIndex: 0 }); // Thinner lines, but pull together
+                    }
+                }
+            }
+        }
+
+        if (subgraph.order <= 1) return subgraph.export();
+
+        // Layout: Single block execution to preserve physics momentum.
+        // For ~250 nodes this executes synchronously in under ~15ms, zero UI thread blocking.
+        const maxIterations = Math.min(300, Math.max(100, subgraph.order));
+        // scalingRatio determines repulsion. We scale it up with attraction to prevent crushing the graph into a 1D line under heavy edge weights.
+        // Disable strongGravityMode which causes nodes with many edges to aggressively clump and collapse.
+        const layoutSettings = { edgeWeightInfluence: 2.0 * attractionMultiplier, gravity: 1.5, linLogMode: true, scalingRatio: 2.0 * Math.max(1.0, attractionMultiplier * 0.8), strongGravityMode: false };
+
+        // Abort if stale before starting expensive layout
+        if (latestGraphUpdateId !== updateId) {
+            workerLogger.debug(`[getSubgraph] Aborting stale layout for \${centerPath}`);
+            return null;
+        }
+
+        try {
+            forceAtlas2.assign(subgraph, { iterations: maxIterations, settings: layoutSettings });
+        } catch (e) {
+            workerLogger.error(`[getSubgraph] FA2 Layout failed:`, e);
+        }
+
+        return subgraph.export();
+    },
+
     async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) {
         config = conf;
         graph = new Graph();
@@ -972,10 +1126,23 @@ function sanitizeExcalidrawContent(content: string): string {
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);
+    const fm = parseYaml(splitFrontmatter(content).frontmatter);
+
+    // Extract topics for UI coloring
+    let topics: string[] = [];
+    const propertyKeys = config.contextAwareHeaderProperties || ['topics', 'tags', 'topic', 'tags_list', 'author'];
+    for (const key of propertyKeys) {
+        if (fm[key]) {
+            topics = [...topics, ...ensureArray(fm[key])].filter(t => typeof t === 'string').map(t => sanitizeProperty(t));
+        }
+    }
+    // Remove duplicates
+    topics = [...new Set(topics.filter(Boolean))];
+
     if (!graph.hasNode(path)) {
-        graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, type: 'file' });
+        graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, topics, type: 'file' });
     } else {
-        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount }));
+        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount, topics }));
     }
 }
 

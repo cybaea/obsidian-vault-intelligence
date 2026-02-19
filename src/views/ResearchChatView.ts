@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, setIcon, DropdownComponent, ToggleComponent, normalizePath } from "obsidian";
+import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, setIcon, DropdownComponent, ToggleComponent, normalizePath, Events } from "obsidian";
 
 import { VIEW_TYPES, UI_STRINGS } from "../constants";
 import VaultIntelligencePlugin from "../main";
@@ -79,24 +79,25 @@ export class ResearchChatView extends ItemView {
 
         const modelContainer = controls.createDiv({ cls: "control-item" });
         const modelDropdown = new DropdownComponent(modelContainer);
-        const chatModels = ModelRegistry.getChatModels();
-        for (const m of chatModels) {
-            modelDropdown.addOption(m.id, m.label);
-        }
-        modelDropdown.addOption("custom", "Custom...");
-
-        const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
-        const isPreset = chatModels.some(m => m.id === currentModel);
-        modelDropdown.setValue(isPreset ? currentModel : "custom");
+        this.populateModelDropdown(modelDropdown);
 
         modelDropdown.onChange((val) => {
             if (val === "custom") {
                 new Notice("Custom models should be configured in settings.");
+                const chatModels = ModelRegistry.getChatModels();
+                const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
+                const isPreset = chatModels.some(m => m.id === currentModel);
                 modelDropdown.setValue(this.temporaryModelId ?? (isPreset ? currentModel : "custom"));
                 return;
             }
             this.temporaryModelId = val;
         });
+
+        this.registerEvent(
+            (this.plugin.app.workspace as Events).on('vault-intelligence:models-updated', () => {
+                this.populateModelDropdown(modelDropdown);
+            })
+        );
 
         new ButtonComponent(controls)
             .setIcon("rotate-ccw")
@@ -207,7 +208,12 @@ export class ResearchChatView extends ItemView {
 
             this.isThinking = false;
             this.addMessage("model", response.text, undefined, response.files, response.createdFiles);
-        } catch (e: unknown) {
+
+            // Trigger Visual RAG: Highlight relevant nodes in Semantic Galaxy
+            if (response.files && response.files.length > 0) {
+                this.graphService.trigger("vault-intelligence:context-highlight", response.files);
+            }
+        } catch (e) {
             this.isThinking = false;
             const message = e instanceof Error ? e.message : String(e);
             new Notice(`Error: ${message}`);
@@ -319,5 +325,18 @@ export class ResearchChatView extends ItemView {
         }
 
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    }
+
+    private populateModelDropdown(modelDropdown: DropdownComponent) {
+        modelDropdown.selectEl.empty();
+        const chatModels = ModelRegistry.getChatModels();
+        for (const m of chatModels) {
+            modelDropdown.addOption(m.id, m.label);
+        }
+        modelDropdown.addOption("custom", "Custom...");
+
+        const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
+        const isPreset = chatModels.some(m => m.id === currentModel);
+        modelDropdown.setValue(isPreset ? currentModel : "custom");
     }
 }

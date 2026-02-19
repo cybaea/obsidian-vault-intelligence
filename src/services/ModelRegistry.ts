@@ -207,6 +207,7 @@ export class ModelRegistry {
                 };
                 (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
             }
+            app.workspace.trigger('vault-intelligence:models-updated');
         } catch (error) {
             logger.error("Error fetching Gemini models", error);
             if (throwOnError) throw error;

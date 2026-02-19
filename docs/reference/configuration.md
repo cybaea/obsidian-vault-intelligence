@@ -39,6 +39,9 @@ Configure how connections and similar notes are discovered.
 | Embedding provider | `gemini` | Google Gemini: Cloud-based. Requires API key. <br>Local: Offline. Runs on your CPU. |
 | Embedding model | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX models. |
 | Minimum similarity score | `0.5` | Relevance threshold (0.0 to 1.0). Matches below this are ignored. |
+| Semantic graph node limit | `250` | Maximum number of nodes to render in the Semantic Galaxy view. Controls the scale of the visualised universe. **How to set:** Keep at `250` for standard performance. Increase to `500+` on powerful desktops for massive overviews, or lower to `100` if the physics simulation stutters on older devices. |
+| Structural edge thickness | `1.0` | Visual weight of explicit wikilinks. Controls how thick the lines representing your actual markdown links are. **How to set:** The default `1.0` balances visibility. Increase to `2.0+` if you want your manual structure to clearly dominate the graph, or reduce to `0.5` to blend them evenly with AI suggestions. |
+| Semantic edge thickness | `0.5` | Visual weight of implied AI relationships. Controls how thick the lines representing vector similarity are. **How to set:** The default `0.5` keeps AI suggestions as a subtle background web. Increase to `1.0+` if you are actively using the galaxy to discover new connections and want them visually prioritised. |
 | Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
 | Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |

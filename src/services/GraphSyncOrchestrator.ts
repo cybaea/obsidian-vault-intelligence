@@ -97,7 +97,10 @@ export class GraphSyncOrchestrator {
             indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
             minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
             ontologyPath: this.settings.ontologyPath,
-            sanitizedModelId: this.persistenceManager.getSanitizedModelId(activeModelId, activeDimension)
+            sanitizedModelId: this.persistenceManager.getSanitizedModelId(activeModelId, activeDimension),
+            semanticEdgeThickness: this.settings.semanticEdgeThickness || 0.5,
+            semanticGraphNodeLimit: this.settings.semanticGraphNodeLimit || 250,
+            structuralEdgeThickness: this.settings.structuralEdgeThickness || 1.0
         };
     }
 
@@ -372,6 +375,9 @@ export class GraphSyncOrchestrator {
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath,
+                semanticEdgeThickness: settings.semanticEdgeThickness,
+                semanticGraphNodeLimit: settings.semanticGraphNodeLimit,
+                structuralEdgeThickness: settings.structuralEdgeThickness
             });
         }
     }
