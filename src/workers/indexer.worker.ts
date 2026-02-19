@@ -600,11 +600,9 @@ const IndexerWorker: WorkerAPI = {
         addNodeToSubgraph(normalizedCenter, 'center');
 
         if (graph.hasNode(normalizedCenter)) {
-
             while (queue.length > 0 && subgraph.order < structuralLimit) {
                 const [node, depth] = queue.shift()!;
 
-                // Limit depth to 2 to keep it local
                 if (depth >= 2) continue;
 
                 graph.forEachNeighbor(node, (neighbor) => {
@@ -618,14 +616,13 @@ const IndexerWorker: WorkerAPI = {
 
                     if (subgraph.hasNode(neighbor)) {
                         if (!subgraph.hasEdge(node, neighbor)) {
-                            subgraph.addEdge(node, neighbor, { size: 1, type: 'structural' });
+                            subgraph.addEdge(node, neighbor, { edgeType: 'structural', size: 1, type: 'line' });
                         }
                     }
                 });
             }
         }
 
-        // Semantic Injection
         const semanticLimit = limit - subgraph.order;
         if (semanticLimit > 0) {
             const similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
@@ -635,30 +632,38 @@ const IndexerWorker: WorkerAPI = {
                     addNodeToSubgraph(path, 'semantic');
                 }
                 if (subgraph.hasNode(path) && !subgraph.hasEdge(normalizedCenter, path)) {
-                    subgraph.addEdge(normalizedCenter, path, { size: 2, type: 'semantic', zIndex: 1 });
+                    subgraph.addEdge(normalizedCenter, path, { edgeType: 'semantic', size: 2, type: 'line', zIndex: 1 });
                 }
             }
         }
 
         if (subgraph.order <= 1) return subgraph.export();
 
-        // Layout with yielding
         const maxIterations = Math.min(300, Math.max(100, subgraph.order));
         const layoutSettings = { gravity: 1.5, linLogMode: true, strongGravityMode: true };
 
-        for (let i = 0; i < maxIterations; i++) {
-            // Check if a newer update has been requested
-            if (latestGraphUpdateId !== updateId) {
-                workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath} (${updateId} < ${latestGraphUpdateId})`);
-                return null;
-            }
+        try {
+            for (let i = 0; i < maxIterations; i++) {
+                if (latestGraphUpdateId !== updateId) {
+                    workerLogger.debug(`[getSubgraph] Aborting stale layout for ${centerPath} (${updateId} < ${latestGraphUpdateId})`);
+                    return null;
+                }
 
-            forceAtlas2.assign(subgraph, { iterations: 1, settings: layoutSettings });
+                forceAtlas2.assign(subgraph, { iterations: 1, settings: layoutSettings });
 
-            // Yield to event loop periodically
-            if (i % 20 === 0) {
-                await new Promise(r => setTimeout(r, 0));
+                if (i % 20 === 0) {
+                    await new Promise(r => setTimeout(r, 0));
+                }
             }
+        } catch (e) {
+            workerLogger.error(`[getSubgraph] FA2 Layout failed. Falling back to circle layout:`, e);
+            let i = 0;
+            subgraph.forEachNode((n) => {
+                const angle = (i / subgraph.order) * 2 * Math.PI;
+                subgraph.setNodeAttribute(n, 'x', Math.cos(angle) * 100);
+                subgraph.setNodeAttribute(n, 'y', Math.sin(angle) * 100);
+                i++;
+            });
         }
 
         return subgraph.export();
