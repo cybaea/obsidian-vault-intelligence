@@ -6,6 +6,21 @@ import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { IVaultIntelligencePlugin } from "../settings/types";
 
+interface SigmaHoverData {
+    color: string;
+    label?: string | null;
+    size: number;
+    x: number;
+    y: number;
+}
+
+interface SigmaHoverSettings {
+    labelColor: { attribute?: string; color?: string };
+    labelFont: string;
+    labelSize: number;
+    labelWeight: string;
+}
+
 /**
  * Semantic Galaxy View: High-performance WebGL graph of vault relationships.
  * Uses Sigma.js and Graphology.
@@ -236,16 +251,19 @@ export class SemanticGraphView extends ItemView {
         };
 
         this.themeColors = {
+            background: getComputedColor("--background-primary", "rgb(255, 255, 255)"),
             center: getComputedColor("--text-accent", "rgb(100, 100, 255)"),
             edge: getComputedColor("--background-modifier-border", "rgb(100, 100, 100)"),
             highlight: getComputedColor("--interactive-accent", "rgb(255, 200, 0)"),
             label: getComputedColor("--text-normal", "rgb(255, 255, 255)"),
             semantic: getComputedColor("--text-faint", "rgb(150, 150, 150)"),
+            shadow: getComputedColor("--background-modifier-box-shadow", "rgba(0, 0, 0, 0.5)"),
             structural: getComputedColor("--text-muted", "rgb(200, 200, 200)")
         };
 
         // Apply updated label color to settings
         this.sigmaInstance?.setSetting("labelColor", { color: this.themeColors.label || "#888" });
+        this.sigmaInstance?.setSetting("defaultDrawNodeHover", this.drawCustomNodeHover.bind(this));
 
         // Apply visual logic via Sigma reducers (state-driven rendering)
         this.sigmaInstance?.setSetting("nodeReducer", (node, data) => {
@@ -442,5 +460,54 @@ export class SemanticGraphView extends ItemView {
         this.visibilityObserver?.disconnect();
         this.sigmaInstance?.kill();
         this.sigmaInstance = null;
+    }
+
+    private drawCustomNodeHover(context: CanvasRenderingContext2D, data: SigmaHoverData, settings: SigmaHoverSettings) {
+        const PADDING = 2;
+        const size = settings.labelSize;
+        const font = settings.labelFont;
+        const weight = settings.labelWeight;
+
+        context.font = `${weight} ${size}px ${font}`;
+        // Set the style for the hover box background
+        context.fillStyle = this.themeColors.background || "#000";
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.shadowBlur = 8;
+        context.shadowColor = this.themeColors.shadow || "rgba(0,0,0,0.5)";
+
+        if (typeof data.label === "string") {
+            const textWidth = context.measureText(data.label).width;
+            const boxWidth = Math.round(textWidth + 5);
+            const boxHeight = Math.round(size + 2 * PADDING);
+            const radius = Math.max(data.size, size / 2) + PADDING;
+
+            const angleRadian = Math.asin(boxHeight / 2 / radius);
+            const xDeltaCoord = Math.sqrt(Math.abs(Math.pow(radius, 2) - Math.pow(boxHeight / 2, 2)));
+
+            context.beginPath();
+            context.moveTo(data.x + xDeltaCoord, data.y + boxHeight / 2);
+            context.lineTo(data.x + radius + boxWidth, data.y + boxHeight / 2);
+            context.lineTo(data.x + radius + boxWidth, data.y - boxHeight / 2);
+            context.lineTo(data.x + xDeltaCoord, data.y - boxHeight / 2);
+            context.arc(data.x, data.y, radius, angleRadian, -angleRadian);
+            context.closePath();
+            context.fill();
+        } else {
+            context.beginPath();
+            context.arc(data.x, data.y, data.size + PADDING, 0, Math.PI * 2);
+            context.closePath();
+            context.fill();
+        }
+
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.shadowBlur = 0;
+
+        // And finally we draw the label text using the correct color
+        if (data.label) {
+            context.fillStyle = settings.labelColor.color || this.themeColors.label || "#000";
+            context.fillText(data.label, data.x + data.size + 3, data.y + size / 3);
+        }
     }
 }
