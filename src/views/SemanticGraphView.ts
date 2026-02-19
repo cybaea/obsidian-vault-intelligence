@@ -99,15 +99,18 @@ export class SemanticGraphView extends ItemView {
             width: "100%"
         });
 
+        // Initialize theme colors and reducers
+        this.resolveThemeColors();
+
         // Initialize Sigma with the graphology instance
         this.sigmaInstance = new Sigma(this.graph, this.wrapperEl, {
             allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
             defaultEdgeType: "line",
             defaultNodeType: "circle",
-            edgeLabelColor: { color: "var(--text-muted)" },
+            edgeLabelColor: { color: this.themeColors.label || "#fff" }, // Brighter text for dark mode
             edgeLabelFont: "var(--font-interface)",
-            edgeLabelSize: 10,
-            labelColor: { color: "var(--text-normal)" }, // Use normal text color for better contrast
+            edgeLabelSize: 14, // Increased size for readability
+            labelColor: { color: this.themeColors.label || "#fff" }, // Use normal text color for better contrast
             labelFont: "var(--font-interface)",
             labelRenderedSizeThreshold: 2, // CRITICAL FIX: Render labels much earlier when zoomed out
             labelSize: 24, // Significantly larger text per user request
@@ -115,9 +118,6 @@ export class SemanticGraphView extends ItemView {
             renderEdgeLabels: true,
             renderLabels: true
         });
-
-        // Initialize theme colors and reducers
-        this.resolveThemeColors();
 
         // Container resize observer to keep WebGL viewport matched
         this.containerResizer = new ResizeObserver(() => {
@@ -154,6 +154,8 @@ export class SemanticGraphView extends ItemView {
             this.app.workspace.on("css-change", () => {
                 if (this.sigmaInstance) {
                     this.resolveThemeColors();
+                    this.sigmaInstance.setSetting("labelColor", { color: this.themeColors.label || "#fff" });
+                    this.sigmaInstance.setSetting("edgeLabelColor", { color: this.themeColors.label || "#fff" });
                     this.sigmaInstance.refresh();
                 }
             })

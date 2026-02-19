@@ -638,7 +638,19 @@ const IndexerWorker: WorkerAPI = {
         // Semantic Injection
         const semanticLimit = Math.min(limit - subgraph.order, Math.max(3, Math.floor(limit * 0.10)));
         if (semanticLimit > 0) {
-            const similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
+            let similar = await IndexerWorker.getSimilar(centerPath, semanticLimit);
+
+            // Fallback to BM25 keyword search if embeddings are missing/disabled
+            if (similar.length === 0) {
+                const centerAttr = graph.hasNode(normalizedCenter) ? graph.getNodeAttributes(normalizedCenter) as GraphNodeData : null;
+                const fallbackQuery = [centerAttr?.title, ...(centerAttr?.topics || []), ...(centerAttr?.tags || [])].filter(Boolean).join(" ");
+                if (fallbackQuery.trim().length > 0) {
+                    similar = await IndexerWorker.keywordSearch(fallbackQuery, semanticLimit);
+                    // Artificially assign a score to keyword matches so the UI handles it gracefully
+                    similar.forEach(s => s.score = s.score && s.score <= 1.0 ? s.score : 0.85);
+                }
+            }
+
             for (const item of similar) {
                 const path = item.path;
 
