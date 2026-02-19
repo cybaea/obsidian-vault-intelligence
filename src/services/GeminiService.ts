@@ -5,6 +5,10 @@ import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { logger } from "../utils/logger";
 
+interface InternalSecretStorage {
+    getSecret(key: string): string | null;
+}
+
 export interface EmbedOptions {
     outputDimensionality?: number;
     taskType?: string;
@@ -40,8 +44,12 @@ export class GeminiService {
         if (storedValue) {
             try {
                 // SecretStorage is synchronous in v1.11.4+, but we wrap in Promise for safety
-                // @ts-ignore - Types might be lagging strictly in some environments
-                return Promise.resolve(this.app.secretStorage.getSecret(storedValue));
+                const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+
+                if (storage && storage.getSecret) {
+                    return Promise.resolve(storage.getSecret(storedValue));
+                }
+                return null;
             } catch (error) {
                 logger.error("Failed to retrieve secret from storage:", error);
                 return null;
