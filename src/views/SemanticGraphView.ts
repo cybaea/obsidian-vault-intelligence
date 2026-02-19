@@ -429,23 +429,11 @@ export class SemanticGraphView extends ItemView {
                         this.sigmaInstance?.refresh();
                     }
 
-                    // Smart Camera: Fit view for small graphs, center for large
+                    // Smart Camera: Always fit view to gracefully show the newly revealed clusters
                     if (this.graph.hasNode(file.path)) {
-                        const pos = this.graph.getNodeAttributes(file.path) as { x: number, y: number };
                         const camera = this.sigmaInstance?.getCamera();
-
-                        if (camera && pos && typeof pos.x === 'number' && !isNaN(pos.x) && typeof pos.y === 'number' && !isNaN(pos.y)) {
-                            if (this.graph.order < 15) {
-                                // For small clusters, fit the whole thing
-                                void camera.animatedReset({ duration: 500 });
-                            } else {
-                                // For larger graphs, center on the active node
-                                if (existingPositions[file.path]) {
-                                    void camera.animate({ ratio: 1.2, x: pos.x, y: pos.y }, { duration: 500 });
-                                } else {
-                                    camera.setState({ ratio: 1.2, x: pos.x, y: pos.y });
-                                }
-                            }
+                        if (camera) {
+                            void camera.animatedReset({ duration: 500 });
                         }
                     }
                 } catch (e) {
