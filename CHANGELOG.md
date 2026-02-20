@@ -11,8 +11,10 @@ New features are added in the "Unreleased" section.
 
 ### Breaking changes
 
--   **API Key Synchronization**: To improve security, your Google Gemini API key is now stored in your device's secure OS keychain (e.g., macOS Keychain, Windows Credential Manager) rather than in plain text. Because of this, **API keys will no longer sync across devices via Obsidian Sync or iCloud**. You will need to manually enter your API key once on each device you use.
--   **Minimum Obsidian Version**: The minimum required version of Obsidian has been bumped to **v1.11.4** to support the native `SecretStorage` API. Users on older versions will not be able to install or update to this version.
+-   **API key synchronization**: To improve security, your Google Gemini API key is now stored in your device's secure OS keychain (eg macOS Keychain or Windows Credential Manager) rather than in plain text.
+    -   Existing keys will be automatically migrated to secure storage on your primary device.
+    -   Because the OS keychain does not sync, API keys will no longer roam across devices via Obsidian Sync or iCloud. You will need to manually enter your API key once on each secondary device.
+-   **Minimum Obsidian version**: The minimum required version of Obsidian has been bumped to **v1.11.4** to support the native `SecretStorage` API. Users on older versions will not be able to install or update to this version.
 
 ### User features
 
