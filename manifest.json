@@ -1,7 +1,7 @@
 {
 	"id": "vault-intelligence",
 	"name": "Vault Intelligence",
-	"version": "7.0.0",
+	"version": "8.0.0",
 	"minAppVersion": "1.11.4",
 	"description": "Research your vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
 	"author": "Allan Engelhardt",

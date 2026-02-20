@@ -9,6 +9,12 @@ New features are added in the "Unreleased" section.
 
 ## [Unreleased]
 
+### User features
+
+### Developer features
+
+## [8.0.0] - 2026-02-20
+
 ### Breaking changes
 
 -   **API key synchronization**: To improve security, your Google Gemini API key is now stored in your device's secure OS keychain (eg macOS Keychain or Windows Credential Manager) rather than in plain text.
