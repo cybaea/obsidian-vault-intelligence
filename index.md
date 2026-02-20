@@ -36,7 +36,7 @@ features:
       dark: /images/icon-explorer.png
       alt: Explorer Icon
     title: "Explorer: Serendipitous Discovery"
-    details: Rediscover forgotten insights. Surface high-recall relationships and bridge siloed ideas as you write.
+    details: Surface high-recall relationships through semantically ranked lists and the interactive "Semantic Galaxy" graph as you write.
     link: /docs/how-to/explore-connections
     linkText: See examples
   - icon:

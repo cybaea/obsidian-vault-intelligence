@@ -4,16 +4,32 @@ The Explorer view helps you rediscover forgotten notes and find hidden relations
 
 ## Opening the Explorer
 
-1.  Click the compass icon in the left ribbon to open the Explorer sidebar.
-2.  Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer: open similar notes view`.
+1.  Click the brain circuit icon in the left ribbon to open the Vault Intelligence menu.
+2.  Select **Explorer: view similar notes** to open the list view, or **Explorer: view semantic galaxy** to open the interactive graph.
+3.  Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer`.
 
 ## Finding Similar Notes
 
-The Explorer works automatically based on your current active note.
+The "Similar notes" view provides a prioritized list of related documents. It works automatically based on your current active note.
 
 -   Automatic Updates: As you switch between notes, the Explorer list refreshes to show the most semantically similar content in your vault.
--   Semantic Matching: Unlike standard search, the Explorer finds notes that share the same meaning, even if they use different keywords.
--   Relevance Scores: Each suggestion includes a similarity percentage. High scores (e.g., 85%+) indicate very close conceptual matches.
+-   Semantic Matching: Unlike standard search, it finds notes that share the same meaning, even if they use different keywords.
+-   Relevance Scores: Each suggestion includes a similarity percentage. High scores (eg 85%+) indicate very close conceptual matches.
+
+## The Semantic Galaxy
+
+The Semantic Galaxy is a 3D-like, interactive graph view that complements the similar notes list. While the list view is perfect for quick navigation, the galaxy visualises your vault's relationships in real-time, helping you spot clusters and bridge siloed ideas.
+
+### Opening the Galaxy
+
+You can access the galaxy through the same ribbon menu or via the Command Palette. Using the **Explorer: view semantic galaxy** command will open the graph in a new tab or reveal it if it is already open.
+
+### Interaction and Controls
+
+-   Visual RAG: When the Researcher agent mentions a note in its chat, the note will glow in the galaxy view, helping you "see" the AI's reasoning.
+-   Attraction Slider: Use the sidebar slider to adjust the "gravity" of the layout. High attraction pulls related notes into tight clusters, while low attraction allows for a broader, flat view.
+-   Reshuffle: Click the reshuffle button to instantly regenerate the layout if the nodes become tangled.
+-   Smart Panning: Double-click nodes to navigate to them, or hover to see a native Obsidian preview.
 
 ## Use Cases
 
@@ -35,3 +51,4 @@ You can adjust how the Explorer calculates similarity in Settings > Explorer.
 
 -   Minimum similarity: Increase this if you only want to see very strong matches.
 -   Number of results: Limit this to keep your sidebar clean.
+-   Semantic vs Structural: Adjust the weight of the galaxy layout to prioritise existing Wikilinks or hidden vector similarities.

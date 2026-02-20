@@ -42,7 +42,15 @@ Most RAG (Retrieval-Augmented Generation) systems only look at similarity (text 
 2.  Centrality: Is this note a "hub" or "authority" in your vault structure?
 3.  Activation: Is this note connected to other relevant notes?
 
-This ensures that a core definition note (e.g., "Project Alpha MOC") ranks higher than a random daily log mentioning "Project Alpha", even if the daily log has more keyword matches.
+This ensures that a core definition note (eg "Project Alpha MOC") ranks higher than a random daily log mentioning "Project Alpha", even if the daily log has more keyword matches.
+
+## Visual Grounding
+
+Vault Intelligence provides spatial context for the Researcher's reasoning through the Semantic Galaxy.
+
+1.  Analysis: The agent identifies notes that support its answer.
+2.  Projection: These notes are automatically highlighted in the 3D-like galaxy view.
+3.  Discovery: You can see not just the cited notes, but also the cluster of related ideas physically surrounding them, helping you verify the agent's logic at a glance.
 
 ## Privacy and processing
 
