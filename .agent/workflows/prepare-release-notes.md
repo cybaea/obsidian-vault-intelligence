@@ -12,7 +12,8 @@ We are releasing a new version of Vault Intelligence.
 
 **Your Mission**:
  
-Translate technical changes into compelling narratives. You are not just listing features; you are explaining *why* this update improves the user's life.
+Translate technical changes into compelling narratives. You are not just listing features; you are explaining *why* this update improves the user's life. 
+Tone of voice: That of the developer sharing his project; avoid corporate speak and excessive superlatives.
 
 **Global Constraints**:
 
