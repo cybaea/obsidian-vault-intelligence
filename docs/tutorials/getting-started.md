@@ -48,6 +48,7 @@ Let's see the magic immediately.
 Now that you are connected, try a specific workflow:
 
 -   [Chat with specific documents](../how-to/researcher-workflows.md)
+-   [Explore connections](../how-to/explore-connections.md)
 -   [Analyse data with Python](../how-to/data-analysis.md)
 -   [Clean up your vault structure](../how-to/gardener-workflows.md)
 

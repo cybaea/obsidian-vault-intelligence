@@ -19,6 +19,8 @@ Your primary interface for interacting with your knowledge base.
 
 A next-generation search engine built for the "I know I wrote this somewhere" moments.
 
+-   **Semantic Galaxy View**: A high-performance, interactive 3D-like graph that visualises your vault's relationships in real-time. It centres on your active note, bridging the gap between structural links and semantic similarity.
+-   **Visual RAG (Retrieval-Augmented Generation)**: The graph reacts to the Researcher agent. When the AI mentions notes in its reasoning, they are automatically highlighted in the galaxy to provide spatial context.
 -   **Graph-Augmented Relevance (GARS)**: A unique scoring algorithm that combines:
     -   **Vector Similarity**: Conceptual matches ("Idea" matches "Thought").
     -   **Keyword Precision**: Essential term matching (BM25).
