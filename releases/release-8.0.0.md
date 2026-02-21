@@ -10,7 +10,7 @@ This release focuses on two key areas: making it much easier to explore the conn
 You can now visualise your vault's relationships in a high-performance, interactive graph view that centers on your active note. 
 
 * **Visual RAG**: When the Researcher agent mentions files in its response, those notes are automatically highlighted in the galaxy, providing instant spatial context for the agent's reasoning.
-* **Structural & Semantic Discovery**: The view blends structural Wikilinks with semantic vector similarities, letting you discover both explicit and hidden connections.
+* **Structural & Semantic Discovery**: The view blends structural links with semantic vector similarities, letting you discover both explicit and hidden connections.
 * **Interactive Layout Controls**: A real-time "Attraction" slider lets you cluster related concepts, making it easier to spot patterns and topics in your knowledge base.
 
 ## Secure API Key Storage

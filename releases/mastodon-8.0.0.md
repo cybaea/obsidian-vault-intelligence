@@ -1,6 +1,6 @@
 Vault Intelligence brings AI to #Obsidian, letting you research your vault and discover semantic connections.
 
-With v8.0.0, we wanted to make exploring your notes more intuitive while addressing a common security frustration: plain text API keys. This is the Interactive & Secure Update.
+With version 8 we wanted to make exploring your notes more intuitive while addressing a common security frustration: plain text API keys. This is the Interactive & Secure Update.
 
 🔗 https://github.com/cybaea/obsidian-vault-intelligence
 @obsidian@mas.to #PKM
