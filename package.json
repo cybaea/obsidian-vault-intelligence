@@ -81,7 +81,7 @@
 	"overrides": {
 		"esbuild": "0.27.3",
 		"lodash-es": "4.17.23",
-		"minimatch": "^9.0.5",
+		"minimatch": "^10.0.0",
 		"glob": "^10.4.0"
 	}
 }
