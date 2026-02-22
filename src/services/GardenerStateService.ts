@@ -127,13 +127,13 @@ export class GardenerStateService {
      * 3. If file was recently skipped by user (within skipRetentionDays), skip.
      * 4. If recheckHours > 0 and time since lastChecked > recheckHours, process (cooldown expired).
      */
-    public shouldProcess(file: TFile, skipRetentionDays: number, recheckHours: number): boolean {
+    public shouldProcess(file: TFile, skipRetentionDays: number, recheckDays: number): boolean {
         const fileState = this.state.files[file.path];
         if (!fileState) return true;
 
         const now = Date.now();
         const skipRetentionMs = skipRetentionDays * 24 * 60 * 60 * 1000;
-        const recheckMs = recheckHours * 60 * 60 * 1000;
+        const recheckMs = recheckDays * 24 * 60 * 60 * 1000;
 
         // 1. Recently skipped by user?
         if (fileState.lastSkipped > 0 && (now - fileState.lastSkipped < skipRetentionMs)) {
@@ -146,7 +146,7 @@ export class GardenerStateService {
         }
 
         // 3. Has the cooldown expired?
-        if (recheckHours > 0 && (now - fileState.lastChecked > recheckMs)) {
+        if (recheckDays > 0 && (now - fileState.lastChecked > recheckMs)) {
             return true;
         }
 

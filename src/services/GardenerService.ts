@@ -145,7 +145,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 if (notes.length >= this.settings.gardenerNoteLimit) break;
 
                 // Only consider files the state says we should
-                if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays, this.settings.gardenerRecheckHours)) {
+                if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays, this.settings.gardenerRecheckDays)) {
                     // Estimate this file's contribution
                     const fileContent = await this.app.vault.cachedRead(file);
                     const fileEstimate = fileContent.length / charsPerToken;
