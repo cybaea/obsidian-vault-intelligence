@@ -11,7 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Gardener settings refinement**: Standardised the "Re-check cooldown" setting to use **days** instead of hours, ensuring consistency with other retention settings.
+-   **Decimal precision**: Added support for floating-point values (eg `0.1` days) across all Gardener time-based settings. Includes automatic rounding to 3 decimal places to maintain a clean configuration file.
+
 ### Developer features
+
+-   **Settings migration**: Implemented a background migration in `main.ts` to convert legacy `gardenerRecheckHours` to `gardenerRecheckDays`.
 
 ## [8.0.0] - 2026-02-20
 
