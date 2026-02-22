@@ -39,7 +39,7 @@ export interface VaultIntelligenceSettings {
     gardenerModel: string;
     gardenerNoteLimit: number;
     gardenerPlansPath: string;
-    gardenerRecheckHours: number;
+    gardenerRecheckDays: number;
     gardenerSkipRetentionDays: number;
     gardenerSystemInstruction: string | null;
     geminiRetries: number;
@@ -155,7 +155,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerModel: 'gemini-flash-latest',
     gardenerNoteLimit: 10,
     gardenerPlansPath: 'Gardener/Plans',
-    gardenerRecheckHours: 24,
+    gardenerRecheckDays: 1,
     gardenerSkipRetentionDays: 7,
     gardenerSystemInstruction: null, // Use default by reference
     geminiRetries: 10,

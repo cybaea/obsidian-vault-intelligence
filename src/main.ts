@@ -431,6 +431,17 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerSystemInstruction = null;
 		}
 
+		// Migration: Rename gardenerRecheckHours to gardenerRecheckDays (v8.1.0)
+		const rawData = data as Record<string, unknown>;
+		if (rawData && typeof rawData.gardenerRecheckHours === 'number') {
+			const hours = rawData.gardenerRecheckHours;
+			// Convert to days and round to 3 decimal places to avoid float jitter
+			this.settings.gardenerRecheckDays = Math.round((hours / 24) * 1000) / 1000;
+			delete rawData.gardenerRecheckHours;
+			await this.saveSettings();
+			logger.info(`Migrating gardenerRecheckHours (${hours}) to gardenerRecheckDays (${this.settings.gardenerRecheckDays})`);
+		}
+
 		// --- SecretStorage Migration (v7.0.0) ---
 		if (this.settings.googleApiKey && this.settings.googleApiKey.startsWith('AIza') && !this.settings.secretStorageFailure) {
 			try {

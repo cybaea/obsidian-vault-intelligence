@@ -63,6 +63,8 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 | Plans retention | `7 days` | How long to keep gardener plans before purging. |
 | Excluded folders | _Default_ | Folders the gardener should ignore. |
 | Recent note limit | `10` | Max notes to scan in a single session. |
+| Re-check cooldown | `1.0 days` | Wait duration before re-examining unchanged files. Supports decimal values (eg `0.5` for 12 hours). |
+| Skip retention | `7.0 days` | How long to remember skipped files. Supports decimal values. |
 | Context budget | `100,000` | Max token usage for a single gardener analysis. |
 
 ## Storage (Mobile-Ready)

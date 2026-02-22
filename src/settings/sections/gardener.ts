@@ -285,16 +285,18 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             }));
 
     new Setting(containerEl)
-        .setName("Re-check cooldown (hours)")
+        .setName("Re-check cooldown (days)")
         .setDesc('Wait duration before re-examining unchanged files.')
         .addText(text => text
-            .setPlaceholder('24')
-            .setValue(String(plugin.settings.gardenerRecheckHours))
+            .setPlaceholder('1')
+            .setValue(String(plugin.settings.gardenerRecheckDays))
             .onChange((value) => {
                 void (async () => {
-                    const num = parseInt(value);
+                    let num = parseFloat(value);
                     if (!isNaN(num) && num >= 0) {
-                        plugin.settings.gardenerRecheckHours = Math.floor(num);
+                        // Round to 3 decimal places to avoid float jitter in data.json
+                        num = Math.round(num * 1000) / 1000;
+                        plugin.settings.gardenerRecheckDays = num;
                         await plugin.saveSettings();
                     }
                 })();
@@ -308,9 +310,11 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             .setValue(String(plugin.settings.gardenerSkipRetentionDays))
             .onChange((value) => {
                 void (async () => {
-                    const num = parseInt(value);
+                    let num = parseFloat(value);
                     if (!isNaN(num) && num >= 0) {
-                        plugin.settings.gardenerSkipRetentionDays = Math.floor(num);
+                        // Round to 3 decimal places
+                        num = Math.round(num * 1000) / 1000;
+                        plugin.settings.gardenerSkipRetentionDays = num;
                         await plugin.saveSettings();
                     }
                 })();
