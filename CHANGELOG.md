@@ -16,6 +16,7 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Dependency updates**: Updated dependencies to their latest versions.
 -   **Settings migration**: Implemented a background migration in `main.ts` to convert legacy `gardenerRecheckHours` to `gardenerRecheckDays`.
 
 ## [8.0.0] - 2026-02-20
