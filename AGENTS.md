@@ -54,7 +54,7 @@ When users ask you to perform tasks, check if any of the available skills below 
 How to use skills:
 - Read skill: `cat ./.agents/skills/<skill-name>/SKILL.md`
 - The skill content will load with detailed instructions on how to complete the task
-- Skills are stored locally in ./.agent/skills/ directory
+- Skills are stored locally in ./.agents/skills/ directory
 
 Usage notes:
 - Only use skills listed in <available_skills> below

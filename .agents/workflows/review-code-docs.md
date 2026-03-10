@@ -1,5 +1,4 @@
 ---
-name: review-code-docs
 description: Review code, architecture, and developer documentation
 ---
 
@@ -54,7 +53,7 @@ In addition to the detailed descriptions, be sure to include:
 - Strict documentation on all Service interfaces.
    	- Where missing, update sources with Inline JSDoc.
 
-Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
+Does the documentation adhere to our markdown formatting rules (`.agents/rules/Markdown.md`)?
 
 Ensure `npm run lint` and `npm run docs:build` completes without warnings or errors.
 
@@ -70,6 +69,6 @@ Adopt role as an expert in user experience and documentation. Carefully review t
 **Target Audience:** New and exsisting users. Content creators for Obsidian who want to showcase our plugin.
 **Format:** GitHub Markdown with linked images in `public/images/` and, where useful, embedded Mermaid.js diagrams.
 
-Does the documentation adhere to our markdown formatting rules (`.agent/rules/Markdown.md`)?
+Does the documentation adhere to our markdown formatting rules (`.agents/rules/Markdown.md`)?
 
 Ensure `npm run lint` and `npm run docs:build` completes without warnings or errors.
