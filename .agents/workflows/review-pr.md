@@ -1,4 +1,5 @@
 ---
+name: review-pr
 description: Carefully review, research, and verify a Renovate dependency pull request.
 ---
 

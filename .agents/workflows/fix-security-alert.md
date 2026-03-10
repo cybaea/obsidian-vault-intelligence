@@ -1,4 +1,5 @@
 ---
+name: fix-security-alert
 description: Fetches details of a GitHub Advanced Security alert and attempts to fix it.
 ---
 

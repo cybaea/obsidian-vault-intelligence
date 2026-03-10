@@ -1,4 +1,5 @@
 ---
+name: prepare-release-notes
 description: Prepare the release notes and announcements
 ---
 

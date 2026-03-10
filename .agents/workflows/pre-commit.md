@@ -1,4 +1,5 @@
 ---
+name: pre-commit
 description: quality gates to verify before completing a task
 ---
 

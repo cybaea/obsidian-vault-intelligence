@@ -124,7 +124,7 @@ For the AI Coding Agent:
 
     [ ] Document what screenshots we need to take and create an issues on GitHub to document them. (Remember: you have the `gh` command available to you.)
 
-    [ ] Are we following our markdown standards (from `.agent/rules/Markdown.md`)?
+    [ ] Are we following our markdown standards (from `.agents/rules/Markdown.md`)?
 
 ## 5. Anti-Patterns (What to Avoid)
 
