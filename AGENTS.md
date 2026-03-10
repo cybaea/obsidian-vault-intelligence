@@ -52,9 +52,9 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
 
 How to use skills:
-- Read skill: `cat ./.agent/skills/<skill-name>/SKILL.md`
+- Read skill: `cat ./.agents/skills/<skill-name>/SKILL.md`
 - The skill content will load with detailed instructions on how to complete the task
-- Skills are stored locally in ./.agent/skills/ directory
+- Skills are stored locally in ./.agents/skills/ directory
 
 Usage notes:
 - Only use skills listed in <available_skills> below
@@ -63,24 +63,6 @@ Usage notes:
 </usage>
 
 <available_skills>
-
-<skill>
-<name>obsidian-dev</name>
-<description>Core development patterns for Obsidian plugins. Load when editing src/main.ts, implementing features, handling API calls, or managing plugin lifecycle.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>obsidian-ops</name>
-<description>Operations, syncing, versioning, and release management for Obsidian projects. Load when running builds, syncing references, bumping versions, or preparing for release.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>obsidian-ref</name>
-<description>Technical references, manifest rules, file formats, and UX guidelines for Obsidian. Load when checking API details, manifest requirements, or UI/UX standards.</description>
-<location>project</location>
-</skill>
 
 <skill>
 <name>project</name>
