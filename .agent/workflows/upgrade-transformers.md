@@ -1,4 +1,5 @@
 ---
+name: upgrade-transformers
 description: how to safeguard and automate the upgrade of the transformers library
 ---
 

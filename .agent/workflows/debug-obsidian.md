@@ -1,4 +1,5 @@
 ---
+name: debug-obsidian
 description: how to start Obsidian with remote debugging and connect to agent DevTools
 ---
 
