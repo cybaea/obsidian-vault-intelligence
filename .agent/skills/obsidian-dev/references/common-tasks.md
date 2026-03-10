@@ -137,7 +137,7 @@ this.addSettingTab(new MySettingTab(this.app, this));
 - `addSearch(cb: (component: SearchComponent) => any)` - Add a search input at the beginning of the group (useful for filtering)
 - `addExtraButton(cb: (component: ExtraButtonComponent) => any)` - Add an extra button to the group
 
-**Backward Compatibility**: To support users on both Obsidian 1.11.0+ and older versions, use a compatibility utility. See [code-patterns.md](code-patterns.md) for the complete implementation with `createSettingsGroup()` utility. Alternatively, you can force `minAppVersion: "1.11.0"` in `manifest.json` if you don't need to support older versions.
+**Important**: You must set `minAppVersion: "1.11.0"` in your `manifest.json` to use these methods.
 
 ## Secret Storage
 
