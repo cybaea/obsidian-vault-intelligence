@@ -1,4 +1,5 @@
 ---
+name: branch-cleanup
 description: Cleans up local branches that have been merged or deleted on the remote
 ---
 
