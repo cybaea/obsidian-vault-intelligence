@@ -55,7 +55,6 @@
 		"markdownlint-cli2": "^0.21.0",
 		"mermaid": "^11.12.2",
 		"obsidian": "^1.12.2",
-		"obsidian-dev-skills": "^1.0.8",
 		"secretlint": "^11.3.1",
 		"stylelint": "^17.0.0",
 		"stylelint-config-standard": "^40.0.0",

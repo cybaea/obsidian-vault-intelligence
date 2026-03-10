@@ -65,24 +65,6 @@ Usage notes:
 <available_skills>
 
 <skill>
-<name>obsidian-dev</name>
-<description>Core development patterns for Obsidian plugins. Load when editing src/main.ts, implementing features, handling API calls, or managing plugin lifecycle.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>obsidian-ops</name>
-<description>Operations, syncing, versioning, and release management for Obsidian projects. Load when running builds, syncing references, bumping versions, or preparing for release.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>obsidian-ref</name>
-<description>Technical references, manifest rules, file formats, and UX guidelines for Obsidian. Load when checking API details, manifest requirements, or UI/UX standards.</description>
-<location>project</location>
-</skill>
-
-<skill>
 <name>project</name>
 <description>Project-specific architecture, maintenance tasks, and unique conventions for this repository. Load when performing project-wide maintenance or working with the core architecture.</description>
 <location>project</location>
