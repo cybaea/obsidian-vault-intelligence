@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
 import { App } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -38,13 +40,14 @@ describe('AgentService Integration', () => {
 
         mockReasoningClient = {
             generateMessage: vi.fn(),
+            generateMessageStream: vi.fn(),
             generateStructured: vi.fn(),
             initialize: vi.fn(),
             supportsStructuredOutput: true,
             supportsTools: true,
             supportsWebGrounding: true,
             terminate: vi.fn()
-        } as unknown as Mocked<IReasoningClient & IModelProvider>;
+        } as any;
 
         mockGraphService = {
             getSemanticNeighbors: vi.fn().mockResolvedValue([])
@@ -82,24 +85,21 @@ describe('AgentService Integration', () => {
         });
         (agentService as unknown as { toolRegistry: { execute: typeof toolExecuteMock } }).toolRegistry.execute = toolExecuteMock;
 
-        // Mock generateMessage to yield a tool call on first invocation, and a final text on the second
-        const toolCallMessage: UnifiedMessage = {
-            content: '',
-            role: 'model',
-            toolCalls: [{
-                args: { content: 'hello', path: 'test.md' },
-                name: 'create_note'
-            }]
-        };
 
-        const finalMessage: UnifiedMessage = {
-            content: 'I have created the note.',
-            role: 'model'
-        };
-
-        mockReasoningClient.generateMessage
-            .mockResolvedValueOnce(toolCallMessage)
-            .mockResolvedValueOnce(finalMessage);
+        mockReasoningClient.generateMessageStream
+            .mockImplementationOnce(() => {
+                return (async function* () {
+                    await Promise.resolve();
+                    yield { toolCalls: [{ args: { content: 'hello', path: 'test.md' }, name: 'create_note' }] };
+                })();
+            })
+            .mockImplementationOnce(() => {
+                return (async function* () {
+                    await Promise.resolve();
+                    yield { text: 'I have created the note.' };
+                    yield { isDone: true };
+                })();
+            });
 
         const result = await agentService.chat([], userPrompt, [], {});
 
@@ -111,11 +111,11 @@ describe('AgentService Integration', () => {
             name: 'create_note'
         }));
         
-        // Ensure generateMessage was called twice (once for the prompt, once with the tool result)
+        // Ensure generateMessageStream was called twice (once for the prompt, once with the tool result)
         /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
-        expect(mockReasoningClient.generateMessage).toHaveBeenCalledTimes(2);
+        expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(2);
 
-        const gm = mockReasoningClient.generateMessage as unknown as { mock: { calls: unknown[][] } };
+        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
         const calls = gm.mock.calls;
         /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         const secondCall = calls[1] as unknown[];
@@ -137,24 +137,24 @@ describe('AgentService Integration', () => {
 
     it('should limit tool call loops to prevent infinite recursions', async () => {
          // Mock generateMessage to constantly return tool calls
-         const toolCallMessage: UnifiedMessage = {
-            content: '',
-            role: 'model',
-            toolCalls: [{
-                args: {},
-                name: 'some_tool'
-            }]
-        };
 
         (agentService as unknown as { toolRegistry: { execute: Mock } }).toolRegistry.execute = vi.fn().mockResolvedValue({ content: "Tool response" });
 
-        mockReasoningClient.generateMessage.mockResolvedValue(toolCallMessage);
+        mockReasoningClient.generateMessageStream.mockImplementation(() => {
+            return (async function* () {
+                await Promise.resolve();
+                yield { toolCalls: [{ args: {}, name: 'some_tool' }] };
+            })();
+        });
 
         const result = await agentService.chat([], "Keep calling tools", [], {});
         
         // It should eventually abort and return the final tool call content due to max turns logic in AgentService
         // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest mock access
-        expect(mockReasoningClient.generateMessage).toHaveBeenCalledTimes(5);
-        expect(result.text).toContain('within the step limit');
+        expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(5);
+        expect(result.text).toContain('reached the step limit');
     });
 });
+
+/* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */

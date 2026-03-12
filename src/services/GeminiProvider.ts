@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
-import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, ToolCall, UnifiedMessage } from "../types/providers";
+import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
 
 interface InternalSecretStorage {
@@ -121,6 +121,88 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
             return this.parseResponse(response);
         });
+    }
+
+    public async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
+        const client = await this.getClient();
+        const contents = this.formatHistory(messages);
+        const tools = this.formatTools(options.tools);
+
+        let systemInstruction = options.systemInstruction;
+        if (!systemInstruction) {
+            const sysMsgs = messages.filter(m => m.role === 'system');
+            if (sysMsgs.length > 0) {
+                systemInstruction = sysMsgs.map(m => m.content).join("\n");
+            }
+        }
+
+        const streamResponse = await client.models.generateContentStream({
+            config: {
+                systemInstruction: systemInstruction,
+                tools: tools.length > 0 ? [{ functionDeclarations: tools }] : undefined
+            },
+            contents: contents,
+            model: options.modelId || this.settings.chatModel
+        });
+
+        const accumulatedParts: Part[] = [];
+        let activeThoughtSignature: string | undefined;
+
+        try {
+            for await (const chunk of streamResponse) {
+                if (options.signal?.aborted) {
+                    break;
+                }
+
+                const candidate = chunk.candidates?.[0];
+                if (candidate?.content?.parts) {
+                    accumulatedParts.push(...candidate.content.parts);
+                    
+                    // Capture thought_signature if present in this chunk
+                    candidate.content.parts.forEach(part => {
+                        const partObj = part as Record<string, unknown>;
+                        if (typeof partObj['thought_signature'] === 'string') {
+                            activeThoughtSignature = partObj['thought_signature'];
+                        }
+                    });
+                }
+
+                const parsed = this.parseResponse(chunk);
+                if (parsed.content) {
+                    yield { text: parsed.content };
+                }
+            }
+
+            if (!options.signal?.aborted && accumulatedParts.length > 0) {
+                // Yield the fully aggregated tool calls once at the end.
+                // Re-parsing all parts ensures complete functionCall arguments.
+                const finalParsed = this.parseResponse({
+                    candidates: [{
+                        content: { parts: accumulatedParts }
+                    }]
+                } as unknown as GenerateContentResponse);
+
+                if (finalParsed.toolCalls && activeThoughtSignature) {
+                    finalParsed.toolCalls.forEach(call => {
+                        if (!call.thought_signature) {
+                            call.thought_signature = activeThoughtSignature;
+                        }
+                    });
+                }
+
+                yield {
+                    isDone: true,
+                    rawContent: accumulatedParts,
+                    toolCalls: finalParsed.toolCalls
+                };
+            }
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes("429")) {
+                throw new ProviderError("Rate limit exceeded during streaming", "google", 429);
+            }
+            throw new ProviderError(`Streaming error: ${message}`, "google");
+        }
     }
 
     public async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
@@ -241,10 +323,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         // Safely extract text from parts to avoid SDK property/getter confusion
         let text = "";
         if (candidate?.content?.parts) {
-            text = candidate.content.parts.map(p => p.text || "").join("").trim();
+            text = candidate.content.parts.map(p => p.text || "").join("");
         }
 
         const toolCalls: ToolCall[] = [];
+        const mergedCalls = new Map<string, ToolCall>();
 
         if (candidate?.content?.parts) {
             // First pass: capture the global or part-specific thought_signature
@@ -260,23 +343,33 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             candidate.content.parts.forEach((part) => {
                 if (part.functionCall) {
                     const call = part.functionCall;
-                    if (call.name) {
+                    const name = call.name;
+                    if (name) {
                         const safeArgs = (call.args && typeof call.args === 'object') ? call.args : {};
                         
-                        // Per Gemini docs: sibling placement. We prioritize the signature on the specific part, 
-                        // fallback to ANY signature found in the candidate content (usually first part containing it).
                         const partObj = part as Record<string, unknown>;
                         const partSignature = partObj['thought_signature'];
                         const finalSignature = typeof partSignature === 'string' ? partSignature : messageLevelSignature;
 
-                        toolCalls.push({
-                            args: safeArgs,
-                            name: call.name,
-                            thought_signature: finalSignature
-                        });
+                        const existing = mergedCalls.get(name);
+                        if (existing) {
+                            // Merge arguments for partial chunks
+                            existing.args = { ...existing.args, ...safeArgs };
+                            if (finalSignature && !existing.thought_signature) {
+                                existing.thought_signature = finalSignature;
+                            }
+                        } else {
+                            mergedCalls.set(name, {
+                                args: { ...safeArgs },
+                                name,
+                                thought_signature: finalSignature
+                            });
+                        }
                     }
                 }
             });
+
+            mergedCalls.forEach(call => toolCalls.push(call));
         }
 
         return {

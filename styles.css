@@ -61,6 +61,10 @@
     color: var(--text-normal);
 }
 
+.research-chat-view .chat-message.model .chat-content.is-streaming {
+    white-space: pre-wrap;
+}
+
 .research-chat-view .chat-message.user {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);

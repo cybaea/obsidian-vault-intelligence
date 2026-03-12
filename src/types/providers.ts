@@ -29,11 +29,27 @@ export interface UnifiedMessage {
     toolResults?: ToolResult[];
 }
 
+export interface StreamChunk {
+    createdFiles?: string[];
+    files?: string[];
+    isDone?: boolean;
+    /**
+     * Optional raw content parts for perfect history preservation.
+     * Yielded when a turn or tool-loop step is complete.
+     */
+    rawContent?: unknown[];
+    status?: string;
+    text?: string;
+    toolCalls?: ToolCall[];
+    toolResults?: ToolResult[];
+}
+
 export interface ChatOptions {
     contextWindowTokens?: number;
     /** Explicit JSON Schema for structured output fallback (Phase 1) */
     jsonSchema?: Record<string, unknown>;
     modelId?: string;
+    signal?: AbortSignal;
     systemInstruction?: string;
     tools?: IToolDefinition[];
 }
@@ -50,6 +66,7 @@ export interface IToolDefinition {
 
 export interface IReasoningClient {
     generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage>;
+    generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk>;
     generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T>;
     searchWithGrounding(query: string): Promise<{ text: string }>;
     solveWithCode(prompt: string): Promise<{ text: string }>;

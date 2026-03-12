@@ -36,6 +36,8 @@ export class TFile {
     basename: string = "";
     extension: string = "";
     path: string = "";
+    name: string = "";
+    stat = { mtime: 0, size: 0, ctime: 0 };
 }
 export class TFolder { }
 export class App {
@@ -76,8 +78,18 @@ export class Notice {
     constructor(_message: string, _duration?: number) { }
 }
 
+export class Modal {
+    contentEl: HTMLElement = {} as HTMLElement;
+    constructor(_app: App) { }
+    open(): void { }
+    close(): void { }
+    onOpen(): void { }
+    onClose(): void { }
+}
+
 export class Events {
     on(_event: string, _callback: (...args: any[]) => any): any { return null; }
+    off(_event: string, _callback: (...args: any[]) => any): any { return null; }
     trigger(_event: string, ..._args: any[]): void { }
 }
 
