@@ -166,41 +166,45 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         let currentParts: Content['parts'] = [];
 
         for (const m of filtered) {
-            const parts: Content['parts'] = [];
-            
-            if (m.content) {
-                parts.push({ text: m.content });
-            }
+            let parts: Part[] = [];
 
-            if (m.role === 'model' && m.toolCalls && m.toolCalls.length > 0) {
-                m.toolCalls.forEach((call) => {
-                    const fc: Part['functionCall'] = {
-                        args: call.args,
-                        name: call.name
-                    };
-                    const part: Record<string, unknown> = { functionCall: fc };
-                    // Sibling placement: thought_signature belongs on the Part object, not inside functionCall
-                    if (call.thought_signature) {
-                        part['thought_signature'] = call.thought_signature;
-                    }
-                    parts.push(part as unknown as Part);
-                });
-            } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
-                m.toolResults.forEach(res => {
-                    const fr: Part['functionResponse'] = {
-                        name: res.name,
-                        response: res.result
-                    };
-                    parts.push({ functionResponse: fr as unknown as Part['functionResponse'] } as Part);
-                });
-            } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
-                // Legacy fallback (Phase 1 stabilization)
-                parts.push({
-                    functionResponse: {
-                        name: m.name,
-                        response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
-                    }
-                });
+            if (m.rawContent && m.rawContent.length > 0) {
+                parts = [...(m.rawContent as Part[])];
+            } else {
+                if (m.content) {
+                    parts.push({ text: m.content });
+                }
+
+                if (m.role === 'model' && m.toolCalls && m.toolCalls.length > 0) {
+                    m.toolCalls.forEach((call) => {
+                        const fc: Part['functionCall'] = {
+                            args: call.args,
+                            name: call.name
+                        };
+                        const part: Record<string, unknown> = { functionCall: fc };
+                        // Sibling placement: thought_signature belongs on the Part object, not inside functionCall
+                        if (call.thought_signature) {
+                            part['thought_signature'] = call.thought_signature;
+                        }
+                        parts.push(part as unknown as Part);
+                    });
+                } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
+                    m.toolResults.forEach(res => {
+                        const fr: Part['functionResponse'] = {
+                            name: res.name,
+                            response: res.result
+                        };
+                        parts.push({ functionResponse: fr as unknown as Part['functionResponse'] } as Part);
+                    });
+                } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
+                    // Legacy fallback (Phase 1 stabilization)
+                    parts.push({
+                        functionResponse: {
+                            name: m.name,
+                            response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
+                        }
+                    });
+                }
             }
 
             const mappedRole: Content['role'] = (m.role === 'tool' || m.role === 'user') ? 'user' : 'model';
@@ -233,10 +237,15 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     private parseResponse(response: GenerateContentResponse): UnifiedMessage {
-        const text = response.text || "";
+        const candidate = response.candidates?.[0];
+        // Safely extract text from parts to avoid SDK property/getter confusion
+        let text = "";
+        if (candidate?.content?.parts) {
+            text = candidate.content.parts.map(p => p.text || "").join("").trim();
+        }
+
         const toolCalls: ToolCall[] = [];
 
-        const candidate = response.candidates?.[0];
         if (candidate?.content?.parts) {
             // First pass: capture the global or part-specific thought_signature
             let messageLevelSignature: string | undefined;
@@ -272,6 +281,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
         return {
             content: text,
+            rawContent: candidate?.content?.parts,
             role: "model",
             toolCalls: toolCalls.length > 0 ? toolCalls : undefined
         };

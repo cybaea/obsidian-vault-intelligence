@@ -19,6 +19,11 @@ export interface ToolResult {
 export interface UnifiedMessage {
     content: string;
     name?: string; // e.g., for function responses (legacy compat)
+    /**
+     * Optional raw content parts for perfect history preservation.
+     * Used by providers like Gemini to maintain thought/metadata parts.
+     */
+    rawContent?: unknown[];
     role: "user" | "model" | "system" | "tool";
     toolCalls?: ToolCall[];
     toolResults?: ToolResult[];
