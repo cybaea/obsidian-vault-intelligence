@@ -209,7 +209,14 @@ sequenceDiagram
 
 1.  **Tool calling loop (control flow)**:
 
-The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer.
+The `AgentService` uses a deliberative loop to handle multiple tool calls (up to `maxAgentSteps`) before providing a final answer. In Version 8.1.0, this loop is implemented as an asyhchronous generator (`chatStream`) that yields partial results (tokens and status) to the UI.
+
+#### Streaming architecture
+
+1.  **Token-driven UI**: `GeminiProvider` yields raw tokens immediately as they arrive from the Google AI SDK.
+2.  **Status Interleaving**: `AgentService` interleaves text tokens with tool status updates (eg `isThinking: true`) in the same stream.
+3.  **Recursive Orchestration**: If a tool is called, the `chatStream` recursion handles subsequent LLM calls while continuing to yield to the original UI consumer.
+4.  **Cancellation (AbortSignal)**: A shared `AbortSignal` is passed from the View to the Provider. If aborted, the loop breaks instantly, and any active network requests are terminated.
 
 ```mermaid
 
@@ -451,6 +458,7 @@ Contract for chat and reasoning capabilities.
 ```typescript
 export interface IReasoningClient {
     generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage>;
+    generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncGenerator<StreamChunk>;
     generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T>;
     searchWithGrounding(query: string): Promise<{ text: string }>;
     solveWithCode(prompt: string): Promise<{ text: string }>;

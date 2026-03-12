@@ -11,9 +11,16 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token, providing instant feedback and a more responsive experience.
+-   **Real-time tool status**: The chat interface now displays live status updates (eg "Thinking...", "Searching...") when the agent is performing background tasks.
+-   **Stop button**: Added a "Stop" button to cancel long-running agent responses or recursive tool loops instantly.
+
 ### Developer features
 
--   **Service-Oriented Architecture (SOA) refactor (Phase 1)**: Introduced project-wide generic interfaces (`IModelProvider`, `IReasoningClient`, `IEmbeddingClient`) to decouple business logic from the Google Gemini SDK.
+-   **Asynchronous streaming architecture (Phase 2)**: Refactored `AgentService` and `GeminiProvider` to support true token-by-token streaming via asynchronous generators.
+-   **Recursive tool loop streaming**: Implemented a streaming orchestrator in `AgentService.chatStream` that allows for interleaving text tokens with tool status updates and recursive calls without breaking the stream.
+-   **Cancellation support**: Integrated `AbortController` and `AbortSignal` across all layers (UI -> Agent -> Provider), enabling clean interruption of active network requests and background loops.
+-   **Progressive UI rendering**: Updated `ResearchChatView` to use single-pass Markdown rendering only after stream completion, preventing layout thrashing and partial-HTML artifacts while maintaining high performance for raw text accumulation.
 -   **Service decoupling**: Refactored `AgentService`, `GardenerService`, `SearchOrchestrator`, and `ToolRegistry` to depend on generic reasoning and embedding contracts.
 -   **Capability-driven tools**: Implemented dynamic tool registration based on provider capability flags (`supportsWebGrounding`, `supportsCodeExecution`, etc.).
 -   **Interface hardening**: Introduced a dedicated `tool` role and `toolResults` property to `UnifiedMessage`, ensuring provider-agnostic tool response handling.

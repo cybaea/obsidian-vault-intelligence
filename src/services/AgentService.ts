@@ -6,7 +6,7 @@ import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { ToolRegistry } from "../tools/ToolRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, UnifiedMessage } from "../types/providers";
+import { IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
@@ -38,6 +38,7 @@ export class AgentService {
     private embeddingService: IEmbeddingClient;
     private graphService: GraphService;
     private reasoningClient: IReasoningClient;
+    private provider: IModelProvider;
     private settings: VaultIntelligenceSettings;
 
     private contextAssembler: ContextAssembler;
@@ -54,6 +55,7 @@ export class AgentService {
     ) {
         this.app = app;
         this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
@@ -86,8 +88,29 @@ export class AgentService {
         messages: ChatMessage[],
         currentPrompt: string,
         contextFiles: TFile[] = [],
-        options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean } = {}
+        options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
+        const stream = this.chatStream(messages, currentPrompt, contextFiles, options);
+        let finalText = "";
+        let finalFiles: string[] = [];
+        let finalCreatedFiles: string[] = [];
+
+        for await (const chunk of stream) {
+            if (chunk.text) finalText += chunk.text;
+            if (chunk.isDone) {
+                finalFiles = chunk.files || [];
+                finalCreatedFiles = chunk.createdFiles || [];
+            }
+        }
+        return { createdFiles: finalCreatedFiles, files: finalFiles, text: finalText };
+    }
+
+    public async *chatStream(
+        messages: ChatMessage[],
+        currentPrompt: string,
+        contextFiles: TFile[] = [],
+        options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
+    ): AsyncIterableIterator<StreamChunk> {
         const history: UnifiedMessage[] = [
             ...messages.filter(h => h.role === "user" || h.role === "model").map(h => ({
                 content: h.text,
@@ -107,10 +130,7 @@ export class AgentService {
                 if (view instanceof MarkdownView) {
                     const file = view.file;
                     if (file && (!activeFile || file.path !== activeFile.path)) {
-                        // FIX: Double cast to bypass strict overlap check
                         const internalLeaf = leaf as unknown as InternalWorkspaceLeaf;
-
-                        // Check if this leaf is actually the active one in its container (tab group)
                         const isVisible = internalLeaf.parent?.type === "tabs" ? internalLeaf.parent.activeLeaf === leaf : true;
 
                         if (isVisible && !contextFiles.some(f => f.path === file.path)) {
@@ -125,7 +145,6 @@ export class AgentService {
             }
         }
 
-        // Initialize files trackers
         const usedFiles = new Set<string>();
         const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(normalizePath(f.path)));
@@ -138,14 +157,12 @@ export class AgentService {
             }));
 
         if (contextFiles.length > 0) {
-            // Map files to VaultSearchResult format for assembler
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
                 isKeywordMatch: true,
                 path: f.path,
                 score: 1.0
             }));
 
-            // Assemble intelligently respecting budget
             const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
             const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
@@ -158,33 +175,55 @@ export class AgentService {
 
         const currentDate = new Date().toDateString();
         const rawSystemInstruction = this.settings.systemInstruction ?? DEFAULT_SYSTEM_PROMPT;
-
-        // Replace placeholders
         let systemInstruction = (rawSystemInstruction || "").replace("{{DATE}}", currentDate);
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
-        const tools = this.toolRegistry.getTools(options.enableCodeExecution);
+        const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
         formattedHistory.push({ content: currentPrompt, role: "user" });
 
         try {
             let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
-            let currentMessage = ""; 
 
             while (loops < maxLoops) {
-                const result = await this.reasoningClient.generateMessage(formattedHistory, {
+                if (options.signal?.aborted) break;
+
+                const stream = this.reasoningClient.generateMessageStream(formattedHistory, {
                     modelId: options.modelId,
+                    signal: options.signal,
                     systemInstruction: systemInstruction,
                     tools: tools.length > 0 ? tools : undefined
                 });
-                
-                // Keep history updated with the model's response
-                formattedHistory.push(result);
 
-                const calls = result.toolCalls;
+                let loopText = "";
+                const loopToolCalls: ToolCall[] = [];
 
-                if (calls && calls.length > 0) {
-                    const toolPromises = calls.map(async (call) => {
+                for await (const chunk of stream) {
+                    if (options.signal?.aborted) break;
+
+                    if (chunk.toolCalls) {
+                        loopToolCalls.push(...chunk.toolCalls);
+                    }
+                    if (chunk.text !== undefined) {
+                        loopText += chunk.text;
+                        yield { text: chunk.text };
+                    }
+                }
+
+                if (options.signal?.aborted) break;
+
+                const modelResponse: UnifiedMessage = {
+                    content: loopText,
+                    role: "model",
+                    toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
+                };
+                formattedHistory.push(modelResponse);
+
+                if (loopToolCalls.length > 0) {
+                    const toolStatus = `Thinking: Using tools (${loopToolCalls.map(c => c.name).join(", ")})...`;
+                    yield { status: toolStatus };
+
+                    const toolPromises = loopToolCalls.map(async (call) => {
                         const args = call.args || {};
                         const functionResponse = await this.toolRegistry.execute({
                             args: args,
@@ -198,7 +237,7 @@ export class AgentService {
                         return {
                             id: call.id,
                             name: call.name,
-                            response: functionResponse,
+                            result: functionResponse,
                             thought_signature: call.thought_signature
                         };
                     });
@@ -206,60 +245,48 @@ export class AgentService {
                     const completedParts = await Promise.all(toolPromises);
 
                     if (completedParts.length > 0) {
-                        // Serialize structured tool results into the history using the dedicated 'tool' role
-                        const toolMessage: UnifiedMessage = {
+                        formattedHistory.push({
                             content: "",
                             role: "tool",
                             toolResults: completedParts.map(p => ({
                                 id: p.id,
                                 name: p.name,
-                                result: p.response,
+                                result: p.result,
                                 thought_signature: p.thought_signature
                             }))
-                        };
-                        formattedHistory.push(toolMessage);
+                        });
                     } else {
-                        currentMessage = result.content || "";
                         break;
                     }
                 } else {
-                    currentMessage = result.content || "";
                     break;
                 }
                 loops++;
             }
 
-            // Did we hit the cap with unresolved tools?
-            // Did we hit the cap with unresolved tools?
-            if (loops >= maxLoops && !currentMessage) {
-                logger.warn("Agent hit max steps limit with pending tool calls.");
-                return {
+            if (loops >= maxLoops) {
+                yield { text: "\n\nI'm sorry, I reached the step limit before finding a definitive answer. Please try rephrasing or check your settings." };
+            }
+
+            if (!options.signal?.aborted) {
+                yield {
                     createdFiles: Array.from(createdFiles),
                     files: Array.from(usedFiles),
-                    text: "I'm sorry, I searched through your notes but couldn't find a definitive answer within the step limit. You might try rephrasing your query or increasing the 'Max agent steps' setting."
+                    isDone: true
                 };
             }
-
-            return { createdFiles: Array.from(createdFiles), files: Array.from(usedFiles), text: currentMessage };
 
         } catch (e: unknown) {
-            logger.error("Error in chat loop", e);
+            logger.error("Error in AgentService chatStream", e);
             const errorMessage = e instanceof Error ? e.message : String(e);
 
-            // Check for common 400 errors (API key, etc)
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
-                return {
-                    createdFiles: [],
-                    files: [],
-                    text: `I encountered an error connecting to Gemini (Status 400). Please check that your API key is valid and has not expired.\n\nError details: ${errorMessage}`
-                };
+                yield { text: `\n\nI encountered an error connecting to Gemini (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
+            } else {
+                yield { text: `\n\nSorry, I encountered an error: ${errorMessage}` };
             }
-
-            return {
-                createdFiles: [],
-                files: [],
-                text: `Sorry, I encountered an error processing your request: ${errorMessage}`
-            };
+            
+            yield { createdFiles: [], files: [], isDone: true };
         }
     }
 

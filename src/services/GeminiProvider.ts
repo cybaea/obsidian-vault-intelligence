@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
-import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, ToolCall, UnifiedMessage } from "../types/providers";
+import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
 
 interface InternalSecretStorage {
@@ -121,6 +121,54 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
             return this.parseResponse(response);
         });
+    }
+
+    public async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
+        const client = await this.getClient();
+        const contents = this.formatHistory(messages);
+        const tools = this.formatTools(options.tools);
+
+        let systemInstruction = options.systemInstruction;
+        if (!systemInstruction) {
+            const sysMsgs = messages.filter(m => m.role === 'system');
+            if (sysMsgs.length > 0) {
+                systemInstruction = sysMsgs.map(m => m.content).join("\n");
+            }
+        }
+
+        const streamResponse = await client.models.generateContentStream({
+            config: {
+                systemInstruction: systemInstruction,
+                tools: tools.length > 0 ? [{ functionDeclarations: tools }] : undefined
+            },
+            contents: contents,
+            model: options.modelId || this.settings.chatModel
+        });
+
+        try {
+            for await (const chunk of streamResponse) {
+                if (options.signal?.aborted) {
+                    break;
+                }
+
+                const parsed = this.parseResponse(chunk);
+                
+                // Defensive: If a tool call arrives, we yield it.
+                // Text is yielded as it arrives.
+                if (parsed.content || parsed.toolCalls) {
+                    yield {
+                        text: parsed.content,
+                        toolCalls: parsed.toolCalls
+                    };
+                }
+            }
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes("429")) {
+                throw new ProviderError("Rate limit exceeded during streaming", "google", 429);
+            }
+            throw new ProviderError(`Streaming error: ${message}`, "google");
+        }
     }
 
     public async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
@@ -241,7 +289,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         // Safely extract text from parts to avoid SDK property/getter confusion
         let text = "";
         if (candidate?.content?.parts) {
-            text = candidate.content.parts.map(p => p.text || "").join("").trim();
+            text = candidate.content.parts.map(p => p.text || "").join("");
         }
 
         const toolCalls: ToolCall[] = [];

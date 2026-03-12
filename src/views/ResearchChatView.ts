@@ -18,9 +18,11 @@ export class ResearchChatView extends ItemView {
     agent: AgentService;
     private messages: ChatMessage[] = [];
     private isThinking = false;
+    private currentAbortController: AbortController | null = null;
     private temporaryModelId: string | null = null;
     private temporaryWriteAccess: boolean | null = null;
     private lastRenderId = 0;
+    private stopButton: ButtonComponent | null = null;
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -111,6 +113,20 @@ export class ResearchChatView extends ItemView {
                 new Notice("Research settings reset");
             });
 
+        this.stopButton = new ButtonComponent(controls)
+            .setIcon("square")
+            .setTooltip("Stop generation")
+            .onClick(() => {
+                if (this.currentAbortController) {
+                    this.currentAbortController.abort();
+                    this.currentAbortController = null;
+                    new Notice("Generation stopped");
+                    this.isThinking = false;
+                    void this.renderMessages();
+                }
+            });
+        this.stopButton.buttonEl.hide();
+
         new ButtonComponent(controls)
             .setIcon("trash")
             .setTooltip("Clear chat")
@@ -198,25 +214,59 @@ export class ResearchChatView extends ItemView {
             const { cleanMessage, contextFiles, warnings } = await this.agent.prepareContext(text);
 
             if (warnings && warnings.length > 0) {
-                warnings.forEach(w => new Notice(w));
+                warnings.forEach((w: string) => new Notice(w));
                 this.addMessage("model", `${UI_STRINGS.RESEARCHER_SYSTEM_NOTE_PREFIX}${warnings.join("\n")}`);
             }
 
-            const response = await this.agent.chat(this.messages, cleanMessage, contextFiles, {
+            this.currentAbortController = new AbortController();
+            this.stopButton?.buttonEl.show();
+
+            const stream = this.agent.chatStream(this.messages, cleanMessage, contextFiles, {
                 enableAgentWriteAccess: this.temporaryWriteAccess ?? undefined,
                 enableCodeExecution: this.plugin.settings.enableCodeExecution,
-                modelId: this.temporaryModelId ?? this.plugin.settings.chatModel
+                modelId: this.temporaryModelId ?? this.plugin.settings.chatModel,
+                signal: this.currentAbortController.signal
             });
 
-            this.isThinking = false;
-            this.addMessage("model", response.text, undefined, response.files, response.createdFiles);
+            const modelMsg = this.addMessage("model", "");
+            void this.renderMessages(); // Initial render to create tools/thinking placeholders
 
-            // Trigger Visual RAG: Highlight relevant nodes in Semantic Galaxy
-            if (response.files && response.files.length > 0) {
-                this.graphService.trigger("vault-intelligence:context-highlight", response.files);
+            let lastStatus = "";
+
+            for await (const chunk of stream) {
+                if (this.currentAbortController?.signal.aborted) break;
+
+                if (chunk.text) {
+                    modelMsg.text += chunk.text;
+                    // We don't re-render everything, we just update the text in the messages array
+                    // and trigger a partial update if we were more advanced. 
+                    // For now, full render is safer but we'll optimize the "thinking" part.
+                    void this.renderMessages();
+                }
+                if (chunk.status && chunk.status !== lastStatus) {
+                    lastStatus = chunk.status;
+                    modelMsg.thought = lastStatus; // Map status to 'thought' for immediate display
+                    void this.renderMessages();
+                }
+                if (chunk.isDone) {
+                    modelMsg.contextFiles = chunk.files;
+                    modelMsg.createdFiles = chunk.createdFiles;
+                    // Trigger Visual RAG: Highlight relevant nodes in Semantic Galaxy
+                    if (chunk.files && chunk.files.length > 0) {
+                        this.graphService.trigger("vault-intelligence:context-highlight", chunk.files);
+                    }
+                }
             }
+
+            this.isThinking = false;
+            this.stopButton?.buttonEl.hide();
+            this.currentAbortController = null;
+            void this.renderMessages();
+
         } catch (error: unknown) {
             this.isThinking = false;
+            this.stopButton?.buttonEl.hide();
+            this.currentAbortController = null;
             const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
@@ -224,8 +274,10 @@ export class ResearchChatView extends ItemView {
     }
 
     private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[], createdFiles?: string[], spotlightResults?: VaultSearchResult[]) {
-        this.messages.push({ contextFiles, createdFiles, role, spotlightResults, text, thought });
+        const msg: ChatMessage = { contextFiles, createdFiles, role, spotlightResults, text, thought };
+        this.messages.push(msg);
         void this.renderMessages();
+        return msg;
     }
 
     private async renderMessages() {
@@ -277,10 +329,17 @@ export class ResearchChatView extends ItemView {
                 thoughtDiv.setText(`Thought: ${msg.thought}`);
             }
 
-            const contentDiv = msgDiv.createDiv();
+            const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
-                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                    // Check if this is the CURRENTLY streaming message
+                    const isStreaming = this.isThinking && msg === this.messages[this.messages.length - 1];
+                    if (isStreaming) {
+                        // Raw text accumulation for streaming performance and avoiding partial HTML issues
+                        contentDiv.setText(msg.text);
+                    } else {
+                        await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                    }
                 }
                 if (renderId !== this.lastRenderId) return;
 
