@@ -214,9 +214,10 @@ The `AgentService` uses a deliberative loop to handle multiple tool calls (up to
 #### Streaming architecture
 
 1.  **Token-driven UI**: `GeminiProvider` yields raw tokens immediately as they arrive from the Google AI SDK.
-2.  **Status Interleaving**: `AgentService` interleaves text tokens with tool status updates (eg `isThinking: true`) in the same stream.
-3.  **Recursive Orchestration**: If a tool is called, the `chatStream` recursion handles subsequent LLM calls while continuing to yield to the original UI consumer.
-4.  **Cancellation (AbortSignal)**: A shared `AbortSignal` is passed from the View to the Provider. If aborted, the loop breaks instantly, and any active network requests are terminated.
+2.  **Stateful Metadata Aggregation**: The provider maintains state during the stream to capture and aggregate structural metadata (eg `thought_signature`) that may be split across multiple chunks, ensuring perfect reconstruction of conversation history.
+3.  **Status Interleaving**: `AgentService` interleaves text tokens with tool status updates (eg `isThinking: true`) in the same stream.
+4.  **Recursive Orchestration**: If a tool is called, the `chatStream` recursion handles subsequent LLM calls while continuing to yield to the original UI consumer.
+5.  **Cancellation (AbortSignal)**: A shared `AbortSignal` is passed from the View to the Provider. If aborted, the loop breaks instantly, and any active network requests are terminated.
 
 ```mermaid
 

@@ -23,6 +23,7 @@ New features are added in the "Unreleased" section.
 -   **Progressive UI rendering**: Updated `ResearchChatView` to use single-pass Markdown rendering only after stream completion, preventing layout thrashing and partial-HTML artifacts while maintaining high performance for raw text accumulation.
 -   **Service decoupling**: Refactored `AgentService`, `GardenerService`, `SearchOrchestrator`, and `ToolRegistry` to depend on generic reasoning and embedding contracts.
 -   **Capability-driven tools**: Implemented dynamic tool registration based on provider capability flags (`supportsWebGrounding`, `supportsCodeExecution`, etc.).
+-   **Exact history preservation**: Modified `GeminiProvider` to be stateful during streaming, capturing and aggregating `thought_signature` metadata across partial chunks for perfect conversation reconstruction.
 -   **Interface hardening**: Introduced a dedicated `tool` role and `toolResults` property to `UnifiedMessage`, ensuring provider-agnostic tool response handling.
 -   **UI decoupling**: Refactored `ResearchChatView` to use constructor injection for reasoning and embedding clients, removing its dependency on the concrete `GeminiProvider`.
 -   **Interface segregation**: Split `IModelProvider` into reasoning and embedding capability interfaces, adhering to SOLID principles and reducing redundant flags in service implementations.
