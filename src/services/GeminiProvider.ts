@@ -106,11 +106,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             if (!systemInstruction) {
                 const sysMsgs = messages.filter(m => m.role === 'system');
                 if (sysMsgs.length > 0) {
-                   systemInstruction = sysMsgs.map(m => m.content).join("\n");
-                   // Remove system messages from content history which Gemini separates out
-                   contents.forEach((c, idx) => {
-                        if (c.role === 'system') contents.splice(idx, 1);
-                   });
+                    systemInstruction = sysMsgs.map(m => m.content).join("\n");
                 }
             }
 
