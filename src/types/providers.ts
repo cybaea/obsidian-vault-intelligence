@@ -17,6 +17,8 @@ export interface UnifiedMessage {
 
 export interface ChatOptions {
     contextWindowTokens?: number;
+    /** Explicit JSON Schema for structured output fallback (Phase 1) */
+    jsonSchema?: Record<string, unknown>;
     modelId?: string;
     systemInstruction?: string;
     tools?: IToolDefinition[];

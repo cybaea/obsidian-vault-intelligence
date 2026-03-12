@@ -132,12 +132,12 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const client = await this.getClient();
             const contents = this.formatHistory(messages);
             
-            // Deep parse zod into JSON Schema (approximation)
-            // For now, in our app, we usually pass the raw schema as Record via the old generateStructuredContent,
-            // To emulate that safely for Phase 1 without a massive Zod-to-JsonSchema utility,
-            // we expect callers to pass a JSON schema in 'options' OR we gracefully fall back.
-            // (Assuming caller logic provides schema map, else we use any)
-            const responseSchema = (schema as unknown as { _def: { jsonSchema?: Record<string, unknown> } })._def?.jsonSchema || options?.tools?.[0]?.parameters || { type: "object" };
+            // Use explicit JSON schema from options if provided (Phase 1 stabilization)
+            // fallback logic: options.jsonSchema -> existing _def hack (for future-proofing) -> tools parameters -> default 
+            const responseSchema = options?.jsonSchema || 
+                                 (schema as unknown as { _def: { jsonSchema?: Record<string, unknown> } })._def?.jsonSchema || 
+                                 options?.tools?.[0]?.parameters || 
+                                 { type: "object" };
 
             const response = await client.models.generateContent({
                 config: {

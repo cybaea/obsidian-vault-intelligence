@@ -201,6 +201,50 @@ ${JSON.stringify(context, null, 2)}
                 [{ content: prompt, role: "user" }],
                 GardenerPlanSchema,
                 {
+                    jsonSchema: {
+                        properties: {
+                            actions: {
+                                items: {
+                                    properties: {
+                                        action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS], type: "string" },
+                                        changes: {
+                                            items: {
+                                                properties: {
+                                                    field: { type: "string" },
+                                                    newValue: { type: "string" },
+                                                    oldValue: { type: "string" }
+                                                },
+                                                required: ["field", "newValue"],
+                                                type: "object"
+                                            },
+                                            type: "array"
+                                        },
+                                        description: { type: "string" },
+                                        filePath: { type: "string" },
+                                        rationale: { type: "string" }
+                                    },
+                                    required: ["action", "changes", "description", "filePath", "rationale"],
+                                    type: "object"
+                                },
+                                type: "array"
+                            },
+                            date: { type: "string" },
+                            newTopicDefinitions: {
+                                items: {
+                                    properties: {
+                                        definition: { type: "string" },
+                                        topicLink: { type: "string" }
+                                    },
+                                    required: ["definition", "topicLink"],
+                                    type: "object"
+                                },
+                                type: "array"
+                            },
+                            summary: { type: "string" }
+                        },
+                        required: ["actions", "date", "summary"],
+                        type: "object"
+                    },
                     modelId: this.settings.gardenerModel,
                     systemInstruction: systemInstruction
                 }

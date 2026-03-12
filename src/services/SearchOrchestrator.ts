@@ -131,7 +131,22 @@ export class SearchOrchestrator {
             const reranked = await this.reasoningClient.generateStructured(
                 [{ content: query, role: "user" }],
                 ReRankSchema,
-                { systemInstruction: instruction }
+                {
+                    jsonSchema: {
+                        items: {
+                            properties: {
+                                id: { description: "The path of the document", type: "string" },
+                                reasoning: { description: "Why this document is relevant", type: "string" },
+                                score: { description: "Relevance score between 0 and 1", type: "number" },
+                                tokenCount: { type: "number" }
+                            },
+                            required: ["id", "reasoning", "score"],
+                            type: "object"
+                        },
+                        type: "array"
+                    },
+                    systemInstruction: instruction
+                }
             );
 
             // 3. Map to VaultSearchResult

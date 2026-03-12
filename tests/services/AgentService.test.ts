@@ -123,14 +123,16 @@ describe('AgentService Integration', () => {
         const secondCallArgs = secondCall[0] as unknown[];
         const toolResponseMessage = secondCallArgs.find((msg) => {
             const m = msg as UnifiedMessage;
-            return m.role === 'user' && m.content.includes('Tool Execution Results');
+            return m.role === 'user' && m.name === 'create_note';
         }) as UnifiedMessage;
         
         expect(toolResponseMessage).toBeDefined();
         if (toolResponseMessage) {
-            expect(toolResponseMessage.content).toContain('Tool Execution Results');
             expect(toolResponseMessage.role).toBe('user');
-            expect(toolResponseMessage.content).toContain('Note created successfully');
+            expect(toolResponseMessage.name).toBe('create_note');
+            // In our structured response hack, the result is in toolCalls[0].args
+            const response = toolResponseMessage.toolCalls?.[0]?.args as Record<string, unknown>;
+            expect(String(response?.content)).toContain('Note created successfully');
         }
     });
 
