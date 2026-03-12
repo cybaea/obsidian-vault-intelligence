@@ -162,31 +162,31 @@ describe('GeminiProvider', () => {
             expect(formatted).toHaveLength(2);
             // Model turn
             expect(formatted[0].role).toBe('model');
+            // Check sibling placement
             expect(formatted[0].parts[0].functionCall).toEqual({ 
                 args: { a: 1 }, 
-                name: 'test_tool',
-                thought_signature: 'sig_123' 
+                name: 'test_tool'
             });
+            expect(formatted[0].parts[0].thought_signature).toBe('sig_123');
             
-            // Tool turn (response)
+            // Tool turn (response) - note: signature is NOT in result part, but kept in internal state
             expect(formatted[1].role).toBe('user');
             expect(formatted[1].parts[0].functionResponse).toEqual({ 
                 name: 'test_tool', 
-                response: { result: 'ok' },
-                thought_signature: 'sig_123'
+                response: { result: 'ok' }
             });
         });
 
-        it('should capture thought_signature in parseResponse', () => {
+        it('should capture thought_signature from sibling Part in parseResponse', () => {
              const mockResponse: any = {
                 candidates: [{
                     content: {
                         parts: [{
                             functionCall: {
                                 args: { q: 'test' },
-                                name: 'search_tool',
-                                thought_signature: 'encoded_thought_metadata'
-                            }
+                                name: 'search_tool'
+                            },
+                            thought_signature: 'encoded_thought_metadata'
                         }]
                     }
                 }],

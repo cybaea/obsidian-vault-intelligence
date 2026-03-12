@@ -173,25 +173,24 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
 
             if (m.role === 'model' && m.toolCalls && m.toolCalls.length > 0) {
-                m.toolCalls.forEach(call => {
-                    const fc: Record<string, unknown> = {
+                m.toolCalls.forEach((call) => {
+                    const fc: Part['functionCall'] = {
                         args: call.args,
                         name: call.name
                     };
+                    const part: Record<string, unknown> = { functionCall: fc };
+                    // Sibling placement: thought_signature belongs on the Part object, not inside functionCall
                     if (call.thought_signature) {
-                        fc.thought_signature = call.thought_signature;
+                        part['thought_signature'] = call.thought_signature;
                     }
-                    parts.push({ functionCall: fc as unknown as Part['functionCall'] } as Part);
+                    parts.push(part as unknown as Part);
                 });
             } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
                 m.toolResults.forEach(res => {
-                    const fr: Record<string, unknown> = {
+                    const fr: Part['functionResponse'] = {
                         name: res.name,
                         response: res.result
                     };
-                    if (res.thought_signature) {
-                        fr.thought_signature = res.thought_signature;
-                    }
                     parts.push({ functionResponse: fr as unknown as Part['functionResponse'] } as Part);
                 });
             } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
@@ -239,17 +238,32 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
         const candidate = response.candidates?.[0];
         if (candidate?.content?.parts) {
+            // First pass: capture the global or part-specific thought_signature
+            let messageLevelSignature: string | undefined;
             candidate.content.parts.forEach(part => {
+                const partObj = part as Record<string, unknown>;
+                const sig = partObj['thought_signature'];
+                if (typeof sig === 'string' && sig) {
+                    messageLevelSignature = sig;
+                }
+            });
+
+            candidate.content.parts.forEach((part) => {
                 if (part.functionCall) {
                     const call = part.functionCall;
                     if (call.name) {
                         const safeArgs = (call.args && typeof call.args === 'object') ? call.args : {};
-                        const thoughtSignature = (call as Record<string, unknown>).thought_signature;
                         
+                        // Per Gemini docs: sibling placement. We prioritize the signature on the specific part, 
+                        // fallback to ANY signature found in the candidate content (usually first part containing it).
+                        const partObj = part as Record<string, unknown>;
+                        const partSignature = partObj['thought_signature'];
+                        const finalSignature = typeof partSignature === 'string' ? partSignature : messageLevelSignature;
+
                         toolCalls.push({
                             args: safeArgs,
                             name: call.name,
-                            thought_signature: typeof thoughtSignature === 'string' ? thoughtSignature : undefined
+                            thought_signature: finalSignature
                         });
                     }
                 }
