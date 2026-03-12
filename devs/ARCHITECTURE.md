@@ -218,6 +218,7 @@ The `AgentService` uses a deliberative loop to handle multiple tool calls (up to
 3.  **Status Interleaving**: `AgentService` interleaves text tokens with tool status updates (eg `isThinking: true`) in the same stream.
 4.  **Recursive Orchestration**: If a tool is called, the `chatStream` recursion handles subsequent LLM calls while continuing to yield to the original UI consumer.
 5.  **Cancellation (AbortSignal)**: A shared `AbortSignal` is passed from the View to the Provider. If aborted, the loop breaks instantly, and any active network requests are terminated.
+6.  **Flicker-free Render Swap**: `ResearchChatView` performs throttled (100ms) Markdown rendering into a detached off-screen element, followed by a synchronous `appendChild` swap. This preserves smooth streaming while providing real-time formatting without layout thrashing.
 
 ```mermaid
 

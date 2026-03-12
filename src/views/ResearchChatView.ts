@@ -241,16 +241,36 @@ export class ResearchChatView extends ItemView {
             if (lastMessageNode) lastMessageNode.addClass('is-streaming'); 
             
             let lastStatus = "";
+            let lastRenderTime = 0;
+            let renderInProgress = false;
+
+            const updateStreamingUI = async (force = false) => {
+                const now = Date.now();
+                if (!force && (renderInProgress || now - lastRenderTime < 100)) return;
+                
+                renderInProgress = true;
+                try {
+                    const tempEl = document.createElement('div');
+                    await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", this);
+                    if (lastMessageNode) {
+                        lastMessageNode.empty();
+                        while (tempEl.firstChild) {
+                            lastMessageNode.appendChild(tempEl.firstChild);
+                        }
+                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                    }
+                    lastRenderTime = Date.now();
+                } finally {
+                    renderInProgress = false;
+                }
+            };
 
             for await (const chunk of stream) {
                 if (this.currentAbortController?.signal.aborted) break;
 
                 if (chunk.text) {
                     modelMsg.text += chunk.text;
-                    if (lastMessageNode) {
-                        lastMessageNode.setText(modelMsg.text);
-                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
-                    }
+                    void updateStreamingUI();
                 }
                 if (chunk.status && chunk.status !== lastStatus) {
                     lastStatus = chunk.status;
@@ -374,12 +394,7 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
-                    const isStreaming = this.isThinking && msg === this.messages[this.messages.length - 1];
-                    if (isStreaming) {
-                        contentDiv.setText(msg.text);
-                    } else {
-                        await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
-                    }
+                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
                 }
                 if (renderId !== this.lastRenderId) return;
 

@@ -11,9 +11,15 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token, providing instant feedback and a more responsive experience.
+-   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token with live Markdown formatting (bold, lists, headers) and a flicker-free rendering strategy.
 -   **Real-time tool status**: The chat interface now displays live status updates (eg "Thinking...", "Searching...") when the agent is performing background tasks.
 -   **Stop button**: Added a "Stop" button to cancel long-running agent responses or recursive tool loops instantly.
+
+### Fixes
+
+-   **Researcher UI stability**: Fixed a critical bug where the UI would freeze or layout would thrash during streaming.
+-   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
+-   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.
 
 ### Developer features
 
