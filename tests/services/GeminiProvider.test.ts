@@ -1,7 +1,7 @@
 import { App, Notice } from 'obsidian';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
-import { GeminiService } from '../../src/services/GeminiService';
+import { GeminiProvider } from '../../src/services/GeminiProvider';
 import { VaultIntelligenceSettings } from '../../src/settings';
 
 vi.mock('obsidian', () => {
@@ -11,8 +11,8 @@ vi.mock('obsidian', () => {
     };
 });
 
-describe('GeminiService', () => {
-    let service: GeminiService;
+describe('GeminiProvider', () => {
+    let service: GeminiProvider;
     let mockApp: App;
     let mockSettings: VaultIntelligenceSettings;
     let mockGetSecret: Mock;
@@ -36,7 +36,7 @@ describe('GeminiService', () => {
             },
         } as unknown as App;
 
-        service = new GeminiService(mockSettings, mockApp);
+        service = new GeminiProvider(mockSettings, mockApp);
     });
 
     describe('getApiKey', () => {
@@ -99,7 +99,7 @@ describe('GeminiService', () => {
             mockGetSecret.mockReturnValue(null);
 
             // Trigger getClient
-            await service.generateContent('test').catch(() => { });
+            await service.generateMessage([{ content: 'test', role: 'user' }], {}).catch(() => { });
 
             expect(Notice).toHaveBeenCalledWith(expect.stringContaining("keychain"));
         });
@@ -107,7 +107,7 @@ describe('GeminiService', () => {
         it('should NOT show a Notice if API key is simply missing (empty settings)', async () => {
             mockSettings.googleApiKey = '';
 
-            await service.generateContent('test').catch(() => { });
+            await service.generateMessage([{ content: 'test', role: 'user' }], {}).catch(() => { });
 
             expect(Notice).not.toHaveBeenCalled();
         });
@@ -115,7 +115,7 @@ describe('GeminiService', () => {
         it('should NOT show a Notice if using a raw AIza key', async () => {
             mockSettings.googleApiKey = 'AIzaRawKey';
 
-            await service.generateContent('test').catch(() => { });
+            await service.generateMessage([{ content: 'test', role: 'user' }], {}).catch(() => { });
 
             expect(Notice).not.toHaveBeenCalled();
         });

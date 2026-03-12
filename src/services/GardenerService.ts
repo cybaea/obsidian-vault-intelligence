@@ -3,9 +3,9 @@ import { z } from "zod";
 
 import { SEARCH_CONSTANTS, GARDENER_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../settings/types";
+import { IReasoningClient } from "../types/providers";
 import { logger } from "../utils/logger";
 import { GardenerStateService } from "./GardenerStateService";
-import { GeminiService } from "./GeminiService";
 import { OntologyService } from "./OntologyService";
 
 /**
@@ -46,14 +46,14 @@ export type GardenerPlan = z.infer<typeof GardenerPlanSchema>;
  */
 export class GardenerService {
     private app: App;
-    private gemini: GeminiService;
+    private reasoningClient: IReasoningClient;
     private ontology: OntologyService;
     private settings: VaultIntelligenceSettings;
     private state: GardenerStateService;
 
-    constructor(app: App, gemini: GeminiService, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
+    constructor(app: App, reasoningClient: IReasoningClient, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
         this.app = app;
-        this.gemini = gemini;
+        this.reasoningClient = reasoningClient;
         this.ontology = ontology;
         this.settings = settings;
         this.state = state;
@@ -197,59 +197,14 @@ NOTES:
 ${JSON.stringify(context, null, 2)}
 `.trim();
 
-            const { text: jsonPlan } = await this.gemini.generateStructuredContent(prompt, {
-                properties: {
-                    actions: {
-                        items: {
-                            properties: {
-                                action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS], type: "string" },
-                                changes: {
-                                    items: {
-                                        properties: {
-                                            field: { type: "string" },
-                                            newValue: {
-                                                oneOf: [
-                                                    { type: "string" },
-                                                    { items: { type: "string" }, type: "array" }
-                                                ]
-                                            }
-                                        },
-                                        required: ["field", "newValue"],
-                                        type: "object"
-                                    },
-                                    type: "array"
-                                },
-                                description: { type: "string" },
-                                filePath: { type: "string" },
-                                rationale: { type: "string" }
-                            },
-                            required: ["filePath", "action", "description", "changes", "rationale"],
-                            type: "object"
-                        },
-                        type: "array"
-                    },
-                    date: { type: "string" },
-                    newTopicDefinitions: {
-                        items: {
-                            properties: {
-                                definition: { type: "string" },
-                                topicLink: { type: "string" }
-                            },
-                            required: ["topicLink", "definition"],
-                            type: "object"
-                        },
-                        type: "array"
-                    },
-                    summary: { type: "string" }
-                },
-                required: ["date", "summary", "actions"],
-                type: "object"
-            }, {
-                model: this.settings.gardenerModel,
-                systemInstruction: systemInstruction
-            });
-
-            const parsedPlan = GardenerPlanSchema.parse(JSON.parse(jsonPlan));
+            const parsedPlan = await this.reasoningClient.generateStructured(
+                [{ content: prompt, role: "user" }],
+                GardenerPlanSchema,
+                {
+                    modelId: this.settings.gardenerModel,
+                    systemInstruction: systemInstruction
+                }
+            );
 
             // Post-process links to ensure URL encoding if AI missed it
             if (parsedPlan.actions) {

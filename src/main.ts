@@ -4,18 +4,18 @@ import { VIEW_TYPES, SANITIZATION_CONSTANTS, UI_STRINGS } from "./constants";
 import { ReleaseNotesModal } from "./modals/ReleaseNotesModal";
 import { GardenerService, GardenerPlanSchema } from "./services/GardenerService";
 import { GardenerStateService } from "./services/GardenerStateService";
-import { GeminiService } from "./services/GeminiService";
+import { GeminiProvider } from "./services/GeminiProvider";
 import { GraphService } from "./services/GraphService";
 import { GraphSyncOrchestrator } from "./services/GraphSyncOrchestrator";
-import { IEmbeddingService } from "./services/IEmbeddingService";
 import { MetadataManager } from "./services/MetadataManager";
-import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "./services/ModelRegistry";
+import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
 import { PersistenceManager } from "./services/PersistenceManager";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { WorkerManager } from "./services/WorkerManager";
-import { DEFAULT_SETTINGS, VaultIntelligenceSettings, VaultIntelligenceSettingTab, IVaultIntelligencePlugin } from "./settings";
+import { DEFAULT_SETTINGS, IVaultIntelligencePlugin, VaultIntelligenceSettings, VaultIntelligenceSettingTab } from "./settings";
+import { IEmbeddingClient } from "./types/providers";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
 import { ResearchChatView } from "./views/ResearchChatView";
@@ -111,8 +111,8 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
  */
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
-	geminiService: GeminiService;
-	embeddingService: IEmbeddingService;
+	geminiService: GeminiProvider;
+	embeddingService: IEmbeddingClient;
 	vaultManager: VaultManager;
 	graphService: GraphService;
 	persistenceManager: PersistenceManager;
@@ -153,7 +153,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		logger.setLevel(this.settings.logLevel);
 
 		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
-		this.geminiService = new GeminiService(this.settings, this.app);
+		this.geminiService = new GeminiProvider(this.settings, this.app);
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey) {
@@ -183,7 +183,6 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager);
 
-		// 4. Initialize Gardener Infrastructure (Stage 2)
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
 		this.gardenerStateService = new GardenerStateService(this.app, this);
@@ -401,7 +400,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		}
 		// Terminate
 		if (this.embeddingService instanceof RoutingEmbeddingService) {
-			this.embeddingService.terminate();
+			this.embeddingService.terminate().catch((e: unknown) => {
+				logger.error("Error during embedding service shutdown", e);
+			});
 		}
 
 		logger.info(UI_STRINGS.NOTICE_PLUGIN_UNLOADED);

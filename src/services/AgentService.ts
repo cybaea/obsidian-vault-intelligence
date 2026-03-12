@@ -1,4 +1,4 @@
-import { Part, Content } from "@google/genai";
+
 import { TFile, TFolder, App, MarkdownView, WorkspaceLeaf } from "obsidian";
 
 import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
@@ -6,11 +6,10 @@ import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { ToolRegistry } from "../tools/ToolRegistry";
+import { IEmbeddingClient, IModelProvider, IReasoningClient, UnifiedMessage } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
-import { GeminiService } from "./GeminiService";
-import { IEmbeddingService } from "./IEmbeddingService";
 import { SearchOrchestrator } from "./SearchOrchestrator";
 
 export interface ChatMessage {
@@ -35,37 +34,39 @@ interface InternalWorkspaceLeaf {
  * It manages tool execution, chat history, and context assembly.
  */
 export class AgentService {
-    private gemini: GeminiService;
-    private graphService: GraphService;
-    private embeddingService: IEmbeddingService;
     private app: App;
+    private embeddingService: IEmbeddingClient;
+    private graphService: GraphService;
+    private reasoningClient: IReasoningClient;
     private settings: VaultIntelligenceSettings;
 
-    private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
+    private searchOrchestrator: SearchOrchestrator;
     private toolRegistry: ToolRegistry;
 
     constructor(
         app: App,
-        gemini: GeminiService,
+        reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
-        embeddingService: IEmbeddingService,
+        embeddingService: IEmbeddingClient,
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
-        this.gemini = gemini;
+        this.reasoningClient = reasoningClient;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
 
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, gemini, embeddingService, settings);
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, this.reasoningClient, this.embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
         this.toolRegistry = new ToolRegistry(
             app,
             settings,
-            gemini,
+            this.reasoningClient,
+            provider,
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
@@ -82,11 +83,19 @@ export class AgentService {
     }
 
     public async chat(
-        history: ChatMessage[],
-        message: string,
+        messages: ChatMessage[],
+        currentPrompt: string,
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean } = {}
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
+        const history: UnifiedMessage[] = [
+            ...messages.filter(h => h.role === "user" || h.role === "model").map(h => ({
+                content: h.text,
+                role: h.role as "user" | "model"
+            })),
+            { content: currentPrompt, role: 'user' }
+        ];
+
         if (contextFiles.length === 0) {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile) {
@@ -121,12 +130,12 @@ export class AgentService {
         const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(f.path));
 
-        const formattedHistory = history
+        const formattedHistory: UnifiedMessage[] = history
             .filter(h => h.role === "user" || h.role === "model")
             .map(h => ({
-                parts: [{ text: h.text }],
+                content: h.content,
                 role: h.role as "user" | "model"
-            })) as Content[];
+            }));
 
         if (contextFiles.length > 0) {
             // Map files to VaultSearchResult format for assembler
@@ -140,10 +149,10 @@ export class AgentService {
             const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
             const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            const { context } = await this.contextAssembler.assemble(fileResults, message, contextBudget);
+            const { context } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
 
             if (context) {
-                message = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${message}`;
+                currentPrompt = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${currentPrompt}`;
             }
         }
 
@@ -155,21 +164,27 @@ export class AgentService {
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
         const tools = this.toolRegistry.getTools(options.enableCodeExecution);
-        const chat = await this.gemini.startChat(formattedHistory, tools, systemInstruction, options.modelId);
+        formattedHistory.push({ content: currentPrompt, role: "user" });
 
         try {
-            let result = await chat.sendMessage({ message: message });
-
             let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
+            let currentMessage = ""; 
 
             while (loops < maxLoops) {
-                const calls = result.functionCalls;
+                const result = await this.reasoningClient.generateMessage(formattedHistory, {
+                    modelId: options.modelId,
+                    systemInstruction: systemInstruction,
+                    tools: tools.length > 0 ? tools : undefined
+                });
+                
+                // Keep history updated with the model's response
+                formattedHistory.push(result);
+
+                const calls = result.toolCalls;
 
                 if (calls && calls.length > 0) {
                     const toolPromises = calls.map(async (call) => {
-                        if (!call.name) return null;
-
                         const args = call.args || {};
                         const functionResponse = await this.toolRegistry.execute({
                             args: args,
@@ -181,27 +196,34 @@ export class AgentService {
                         });
 
                         return {
-                            functionResponse: {
-                                name: call.name,
-                                response: functionResponse
-                            }
-                        } as Part;
+                            id: call.id,
+                            name: call.name,
+                            response: functionResponse
+                        };
                     });
 
-                    const completedParts = (await Promise.all(toolPromises)).filter((p): p is Part => p !== null);
+                    const completedParts = await Promise.all(toolPromises);
 
                     if (completedParts.length > 0) {
-                        result = await chat.sendMessage({ message: completedParts });
+                        // Serialize tool responses into the next user message as the context
+                        formattedHistory.push({
+                            content: `Tool Execution Results:\n\n${completedParts.map(p => `[Tool: ${p.name}] (ID: ${p.id})\n${JSON.stringify(p.response, null, 2)}`).join("\n\n")}`,
+                            role: "user"
+                        });
                     } else {
+                        currentMessage = result.content || "";
                         break;
                     }
                 } else {
+                    currentMessage = result.content || "";
                     break;
                 }
                 loops++;
             }
 
-            if (result.functionCalls && result.functionCalls.length > 0) {
+            // Did we hit the cap with unresolved tools?
+            // Did we hit the cap with unresolved tools?
+            if (loops >= maxLoops && !currentMessage) {
                 logger.warn("Agent hit max steps limit with pending tool calls.");
                 return {
                     createdFiles: Array.from(createdFiles),
@@ -210,7 +232,7 @@ export class AgentService {
                 };
             }
 
-            return { createdFiles: Array.from(createdFiles), files: Array.from(usedFiles), text: result.text || "" };
+            return { createdFiles: Array.from(createdFiles), files: Array.from(usedFiles), text: currentMessage };
 
         } catch (e: unknown) {
             logger.error("Error in chat loop", e);

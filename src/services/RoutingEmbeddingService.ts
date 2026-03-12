@@ -1,31 +1,38 @@
 import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
+import { EmbeddingPriority, IEmbeddingClient, IModelProvider } from "../types/providers";
 import { logger } from "../utils/logger";
-import { GeminiEmbeddingService } from "./GeminiEmbeddingService";
-import { GeminiService } from "./GeminiService";
-import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
+import { GeminiProvider } from "./GeminiProvider";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 
 /**
  * Handles routing of embedding requests to either local (WASM) or remote (Gemini) providers.
  */
-export class RoutingEmbeddingService implements IEmbeddingService {
+export class RoutingEmbeddingService implements IEmbeddingClient, IModelProvider {
+    public readonly supportsTools = false;
+    public readonly supportsStructuredOutput = false;
+    public readonly supportsWebGrounding = false;
+    public supportsCodeExecution = false;
 
     private localService: LocalEmbeddingService;
-    private geminiService: GeminiEmbeddingService;
+    private geminiService: GeminiProvider;
     private settings: VaultIntelligenceSettings;
 
-    constructor(plugin: IVaultIntelligencePlugin, gemini: GeminiService, settings: VaultIntelligenceSettings) {
+    constructor(plugin: IVaultIntelligencePlugin, gemini: GeminiProvider, settings: VaultIntelligenceSettings) {
         this.settings = settings;
         this.localService = new LocalEmbeddingService(plugin, settings);
-        this.geminiService = new GeminiEmbeddingService(gemini, settings);
+        this.geminiService = gemini;
     }
 
-    public async initialize() {
+    public async initialize(): Promise<void> {
         // We only initialize the local service if it's the current provider
-        // or we can let it initialize on demand.
         if (this.settings.embeddingProvider === 'local') {
             await this.localService.initialize();
         }
+    }
+
+    public async terminate(): Promise<void> {
+        // Safely kill local service workers on shutdown
+        await this.localService.terminate();
     }
 
     get modelName(): string {
@@ -36,7 +43,7 @@ export class RoutingEmbeddingService implements IEmbeddingService {
         return this.settings.embeddingDimension;
     }
 
-    private get currentService(): IEmbeddingService {
+    private get currentService(): IEmbeddingClient {
         if (this.settings.embeddingProvider === 'local') {
             return this.localService;
         }
@@ -44,25 +51,22 @@ export class RoutingEmbeddingService implements IEmbeddingService {
     }
 
     async embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }> {
-        logger.debug(`[RoutingEmbeddingService] Routing query to ${this.settings.embeddingProvider}`);
+        logger.debug(`[RoutingEmbeddingService] Routing query to ${this.settings.embeddingProvider} (${this.modelName})`);
         return this.currentService.embedQuery(text, priority);
     }
 
     async embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }> {
-        logger.debug(`[RoutingEmbeddingService] Routing document to ${this.settings.embeddingProvider}`);
+        logger.debug(`[RoutingEmbeddingService] Routing document to ${this.settings.embeddingProvider} (${this.modelName})`);
         return this.currentService.embedDocument(text, title, priority);
     }
 
     updateConfiguration() {
-        this.localService.updateConfiguration();
-        // GeminiEmbeddingService doesn't have updateConfiguration yet but it uses settings directly
+        if (this.localService.updateConfiguration) {
+            this.localService.updateConfiguration();
+        }
     }
 
-    public terminate() {
-        this.localService.terminate();
-    }
-
-    public async forceRedownload() {
+    public async forceRedownload(): Promise<void> {
         if (this.settings.embeddingProvider === 'local') {
             await this.localService.forceRedownload();
         }

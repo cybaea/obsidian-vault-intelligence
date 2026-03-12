@@ -2,6 +2,7 @@ import { Setting, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { IEmbeddingClient } from "../../types/providers";
 import { LogLevel } from "../../utils/logger";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
@@ -97,8 +98,10 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                     .onChange(async (value) => {
                         plugin.settings.embeddingThreads = value;
                         await plugin.saveSettings();
-                        if (plugin.embeddingService.updateConfiguration) {
-                            plugin.embeddingService.updateConfiguration();
+                        // Update the live service if it's already running
+                        const service = plugin.embeddingService as unknown as IEmbeddingClient;
+                        if (service && service.updateConfiguration) {
+                            void service.updateConfiguration();
                         }
                     });
             });

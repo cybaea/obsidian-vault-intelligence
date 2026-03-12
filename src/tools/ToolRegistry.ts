@@ -1,13 +1,12 @@
-import { Tool, FunctionDeclaration, Type } from "@google/genai";
 import { App, normalizePath, TFile, requestUrl } from "obsidian";
 
 import { AGENT_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
-import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
-import { VaultIntelligenceSettings, DEFAULT_SETTINGS } from "../settings";
+import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
+import { IModelProvider, IReasoningClient, IToolDefinition } from "../types/providers";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
 import { FileTools } from "./FileTools";
@@ -24,7 +23,8 @@ export interface ToolExecutionParams {
 export class ToolRegistry {
     private app: App;
     private settings: VaultIntelligenceSettings;
-    private gemini: GeminiService;
+    private reasoningClient: IReasoningClient; 
+    private provider: IModelProvider; 
     private graphService: GraphService;
     private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
@@ -33,7 +33,8 @@ export class ToolRegistry {
     constructor(
         app: App,
         settings: VaultIntelligenceSettings,
-        gemini: GeminiService,
+        reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
         searchOrchestrator: SearchOrchestrator,
         contextAssembler: ContextAssembler,
@@ -41,7 +42,8 @@ export class ToolRegistry {
     ) {
         this.app = app;
         this.settings = settings;
-        this.gemini = gemini;
+        this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.searchOrchestrator = searchOrchestrator;
         this.contextAssembler = contextAssembler;
@@ -49,11 +51,15 @@ export class ToolRegistry {
     }
 
     /**
-     * Returns the list of available tools types for the Google GenAI model.
+     * Returns the list of available tools types abstracted from SDKs.
      */
-    public getTools(enableCodeExecution?: boolean): Tool[] {
+    public getTools(enableCodeExecution?: boolean): IToolDefinition[] {
+        if (!this.provider.supportsTools) {
+             return [];
+        }
+
         const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
-        const tools: FunctionDeclaration[] = [];
+        const tools: IToolDefinition[] = [];
 
         // 1. Vault Search
         tools.push({
@@ -61,10 +67,10 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.VAULT_SEARCH,
             parameters: {
                 properties: {
-                    query: { description: "The search query to find relevant notes.", type: Type.STRING }
+                    query: { description: "The search query to find relevant notes.", type: "string" }
                 },
                 required: ["query"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -74,23 +80,25 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.URL_READER,
             parameters: {
                 properties: {
-                    url: { description: "The full URL to read.", type: Type.STRING }
+                    url: { description: "The full URL to read.", type: "string" }
                 },
                 required: ["url"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
-        // 3. Google Search
-        tools.push({
-            description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
-            name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
-            parameters: {
-                properties: { query: { type: Type.STRING } },
-                required: ["query"],
-                type: Type.OBJECT
-            }
-        });
+        // 3. Google Search (Gated by provider capability)
+        if (this.provider.supportsWebGrounding) {
+            tools.push({
+                description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
+                name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
+                parameters: {
+                    properties: { query: { type: "string" } },
+                    required: ["query"],
+                    type: "object"
+                }
+            });
+        }
 
         // 4. Graph Explorer
         tools.push({
@@ -98,14 +106,14 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES,
             parameters: {
                 properties: {
-                    path: { description: "The path of the note to find connections for.", type: Type.STRING }
+                    path: { description: "The path of the note to find connections for.", type: "string" }
                 },
                 required: ["path"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
-        // 5. Computational Solver
+        // 5. Computational Solver (Gated by Code settings but may eventually be provider capability)
         if (isCodeEnabled && this.settings.codeModel.trim().length > 0) {
             tools.push({
                 description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
@@ -114,11 +122,11 @@ export class ToolRegistry {
                     properties: {
                         task: {
                             description: "The math problem or logic task to solve (e.g., 'Calculate the 50th Fibonacci number').",
-                            type: Type.STRING
+                            type: "string"
                         }
                     },
                     required: ["task"],
-                    type: Type.OBJECT
+                    type: "object"
                 }
             });
         }
@@ -129,11 +137,11 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.CREATE_NOTE,
             parameters: {
                 properties: {
-                    content: { description: "The markdown content of the note. Do NOT include frontmatter.", type: Type.STRING },
-                    path: { description: "The vault-absolute path where the note should be created (e.g., 'Projects/Project A/Meeting.md').", type: Type.STRING }
+                    content: { description: "The markdown content of the note. Do NOT include frontmatter.", type: "string" },
+                    path: { description: "The vault-absolute path where the note should be created (e.g., 'Projects/Project A/Meeting.md').", type: "string" }
                 },
                 required: ["path", "content"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -142,12 +150,12 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.UPDATE_NOTE,
             parameters: {
                 properties: {
-                    content: { description: "The new content or text to add.", type: Type.STRING },
-                    mode: { description: "How to update: 'append' (add to end), 'prepend' (add to start), or 'overwrite' (replace entirely).", enum: ["append", "prepend", "overwrite"], type: Type.STRING },
-                    path: { description: "The vault-absolute path of the note.", type: Type.STRING }
+                    content: { description: "The new content or text to add.", type: "string" },
+                    mode: { description: "How to update: 'append' (add to end), 'prepend' (add to start), or 'overwrite' (replace entirely).", enum: ["append", "prepend", "overwrite"], type: "string" },
+                    path: { description: "The vault-absolute path of the note.", type: "string" }
                 },
                 required: ["path", "content", "mode"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -156,11 +164,11 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.RENAME_NOTE,
             parameters: {
                 properties: {
-                    newPath: { description: "The new vault-absolute path.", type: Type.STRING },
-                    path: { description: "The current vault-absolute path.", type: Type.STRING }
+                    newPath: { description: "The new vault-absolute path.", type: "string" },
+                    path: { description: "The current vault-absolute path.", type: "string" }
                 },
                 required: ["path", "newPath"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -169,10 +177,10 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.CREATE_FOLDER,
             parameters: {
                 properties: {
-                    path: { description: "The folder path to create.", type: Type.STRING }
+                    path: { description: "The folder path to create.", type: "string" }
                 },
                 required: ["path"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -181,10 +189,10 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.LIST_FOLDER,
             parameters: {
                 properties: {
-                    folderPath: { description: "The folder path to list.", type: Type.STRING }
+                    folderPath: { description: "The folder path to list.", type: "string" }
                 },
                 required: ["folderPath"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
@@ -193,14 +201,14 @@ export class ToolRegistry {
             name: AGENT_CONSTANTS.TOOLS.READ_NOTE,
             parameters: {
                 properties: {
-                    path: { description: "The vault-absolute path of the note.", type: Type.STRING }
+                    path: { description: "The vault-absolute path of the note.", type: "string" }
                 },
                 required: ["path"],
-                type: Type.OBJECT
+                type: "object"
             }
         });
 
-        return [{ functionDeclarations: tools }];
+        return tools;
     }
 
     /**
@@ -262,8 +270,11 @@ export class ToolRegistry {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
         logger.info(`Delegating search to sub-agent for: ${query}`);
-        const { text: searchResult } = await this.gemini.searchWithGrounding(query);
-        return { result: searchResult };
+        if (this.provider.supportsWebGrounding) {
+            const result = await this.reasoningClient.searchWithGrounding(query);
+            return { result: result.text };
+        }
+        return { error: "Google Search is not supported by the current provider." };
     }
 
     private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>) {
@@ -326,8 +337,11 @@ export class ToolRegistry {
 
         const task = args.task as string;
         logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-        const { text: codeResult } = await this.gemini.solveWithCode(task);
-        return { result: codeResult };
+        if (this.provider.supportsCodeExecution) {
+            const result = await this.reasoningClient.solveWithCode(task);
+            return { result: result.text };
+        }
+        return { error: "Code execution is not supported by the current provider." };
     }
 
     private async executeWriteOperation(name: string, args: Record<string, unknown>, createdFiles: Set<string>, isWriteEnabled: boolean) {

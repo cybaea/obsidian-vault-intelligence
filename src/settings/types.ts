@@ -1,12 +1,12 @@
 import { App, Platform } from "obsidian";
 
-import type { GeminiService } from "../services/GeminiService";
+import type { GeminiProvider } from "../services/GeminiProvider";
 
 import { SEARCH_CONSTANTS, GRAPH_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { GraphSyncOrchestrator } from "../services/GraphSyncOrchestrator";
-import { IEmbeddingService } from "../services/IEmbeddingService";
 import { PersistenceManager } from "../services/PersistenceManager";
+import { IEmbeddingClient } from "../types/providers";
 import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local';
@@ -185,8 +185,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
 
 export interface IVaultIntelligencePlugin {
     app: App;
-    embeddingService: IEmbeddingService;
-    geminiService: GeminiService;
+    embeddingService: IEmbeddingClient;
+    geminiService: GeminiProvider;
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
