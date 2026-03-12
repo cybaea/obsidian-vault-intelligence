@@ -50,9 +50,11 @@ describe('GeminiProvider Streaming', () => {
             chunks.push(chunk);
         }
 
-        expect(chunks).toHaveLength(2);
+        // Now expected 3 chunks: 'Hello', ' world', and final rawContent chunk
+        expect(chunks).toHaveLength(3);
         expect(chunks[0].text).toBe('Hello');
         expect(chunks[1].text).toBe(' world');
+        expect(chunks[2].rawContent).toHaveLength(2);
     });
 
     it('should aggregate and merge partial functionCall arguments', async () => {
@@ -78,9 +80,11 @@ describe('GeminiProvider Streaming', () => {
             chunks.push(chunk);
         }
 
-        expect(chunks).toHaveLength(2);
+        // Now expected 3 chunks: Partial 1, Partial 2, and final rawContent chunk
+        expect(chunks).toHaveLength(3);
         expect(chunks[0].toolCalls[0].args).toEqual({ first: 'part' });
         expect(chunks[1].toolCalls[0].args).toEqual({ second: 'half' });
+        expect(chunks[2].rawContent).toHaveLength(2);
     });
 
     it('should honor AbortSignal and stop yielding', async () => {
@@ -112,7 +116,63 @@ describe('GeminiProvider Streaming', () => {
         }
 
         expect(chunks).toHaveLength(1);
+        expect(chunks).toHaveLength(1);
         expect(chunks[0].text).toBe('Chunk 1');
+    });
+
+    it('should maintain thought_signature state across chunks', async () => {
+        const mockStream = (async function* () {
+            await Promise.resolve();
+            // Chunk 1: Thought signature only
+            yield { 
+                candidates: [{ content: { parts: [{ thought_signature: 'sig_123' } as any] } }]
+            };
+            // Chunk 2: Function call without signature (must inherit from previous chunk)
+            yield { 
+                candidates: [{ content: { parts: [{ functionCall: { args: { query: 'test' }, name: 'vault_search' } }] } }]
+            };
+        })();
+
+        (service as any).getClient = vi.fn().mockResolvedValue({
+            models: {
+                generateContentStream: vi.fn().mockResolvedValue(mockStream)
+            }
+        });
+
+        const chunks: any[] = [];
+        for await (const chunk of service.generateMessageStream([{ content: 'hi', role: 'user' }], {})) {
+            chunks.push(chunk);
+        }
+
+        // Chunk 1 yielded nothing to the consumer because it had no text or tool calls (internal state update only)
+        // Chunk 2 should have the inherited signature
+        const toolCallChunk = chunks.find(c => c.toolCalls);
+        expect(toolCallChunk).toBeDefined();
+        expect(toolCallChunk.toolCalls[0].thought_signature).toBe('sig_123');
+    });
+
+    it('should yield rawContent in the final chunk for history preservation', async () => {
+        const mockStream = (async function* () {
+            await Promise.resolve();
+            yield { 
+                candidates: [{ content: { parts: [{ text: 'Final Answer' }] } }]
+            };
+        })();
+
+        (service as any).getClient = vi.fn().mockResolvedValue({
+            models: {
+                generateContentStream: vi.fn().mockResolvedValue(mockStream)
+            }
+        });
+
+        const chunks: any[] = [];
+        for await (const chunk of service.generateMessageStream([{ content: 'hi', role: 'user' }], {})) {
+            chunks.push(chunk);
+        }
+
+        const finalChunk = chunks[chunks.length - 1];
+        expect(finalChunk.rawContent).toBeDefined();
+        expect(finalChunk.rawContent[0].text).toBe('Final Answer');
     });
 });
 

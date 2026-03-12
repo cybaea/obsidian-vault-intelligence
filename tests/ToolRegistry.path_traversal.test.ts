@@ -72,7 +72,6 @@ describe('ToolRegistry Security', () => {
             mockApp,
             mockSettings,
             mockGeminiService,
-            mockGeminiService,
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,

@@ -1,8 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- We use any for complex model mocks in tests */
 import { App } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -161,6 +158,3 @@ describe('AgentService Integration', () => {
 
 /* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
 /* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-argument -- End of model mock section */

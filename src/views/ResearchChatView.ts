@@ -5,7 +5,7 @@ import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { GraphService } from "../services/GraphService";
 import { ModelRegistry } from "../services/ModelRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient } from "../types/providers";
+import { IEmbeddingClient, IModelProvider, IReasoningClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
@@ -256,6 +256,16 @@ export class ResearchChatView extends ItemView {
                         this.graphService.trigger("vault-intelligence:context-highlight", chunk.files);
                     }
                 }
+                if (chunk.toolCalls) {
+                    modelMsg.toolCalls = chunk.toolCalls;
+                }
+                if (chunk.toolResults) {
+                    // This is for capturing intermediate tool results from the agent loop
+                    this.addMessage("tool", "", undefined, undefined, undefined, undefined, undefined, chunk.toolResults);
+                }
+                if (chunk.rawContent) {
+                    modelMsg.rawContent = chunk.rawContent;
+                }
             }
 
             this.isThinking = false;
@@ -273,8 +283,18 @@ export class ResearchChatView extends ItemView {
         }
     }
 
-    private addMessage(role: "user" | "model" | "system", text: string, thought?: string, contextFiles?: string[], createdFiles?: string[], spotlightResults?: VaultSearchResult[]) {
-        const msg: ChatMessage = { contextFiles, createdFiles, role, spotlightResults, text, thought };
+    private addMessage(
+        role: "user" | "model" | "system" | "tool", 
+        text: string, 
+        thought?: string, 
+        contextFiles?: string[], 
+        createdFiles?: string[], 
+        spotlightResults?: VaultSearchResult[],
+        toolCalls?: ToolCall[],
+        toolResults?: ToolResult[],
+        rawContent?: unknown[]
+    ) {
+        const msg: ChatMessage = { contextFiles, createdFiles, rawContent, role, spotlightResults, text, thought, toolCalls, toolResults };
         this.messages.push(msg);
         void this.renderMessages();
         return msg;

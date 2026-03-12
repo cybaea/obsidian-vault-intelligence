@@ -145,22 +145,54 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             model: options.modelId || this.settings.chatModel
         });
 
+        const accumulatedParts: Part[] = [];
+        let activeThoughtSignature: string | undefined;
+
         try {
             for await (const chunk of streamResponse) {
                 if (options.signal?.aborted) {
                     break;
                 }
 
+                const candidate = chunk.candidates?.[0];
+                if (candidate?.content?.parts) {
+                    accumulatedParts.push(...candidate.content.parts);
+                    
+                    // Capture thought_signature if present in this chunk
+                    candidate.content.parts.forEach(part => {
+                        const partObj = part as Record<string, unknown>;
+                        if (typeof partObj['thought_signature'] === 'string') {
+                            activeThoughtSignature = partObj['thought_signature'];
+                        }
+                    });
+                }
+
                 const parsed = this.parseResponse(chunk);
                 
-                // Defensive: If a tool call arrives, we yield it.
-                // Text is yielded as it arrives.
+                // If this is a tool call chunk, ensure it has the active signature if missing
+                if (parsed.toolCalls && activeThoughtSignature) {
+                    parsed.toolCalls.forEach(call => {
+                        if (!call.thought_signature) {
+                            call.thought_signature = activeThoughtSignature;
+                        }
+                    });
+                }
+
+                // yield text as it arrives
+                // yield toolCalls if present
                 if (parsed.content || parsed.toolCalls) {
                     yield {
                         text: parsed.content,
                         toolCalls: parsed.toolCalls
                     };
                 }
+            }
+
+            // Yield a final chunk with the full rawContent for history preservation
+            if (!options.signal?.aborted && accumulatedParts.length > 0) {
+                yield {
+                    rawContent: accumulatedParts
+                };
             }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);

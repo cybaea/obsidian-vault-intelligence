@@ -6,7 +6,7 @@ import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { ToolRegistry } from "../tools/ToolRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
+import { IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, UnifiedMessage } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
@@ -15,10 +15,13 @@ import { SearchOrchestrator } from "./SearchOrchestrator";
 export interface ChatMessage {
     contextFiles?: string[];
     createdFiles?: string[];
-    role: "user" | "model" | "system";
+    rawContent?: unknown[];
+    role: "user" | "model" | "system" | "tool";
     spotlightResults?: VaultSearchResult[];
     text: string;
     thought?: string;
+    toolCalls?: ToolCall[];
+    toolResults?: ToolResult[];
 }
 
 // Internal interface for accessing non-public Obsidian API properties
@@ -68,7 +71,6 @@ export class AgentService {
             app,
             settings,
             this.reasoningClient,
-            provider,
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
@@ -112,9 +114,12 @@ export class AgentService {
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
         const history: UnifiedMessage[] = [
-            ...messages.filter(h => h.role === "user" || h.role === "model").map(h => ({
+            ...messages.map(h => ({
                 content: h.text,
-                role: h.role as "user" | "model"
+                rawContent: h.rawContent,
+                role: h.role as "user" | "model" | "tool",
+                toolCalls: h.toolCalls,
+                toolResults: h.toolResults
             })),
             { content: currentPrompt, role: 'user' }
         ];
@@ -149,12 +154,13 @@ export class AgentService {
         const createdFiles = new Set<string>();
         contextFiles.forEach(f => usedFiles.add(normalizePath(f.path)));
 
-        const formattedHistory: UnifiedMessage[] = history
-            .filter(h => h.role === "user" || h.role === "model")
-            .map(h => ({
-                content: h.content,
-                role: h.role as "user" | "model"
-            }));
+        const formattedHistory: UnifiedMessage[] = history.map(h => ({
+            content: h.content,
+            rawContent: h.rawContent,
+            role: h.role,
+            toolCalls: h.toolCalls,
+            toolResults: h.toolResults
+        }));
 
         if (contextFiles.length > 0) {
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
@@ -188,6 +194,8 @@ export class AgentService {
             while (loops < maxLoops) {
                 if (options.signal?.aborted) break;
 
+                let modelResponseRawContent: unknown[] | undefined;
+
                 const stream = this.reasoningClient.generateMessageStream(formattedHistory, {
                     modelId: options.modelId,
                     signal: options.signal,
@@ -208,16 +216,26 @@ export class AgentService {
                         loopText += chunk.text;
                         yield { text: chunk.text };
                     }
+                    if (chunk.rawContent) {
+                        modelResponseRawContent = chunk.rawContent;
+                    }
                 }
 
                 if (options.signal?.aborted) break;
 
                 const modelResponse: UnifiedMessage = {
                     content: loopText,
+                    rawContent: modelResponseRawContent,
                     role: "model",
                     toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
                 };
                 formattedHistory.push(modelResponse);
+
+                // Yield the final model message metadata so UI can store it for follow-up turns
+                yield { 
+                    rawContent: modelResponseRawContent,
+                    toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
+                };
 
                 if (loopToolCalls.length > 0) {
                     const toolStatus = `Thinking: Using tools (${loopToolCalls.map(c => c.name).join(", ")})...`;
@@ -245,7 +263,7 @@ export class AgentService {
                     const completedParts = await Promise.all(toolPromises);
 
                     if (completedParts.length > 0) {
-                        formattedHistory.push({
+                        const toolMsg: UnifiedMessage = {
                             content: "",
                             role: "tool",
                             toolResults: completedParts.map(p => ({
@@ -254,7 +272,11 @@ export class AgentService {
                                 result: p.result,
                                 thought_signature: p.thought_signature
                             }))
-                        });
+                        };
+                        formattedHistory.push(toolMsg);
+                        
+                        // Yield tool results to UI for history preservation
+                        yield { toolResults: toolMsg.toolResults };
                     } else {
                         break;
                     }

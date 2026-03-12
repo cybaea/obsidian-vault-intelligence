@@ -33,9 +33,15 @@ export interface StreamChunk {
     createdFiles?: string[];
     files?: string[];
     isDone?: boolean;
+    /**
+     * Optional raw content parts for perfect history preservation.
+     * Yielded when a turn or tool-loop step is complete.
+     */
+    rawContent?: unknown[];
     status?: string;
     text?: string;
     toolCalls?: ToolCall[];
+    toolResults?: ToolResult[];
 }
 
 export interface ChatOptions {

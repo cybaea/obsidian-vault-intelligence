@@ -64,6 +64,7 @@ describe('AgentService Streaming', () => {
             yield { text: 'Hello' };
             yield { text: ' world' };
             yield { isDone: true, text: '!' };
+            yield { rawContent: [{ text: 'Hello world!' }] }; // Final metadata chunk from provider
         })();
         mockReasoningClient.generateMessageStream.mockReturnValue(mockStream);
 
@@ -72,10 +73,15 @@ describe('AgentService Streaming', () => {
             chunks.push(chunk);
         }
 
-        expect(chunks).toHaveLength(4);
+        // Now expected 5 chunks: 'Hello', ' world', '!', model-metadata, final-isDone
+        expect(chunks).toHaveLength(5);
         expect(chunks[0].text).toBe('Hello');
         expect(chunks[1].text).toBe(' world');
         expect(chunks[2].text).toBe('!');
+        // Chunk 3 is metadata (rawContent/toolCalls)
+        expect(chunks[3].rawContent).toBeDefined();
+        // Chunk 4 is isDone: true
+        expect(chunks[4].isDone).toBe(true);
     });
 
     it('should handle tool call loop in stream', async () => {
@@ -110,6 +116,12 @@ describe('AgentService Streaming', () => {
             throw new Error(`No thinking chunks found. Received: ${JSON.stringify(chunks)}`);
         }
         expect(chunks.find(c => c.text === 'Final answer')).toBeDefined();
+        
+        // Check that toolResults were yielded
+        const toolResultChunk = chunks.find(c => c.toolResults);
+        expect(toolResultChunk).toBeDefined();
+        expect(toolResultChunk.toolResults[0].result).toEqual({ content: "Tool result" });
+
         expect(toolExecuteMock).toHaveBeenCalledTimes(1);
     });
 

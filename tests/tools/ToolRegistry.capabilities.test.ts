@@ -3,13 +3,12 @@ import { beforeEach, describe, expect, it, vi, Mocked } from 'vitest';
 
 import { AGENT_CONSTANTS } from '../../src/constants';
 import { ContextAssembler } from '../../src/services/ContextAssembler';
-import { GeminiProvider } from '../../src/services/GeminiProvider';
 import { GraphService } from '../../src/services/GraphService';
 import { SearchOrchestrator } from '../../src/services/SearchOrchestrator';
 import { VaultIntelligenceSettings } from '../../src/settings';
 import { FileTools } from '../../src/tools/FileTools';
 import { ToolRegistry } from '../../src/tools/ToolRegistry';
-import { IModelProvider } from '../../src/types/providers';
+import { IModelProvider, IReasoningClient } from '../../src/types/providers';
 
 vi.mock('../../src/modals/ToolConfirmationModal', () => ({
     ToolConfirmationModal: {
@@ -21,7 +20,6 @@ describe('ToolRegistry Capabilities', () => {
     let mockApp: App;
     let mockSettings: VaultIntelligenceSettings;
     let mockProvider: Mocked<IModelProvider>;
-    let mockGeminiService: GeminiProvider;
     let mockGraphService: GraphService;
     let mockSearchOrchestrator: SearchOrchestrator;
     let mockContextAssembler: ContextAssembler;
@@ -41,8 +39,6 @@ describe('ToolRegistry Capabilities', () => {
             supportsWebGrounding: false,
             terminate: vi.fn()
         } as unknown as Mocked<IModelProvider>;
-
-        mockGeminiService = {} as unknown as GeminiProvider;
         mockGraphService = {} as unknown as GraphService;
         mockSearchOrchestrator = {} as unknown as SearchOrchestrator;
         mockContextAssembler = {} as unknown as ContextAssembler;
@@ -53,8 +49,7 @@ describe('ToolRegistry Capabilities', () => {
         return new ToolRegistry(
             mockApp,
             mockSettings,
-            mockGeminiService,
-            provider,
+            provider as unknown as IReasoningClient,
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,
