@@ -1,5 +1,5 @@
 
-import { TFile, TFolder, App, MarkdownView, WorkspaceLeaf } from "obsidian";
+import { App, MarkdownView, TFile, TFolder, WorkspaceLeaf, normalizePath } from "obsidian";
 
 import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
 import { GraphService } from "../services/GraphService";
@@ -128,7 +128,7 @@ export class AgentService {
         // Initialize files trackers
         const usedFiles = new Set<string>();
         const createdFiles = new Set<string>();
-        contextFiles.forEach(f => usedFiles.add(f.path));
+        contextFiles.forEach(f => usedFiles.add(normalizePath(f.path)));
 
         const formattedHistory: UnifiedMessage[] = history
             .filter(h => h.role === "user" || h.role === "model")

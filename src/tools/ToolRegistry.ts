@@ -305,7 +305,7 @@ export class ToolRegistry {
             return { result: "No relevant notes found or context budget exceeded." };
         }
 
-        resultFiles.forEach(f => usedFiles.add(f));
+        resultFiles.forEach(f => usedFiles.add(normalizePath(f)));
         return { result: context };
     }
 

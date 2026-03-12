@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, normalizePath } from "obsidian";
 import { z } from "zod";
 
 import { VaultIntelligenceSettings } from "../settings/types";
@@ -152,7 +152,7 @@ export class SearchOrchestrator {
             // 3. Map to VaultSearchResult
             return reranked.map(r => ({
                 content: r.reasoning,
-                path: r.id.split('#')[0], // Simple path extraction
+                path: normalizePath(String(r.id).split('#')[0] || ""), // Normalize AI-provided path
                 score: r.score,
                 tokenCount: r.tokenCount
             } as VaultSearchResult));
