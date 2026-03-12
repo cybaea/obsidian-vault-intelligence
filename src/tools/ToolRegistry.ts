@@ -262,7 +262,9 @@ export class ToolRegistry {
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             logger.error(`Failed to execute ${name}`, e);
-            return { error: `Failed to execute ${name}: ${message}` };
+            // Truncate error to 500 chars to avoid blowing out context window
+            const truncated = message.length > 500 ? message.substring(0, 500) + "..." : message;
+            return { error: `Failed to execute ${name}: ${truncated}` };
         }
     }
 

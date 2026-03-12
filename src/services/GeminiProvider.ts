@@ -162,7 +162,14 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     // --- Adapters Data Mapping ---
 
     private formatHistory(messages: UnifiedMessage[]): Content[] {
-        return messages.filter(m => m.role !== 'system').map(m => {
+        const filtered = messages.filter(m => m.role !== 'system');
+        if (filtered.length === 0) return [];
+
+        const merged: Content[] = [];
+        let currentRole: Content['role'] | null = null;
+        let currentParts: Content['parts'] = [];
+
+        for (const m of filtered) {
             const parts: Content['parts'] = [];
             
             if (m.content) {
@@ -170,32 +177,42 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
 
             if (m.toolCalls && m.toolCalls.length > 0) {
-                // If it's a model issuing a call
                 if (m.role === 'model') {
                     m.toolCalls.forEach(call => {
-                       parts.push({
-                           functionCall: {
-                               args: call.args,
-                               name: call.name
-                           }
-                       });
+                        parts.push({
+                            functionCall: {
+                                args: call.args,
+                                name: call.name
+                            }
+                        });
                     });
                 } else if (m.role === 'user' && m.name) {
                     // It's a tool response from user
                     parts.push({
                         functionResponse: {
                             name: m.name,
-                            response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined // The result data
+                            response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
                         }
                     });
                 }
             }
 
-            return {
-                parts: parts,
-                role: m.role
-            };
-        });
+            if (m.role === currentRole) {
+                currentParts.push(...parts);
+            } else {
+                if (currentRole !== null) {
+                    merged.push({ parts: currentParts, role: currentRole });
+                }
+                currentRole = m.role as Content['role'];
+                currentParts = parts;
+            }
+        }
+
+        if (currentRole !== null) {
+            merged.push({ parts: currentParts, role: currentRole });
+        }
+
+        return merged;
     }
 
     private formatTools(tools?: IToolDefinition[]): FunctionDeclaration[] {

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking private methods for unit testing adaptation logic */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking private methods for unit testing adaptation logic */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking private methods for unit testing adaptation logic */
+/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking private methods for unit testing adaptation logic */
 import { App, Notice } from 'obsidian';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -120,4 +124,71 @@ describe('GeminiProvider', () => {
             expect(Notice).not.toHaveBeenCalled();
         });
     });
+
+    describe('Translation Logic (private methods)', () => {
+        it('should correctly merge consecutive roles in formatHistory', () => {
+            const history: any[] = [
+                { content: 'hello', role: 'user' },
+                { content: 'world', role: 'user' },
+                { content: 'thinking', role: 'model' }
+            ];
+            
+            const formatted = (service as any).formatHistory(history);
+            
+            expect(formatted).toHaveLength(2);
+            expect(formatted[0].role).toBe('user');
+            expect(formatted[0].parts).toHaveLength(2);
+            expect(formatted[0].parts[0].text).toBe('hello');
+            expect(formatted[0].parts[1].text).toBe('world');
+            expect(formatted[1].role).toBe('model');
+        });
+
+        it('should translate tool calls and responses correctly', () => {
+             const history: any[] = [
+                { 
+                    content: '', 
+                    role: 'model', 
+                    toolCalls: [{ args: { a: 1 }, name: 'test_tool' }] 
+                },
+                { 
+                    content: '', 
+                    name: 'test_tool', 
+                    role: 'user', 
+                    toolCalls: [{ args: { result: 'ok' }, id: '123', name: 'test_tool' }] 
+                } 
+            ];
+            
+            const formatted = (service as any).formatHistory(history);
+            
+            expect(formatted).toHaveLength(2);
+            // Model turn
+            expect(formatted[0].role).toBe('model');
+            expect(formatted[0].parts[0].functionCall).toEqual({ args: { a: 1 }, name: 'test_tool' });
+            
+            // User turn (response)
+            expect(formatted[1].role).toBe('user');
+            expect(formatted[1].parts[0].functionResponse).toEqual({ 
+                name: 'test_tool', 
+                response: { result: 'ok' } 
+            });
+        });
+
+        it('should format tools correctly for the SDK', () => {
+            const tools: any[] = [{
+                description: 'A tool',
+                name: 'my_tool',
+                parameters: { properties: { x: { type: 'number' } }, type: 'object' }
+            }];
+            
+            const formatted = (service as any).formatTools(tools);
+            expect(formatted).toHaveLength(1);
+            expect(formatted[0].name).toBe('my_tool');
+            expect(formatted[0].parameters).toEqual(tools[0].parameters);
+        });
+    });
 });
+
+/* eslint-enable @typescript-eslint/no-explicit-any -- End of mock-heavy test section */
+/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of mock-heavy test section */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of mock-heavy test section */
+/* eslint-enable @typescript-eslint/no-unsafe-call -- End of mock-heavy test section */
