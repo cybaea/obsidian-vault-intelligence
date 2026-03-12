@@ -172,44 +172,44 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 parts.push({ text: m.content });
             }
 
-            if (m.toolCalls && m.toolCalls.length > 0) {
-                if (m.role === 'model') {
-                    m.toolCalls.forEach(call => {
-                        parts.push({
-                            functionCall: {
-                                args: call.args,
-                                name: call.name
-                            }
-                        });
-                    });
-                } else if (m.role === 'tool' && m.toolResults) {
-                    m.toolResults.forEach(res => {
-                        parts.push({
-                            functionResponse: {
-                                name: res.name,
-                                response: res.result
-                            }
-                        });
-                    });
-                } else if (m.role === 'user' && m.name) {
-                    // Legacy fallback (Phase 1 stabilization)
+            if (m.role === 'model' && m.toolCalls && m.toolCalls.length > 0) {
+                m.toolCalls.forEach(call => {
                     parts.push({
-                        functionResponse: {
-                            name: m.name,
-                            response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
+                        functionCall: {
+                            args: call.args,
+                            name: call.name
                         }
                     });
-                }
+                });
+            } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
+                m.toolResults.forEach(res => {
+                    parts.push({
+                        functionResponse: {
+                            name: res.name,
+                            response: res.result
+                        }
+                    });
+                });
+            } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
+                // Legacy fallback (Phase 1 stabilization)
+                parts.push({
+                    functionResponse: {
+                        name: m.name,
+                        response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
+                    }
+                });
             }
 
-            if (m.role === currentRole) {
+            const mappedRole: Content['role'] = (m.role === 'tool' || m.role === 'user') ? 'user' : 'model';
+
+            if (mappedRole === currentRole) {
                 currentParts.push(...parts);
             } else {
-                if (currentRole !== null) {
+                if (currentRole !== null && currentParts.length > 0) {
                     merged.push({ parts: currentParts, role: currentRole });
                 }
-                currentRole = m.role as Content['role'];
-                currentParts = parts;
+                currentRole = mappedRole;
+                currentParts = [...parts];
             }
         }
 

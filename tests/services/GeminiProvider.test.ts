@@ -152,9 +152,8 @@ describe('GeminiProvider', () => {
                 },
                 { 
                     content: '', 
-                    name: 'test_tool', 
-                    role: 'user', 
-                    toolCalls: [{ args: { result: 'ok' }, id: '123', name: 'test_tool' }] 
+                    role: 'tool', 
+                    toolResults: [{ id: '123', name: 'test_tool', result: { result: 'ok' } }] 
                 } 
             ];
             
@@ -165,7 +164,7 @@ describe('GeminiProvider', () => {
             expect(formatted[0].role).toBe('model');
             expect(formatted[0].parts[0].functionCall).toEqual({ args: { a: 1 }, name: 'test_tool' });
             
-            // User turn (response)
+            // Tool turn (response)
             expect(formatted[1].role).toBe('user');
             expect(formatted[1].parts[0].functionResponse).toEqual({ 
                 name: 'test_tool', 
