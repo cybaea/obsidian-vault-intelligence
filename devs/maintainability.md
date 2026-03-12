@@ -8,7 +8,8 @@ This document outlines key strategies and patterns to ensure the long-term maint
 
 *   **Services vs. UI:** Keep business logic (e.g., embedding generation, vector storage) completely separate from UI code (Views, Modals). Services should not import UI components.
 *   **Workers:** Offload heavy computational tasks (like embedding generation) to Web Workers to prevent freezing the Obsidian UI.
-*   **dependency Injection:** Pass dependencies (like `App`, `Settings`) into classes via their constructor rather than relying on global state. This makes unit testing easier.
+*   **Dependency Injection:** Pass dependencies (like `App`, `Settings`, or `IReasoningClient`) into classes via their constructor rather than relying on global state. This makes unit testing easier.
+*   **Provider Abstraction:** Never couple business logic to a specific AI SDK (eg `@google/genai`). Use the `IModelProvider`, `IReasoningClient`, and `IEmbeddingClient` interfaces to ensure the system can support new LLM backends without refactoring orchestrators.
 
 ### Constants & Configuration
 
@@ -60,7 +61,7 @@ Complex heuristic scoring is isolated in the `ScoringStrategy.ts` class.
 ### Embeddings & Vector Storage
 
 *   **Robust Change Detection:** `VectorStore.ts` checks both `mtime` and `size` to detect file modifications, ensuring parity with sync tools.
-*   **Dimensions:** Always read `dimensions` from the `IEmbeddingService` or the `VectorIndex`, never hardcode.
+*   **Dimensions:** Always read `dimensions` from the `IEmbeddingClient` or the `VectorIndex`, never hardcode.
 *   **Backoff:** Network failures (especially HTTP 429) trigger a centralized backoff in `VectorStore.ts` using `EMBEDDING_CONSTANTS.BACKOFF_DELAY_MS`.
 
 ### Centralized Configuration

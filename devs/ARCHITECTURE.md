@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 5.2.1
+**Version**: 6.0.0
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -26,7 +26,7 @@ C4Context
         System(ontology, "Ontology Service", "Knowledge Model")
     }
 
-    System_Ext(gemini, "Google Gemini API", "LLM Reasoning, Code Execution, Web Grounding")
+    System_Ext(gemini, "AI Provider (Google Gemini)", "LLM Reasoning, Code Execution, Web Grounding")
     System_Ext(huggingface, "Hugging Face", "Model Downloads (CDN)")
     System_Ext(cdn, "jsDelivr", "WASM Runtime Assets")
 
@@ -37,7 +37,7 @@ C4Context
     Rel(plugin, gardener, "Manages vault hygiene via")
     Rel(gardener, ontology, "Consults knowledge model")
     
-    Rel(plugin, gemini, "Sends prompts/context to", "HTTPS/REST")
+    Rel(plugin, gemini, "Sends prompts/context to", "HTTPS/REST (via Provider Abstraction)")
     Rel(plugin, huggingface, "Downloads ONNX models from", "HTTPS")
     Rel(worker, cdn, "Fetches WASM binaries from", "HTTPS")
 
@@ -79,9 +79,9 @@ Manual Dependency Injection is used in `main.ts`. Services are instantiated in a
 
 ```typescript
 // main.ts
-this.geminiService = new GeminiService(settings);
-this.embeddingService = new RoutingEmbeddingService(..., geminiService); // Injects dependency
-this.graphService = new GraphService(..., embeddingService); // Injects dependency
+this.geminiProvider = new GeminiProvider(settings); // Implements IModelProvider, IReasoningClient, IEmbeddingClient
+this.embeddingService = new RoutingEmbeddingService(..., this.geminiProvider); // Injects dependency
+this.graphService = new GraphService(..., this.embeddingService); // Injects dependency
 ```
 
 ---
@@ -145,7 +145,7 @@ sequenceDiagram
     participant A as AgentService
     participant TR as ToolRegistry
     participant S as SearchOrchestrator
-    participant G as GeminiService
+    participant RC as IReasoningClient (eg GeminiProvider)
     participant CA as ContextAssembler
     participant GS as GraphService
     participant IW as IndexerWorker
@@ -163,8 +163,8 @@ sequenceDiagram
 
     Note over V,A: Intent expansion
     V->>A: chat(history, msg)
-    A->>G: startChat()
-    G-->>A: Request Tool: "vault_search"
+    A->>RC: generateMessage()
+    RC-->>A: Request Tool: "vault_search"
     A->>TR: execute("vault_search")
     TR->>S: search(query)
 
@@ -201,8 +201,8 @@ sequenceDiagram
     GS-->>V: Hydrated Results (Context & Excerpts)
     
     V->>A: chat(history, hydrated)
-    A->>G: sendMessage(context)
-    G-->>A: Final Answer
+    A->>RC: generateMessage(context)
+    RC-->>A: Final Answer
     A-->>V: Display Answer
     V-->>U: Read Answer
 ```
@@ -215,11 +215,11 @@ The `AgentService` uses a loop to handle multiple tool calls (up to `maxAgentSte
 
 flowchart TD
   Start[User Prompt] --> Agent[AgentService: chat]
-  Agent --> LLM[GeminiService: sendMessage]
-  LLM --> Check{Tool Call?}
-  Check -- Yes --> Exec[Execute Tool]
+  Agent --> LLM[IReasoningClient: generateMessage]
+  LLM --> Check{Action?}
+  Check -- "Function Call" --> Exec[ToolRegistry: execute]
   Exec --> LLM
-  Check -- No --> Final[Return Final Answer]
+  Check -- "Final Response" --> Final[Return Answer]
 
   subgraph Tools Available
     T1[Vault Search]
@@ -368,13 +368,16 @@ classDiagram
     AgentService --> ToolRegistry : executes tools
     AgentService --> SearchOrchestrator : delegates search
     AgentService --> ContextAssembler : delegates RAG
-    AgentService --> GeminiService : calls generic LLM
+    AgentService --> IReasoningClient : calls provider interface
     ToolRegistry --> GraphService : uses for graph tools
     ToolRegistry --> SearchOrchestrator : uses for search tool
     TR_VAULT_SEARCH[Tool: vault_search] -.-> SearchOrchestrator : calls
     TR_READ_NOTE[Tool: read_note] -.-> FileTools : calls
     SearchOrchestrator --> GraphService : uses index
     GraphService ..> IndexerWorker : via Comlink
+    GeminiProvider ..|> IReasoningClient : implements
+    GeminiProvider ..|> IEmbeddingClient : implements
+    GeminiProvider ..|> IModelProvider : implements
 ```
 
 ### 4.2. Tool Execution Control Flow
@@ -386,7 +389,7 @@ flowchart TD
     subgraph "Agent Loop"
         Start[User Query] --> Agent[AgentService: chat]
         Agent --> Build[Assemble initial context]
-        Build --> LLM[GeminiService: sendMessage]
+        Build --> LLM[IReasoningClient: generateMessage]
         LLM --> Decision{Action?}
         Decision -- "Function Call" --> Exec[ToolRegistry: execute]
         Exec --> Feedback[Append Tool Result to History]
@@ -403,23 +406,50 @@ flowchart TD
         
         T1 --> SO[SearchOrchestrator]
         T3 --> FT[FileTools]
-        T4 --> GS[GeminiService: solveWithCode]
+        T4 --> RC[IReasoningClient: solveWithCode]
     end
 ```
 
 ### Service interface documentation
 
-#### `IEmbeddingService`
+### Provider Abstraction Interfaces
 
-The contract for any provider that can turn text into numbers.
+The following interfaces decouple the core business logic from specific AI providers.
+
+#### `IModelProvider`
+
+Defines the capabilities and lifecycle of an AI provider.
 
 ```typescript
-export type EmbeddingPriority = 'high' | 'low';
+export interface IModelProvider {
+    initialize?(): Promise<void>;
+    supportsCodeExecution: boolean;
+    supportsStructuredOutput: boolean;
+    supportsTools: boolean;
+    supportsWebGrounding: boolean;
+    terminate?(): Promise<void>;
+}
+```
 
-export interface IEmbeddingService {
-    readonly modelName: string;
-    readonly dimensions: number;
+#### `IReasoningClient`
 
+Contract for chat and reasoning capabilities.
+
+```typescript
+export interface IReasoningClient {
+    generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage>;
+    generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T>;
+    searchWithGrounding(query: string): Promise<{ text: string }>;
+    solveWithCode(prompt: string): Promise<{ text: string }>;
+}
+```
+
+#### `IEmbeddingClient`
+
+Contract for vector embedding generation.
+
+```typescript
+export interface IEmbeddingClient {
     embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ vector: number[], tokenCount: number }>;
     embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ vectors: number[][], tokenCount: number }>;
     updateConfiguration?(): void;
@@ -545,13 +575,15 @@ export class SearchOrchestrator {
 
 ### LLM provider abstraction
 
-Currently, the system is tighter coupled to **Google Gemini** (`GeminiService`), but abstraction covers the Embeddings layer.
+As of Version 6.0.0, the system is provider-agnostic. While Google Gemini is currently the primary implementation (`GeminiProvider`), all core services (`AgentService`, `GardenerService`, `SearchOrchestrator`) communicate via generic interfaces:
 
--   **Strategy**: `GeminiService` handles all Chat/Reasoning. `IEmbeddingService` handles Vectors.
+-   **Reasoning**: `IReasoningClient` (Messages, Structured JSON, Grounding, Code).
+-   **Embeddings**: `IEmbeddingClient` (Vectors).
+-   **Capabilities**: `IModelProvider` (Flag-based feature detection).
 
 ### Failover and retry logic
 
--   **Gemini API**: The `GeminiService` implements an exponential backoff retry mechanism for `429 Too Many Requests` errors (default 3 retries).
+-   **API Clients**: Providers should implement internal retry logic (eg exponential backoff for `429 Too Many Requests`). `GeminiProvider` uses this for all model interactions.
 -   **Local worker**: Implements a "Progressive Stability Degradation" (ADR-003). If the worker crashes, it restarts with simpler settings (threads -> 1, SIMD -> off).
 
 ---
