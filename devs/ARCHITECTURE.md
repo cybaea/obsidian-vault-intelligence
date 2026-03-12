@@ -164,7 +164,7 @@ sequenceDiagram
     Note over V,A: Intent expansion
     V->>A: chat(history, msg)
     A->>RC: generateMessage()
-    RC-->>A: Request Tool: "vault_search"
+    RC-->>A: Request Tool: "vault_search" (incl. rawContent parts)
     A->>TR: execute("vault_search")
     TR->>S: search(query)
 
@@ -455,6 +455,15 @@ export interface IReasoningClient {
     searchWithGrounding(query: string): Promise<{ text: string }>;
     solveWithCode(prompt: string): Promise<{ text: string }>;
 }
+
+/**
+ * Exact History Preservation
+ * 
+ * To support reasoning models (Gemini 3) that utilize multi-part messages
+ * (including hidden thought/signature parts), the system captures the 
+ * raw SDK response parts in `UnifiedMessage.rawContent`. This ensures 
+ * history is reconstructed exactly as the provider expects in tool loops.
+ */
 ```
 
 #### `IEmbeddingClient`
