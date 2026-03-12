@@ -60,6 +60,21 @@ class MockElement {
         this.lastElementChild = el;
     }
 
+    insertBefore(newNode: MockElement, referenceNode: MockElement | null) {
+        if (!referenceNode) {
+            this.children.push(newNode);
+        } else {
+            const index = this.children.indexOf(referenceNode);
+            if (index !== -1) {
+                this.children.splice(index, 0, newNode);
+            } else {
+                this.children.push(newNode);
+            }
+        }
+        this.lastElementChild = this.children[this.children.length - 1] ?? null;
+        return newNode;
+    }
+
     createDiv(options?: { cls?: string }) {
         const div = new MockElement();
         if (options?.cls) div.className = options.cls;
@@ -216,6 +231,31 @@ describe('ResearchChatView Rendering', () => {
         const lastChild = mockChatContainer.lastElementChild;
         const contentEl = lastChild?.querySelector('.chat-content');
         expect(contentEl?.innerText).toBe('Part 1 Part 2');
+    });
+
+    it('should handle status updates without destroying text node', async () => {
+        const mockStream = (async function* () {
+            await Promise.resolve();
+            yield { text: 'Starting' };
+            yield { status: 'Thinking...' };
+            yield { text: ' edge' };
+            yield { status: 'Searching...' };
+            yield { text: ' case' };
+            yield { isDone: true };
+        })();
+
+        view.agent.chatStream = vi.fn().mockReturnValue(mockStream);
+        view.agent.prepareContext = vi.fn().mockResolvedValue({ cleanMessage: 'test', contextFiles: [] });
+        view.agent.reflexSearch = vi.fn().mockResolvedValue([]);
+
+        await (view as any).handleSubmit();
+
+        const lastChild = mockChatContainer.lastElementChild;
+        const contentEl = lastChild?.querySelector('.chat-content');
+        const thoughtEl = lastChild?.children.find(c => c.className === 'chat-thought');
+        
+        expect(contentEl?.innerText).toBe('Starting edge case');
+        expect(thoughtEl).toBeUndefined(); // Temporary thoughts are cleared on completion
     });
 });
 /* eslint-enable */

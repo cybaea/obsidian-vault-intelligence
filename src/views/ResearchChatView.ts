@@ -234,7 +234,10 @@ export class ResearchChatView extends ItemView {
             const modelMsg = this.addMessage("model", "");
             await this.renderMessages(); 
 
-            const lastMessageNode = this.chatContainer.lastElementChild?.querySelector('.chat-content') as HTMLElement;
+            let messageContainer = this.chatContainer.lastElementChild as HTMLElement;
+            let lastMessageNode = messageContainer?.querySelector('.chat-content') as HTMLElement;
+            let thoughtNode = messageContainer?.querySelector('.chat-thought') as HTMLElement;
+
             if (lastMessageNode) lastMessageNode.addClass('is-streaming'); 
             
             let lastStatus = "";
@@ -252,11 +255,14 @@ export class ResearchChatView extends ItemView {
                 if (chunk.status && chunk.status !== lastStatus) {
                     lastStatus = chunk.status;
                     modelMsg.thought = lastStatus; 
-                    void this.renderMessages();
-                    const newNode = this.chatContainer.lastElementChild?.querySelector('.chat-content') as HTMLElement;
-                    if (newNode) {
-                        newNode.addClass('is-streaming');
-                        newNode.setText(modelMsg.text);
+                    
+                    if (messageContainer) {
+                        if (!thoughtNode) {
+                            thoughtNode = messageContainer.createDiv({ cls: "chat-thought" });
+                            messageContainer.insertBefore(thoughtNode, lastMessageNode);
+                        }
+                        thoughtNode.setText(`Thought: ${lastStatus}`);
+                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
                     }
                 }
                 if (chunk.isDone) {
@@ -271,6 +277,14 @@ export class ResearchChatView extends ItemView {
                 }
                 if (chunk.toolResults) {
                     this.addMessage("tool", "", undefined, undefined, undefined, undefined, undefined, chunk.toolResults);
+                    await this.renderMessages(); 
+                    
+                    messageContainer = this.chatContainer.children[this.chatContainer.children.length - 2] as HTMLElement; 
+                    if (messageContainer) {
+                        lastMessageNode = messageContainer.querySelector('.chat-content') as HTMLElement;
+                        thoughtNode = messageContainer.querySelector('.chat-thought') as HTMLElement;
+                        if (lastMessageNode) lastMessageNode.addClass('is-streaming');
+                    }
                 }
                 if (chunk.rawContent) {
                     modelMsg.rawContent = chunk.rawContent;
