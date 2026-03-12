@@ -143,17 +143,17 @@ describe('GeminiProvider', () => {
             expect(formatted[1].role).toBe('model');
         });
 
-        it('should translate tool calls and responses correctly', () => {
+        it('should translate tool calls and responses correctly with thought_signatures', () => {
              const history: any[] = [
                 { 
                     content: '', 
                     role: 'model', 
-                    toolCalls: [{ args: { a: 1 }, name: 'test_tool' }] 
+                    toolCalls: [{ args: { a: 1 }, name: 'test_tool', thought_signature: 'sig_123' }] 
                 },
                 { 
                     content: '', 
                     role: 'tool', 
-                    toolResults: [{ id: '123', name: 'test_tool', result: { result: 'ok' } }] 
+                    toolResults: [{ id: '123', name: 'test_tool', result: { result: 'ok' }, thought_signature: 'sig_123' }] 
                 } 
             ];
             
@@ -162,14 +162,42 @@ describe('GeminiProvider', () => {
             expect(formatted).toHaveLength(2);
             // Model turn
             expect(formatted[0].role).toBe('model');
-            expect(formatted[0].parts[0].functionCall).toEqual({ args: { a: 1 }, name: 'test_tool' });
+            expect(formatted[0].parts[0].functionCall).toEqual({ 
+                args: { a: 1 }, 
+                name: 'test_tool',
+                thought_signature: 'sig_123' 
+            });
             
             // Tool turn (response)
             expect(formatted[1].role).toBe('user');
             expect(formatted[1].parts[0].functionResponse).toEqual({ 
                 name: 'test_tool', 
-                response: { result: 'ok' } 
+                response: { result: 'ok' },
+                thought_signature: 'sig_123'
             });
+        });
+
+        it('should capture thought_signature in parseResponse', () => {
+             const mockResponse: any = {
+                candidates: [{
+                    content: {
+                        parts: [{
+                            functionCall: {
+                                args: { q: 'test' },
+                                name: 'search_tool',
+                                thought_signature: 'encoded_thought_metadata'
+                            }
+                        }]
+                    }
+                }],
+                text: ''
+            };
+            
+            const parsed = (service as any).parseResponse(mockResponse);
+            
+            expect(parsed.toolCalls).toHaveLength(1);
+            expect(parsed.toolCalls[0].name).toBe('search_tool');
+            expect(parsed.toolCalls[0].thought_signature).toBe('encoded_thought_metadata');
         });
 
         it('should format tools correctly for the SDK', () => {

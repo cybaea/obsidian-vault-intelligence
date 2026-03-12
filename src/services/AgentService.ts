@@ -198,7 +198,8 @@ export class AgentService {
                         return {
                             id: call.id,
                             name: call.name,
-                            response: functionResponse
+                            response: functionResponse,
+                            thought_signature: call.thought_signature
                         };
                     });
 
@@ -212,7 +213,8 @@ export class AgentService {
                             toolResults: completedParts.map(p => ({
                                 id: p.id,
                                 name: p.name,
-                                result: p.response
+                                result: p.response,
+                                thought_signature: p.thought_signature
                             }))
                         };
                         formattedHistory.push(toolMessage);

@@ -6,12 +6,14 @@ export interface ToolCall {
     args: Record<string, unknown>;
     id?: string;
     name: string;
+    thought_signature?: string;
 }
 
 export interface ToolResult {
     id?: string;
     name: string;
     result: Record<string, unknown>;
+    thought_signature?: string;
 }
 
 export interface UnifiedMessage {

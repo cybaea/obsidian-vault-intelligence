@@ -1,4 +1,4 @@
-import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentResponse, GoogleGenAI, Part } from "@google/genai";
 import { App, Notice } from "obsidian";
 import { z } from "zod";
 
@@ -174,21 +174,25 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
             if (m.role === 'model' && m.toolCalls && m.toolCalls.length > 0) {
                 m.toolCalls.forEach(call => {
-                    parts.push({
-                        functionCall: {
-                            args: call.args,
-                            name: call.name
-                        }
-                    });
+                    const fc: Record<string, unknown> = {
+                        args: call.args,
+                        name: call.name
+                    };
+                    if (call.thought_signature) {
+                        fc.thought_signature = call.thought_signature;
+                    }
+                    parts.push({ functionCall: fc as unknown as Part['functionCall'] } as Part);
                 });
             } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
                 m.toolResults.forEach(res => {
-                    parts.push({
-                        functionResponse: {
-                            name: res.name,
-                            response: res.result
-                        }
-                    });
+                    const fr: Record<string, unknown> = {
+                        name: res.name,
+                        response: res.result
+                    };
+                    if (res.thought_signature) {
+                        fr.thought_signature = res.thought_signature;
+                    }
+                    parts.push({ functionResponse: fr as unknown as Part['functionResponse'] } as Part);
                 });
             } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
                 // Legacy fallback (Phase 1 stabilization)
@@ -233,16 +237,21 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         const text = response.text || "";
         const toolCalls: ToolCall[] = [];
 
-        if (response.functionCalls && response.functionCalls.length > 0) {
-            response.functionCalls.forEach(call => {
-                if (call.name) {
-                    // Gemini correctly parses its own tool args
-                    // We defensively enforce Record<string, unknown>
-                    const safeArgs = (call.args && typeof call.args === 'object') ? call.args : {};
-                    toolCalls.push({
-                        args: safeArgs,
-                        name: call.name
-                    });
+        const candidate = response.candidates?.[0];
+        if (candidate?.content?.parts) {
+            candidate.content.parts.forEach(part => {
+                if (part.functionCall) {
+                    const call = part.functionCall;
+                    if (call.name) {
+                        const safeArgs = (call.args && typeof call.args === 'object') ? call.args : {};
+                        const thoughtSignature = (call as Record<string, unknown>).thought_signature;
+                        
+                        toolCalls.push({
+                            args: safeArgs,
+                            name: call.name,
+                            thought_signature: typeof thoughtSignature === 'string' ? thoughtSignature : undefined
+                        });
+                    }
                 }
             });
         }
