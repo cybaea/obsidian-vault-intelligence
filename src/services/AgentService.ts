@@ -205,20 +205,17 @@ export class AgentService {
                     const completedParts = await Promise.all(toolPromises);
 
                     if (completedParts.length > 0) {
-                        // Serialize structured tool results into the history
-                        // GeminiProvider (and standard tool-capable models) expect one response per call
-                        const toolResponses = completedParts.map(p => ({
+                        // Serialize structured tool results into the history using the dedicated 'tool' role
+                        const toolMessage: UnifiedMessage = {
                             content: "",
-                            name: p.name,
-                            role: "user" as const,
-                            // Carrying the response object in toolCalls[0].args for GeminiProvider adapter compat
-                            toolCalls: [{
-                                args: p.response,
+                            role: "tool",
+                            toolResults: completedParts.map(p => ({
                                 id: p.id,
-                                name: p.name
-                            }]
-                        }));
-                        formattedHistory.push(...toolResponses);
+                                name: p.name,
+                                result: p.response
+                            }))
+                        };
+                        formattedHistory.push(toolMessage);
                     } else {
                         currentMessage = result.content || "";
                         break;

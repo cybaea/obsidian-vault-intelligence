@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 6.0.0
+**Version**: 8.1.0
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -412,23 +412,36 @@ flowchart TD
 
 ### Service interface documentation
 
-### Provider Abstraction Interfaces
+#### `IProvider`
 
-The following interfaces decouple the core business logic from specific AI providers.
-
-#### `IModelProvider`
-
-Defines the capabilities and lifecycle of an AI provider.
+Defines the lifecycle of an AI provider.
 
 ```typescript
-export interface IModelProvider {
+export interface IProvider {
     initialize?(): Promise<void>;
+    terminate?(): Promise<void>;
+}
+```
+
+#### `IReasoningCapabilities`
+
+Defines the features supported by a reasoning provider.
+
+```typescript
+export interface IReasoningCapabilities {
     supportsCodeExecution: boolean;
     supportsStructuredOutput: boolean;
     supportsTools: boolean;
     supportsWebGrounding: boolean;
-    terminate?(): Promise<void>;
 }
+```
+
+#### `IModelProvider`
+
+Unified interface for reasoning and lifecycle.
+
+```typescript
+export interface IModelProvider extends IProvider, IReasoningCapabilities {}
 ```
 
 #### `IReasoningClient`

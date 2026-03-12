@@ -246,7 +246,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Register Views
 		this.registerView(
 			VIEW_TYPES.RESEARCH_CHAT,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.graphService, this.embeddingService)
+			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.geminiService, this.graphService, this.embeddingService)
 		);
 		this.registerView(
 			VIEW_TYPES.SEMANTIC_GRAPH,

@@ -182,8 +182,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                             }
                         });
                     });
+                } else if (m.role === 'tool' && m.toolResults) {
+                    m.toolResults.forEach(res => {
+                        parts.push({
+                            functionResponse: {
+                                name: res.name,
+                                response: res.result
+                            }
+                        });
+                    });
                 } else if (m.role === 'user' && m.name) {
-                    // It's a tool response from user
+                    // Legacy fallback (Phase 1 stabilization)
                     parts.push({
                         functionResponse: {
                             name: m.name,
@@ -344,8 +353,8 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     private extractTokenCount(response: unknown, fallbackText: string): number {
-        const res = response as { usageMetadata?: { promptTokenCount?: number }; embeddings?: { statistics?: { tokenCount?: number } }[] };
-        const count = res.usageMetadata?.promptTokenCount || res.embeddings?.[0]?.statistics?.tokenCount;
+        const res = response as { usageMetadata?: { totalTokenCount?: number, promptTokenCount?: number }; embeddings?: { statistics?: { tokenCount?: number } }[] };
+        const count = res.usageMetadata?.totalTokenCount || res.usageMetadata?.promptTokenCount || res.embeddings?.[0]?.statistics?.tokenCount;
         return (typeof count === 'number' && !isNaN(count) && count > 0)
              ? count
              : Math.ceil(fallbackText.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);

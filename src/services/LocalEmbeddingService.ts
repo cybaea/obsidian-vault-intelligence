@@ -2,7 +2,7 @@ import { Notice, requestUrl } from "obsidian";
 
 import { WORKER_CONSTANTS } from "../constants";
 import { IVaultIntelligencePlugin, VaultIntelligenceSettings } from "../settings/types";
-import { EmbeddingPriority, IEmbeddingClient, IModelProvider } from "../types/providers";
+import { EmbeddingPriority, IEmbeddingClient, IProvider } from "../types/providers";
 import { ConfigureMessage, ProgressPayload, WorkerMessage } from "../types/worker.types";
 import { logger } from "../utils/logger";
 import EmbeddingWorker from "../workers/embedding.worker";
@@ -17,11 +17,7 @@ interface EmbeddingTask {
     title?: string;
 }
 
-export class LocalEmbeddingService implements IEmbeddingClient, IModelProvider {
-    public readonly supportsTools = false;
-    public readonly supportsStructuredOutput = false;
-    public readonly supportsWebGrounding = false;
-    public readonly supportsCodeExecution = false;
+export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     private plugin: IVaultIntelligencePlugin;
     private settings: VaultIntelligenceSettings;
     private worker: Worker | null = null;

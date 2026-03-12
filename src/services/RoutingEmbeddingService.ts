@@ -1,5 +1,5 @@
 import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
-import { EmbeddingPriority, IEmbeddingClient, IModelProvider } from "../types/providers";
+import { EmbeddingPriority, IEmbeddingClient, IProvider } from "../types/providers";
 import { logger } from "../utils/logger";
 import { GeminiProvider } from "./GeminiProvider";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
@@ -7,11 +7,7 @@ import { LocalEmbeddingService } from "./LocalEmbeddingService";
 /**
  * Handles routing of embedding requests to either local (WASM) or remote (Gemini) providers.
  */
-export class RoutingEmbeddingService implements IEmbeddingClient, IModelProvider {
-    public readonly supportsTools = false;
-    public readonly supportsStructuredOutput = false;
-    public readonly supportsWebGrounding = false;
-    public supportsCodeExecution = false;
+export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
 
     private localService: LocalEmbeddingService;
     private geminiService: GeminiProvider;

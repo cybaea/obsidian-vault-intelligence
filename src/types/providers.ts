@@ -8,11 +8,18 @@ export interface ToolCall {
     name: string;
 }
 
+export interface ToolResult {
+    id?: string;
+    name: string;
+    result: Record<string, unknown>;
+}
+
 export interface UnifiedMessage {
     content: string;
-    name?: string; // e.g., for function responses
-    role: "user" | "model" | "system";
+    name?: string; // e.g., for function responses (legacy compat)
+    role: "user" | "model" | "system" | "tool";
     toolCalls?: ToolCall[];
+    toolResults?: ToolResult[];
 }
 
 export interface ChatOptions {
@@ -47,8 +54,12 @@ export interface IEmbeddingClient {
     updateConfiguration?(): void;
 }
 
-export interface IModelProvider {
+export interface IProvider {
     initialize?(): Promise<void>;
+    terminate?(): Promise<void>;
+}
+
+export interface IReasoningCapabilities {
     /** Whether this provider supports internal code execution sandboxes */
     supportsCodeExecution: boolean;
     /** Whether this provider supports forced structured JSON-schema outputs natively */
@@ -57,8 +68,9 @@ export interface IModelProvider {
     supportsTools: boolean;
     /** Whether this provider supports Google Search web grounding */
     supportsWebGrounding: boolean;
-    terminate?(): Promise<void>;
 }
+
+export interface IModelProvider extends IProvider, IReasoningCapabilities {}
 
 export class ProviderError extends Error {
     public readonly provider: string;

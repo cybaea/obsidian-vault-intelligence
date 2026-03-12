@@ -3,16 +3,16 @@ import { ButtonComponent, DropdownComponent, Events, ItemView, MarkdownRenderer,
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
-import { GeminiProvider } from "../services/GeminiProvider";
 import { GraphService } from "../services/GraphService";
 import { ModelRegistry } from "../services/ModelRegistry";
-import { IEmbeddingClient } from "../types/providers";
+import { IEmbeddingClient, IModelProvider, IReasoningClient } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
-    gemini: GeminiProvider;
+    reasoningClient: IReasoningClient;
+    provider: IModelProvider;
     graphService: GraphService;
     embeddingService: IEmbeddingClient;
     agent: AgentService;
@@ -31,17 +31,19 @@ export class ResearchChatView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        gemini: GeminiProvider,
+        reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
         embeddingService: IEmbeddingClient
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.gemini = gemini;
+        this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, gemini, gemini, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, reasoningClient, provider, graphService, embeddingService, plugin.settings);
         this.icon = "message-circle";
     }
 

@@ -13,9 +13,12 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **Service-Oriented Architecture (SOA) Refactor (Phase 1)**: Introduced project-wide generic interfaces (`IModelProvider`, `IReasoningClient`, `IEmbeddingClient`) to decouple business logic from the Google Gemini SDK.
+-   **Service-Oriented Architecture (SOA) refactor (Phase 1)**: Introduced project-wide generic interfaces (`IModelProvider`, `IReasoningClient`, `IEmbeddingClient`) to decouple business logic from the Google Gemini SDK.
 -   **Service decoupling**: Refactored `AgentService`, `GardenerService`, `SearchOrchestrator`, and `ToolRegistry` to depend on generic reasoning and embedding contracts.
 -   **Capability-driven tools**: Implemented dynamic tool registration based on provider capability flags (`supportsWebGrounding`, `supportsCodeExecution`, etc.).
+-   **Interface hardening**: Introduced a dedicated `tool` role and `toolResults` property to `UnifiedMessage`, ensuring provider-agnostic tool response handling.
+-   **UI decoupling**: Refactored `ResearchChatView` to use constructor injection for reasoning and embedding clients, removing its dependency on the concrete `GeminiProvider`.
+-   **Interface segregation**: Split `IModelProvider` into reasoning and embedding capability interfaces, adhering to SOLID principles and reducing redundant flags in service implementations.
 
 ## [8.0.1] - 2026-02-24
 
