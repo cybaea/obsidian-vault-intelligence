@@ -80,11 +80,10 @@ describe('GeminiProvider Streaming', () => {
             chunks.push(chunk);
         }
 
-        // Now expected 3 chunks: Partial 1, Partial 2, and final rawContent chunk
-        expect(chunks).toHaveLength(3);
-        expect(chunks[0].toolCalls[0].args).toEqual({ first: 'part' });
-        expect(chunks[1].toolCalls[0].args).toEqual({ second: 'half' });
-        expect(chunks[2].rawContent).toHaveLength(2);
+        // Now expected 1 chunk: the final one with aggregated tool calls
+        expect(chunks).toHaveLength(1);
+        expect(chunks[0].toolCalls[0].args).toEqual({ first: 'part', second: 'half' });
+        expect(chunks[0].isDone).toBe(true);
     });
 
     it('should honor AbortSignal and stop yielding', async () => {
@@ -115,7 +114,7 @@ describe('GeminiProvider Streaming', () => {
             // Some implementations might throw on abort
         }
 
-        expect(chunks).toHaveLength(1);
+        // Expected 1 chunk: 'Chunk 1'. Final chunk is NOT yielding because of abort.
         expect(chunks).toHaveLength(1);
         expect(chunks[0].text).toBe('Chunk 1');
     });
@@ -127,7 +126,7 @@ describe('GeminiProvider Streaming', () => {
             yield { 
                 candidates: [{ content: { parts: [{ thought_signature: 'sig_123' } as any] } }]
             };
-            // Chunk 2: Function call without signature (must inherit from previous chunk)
+            // Chunk 2: Function call without signature
             yield { 
                 candidates: [{ content: { parts: [{ functionCall: { args: { query: 'test' }, name: 'vault_search' } }] } }]
             };
@@ -144,11 +143,12 @@ describe('GeminiProvider Streaming', () => {
             chunks.push(chunk);
         }
 
-        // Chunk 1 yielded nothing to the consumer because it had no text or tool calls (internal state update only)
-        // Chunk 2 should have the inherited signature
-        const toolCallChunk = chunks.find(c => c.toolCalls);
-        expect(toolCallChunk).toBeDefined();
+        // Now expected 1 chunk: the final one with the aggregated call and signature
+        expect(chunks).toHaveLength(1);
+        const toolCallChunk = chunks[0];
+        expect(toolCallChunk.toolCalls).toBeDefined();
         expect(toolCallChunk.toolCalls[0].thought_signature).toBe('sig_123');
+        expect(toolCallChunk.isDone).toBe(true);
     });
 
     it('should yield rawContent in the final chunk for history preservation', async () => {

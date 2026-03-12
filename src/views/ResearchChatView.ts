@@ -58,6 +58,8 @@ export class ResearchChatView extends ItemView {
     }
 
     async onClose() {
+        this.currentAbortController?.abort();
+        this.currentAbortController = null;
         await Promise.resolve();
     }
 
@@ -131,10 +133,12 @@ export class ResearchChatView extends ItemView {
             .setIcon("trash")
             .setTooltip("Clear chat")
             .onClick(() => {
+                this.currentAbortController?.abort();
                 this.messages = [];
+                this.isThinking = false;
                 this.temporaryModelId = null;
                 this.temporaryWriteAccess = null;
-                void this.onOpen();
+                void this.renderMessages();
                 new Notice("Chat cleared");
             });
 
@@ -200,7 +204,6 @@ export class ResearchChatView extends ItemView {
         this.isThinking = true;
         this.addMessage("user", text);
 
-        // SPOTLIGHT: Call Reflex Search Immediately (Loop 1)
         try {
             const reflexResults = await this.agent.reflexSearch(text, 5);
             if (reflexResults.length > 0) {
@@ -229,8 +232,11 @@ export class ResearchChatView extends ItemView {
             });
 
             const modelMsg = this.addMessage("model", "");
-            void this.renderMessages(); // Initial render to create tools/thinking placeholders
+            await this.renderMessages(); 
 
+            const lastMessageNode = this.chatContainer.lastElementChild?.querySelector('.chat-content') as HTMLElement;
+            if (lastMessageNode) lastMessageNode.addClass('is-streaming'); 
+            
             let lastStatus = "";
 
             for await (const chunk of stream) {
@@ -238,20 +244,24 @@ export class ResearchChatView extends ItemView {
 
                 if (chunk.text) {
                     modelMsg.text += chunk.text;
-                    // We don't re-render everything, we just update the text in the messages array
-                    // and trigger a partial update if we were more advanced. 
-                    // For now, full render is safer but we'll optimize the "thinking" part.
-                    void this.renderMessages();
+                    if (lastMessageNode) {
+                        lastMessageNode.setText(modelMsg.text);
+                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                    }
                 }
                 if (chunk.status && chunk.status !== lastStatus) {
                     lastStatus = chunk.status;
-                    modelMsg.thought = lastStatus; // Map status to 'thought' for immediate display
+                    modelMsg.thought = lastStatus; 
                     void this.renderMessages();
+                    const newNode = this.chatContainer.lastElementChild?.querySelector('.chat-content') as HTMLElement;
+                    if (newNode) {
+                        newNode.addClass('is-streaming');
+                        newNode.setText(modelMsg.text);
+                    }
                 }
                 if (chunk.isDone) {
                     modelMsg.contextFiles = chunk.files;
                     modelMsg.createdFiles = chunk.createdFiles;
-                    // Trigger Visual RAG: Highlight relevant nodes in Semantic Galaxy
                     if (chunk.files && chunk.files.length > 0) {
                         this.graphService.trigger("vault-intelligence:context-highlight", chunk.files);
                     }
@@ -260,7 +270,6 @@ export class ResearchChatView extends ItemView {
                     modelMsg.toolCalls = chunk.toolCalls;
                 }
                 if (chunk.toolResults) {
-                    // This is for capturing intermediate tool results from the agent loop
                     this.addMessage("tool", "", undefined, undefined, undefined, undefined, undefined, chunk.toolResults);
                 }
                 if (chunk.rawContent) {
@@ -268,6 +277,7 @@ export class ResearchChatView extends ItemView {
                 }
             }
 
+            modelMsg.thought = undefined;
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
             this.currentAbortController = null;
@@ -311,7 +321,6 @@ export class ResearchChatView extends ItemView {
                 cls: `chat-message ${msg.role}`
             });
 
-            // SPOTLIGHT RENDER
             if (msg.spotlightResults && msg.spotlightResults.length > 0) {
                 const spotlightDiv = msgDiv.createDiv({ cls: "spotlight-container" });
                 spotlightDiv.createEl("h5", { text: UI_STRINGS.RESEARCHER_SPOTLIGHT_HEADER });
@@ -327,7 +336,6 @@ export class ResearchChatView extends ItemView {
                     });
                     item.createSpan({ cls: "spotlight-score", text: ` (${Math.round(res.score * 100)}%)` });
                 }
-                // Allow system messages to be JUST spotlight by continuing if text is empty
                 if (!msg.text) continue;
             }
 
@@ -352,10 +360,8 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
-                    // Check if this is the CURRENTLY streaming message
                     const isStreaming = this.isThinking && msg === this.messages[this.messages.length - 1];
                     if (isStreaming) {
-                        // Raw text accumulation for streaming performance and avoiding partial HTML issues
                         contentDiv.setText(msg.text);
                     } else {
                         await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
@@ -366,8 +372,6 @@ export class ResearchChatView extends ItemView {
                 if (msg.createdFiles && msg.createdFiles.length > 0) {
                     const createdDetails = msgDiv.createEl("details", { cls: "context-details created-files" });
                     createdDetails.createEl("summary", { text: `Created ${msg.createdFiles.length} files` });
-                    // (Simplified render for brevity, assuming standard rendering logic is acceptable or can be fully restored if crucial)
-                    // Restoring full list rendering logic:
                     const list = createdDetails.createDiv({ cls: "context-file-list" });
                     for (const filePath of msg.createdFiles) {
                         const fileItem = list.createDiv({ cls: "context-file-item" });

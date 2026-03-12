@@ -168,30 +168,32 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 }
 
                 const parsed = this.parseResponse(chunk);
-                
-                // If this is a tool call chunk, ensure it has the active signature if missing
-                if (parsed.toolCalls && activeThoughtSignature) {
-                    parsed.toolCalls.forEach(call => {
+                if (parsed.content) {
+                    yield { text: parsed.content };
+                }
+            }
+
+            if (!options.signal?.aborted && accumulatedParts.length > 0) {
+                // Yield the fully aggregated tool calls once at the end.
+                // Re-parsing all parts ensures complete functionCall arguments.
+                const finalParsed = this.parseResponse({
+                    candidates: [{
+                        content: { parts: accumulatedParts }
+                    }]
+                } as unknown as GenerateContentResponse);
+
+                if (finalParsed.toolCalls && activeThoughtSignature) {
+                    finalParsed.toolCalls.forEach(call => {
                         if (!call.thought_signature) {
                             call.thought_signature = activeThoughtSignature;
                         }
                     });
                 }
 
-                // yield text as it arrives
-                // yield toolCalls if present
-                if (parsed.content || parsed.toolCalls) {
-                    yield {
-                        text: parsed.content,
-                        toolCalls: parsed.toolCalls
-                    };
-                }
-            }
-
-            // Yield a final chunk with the full rawContent for history preservation
-            if (!options.signal?.aborted && accumulatedParts.length > 0) {
                 yield {
-                    rawContent: accumulatedParts
+                    isDone: true,
+                    rawContent: accumulatedParts,
+                    toolCalls: finalParsed.toolCalls
                 };
             }
         } catch (error: unknown) {
@@ -325,6 +327,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         }
 
         const toolCalls: ToolCall[] = [];
+        const mergedCalls = new Map<string, ToolCall>();
 
         if (candidate?.content?.parts) {
             // First pass: capture the global or part-specific thought_signature
@@ -340,23 +343,33 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             candidate.content.parts.forEach((part) => {
                 if (part.functionCall) {
                     const call = part.functionCall;
-                    if (call.name) {
+                    const name = call.name;
+                    if (name) {
                         const safeArgs = (call.args && typeof call.args === 'object') ? call.args : {};
                         
-                        // Per Gemini docs: sibling placement. We prioritize the signature on the specific part, 
-                        // fallback to ANY signature found in the candidate content (usually first part containing it).
                         const partObj = part as Record<string, unknown>;
                         const partSignature = partObj['thought_signature'];
                         const finalSignature = typeof partSignature === 'string' ? partSignature : messageLevelSignature;
 
-                        toolCalls.push({
-                            args: safeArgs,
-                            name: call.name,
-                            thought_signature: finalSignature
-                        });
+                        const existing = mergedCalls.get(name);
+                        if (existing) {
+                            // Merge arguments for partial chunks
+                            existing.args = { ...existing.args, ...safeArgs };
+                            if (finalSignature && !existing.thought_signature) {
+                                existing.thought_signature = finalSignature;
+                            }
+                        } else {
+                            mergedCalls.set(name, {
+                                args: { ...safeArgs },
+                                name,
+                                thought_signature: finalSignature
+                            });
+                        }
                     }
                 }
             });
+
+            mergedCalls.forEach(call => toolCalls.push(call));
         }
 
         return {
