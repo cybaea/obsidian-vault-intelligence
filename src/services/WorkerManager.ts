@@ -2,9 +2,9 @@ import * as Comlink from 'comlink';
 import { App, requestUrl } from "obsidian";
 
 import { WorkerAPI, WorkerConfig } from "../types/graph";
+import { IEmbeddingClient } from "../types/providers";
 import { logger } from "../utils/logger";
 import IndexerWorkerModule from "../workers/indexer.worker";
-import { IEmbeddingService } from "./IEmbeddingService";
 
 /**
  * Manages the lifecycle and communication with the Indexer Web Worker.
@@ -13,7 +13,7 @@ import { IEmbeddingService } from "./IEmbeddingService";
  */
 export class WorkerManager {
     private app: App;
-    private embeddingService: IEmbeddingService;
+    private embeddingService: IEmbeddingClient;
     private worker: Worker | null = null;
     private api: Comlink.Remote<WorkerAPI> | null = null;
 
@@ -25,7 +25,7 @@ export class WorkerManager {
     // Serial queue for mutations to handle API rate limiting and race conditions
     private mutationQueue: Promise<unknown> = Promise.resolve();
 
-    constructor(app: App, embeddingService: IEmbeddingService) {
+    constructor(app: App, embeddingService: IEmbeddingClient) {
         this.app = app;
         this.embeddingService = embeddingService;
     }

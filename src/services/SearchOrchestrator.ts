@@ -1,11 +1,11 @@
-import { App } from "obsidian";
+import { App, normalizePath } from "obsidian";
+import { z } from "zod";
 
 import { VaultIntelligenceSettings } from "../settings/types";
+import { IEmbeddingClient, IReasoningClient } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
-import { GeminiService } from "./GeminiService";
 import { GraphService } from "./GraphService";
-import { IEmbeddingService } from "./IEmbeddingService";
 import { ScoringStrategy } from "./ScoringStrategy";
 
 /**
@@ -15,8 +15,8 @@ import { ScoringStrategy } from "./ScoringStrategy";
 export class SearchOrchestrator {
     private app: App;
     private graphService: GraphService;
-    private geminiService: GeminiService;
-    private embeddingService: IEmbeddingService;
+    private reasoningClient: IReasoningClient;
+    private embeddingService: IEmbeddingClient;
     private settings: VaultIntelligenceSettings;
     private scoringStrategy: ScoringStrategy;
 
@@ -24,13 +24,13 @@ export class SearchOrchestrator {
     constructor(
         app: App,
         graphService: GraphService,
-        geminiService: GeminiService,
-        embeddingService: IEmbeddingService,
+        reasoningClient: IReasoningClient,
+        embeddingService: IEmbeddingClient,
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
         this.graphService = graphService;
-        this.geminiService = geminiService;
+        this.reasoningClient = reasoningClient;
         this.embeddingService = embeddingService;
         this.settings = settings;
         this.scoringStrategy = new ScoringStrategy();
@@ -116,19 +116,46 @@ export class SearchOrchestrator {
             // 1. Build Payload (Graph + Vector + Keyword)
             const payload = await this.graphService.buildPriorityPayload(queryVector, query);
 
-            // 2. Re-Rank (Gemini 3)
-            const reranked = await this.geminiService.reRank(query, payload);
+            // 2. Re-Rank using generic structured output
+            const ReRankSchema = z.array(
+                z.object({
+                    id: z.string().describe("The path of the document"),
+                    reasoning: z.string().describe("Why this document is relevant"),
+                    score: z.number().describe("Relevance score between 0 and 1"),
+                    tokenCount: z.number().optional()
+                })
+            );
+
+            const instruction = `You are a search analyst. Given a search query and a list of potentially relevant documents, score and re-rank them based on absolute relevance. Document Context:\n${JSON.stringify(payload)}`;
+            
+            const reranked = await this.reasoningClient.generateStructured(
+                [{ content: query, role: "user" }],
+                ReRankSchema,
+                {
+                    jsonSchema: {
+                        items: {
+                            properties: {
+                                id: { description: "The path of the document", type: "string" },
+                                reasoning: { description: "Why this document is relevant", type: "string" },
+                                score: { description: "Relevance score between 0 and 1", type: "number" },
+                                tokenCount: { type: "number" }
+                            },
+                            required: ["id", "reasoning", "score"],
+                            type: "object"
+                        },
+                        type: "array"
+                    },
+                    systemInstruction: instruction
+                }
+            );
 
             // 3. Map to VaultSearchResult
-            return reranked.map((item: unknown) => {
-                const r = item as { id: string, reasoning: string, score: number, tokenCount?: number };
-                return {
-                    content: r.reasoning,
-                    path: r.id.split('#')[0], // Simple path extraction
-                    score: r.score,
-                    tokenCount: r.tokenCount
-                } as VaultSearchResult;
-            });
+            return reranked.map(r => ({
+                content: r.reasoning,
+                path: normalizePath(String(r.id).split('#')[0] || ""), // Normalize AI-provided path
+                score: r.score,
+                tokenCount: r.tokenCount
+            } as VaultSearchResult));
         }
         return []; // Return empty if dual loop is not enabled
     }

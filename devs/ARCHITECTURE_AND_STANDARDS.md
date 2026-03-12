@@ -7,7 +7,7 @@
 ## 1. Core Philosophy & Identity
 
 *   **Identity**: Vault Intelligence is an AI-powered Research Agent and Adaptive Hybrid Search tool.
-*   **AI Backend**: Google Gemini 3 (via `GeminiService`). _Note: Requires strict context window management._
+*   **AI Backend**: Provider-agnostic architecture (via `IReasoningClient`). Google Gemini is the default implementation (`GeminiProvider`).
 *   **Data Structure**: Knowledge Graph + Vector Embeddings (via `GraphService`).
 *   **Platform**: Obsidian (Desktop and Mobile). _Note: Linux/Wayland support is now default in Electron v39 (Jan 2026)._
 
@@ -25,9 +25,9 @@ We strictly adhere to a **Service-Oriented Architecture (SOA)** to ensure testab
 
 ### 2.2 Service Responsibilities
 
-*   **`GeminiService`**: Manages LLM interactions. _New 2026 Req: Must use `SecretStorage` for API keys._
+*   **`GeminiProvider`**: Implementation of `IReasoningClient` & `IEmbeddingClient`. Manages LLM interactions. _New 2026 Req: Must use `SecretStorage` for API keys._
 *   **`GraphService`**: Manages the localized knowledge graph and vector store.
-*   **`SearchService`**: Orchestrates Hybrid Search (combining keyword and semantic results).
+*   **`SearchOrchestrator`**: Orchestrates Hybrid Search (combining keyword and semantic results).
 *   **`PersistenceManager`**: Handles all file I/O for plugin state (eg `.vault-intelligence/`).
 
 ## 3. Obsidian Development Standards (2026 Grounded)

@@ -1,15 +1,9 @@
 import { App } from 'obsidian';
-import {
-    beforeEach,
-    describe,
-    expect,
-    it,
-    vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi, Mocked } from 'vitest';
 
 import { AGENT_CONSTANTS } from '../src/constants';
 import { ContextAssembler } from '../src/services/ContextAssembler';
-import { GeminiService } from '../src/services/GeminiService';
+import { GeminiProvider } from '../src/services/GeminiProvider';
 import { GraphService } from '../src/services/GraphService';
 import { SearchOrchestrator } from '../src/services/SearchOrchestrator';
 import { VaultIntelligenceSettings } from '../src/settings';
@@ -27,10 +21,10 @@ describe('ToolRegistry Security', () => {
     let toolRegistry: ToolRegistry;
     let mockApp: App;
     let mockSettings: VaultIntelligenceSettings;
-    let mockGemini: GeminiService;
-    let mockGraph: GraphService;
-    let mockSearch: SearchOrchestrator;
-    let mockContext: ContextAssembler;
+    let mockGeminiService: Mocked<GeminiProvider>;
+    let mockGraphService: GraphService;
+    let mockSearchOrchestrator: SearchOrchestrator;
+    let mockContextAssembler: ContextAssembler;
     let mockFileTools: FileTools;
 
     beforeEach(() => {
@@ -53,10 +47,18 @@ describe('ToolRegistry Security', () => {
             vaultSearchResultsLimit: 10,
         } as unknown as VaultIntelligenceSettings;
 
-        mockGemini = {} as unknown as GeminiService;
-        mockGraph = {} as unknown as GraphService;
-        mockSearch = {} as unknown as SearchOrchestrator;
-        mockContext = {} as unknown as ContextAssembler;
+        mockGeminiService = {
+            generateMessage: vi.fn(),
+            generateStructured: vi.fn(),
+            getApiKey: vi.fn(),
+            startChat: vi.fn(),
+            supportsStructuredOutput: true,
+            supportsTools: true,
+            supportsWebGrounding: true
+        } as unknown as Mocked<GeminiProvider>;
+        mockGraphService = {} as unknown as GraphService;
+        mockSearchOrchestrator = {} as unknown as SearchOrchestrator;
+        mockContextAssembler = {} as unknown as ContextAssembler;
         mockFileTools = {
             createFolder: vi.fn(),
             createNote: vi.fn(),
@@ -69,10 +71,11 @@ describe('ToolRegistry Security', () => {
         toolRegistry = new ToolRegistry(
             mockApp,
             mockSettings,
-            mockGemini,
-            mockGraph,
-            mockSearch,
-            mockContext,
+            mockGeminiService,
+            mockGeminiService,
+            mockGraphService,
+            mockSearchOrchestrator,
+            mockContextAssembler,
             mockFileTools
         );
     });

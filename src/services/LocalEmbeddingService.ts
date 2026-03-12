@@ -1,11 +1,11 @@
 import { Notice, requestUrl } from "obsidian";
 
 import { WORKER_CONSTANTS } from "../constants";
-import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../settings/types";
-import { WorkerMessage, ProgressPayload, ConfigureMessage } from "../types/worker.types";
+import { IVaultIntelligencePlugin, VaultIntelligenceSettings } from "../settings/types";
+import { EmbeddingPriority, IEmbeddingClient, IProvider } from "../types/providers";
+import { ConfigureMessage, ProgressPayload, WorkerMessage } from "../types/worker.types";
 import { logger } from "../utils/logger";
 import EmbeddingWorker from "../workers/embedding.worker";
-import { IEmbeddingService, EmbeddingPriority } from "./IEmbeddingService";
 import { ModelRegistry } from "./ModelRegistry";
 
 interface EmbeddingTask {
@@ -17,7 +17,7 @@ interface EmbeddingTask {
     title?: string;
 }
 
-export class LocalEmbeddingService implements IEmbeddingService {
+export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     private plugin: IVaultIntelligencePlugin;
     private settings: VaultIntelligenceSettings;
     private worker: Worker | null = null;
@@ -46,7 +46,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
      */
     public async forceRedownload() {
         // 1. Terminate the current worker to release any file locks/memory
-        this.terminate();
+        await this.terminate();
 
         // 2. Clear the Cache Storage (Shared between Main thread and Worker)
         // Transformers.js stores models in caches starting with "transformers-cache"
@@ -84,7 +84,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
         return this.settings.embeddingDimension;
     }
 
-    public async initialize() {
+    public async initialize(): Promise<void> {
         if (this.worker) return;
 
         // Reset circuit breaker if it's been more than reset window since last crash
@@ -106,7 +106,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
             this.worker = instance;
 
             this.worker.onmessage = (e: MessageEvent) => this._onMessage(e);
-            this.worker.onerror = (e: ErrorEvent) => {
+            this.worker.onerror = async (e: ErrorEvent) => {
                 let errorDetails = 'No error object';
                 if (e.error) {
                     if (e.error instanceof Error) {
@@ -150,7 +150,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
                     // Persist this stable mode if it's an early crash (likely environment mismatch)
                     if (isEarlyCrash && this.settings.embeddingThreads > 1) {
                         this.settings.embeddingThreads = 1;
-                        void this.plugin.saveSettings();
+                        await this.plugin.saveSettings();
                     }
                 }
 
@@ -161,7 +161,7 @@ export class LocalEmbeddingService implements IEmbeddingService {
 
                     // Persist Safe Mode
                     this.settings.embeddingSimd = false;
-                    void this.plugin.saveSettings();
+                    await this.plugin.saveSettings();
                 }
 
                 if (this.restartCount > WORKER_CONSTANTS.MAX_CRASH_RETRY) {
@@ -169,14 +169,13 @@ export class LocalEmbeddingService implements IEmbeddingService {
                     const msg = "Local embedding worker crashed repeatedly. Automatic restart disabled to prevent loop. Please try 'Force Download' in settings or switch models.";
                     logger.error(`[LocalEmbedding] ${msg}`);
                     new Notice(msg, 10000);
-                    this.terminate();
                     return;
                 }
 
                 new Notice(`Local embedding worker crashed (${this.restartCount}/3). Attempting to restart...`);
 
                 // 1. Terminate the zombie worker
-                this.terminate();
+                await this.terminate();
 
                 // 2. Reject all pending requests to unblock the queue
                 if (this.pendingRequests.size > 0) {
@@ -420,10 +419,11 @@ export class LocalEmbeddingService implements IEmbeddingService {
         }
     }
 
-    public terminate() {
+    public async terminate(): Promise<void> {
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
         }
+        await Promise.resolve();
     }
 }

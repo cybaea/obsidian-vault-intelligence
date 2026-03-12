@@ -1,20 +1,20 @@
-import { ItemView, WorkspaceLeaf, ButtonComponent, TextAreaComponent, Notice, MarkdownRenderer, Menu, TFile, setIcon, DropdownComponent, ToggleComponent, normalizePath, Events } from "obsidian";
+import { ButtonComponent, DropdownComponent, Events, ItemView, MarkdownRenderer, Menu, Notice, TFile, TextAreaComponent, ToggleComponent, WorkspaceLeaf, normalizePath, setIcon } from "obsidian";
 
-import { VIEW_TYPES, UI_STRINGS } from "../constants";
+import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
-import { GeminiService } from "../services/GeminiService";
 import { GraphService } from "../services/GraphService";
-import { IEmbeddingService } from "../services/IEmbeddingService";
 import { ModelRegistry } from "../services/ModelRegistry";
+import { IEmbeddingClient, IModelProvider, IReasoningClient } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
-    gemini: GeminiService;
+    reasoningClient: IReasoningClient;
+    provider: IModelProvider;
     graphService: GraphService;
-    embeddingService: IEmbeddingService;
+    embeddingService: IEmbeddingClient;
     agent: AgentService;
     private messages: ChatMessage[] = [];
     private isThinking = false;
@@ -31,17 +31,19 @@ export class ResearchChatView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        gemini: GeminiService,
+        reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
-        embeddingService: IEmbeddingService
+        embeddingService: IEmbeddingClient
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.gemini = gemini;
+        this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, gemini, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, reasoningClient, provider, graphService, embeddingService, plugin.settings);
         this.icon = "message-circle";
     }
 
@@ -213,9 +215,9 @@ export class ResearchChatView extends ItemView {
             if (response.files && response.files.length > 0) {
                 this.graphService.trigger("vault-intelligence:context-highlight", response.files);
             }
-        } catch (e) {
+        } catch (error: unknown) {
             this.isThinking = false;
-            const message = e instanceof Error ? e.message : String(e);
+            const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
         }
