@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
 import { App } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentService } from '../../src/services/AgentService';
 import { GraphService } from '../../src/services/GraphService';
+import { ProviderRegistry } from '../../src/services/ProviderRegistry';
 import { VaultIntelligenceSettings } from '../../src/settings';
 import { IEmbeddingClient, IModelProvider, IReasoningClient, UnifiedMessage } from '../../src/types/providers';
 
@@ -13,6 +12,7 @@ vi.mock('../../src/tools/ToolRegistry', () => {
         ToolRegistry: class {
             execute = vi.fn();
             getTools = vi.fn().mockReturnValue([]);
+            updateProvider = vi.fn();
         }
     };
 });
@@ -24,6 +24,7 @@ describe('AgentService Integration', () => {
     let mockGraphService: GraphService;
     let mockEmbeddingClient: IEmbeddingClient;
     let mockSettings: VaultIntelligenceSettings;
+    let mockProviderRegistry: ProviderRegistry;
 
     beforeEach(() => {
         mockApp = {
@@ -43,11 +44,12 @@ describe('AgentService Integration', () => {
             generateMessageStream: vi.fn(),
             generateStructured: vi.fn(),
             initialize: vi.fn(),
+            supportsCodeExecution: false,
             supportsStructuredOutput: true,
             supportsTools: true,
             supportsWebGrounding: true,
             terminate: vi.fn()
-        } as any;
+        } as unknown as Mocked<IReasoningClient & IModelProvider>;
 
         mockGraphService = {
             getSemanticNeighbors: vi.fn().mockResolvedValue([])
@@ -65,10 +67,14 @@ describe('AgentService Integration', () => {
             systemInstruction: 'You are an agent.'
         } as unknown as VaultIntelligenceSettings;
 
+        mockProviderRegistry = {
+            getModelProvider: vi.fn().mockReturnValue(mockReasoningClient),
+            getReasoningClient: vi.fn().mockReturnValue(mockReasoningClient)
+        } as unknown as ProviderRegistry;
+
         agentService = new AgentService(
             mockApp,
-            mockReasoningClient,
-            mockReasoningClient,
+            mockProviderRegistry,
             mockGraphService,
             mockEmbeddingClient,
             mockSettings
@@ -155,6 +161,3 @@ describe('AgentService Integration', () => {
         expect(result.text).toContain('reached the step limit');
     });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */

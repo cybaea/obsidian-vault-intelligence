@@ -6,10 +6,11 @@ import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { ToolRegistry } from "../tools/ToolRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, UnifiedMessage } from "../types/providers";
+import { IEmbeddingClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, UnifiedMessage, IReasoningClient, IModelProvider } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
+import { ProviderRegistry } from "./ProviderRegistry";
 import { SearchOrchestrator } from "./SearchOrchestrator";
 
 export interface ChatMessage {
@@ -40,8 +41,7 @@ export class AgentService {
     private app: App;
     private embeddingService: IEmbeddingClient;
     private graphService: GraphService;
-    private reasoningClient: IReasoningClient;
-    private provider: IModelProvider;
+    private providerRegistry: ProviderRegistry;
     private settings: VaultIntelligenceSettings;
 
     private contextAssembler: ContextAssembler;
@@ -50,27 +50,30 @@ export class AgentService {
 
     constructor(
         app: App,
-        reasoningClient: IReasoningClient,
-        provider: IModelProvider,
+        providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient,
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
-        this.reasoningClient = reasoningClient;
-        this.provider = provider;
+        this.providerRegistry = providerRegistry;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
 
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, this.reasoningClient, this.embeddingService, settings);
+        // Initialize with default providers from registry
+        const initialClient = this.providerRegistry.getReasoningClient();
+        const initialProvider = this.providerRegistry.getModelProvider();
+
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, initialClient, this.embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
         this.toolRegistry = new ToolRegistry(
             app,
             settings,
-            this.reasoningClient,
+            initialClient,
+            initialProvider,
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
@@ -113,6 +116,12 @@ export class AgentService {
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
+        const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
+        const provider: IModelProvider = this.providerRegistry.getModelProvider(options.modelId);
+
+        // Update ToolRegistry for this turn if model changed
+        this.toolRegistry.updateProvider(reasoningClient, provider);
+
         const history: UnifiedMessage[] = [
             ...messages.map(h => ({
                 content: h.text,
@@ -196,7 +205,7 @@ export class AgentService {
 
                 let modelResponseRawContent: unknown[] | undefined;
 
-                const stream = this.reasoningClient.generateMessageStream(formattedHistory, {
+                const stream = reasoningClient.generateMessageStream(formattedHistory, {
                     modelId: options.modelId,
                     signal: options.signal,
                     systemInstruction: systemInstruction,
@@ -303,7 +312,7 @@ export class AgentService {
             const errorMessage = e instanceof Error ? e.message : String(e);
 
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
-                yield { text: `\n\nI encountered an error connecting to Gemini (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
+                yield { text: `\n\nI encountered an error connecting to the AI provider (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
             } else {
                 yield { text: `\n\nSorry, I encountered an error: ${errorMessage}` };
             }

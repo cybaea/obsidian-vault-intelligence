@@ -12,6 +12,7 @@ vi.mock('../../src/tools/ToolRegistry', () => ({
     ToolRegistry: class {
         execute = vi.fn();
         getTools = vi.fn().mockReturnValue([]);
+        updateProvider = vi.fn();
     }
 }));
 
@@ -48,10 +49,14 @@ describe('AgentService Streaming', () => {
             systemInstruction: 'You are an agent.'
         };
 
+        const mockProviderRegistry = {
+            getModelProvider: vi.fn().mockReturnValue(mockReasoningClient),
+            getReasoningClient: vi.fn().mockReturnValue(mockReasoningClient)
+        };
+
         service = new AgentService(
             mockApp,
-            mockReasoningClient,
-            mockReasoningClient,
+            mockProviderRegistry as any,
             mockGraphService,
             mockEmbeddingClient,
             mockSettings

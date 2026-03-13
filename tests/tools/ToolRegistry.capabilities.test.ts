@@ -50,6 +50,7 @@ describe('ToolRegistry Capabilities', () => {
             mockApp,
             mockSettings,
             provider as unknown as IReasoningClient,
+            provider, // New provider parameter
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,

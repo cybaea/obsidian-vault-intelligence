@@ -24,6 +24,7 @@ export class ToolRegistry {
     private app: App;
     private settings: VaultIntelligenceSettings;
     private reasoningClient: IReasoningClient; 
+    private provider: IModelProvider;
     private graphService: GraphService;
     private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
@@ -33,6 +34,7 @@ export class ToolRegistry {
         app: App,
         settings: VaultIntelligenceSettings,
         reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
         searchOrchestrator: SearchOrchestrator,
         contextAssembler: ContextAssembler,
@@ -41,6 +43,7 @@ export class ToolRegistry {
         this.app = app;
         this.settings = settings;
         this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.searchOrchestrator = searchOrchestrator;
         this.contextAssembler = contextAssembler;
@@ -48,11 +51,20 @@ export class ToolRegistry {
     }
 
     /**
+     * Updates the reasoning client and provider used by the registry.
+     * Needed when switching between local and cloud providers dynamically.
+     */
+    public updateProvider(reasoningClient: IReasoningClient, provider: IModelProvider): void {
+        this.reasoningClient = reasoningClient;
+        this.provider = provider;
+        this.searchOrchestrator.updateReasoningClient(reasoningClient);
+    }
+
+    /**
      * Returns the list of available tools types abstracted from SDKs.
      */
     public getTools(enableCodeExecution?: boolean): IToolDefinition[] {
-        const capabilities = this.reasoningClient as unknown as IModelProvider;
-        if (!capabilities.supportsTools) {
+        if (!this.provider.supportsTools) {
              return [];
         }
 
@@ -86,7 +98,7 @@ export class ToolRegistry {
         });
 
         // 3. Google Search (Gated by provider capability)
-        if (capabilities.supportsWebGrounding) {
+        if (this.provider.supportsWebGrounding) {
             tools.push({
                 description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
                 name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
@@ -270,7 +282,7 @@ export class ToolRegistry {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
         logger.info(`Delegating search to sub-agent for: ${query}`);
-        if ((this.reasoningClient as unknown as IModelProvider).supportsWebGrounding) {
+        if (this.provider.supportsWebGrounding) {
             const result = await this.reasoningClient.searchWithGrounding(query);
             return { result: result.text };
         }
@@ -337,7 +349,7 @@ export class ToolRegistry {
 
         const task = args.task as string;
         logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-        if ((this.reasoningClient as unknown as IModelProvider).supportsCodeExecution) {
+        if (this.provider.supportsCodeExecution) {
             const result = await this.reasoningClient.solveWithCode(task);
             return { result: result.text };
         }

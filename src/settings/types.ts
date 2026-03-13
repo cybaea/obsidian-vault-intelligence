@@ -47,12 +47,12 @@ export interface VaultIntelligenceSettings {
     groundingModel: string;
     indexingDelayMs: number;
     indexVersion: number;
-    /** Calibration constant for BM25 score normalization. Higher = more aggressive normalization. */
     keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
     minSimilarityScore: number;
     modelCacheDurationDays: number;
+    ollamaEndpoint: string;
     ontologyPath: string;
     plansRetentionDays: number;
     previousVersion: string;
@@ -168,6 +168,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
+    ollamaEndpoint: 'http://localhost:11434',
     ontologyPath: 'Ontology',
     plansRetentionDays: 7,
     previousVersion: '0.0.0',

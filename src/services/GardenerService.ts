@@ -7,6 +7,7 @@ import { IReasoningClient } from "../types/providers";
 import { logger } from "../utils/logger";
 import { GardenerStateService } from "./GardenerStateService";
 import { OntologyService } from "./OntologyService";
+import { ProviderRegistry } from "./ProviderRegistry";
 
 /**
  * Zod Schema for a single refactoring action.
@@ -46,14 +47,14 @@ export type GardenerPlan = z.infer<typeof GardenerPlanSchema>;
  */
 export class GardenerService {
     private app: App;
-    private reasoningClient: IReasoningClient;
+    private providerRegistry: ProviderRegistry;
     private ontology: OntologyService;
     private settings: VaultIntelligenceSettings;
     private state: GardenerStateService;
 
-    constructor(app: App, reasoningClient: IReasoningClient, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
+    constructor(app: App, providerRegistry: ProviderRegistry, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
         this.app = app;
-        this.reasoningClient = reasoningClient;
+        this.providerRegistry = providerRegistry;
         this.ontology = ontology;
         this.settings = settings;
         this.state = state;
@@ -197,7 +198,8 @@ NOTES:
 ${JSON.stringify(context, null, 2)}
 `.trim();
 
-            const parsedPlan = await this.reasoningClient.generateStructured(
+            const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(this.settings.gardenerModel);
+            const parsedPlan = await reasoningClient.generateStructured(
                 [{ content: prompt, role: "user" }],
                 GardenerPlanSchema,
                 {

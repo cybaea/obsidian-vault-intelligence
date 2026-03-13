@@ -37,6 +37,13 @@ export class SearchOrchestrator {
     }
 
     /**
+     * Updates the reasoning client used for Analyst search (Loop 2).
+     */
+    public updateReasoningClient(client: IReasoningClient): void {
+        this.reasoningClient = client;
+    }
+
+    /**
      * Performs a hybrid search (Vector + Keyword) on the vault.
      * @param query - The user's search query.
      * @param limit - Maximum number of final results to return.

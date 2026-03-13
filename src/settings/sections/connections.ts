@@ -127,7 +127,19 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         });
     }
 
-    // --- 2. Model List Management ---
+    // --- 2. Ollama Endpoint Setting ---
+    new Setting(containerEl)
+        .setName('Ollama endpoint')
+        .setDesc('Server url for local model provider.')
+        .addText(text => text
+            .setPlaceholder('')
+            .setValue(plugin.settings.ollamaEndpoint || '')
+            .onChange(async (value) => {
+                plugin.settings.ollamaEndpoint = value;
+                await plugin.saveSettings();
+            }));
+
+    // --- 3. Model List Management ---
     new Setting(containerEl).setName('Model management').setHeading();
 
     new Setting(containerEl)

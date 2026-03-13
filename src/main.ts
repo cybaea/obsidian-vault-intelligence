@@ -11,6 +11,7 @@ import { MetadataManager } from "./services/MetadataManager";
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
 import { PersistenceManager } from "./services/PersistenceManager";
+import { ProviderRegistry } from "./services/ProviderRegistry";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { WorkerManager } from "./services/WorkerManager";
@@ -112,6 +113,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiProvider;
+	providerRegistry: ProviderRegistry;
 	embeddingService: IEmbeddingClient;
 	vaultManager: VaultManager;
 	graphService: GraphService;
@@ -152,8 +154,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Initialize Logger
 		logger.setLevel(this.settings.logLevel);
 
-		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
+		// 1. Initialize Base Services
 		this.geminiService = new GeminiProvider(this.settings, this.app);
+		this.providerRegistry = new ProviderRegistry(this.settings, this.app, this.geminiService);
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey) {
@@ -186,7 +189,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
 		this.gardenerStateService = new GardenerStateService(this.app, this);
-		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
+		this.gardenerService = new GardenerService(this.app, this.providerRegistry, this.ontologyService, this.settings, this.gardenerStateService);
 
 		// 5. Initialize GraphSyncOrchestrator (now that dependencies are ready)
 		this.graphSyncOrchestrator = new GraphSyncOrchestrator(
@@ -246,7 +249,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Register Views
 		this.registerView(
 			VIEW_TYPES.RESEARCH_CHAT,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.geminiService, this.graphService, this.embeddingService)
+			(leaf) => new ResearchChatView(leaf, this, this.providerRegistry, this.graphService, this.embeddingService)
 		);
 		this.registerView(
 			VIEW_TYPES.SEMANTIC_GRAPH,

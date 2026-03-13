@@ -11,6 +11,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Local model support (Ollama)**: Full production-ready support for local models via Ollama, including token-by-token streaming and high-reliability JSON mode.
 -   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token with live Markdown formatting (bold, lists, headers) and a flicker-free rendering strategy.
 -   **Real-time tool status**: The chat interface now displays live status updates (eg "Thinking...", "Searching...") when the agent is performing background tasks.
 -   **Stop button**: Added a "Stop" button to cancel long-running agent responses or recursive tool loops instantly.
@@ -22,6 +23,11 @@ New features are added in the "Unreleased" section.
 -   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.
 
 ### Developer features
+
+-   **Ollama integration (Phase 3)**: Finalised the local model provider with strict type safety, NDJSON streaming, and high-fidelity JSON mode support.
+-   **Typed model discovery**: Implemented explicit interfaces for Ollama model listing and metadata extraction in `ModelRegistry`, eliminating all `any` usages in the retrieval pipeline.
+-   **Hardened test suite**: Eliminated all `any` mocks and lint bypasses from `AgentService.test.ts`, ensuring 100% type coverage for agent orchestration tests.
+-   **Standardised sorting**: Enforced strict alphabetical sorting across all service interfaces and plugin settings to maintain a premium codebase.
 
 -   **Asynchronous streaming architecture (Phase 2)**: Refactored `AgentService` and `GeminiProvider` to support true token-by-token streaming via asynchronous generators.
 -   **Recursive tool loop streaming**: Implemented a streaming orchestrator in `AgentService.chatStream` that allows for interleaving text tokens with tool status updates and recursive calls without breaking the stream.

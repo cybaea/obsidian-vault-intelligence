@@ -72,6 +72,7 @@ describe('ToolRegistry Security', () => {
             mockApp,
             mockSettings,
             mockGeminiService,
+            mockGeminiService, // Pass mockGeminiService twice since it's used as both reasoning client and provider
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,

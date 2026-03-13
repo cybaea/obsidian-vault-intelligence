@@ -1,18 +1,18 @@
-import { ButtonComponent, DropdownComponent, Events, ItemView, MarkdownRenderer, Menu, Notice, TFile, TextAreaComponent, ToggleComponent, WorkspaceLeaf, normalizePath, setIcon } from "obsidian";
+import { ButtonComponent, Component, DropdownComponent, Events, ItemView, MarkdownRenderer, Menu, Notice, TFile, TextAreaComponent, ToggleComponent, WorkspaceLeaf, normalizePath, setIcon } from "obsidian";
 
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { GraphService } from "../services/GraphService";
 import { ModelRegistry } from "../services/ModelRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, ToolCall, ToolResult } from "../types/providers";
+import { ProviderRegistry } from "../services/ProviderRegistry";
+import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
-    reasoningClient: IReasoningClient;
-    provider: IModelProvider;
+    providerRegistry: ProviderRegistry;
     graphService: GraphService;
     embeddingService: IEmbeddingClient;
     agent: AgentService;
@@ -33,19 +33,17 @@ export class ResearchChatView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        reasoningClient: IReasoningClient,
-        provider: IModelProvider,
+        providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.reasoningClient = reasoningClient;
-        this.provider = provider;
+        this.providerRegistry = providerRegistry;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, reasoningClient, provider, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings);
         this.icon = "message-circle";
     }
 
@@ -243,6 +241,7 @@ export class ResearchChatView extends ItemView {
             let lastStatus = "";
             let lastRenderTime = 0;
             let renderInProgress = false;
+            let streamingComponent: Component | null = null;
 
             const updateStreamingUI = async (force = false) => {
                 const now = Date.now();
@@ -250,13 +249,23 @@ export class ResearchChatView extends ItemView {
                 
                 renderInProgress = true;
                 try {
+                    // 1. Unload previous streaming artifacts to prevent memory leaks
+                    if (streamingComponent) {
+                        streamingComponent.unload();
+                    }
+                    
+                    // 2. Create a fresh sandbox for this render step
+                    streamingComponent = new Component();
+                    streamingComponent.load();
+
                     const tempEl = document.createElement('div');
-                    await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", this);
+                    
+                    // 3. Render into the temporary component, NOT `this`
+                    await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
+                    
                     if (lastMessageNode) {
-                        lastMessageNode.empty();
-                        while (tempEl.firstChild) {
-                            lastMessageNode.appendChild(tempEl.firstChild);
-                        }
+                        // 4. Optimization: Use replaceChildren instead of manual while loop
+                        lastMessageNode.replaceChildren(...Array.from(tempEl.childNodes));
                         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
                     }
                     lastRenderTime = Date.now();
@@ -311,6 +320,12 @@ export class ResearchChatView extends ItemView {
                 }
             }
 
+            // 5. When the stream is entirely finished, clean up the sandbox
+            if (streamingComponent) {
+                (streamingComponent as Component).unload();
+                streamingComponent = null;
+            }
+
             modelMsg.thought = undefined;
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
@@ -320,6 +335,14 @@ export class ResearchChatView extends ItemView {
         } catch (error: unknown) {
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
+            
+            // Check for intentional abortion
+            if (this.currentAbortController?.signal.aborted) {
+                this.currentAbortController = null;
+                void this.renderMessages();
+                return;
+            }
+            
             this.currentAbortController = null;
             const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);

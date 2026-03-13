@@ -1,6 +1,7 @@
 import { App, requestUrl } from "obsidian";
 
 import { MODEL_REGISTRY_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
 interface InternalApp {
@@ -43,6 +44,38 @@ interface GeminiModel {
 
 interface GeminiApiResponse {
     models: GeminiModel[];
+}
+
+interface OllamaModel {
+    details: {
+        families: string[] | null;
+        family: string;
+        format: string;
+        parameter_size: string;
+        quantization_level: string;
+    };
+    digest: string;
+    modified_at: string;
+    name: string;
+    size: number;
+}
+
+interface OllamaTagsResponse {
+    models: OllamaModel[];
+}
+
+interface OllamaShowResponse {
+    details: {
+        families: string[] | null;
+        family: string;
+        format: string;
+        parameter_size: string;
+        quantization_level: string;
+    };
+    model_info: Record<string, unknown>;
+    modelfile: string;
+    parameters: string;
+    template: string;
 }
 
 export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
@@ -133,7 +166,7 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, throwOnError: boolean = false): Promise<void> {
+    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false): Promise<void> {
         if (!apiKey || this.isFetching) return;
 
         // 1. Check Memory Cache
@@ -141,7 +174,8 @@ export class ModelRegistry {
         const cacheDurationMs = cacheDurationDays * 24 * 60 * 60 * 1000;
 
         if (this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
-            return;
+            // Even if cached, we might want to refresh Ollama if it's local
+            if (!forceUpdate) return;
         }
 
         // 2. Check LocalStorage Cache
@@ -164,39 +198,22 @@ export class ModelRegistry {
             }
         }
 
-        // 3. Fetch from API
-        logger.debug("Fetching models from Gemini API...");
+        // 3. Fetch from APIs
+        logger.debug("Fetching models from APIs...");
         this.isFetching = true;
         try {
-            const response = await requestUrl({
-                method: 'GET',
-                url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-            });
+            const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("obsidian-vault-intelligence");
+            const settings = plugin?.settings;
+            if (!settings) throw new Error("Vault Intelligence settings not found during model fetch.");
+            
+            // Parallel fetch
+            const [geminiResult, ollamaModels] = await Promise.all([
+                this.fetchGeminiModels(apiKey),
+                this.fetchOllamaModels(settings.ollamaEndpoint)
+            ]);
 
-            if (response.status !== 200) {
-                logger.error(`API error ${response.status}`, response.text);
-                throw new Error(`Failed to fetch models: ${response.status}`);
-            }
-
-            const data = response.json as GeminiApiResponse;
-            if (!data || !data.models) {
-                logger.error("Invalid API response structure", data);
-                throw new Error("Invalid API response");
-            }
-
-            this.rawApiResponse = data;
-            const fetchedModels: ModelDefinition[] = data.models.map((m: GeminiModel) => ({
-                description: m.description,
-                id: m.name.replace('models/', ''),
-                inputTokenLimit: m.inputTokenLimit,
-                label: m.displayName,
-                outputTokenLimit: m.outputTokenLimit,
-                provider: 'gemini',
-                supportedMethods: m.supportedGenerationMethods || []
-            }));
-
-            logger.debug(`Successfully fetched ${fetchedModels.length} models`);
-            this.dynamicModels = this.sortModels(fetchedModels);
+            this.dynamicModels = this.sortModels([...geminiResult.models, ...ollamaModels]);
+            this.rawApiResponse = geminiResult.rawResponse;
             this.lastFetchTime = Date.now();
 
             if (cacheDurationDays > 0) {
@@ -221,6 +238,77 @@ export class ModelRegistry {
             }
         } finally {
             this.isFetching = false;
+        }
+    }
+
+    private static async fetchGeminiModels(apiKey: string): Promise<{ models: ModelDefinition[], rawResponse: GeminiApiResponse }> {
+        const response = await requestUrl({
+            method: 'GET',
+            url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        });
+
+        if (response.status !== 200) {
+            throw new Error(`Gemini API error ${response.status}`);
+        }
+
+        const data = response.json as GeminiApiResponse;
+        const models = data.models.map((m: GeminiModel) => ({
+            description: m.description,
+            id: m.name.replace('models/', ''),
+            inputTokenLimit: m.inputTokenLimit,
+            label: m.displayName,
+            outputTokenLimit: m.outputTokenLimit,
+            provider: 'gemini' as const,
+            supportedMethods: m.supportedGenerationMethods || []
+        }));
+
+        return { models, rawResponse: data };
+    }
+
+    private static async fetchOllamaModels(endpoint: string): Promise<ModelDefinition[]> {
+        if (!endpoint) return [];
+        
+        try {
+            const response = await requestUrl({
+                method: 'GET',
+                url: `${endpoint}/api/tags`
+            });
+
+            if (response.status !== 200) return [];
+            
+            const data = response.json as OllamaTagsResponse;
+            const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => ({
+                description: `Local model: ${m.name}`,
+                id: `ollama/${m.name}`,
+                label: `${m.name} (Ollama)`,
+                provider: 'local' as const,
+                supportedMethods: ['generateContent'] 
+            }));
+
+            // Fetch detail for first model or all if feasible (caching would be better)
+            for (const model of models) {
+                 try {
+                     const detailResponse = await requestUrl({
+                         body: JSON.stringify({ name: model.id.replace('ollama/', '') }),
+                         method: 'POST',
+                         url: `${endpoint}/api/show`
+                     });
+                     if (detailResponse.status === 200) {
+                         const details = detailResponse.json as OllamaShowResponse;
+                         const ctx = (details.model_info?.["llama.context_length"] as number) || 
+                                     (details.model_info?.["phi3.context_length"] as number) || 
+                                     (details.model_info?.["qwen2.context_length"] as number) || 4096;
+                         model.inputTokenLimit = ctx;
+                     }
+                 } catch (e) {
+                     logger.debug(`Failed to fetch details for ${model.id}`, e);
+                 }
+            }
+
+            return models;
+        } catch (e) {
+            logger.debug("Ollama models not available", e);
+            return [];
         }
     }
 
@@ -263,7 +351,7 @@ export class ModelRegistry {
     public static getChatModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
-            m.provider === 'gemini' &&
+            (m.provider === 'gemini' || m.provider === 'local') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&

@@ -124,6 +124,10 @@ vi.mock('obsidian', async (importOriginal) => {
     const actual = await importOriginal() as any;
     return {
         ...actual,
+        Component: class {
+            load() { return this; }
+            unload() { return this; }
+        },
         ButtonComponent: class {
             buttonEl = new MockElement();
             onClick() { return this; }
@@ -178,11 +182,14 @@ describe('ResearchChatView Rendering', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        const mockProviderRegistry = {
+            getModelProvider: vi.fn(),
+            getReasoningClient: vi.fn()
+        };
         view = new ResearchChatView(
             {} as any,
             mockPlugin,
-            mockReasoningClient,
-            mockProvider,
+            mockProviderRegistry as any,
             mockGraphService,
             mockEmbeddingService
         );
