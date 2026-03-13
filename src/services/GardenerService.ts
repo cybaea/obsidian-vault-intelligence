@@ -6,6 +6,7 @@ import { VaultIntelligenceSettings, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../se
 import { IReasoningClient } from "../types/providers";
 import { logger } from "../utils/logger";
 import { GardenerStateService } from "./GardenerStateService";
+import { ModelRegistry } from "./ModelRegistry";
 import { OntologyService } from "./OntologyService";
 import { ProviderRegistry } from "./ProviderRegistry";
 
@@ -134,7 +135,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
             // 2. Token Estimation & Budgeting
             const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
-            const contextBudget = this.settings.gardenerContextBudget;
+            const contextBudget = ModelRegistry.resolveContextBudget(this.settings.gardenerModel, this.settings.modelContextOverrides, this.settings.gardenerContextBudget);
 
             // Estimate base prompt overhead
             const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 2000) / charsPerToken;
@@ -203,6 +204,7 @@ ${JSON.stringify(context, null, 2)}
                 [{ content: prompt, role: "user" }],
                 GardenerPlanSchema,
                 {
+                    contextWindowTokens: contextBudget,
                     jsonSchema: {
                         properties: {
                             actions: {

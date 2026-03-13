@@ -130,8 +130,7 @@ export class AgentService {
                 role: h.role as "user" | "model" | "tool",
                 toolCalls: h.toolCalls,
                 toolResults: h.toolResults
-            })),
-            { content: currentPrompt, role: 'user' }
+            }))
         ];
 
         if (contextFiles.length === 0) {
@@ -162,7 +161,7 @@ export class AgentService {
 
         const usedFiles = new Set<string>();
         const createdFiles = new Set<string>();
-        contextFiles.forEach(f => usedFiles.add(normalizePath(f.path)));
+        const wereFilesExplicitlyMentioned = contextFiles.length > 0;
 
         const formattedHistory: UnifiedMessage[] = history.map(h => ({
             content: h.content,
@@ -183,10 +182,17 @@ export class AgentService {
             const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
             const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            const { context } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
+            const { context, usedFiles: assembledFiles } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
 
             if (context) {
+                if (wereFilesExplicitlyMentioned && assembledFiles.length < contextFiles.length) {
+                    const skipped = contextFiles.length - assembledFiles.length;
+                    currentPrompt = `[SYSTEM NOTE: ${skipped} context files were skipped because they exceeded the context window budget for the selected model.]\n\n` + currentPrompt;
+                }
                 currentPrompt = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${currentPrompt}`;
+
+                // ONLY track files that actually survived the budget
+                assembledFiles.forEach(f => usedFiles.add(normalizePath(f)));
             }
         }
 
@@ -259,6 +265,7 @@ export class AgentService {
                             createdFiles: createdFiles,
                             enableAgentWriteAccess: options.enableAgentWriteAccess,
                             enableCodeExecution: options.enableCodeExecution,
+                            modelId: options.modelId,
                             name: call.name,
                             usedFiles: usedFiles
                         });
@@ -329,7 +336,7 @@ export class AgentService {
      * @param inputMessage - The raw message from the user.
      * @returns Object containing resolved context files, the clean message, and any warnings.
      */
-    public async prepareContext(inputMessage: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
+    public async prepareContext(inputMessage: string, modelId?: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
         const resultFiles: TFile[] = [];
         const warnings: string[] = [];
         let message = inputMessage;
@@ -362,7 +369,7 @@ export class AgentService {
                     }
                 } else if (abstractFile instanceof TFolder) {
                     // Expand folder into files recursively
-                    await this.processFolderContext(abstractFile, message, allPotentialFiles, warnings);
+                    await this.processFolderContext(abstractFile, message, allPotentialFiles, warnings, modelId);
                 }
             }
         }
@@ -372,7 +379,7 @@ export class AgentService {
         return { cleanMessage: message, contextFiles: resultFiles, warnings };
     }
 
-    private async processFolderContext(folder: TFolder, query: string, collector: TFile[], warnings: string[]) {
+    private async processFolderContext(folder: TFolder, query: string, collector: TFile[], warnings: string[], modelId?: string) {
         // TFolder is a type from 'obsidian', assuming it's imported at the top of the file.
 
         const folderPath = folder.path;
@@ -403,16 +410,17 @@ export class AgentService {
 
         // Calculate budget
         // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
-        const activeModel = this.settings.chatModel;
+        const activeModel = modelId || this.settings.chatModel;
         const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
+        const maxFiles = this.settings.contextMaxFiles || SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES;
 
         let currentSize = 0;
         const filesToInclude: TFile[] = [];
 
         for (const file of sortedFiles) {
             const size = file.stat.size;
-            if (currentSize + size > charBudget) break;
+            if (currentSize + size > charBudget || filesToInclude.length >= maxFiles) break;
 
             filesToInclude.push(file);
             currentSize += size;
@@ -420,7 +428,8 @@ export class AgentService {
 
         if (filesToInclude.length < folderFiles.length) {
             const method = similarityResults.length > 0 ? "similarity-ranked" : "most recent";
-            warnings.push(`Context limit reached for folder "${folder.name}". Included ${filesToInclude.length} ${method} files.`);
+            const limitReason = filesToInclude.length >= maxFiles ? `Max file limit (${maxFiles})` : `Context limit (~${totalTokens.toLocaleString()} tokens)`;
+            warnings.push(`${limitReason} reached for folder "${folder.name}". Included ${filesToInclude.length} ${method} files.`);
         }
 
         filesToInclude.forEach(f => {

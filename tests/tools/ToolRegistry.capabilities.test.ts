@@ -85,4 +85,26 @@ describe('ToolRegistry Capabilities', () => {
         const googleSearchTool = tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH);
         expect(googleSearchTool).toBeUndefined();
     });
+
+    it('should use the provided modelId to resolve context budget during vault_search', async () => {
+        mockProvider.supportsTools = true;
+        
+        mockSearchOrchestrator.search = vi.fn().mockResolvedValue([{path: 'hello.md', score: 1.0}]);
+        mockContextAssembler.assemble = vi.fn().mockResolvedValue({context: 'hello', usedFiles: ['hello.md']});
+
+        const registry = createRegistry(mockProvider);
+
+        const { ModelRegistry } = await import('../../src/services/ModelRegistry');
+        const resolveSpy = vi.spyOn(ModelRegistry, 'resolveContextBudget').mockReturnValue(8192);
+
+        await registry.execute({
+            args: { query: 'test' },
+            createdFiles: new Set(),
+            modelId: 'local/test-agent',
+            name: AGENT_CONSTANTS.TOOLS.VAULT_SEARCH,
+            usedFiles: new Set()
+        });
+
+        expect(resolveSpy).toHaveBeenCalledWith('local/test-agent', mockSettings.modelContextOverrides, mockSettings.contextWindowTokens);
+    });
 });

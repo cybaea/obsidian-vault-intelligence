@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentService } from '../../src/services/AgentService';
@@ -159,5 +159,40 @@ describe('AgentService Integration', () => {
         // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest mock access
         expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(5);
         expect(result.text).toContain('reached the step limit');
+    });
+
+    it('should drop files exceeding the context budget and inject a SYSTEM NOTE into the prompt', async () => {
+        const assemblerSpy = vi.spyOn((agentService as unknown as { contextAssembler: { assemble: Mock } }).contextAssembler, 'assemble').mockResolvedValue({
+            context: 'Test content',
+            usedFiles: ['file1.md'] // Only one survived
+        });
+
+        mockReasoningClient.generateMessageStream.mockImplementationOnce(() => {
+            return (async function* () {
+                await Promise.resolve();
+                yield { text: 'Done' };
+                yield { files: ['file1.md'], isDone: true }; // AgentService passes usedFiles here
+            })();
+        });
+
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
+        const mockFile1 = { path: 'file1.md', stat: { size: 100 } } as unknown as TFile;
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
+        const mockFile2 = { path: 'file2.md', stat: { size: 100 } } as unknown as TFile;
+
+        const result = await agentService.chat([], "Hello", [mockFile1, mockFile2], { modelId: 'local/test-local-model' });
+
+        expect(result.files).toEqual(['file1.md']); // Verifying DOM blowout fix prevents file2.md being added
+        expect(assemblerSpy).toHaveBeenCalled();
+
+        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
+        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
+        
+        const firstCall = gm.mock.calls[0] as unknown[];
+        const firstCallHistory = firstCall[0] as UnifiedMessage[];
+        const promptSentToModel = firstCallHistory[0]?.content || "";
+        
+        expect(promptSentToModel).toContain('[SYSTEM NOTE: 1 context files were skipped');
     });
 });

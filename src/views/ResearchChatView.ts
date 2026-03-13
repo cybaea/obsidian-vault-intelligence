@@ -212,7 +212,8 @@ export class ResearchChatView extends ItemView {
         }
 
         try {
-            const { cleanMessage, contextFiles, warnings } = await this.agent.prepareContext(text);
+            const activeModelId = this.temporaryModelId ?? this.plugin.settings.chatModel;
+            const { cleanMessage, contextFiles, warnings } = await this.agent.prepareContext(text, activeModelId);
 
             if (warnings && warnings.length > 0) {
                 warnings.forEach((w: string) => new Notice(w));

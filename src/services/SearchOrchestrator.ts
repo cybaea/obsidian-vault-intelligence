@@ -152,6 +152,7 @@ export class SearchOrchestrator {
                         },
                         type: "array"
                     },
+                    modelId: this.settings.reRankingModel,
                     systemInstruction: instruction
                 }
             );

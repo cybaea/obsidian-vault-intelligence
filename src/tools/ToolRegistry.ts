@@ -17,6 +17,7 @@ export interface ToolExecutionParams {
     createdFiles: Set<string>;
     enableAgentWriteAccess?: boolean;
     enableCodeExecution?: boolean;
+    modelId?: string;
     name: string;
     usedFiles: Set<string>;
 }
@@ -226,7 +227,7 @@ export class ToolRegistry {
      * Executes a tool by name.
      */
     public async execute(params: ToolExecutionParams): Promise<Record<string, unknown>> {
-        const { args, createdFiles, enableAgentWriteAccess, enableCodeExecution, name, usedFiles } = params;
+        const { args, createdFiles, enableAgentWriteAccess, enableCodeExecution, modelId, name, usedFiles } = params;
         const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
         const isWriteEnabled = enableAgentWriteAccess !== undefined ? enableAgentWriteAccess : this.settings.enableAgentWriteAccess;
 
@@ -238,7 +239,7 @@ export class ToolRegistry {
                     return await this.executeGoogleSearch(args);
 
                 case AGENT_CONSTANTS.TOOLS.VAULT_SEARCH:
-                    return await this.executeVaultSearch(args, usedFiles);
+                    return await this.executeVaultSearch(args, usedFiles, modelId);
 
                 case AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES:
                     return await this.executeGraphExplorer(args);
@@ -290,7 +291,7 @@ export class ToolRegistry {
         return { error: "Google Search is not supported by the current provider." };
     }
 
-    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>) {
+    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>, modelId?: string) {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
 
@@ -307,7 +308,7 @@ export class ToolRegistry {
             return { result: "No relevant notes found." };
         }
 
-        const activeModel = this.settings.chatModel;
+        const activeModel = modelId || this.settings.chatModel;
         const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
