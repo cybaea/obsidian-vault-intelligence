@@ -245,6 +245,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
             const decoder = new TextDecoder();
             let buffer = "";
+            let fullMessageText = "";
 
             try {
                 while (true) {
@@ -264,6 +265,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             const chunk = JSON.parse(line) as OllamaChatChunk;
                             
                             if (chunk.message) {
+                                fullMessageText += chunk.message.content;
                                 yield {
                                     text: chunk.message.content,
                                     toolCalls: chunk.message.tool_calls?.map(tc => ({
@@ -274,7 +276,20 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             }
 
                             if (chunk.done) {
-                                yield { isDone: true };
+                                let extractedToolCalls;
+                                const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+                                if (toolMatch && toolMatch[1]) {
+                                    try {
+                                        extractedToolCalls = [JSON.parse(toolMatch[1])];
+                                    } catch (parseErr) {
+                                        logger.warn("[Ollama] Failed to parse ReAct JSON", parseErr, toolMatch[1]);
+                                    }
+                                }
+
+                                yield { 
+                                    isDone: true,
+                                    toolCalls: extractedToolCalls
+                                };
                             }
                         } catch (parseError) {
                             logger.error("[Ollama] Failed to parse NDJSON line", parseError, line);
@@ -376,6 +391,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const res = await promise;
         const decoder = new TextDecoder();
         let buffer = "";
+        let fullMessageText = "";
 
         try {
             for await (const chunk of res) {
@@ -392,6 +408,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     const data = JSON.parse(line) as OllamaChatChunk;
                     
                     if (data.message) {
+                        fullMessageText += data.message.content;
                         yield {
                             text: data.message.content,
                             toolCalls: data.message.tool_calls?.map(tc => ({
@@ -402,10 +419,21 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     }
 
                     if (data.done) {
+                        let extractedToolCalls;
+                        const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+                        if (toolMatch && toolMatch[1]) {
+                            try {
+                                extractedToolCalls = [JSON.parse(toolMatch[1])];
+                            } catch (parseErr) {
+                                logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
+                            }
+                        }
+
                         // Pass exact token telemetry back to service
                         yield { 
                             isDone: true,
-                            tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0)
+                            tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
+                            toolCalls: extractedToolCalls
                         };
                     }
                 }
@@ -493,19 +521,30 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId);
 
         // Map UnifiedMessage roles/content to Ollama format
-        const ollamaMessages: OllamaMessage[] = messages.map(m => ({
-            content: m.content,
-            // Ollama expects 'assistant' and 'tool' (recent versions)
-            role: m.role === "model" ? "assistant" : m.role,
-            // Map tool results back correctly
-            tool_call_id: m.toolResults?.[0]?.id,
-            tool_calls: m.toolCalls?.map(tc => ({
-                function: {
-                    arguments: tc.args,
-                    name: tc.name
-                }
-            }))
-        }));
+        const useNativeTools = details?.supportedMethods?.includes("nativeTools");
+
+        const ollamaMessages: OllamaMessage[] = messages.map(m => {
+            if (m.role === "tool" && !useNativeTools) {
+                return {
+                    content: `Tool Execution Result:\n${JSON.stringify(m.toolResults)}\n\nAnalyze the result and continue your response.`,
+                    role: "user" // Fallback for lack of tool role
+                };
+            }
+            
+            return {
+                content: m.content || (m.toolCalls && !useNativeTools ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : ""),
+                // Ollama expects 'assistant' and 'tool' (recent versions)
+                role: m.role === "model" ? "assistant" : m.role,
+                // Map tool results back correctly (only for native)
+                tool_call_id: useNativeTools ? m.toolResults?.[0]?.id : undefined,
+                tool_calls: useNativeTools && m.toolCalls ? m.toolCalls.map(tc => ({
+                    function: {
+                        arguments: tc.args,
+                        name: tc.name
+                    }
+                })) : undefined
+            };
+        });
 
         // Insert system instruction if provided
         if (options.systemInstruction) {
@@ -544,17 +583,29 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
         // Map tools if available
         if (options.tools && options.tools.length > 0) {
-            requestBody.tools = options.tools.map(t => {
-                const params = t.parameters as Record<string, unknown>;
-                return {
-                    function: {
-                        description: t.description,
-                        name: t.name,
-                        parameters: params
-                    },
-                    type: "function"
-                };
-            });
+            if (useNativeTools) {
+                requestBody.tools = options.tools.map(t => {
+                    const params = t.parameters as Record<string, unknown>;
+                    return {
+                        function: {
+                            description: t.description,
+                            name: t.name,
+                            parameters: params
+                        },
+                        type: "function"
+                    };
+                });
+            } else {
+                // ReAct Polyfill
+                const toolsDesc = options.tools.map(t => `- ${t.name}: ${t.description}\n  Args: ${JSON.stringify(t.parameters)}`).join("\n");
+                const reactPrompt = `\nYou have access to following tools:\n${toolsDesc}\n\nTo use a tool, you MUST output ONLY the following format:\n<tool_call>{"name": "tool_name", "args": {"arg1": "value"}}</tool_call>\n\nWait for the tool execution result before proceeding.`;
+                
+                if (requestBody.messages[0]?.role === "system") {
+                    requestBody.messages[0].content += reactPrompt;
+                } else {
+                    requestBody.messages.unshift({ content: reactPrompt, role: "system" });
+                }
+            }
         }
 
         return requestBody;

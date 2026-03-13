@@ -523,6 +523,16 @@ export class ModelRegistry {
             
             if (dim) model.dimensions = dim;
 
+            // Extract Native Tool Support
+            const template = details.template || "";
+            if (template.includes(".Tools") || template.includes(".tools")) {
+                if (model.supportedMethods && !model.supportedMethods.includes('nativeTools')) {
+                    model.supportedMethods.push('nativeTools');
+                } else if (!model.supportedMethods) {
+                    model.supportedMethods = ['nativeTools'];
+                }
+            }
+
             return model;
         } catch (e) {
             logger.error(`Failed to fetch JIT details for ${modelId}`, e);
