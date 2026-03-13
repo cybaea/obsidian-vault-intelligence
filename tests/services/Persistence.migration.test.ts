@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import { App, PluginManifest } from 'obsidian';
+import { describe, expect, it, vi } from 'vitest';
 
 import VaultIntelligencePlugin from '../../src/main';
 import { DEFAULT_SETTINGS } from '../../src/settings/types';
@@ -15,8 +15,8 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
         const legacyData = {
             chatModel: 'ollama/llama3',
             contextWindowTokens: 16000,
-            gardenerModel: 'local/qwen2',
             gardenerContextBudget: 32000,
+            gardenerModel: 'local/qwen2',
             modelContextOverrides: {}
         };
 
@@ -45,8 +45,8 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
             chatModel: 'gemini-1.5-flash',
             contextWindowTokens: 200000,
             modelContextOverrides: {
-                'ollama/tinyllama': 9999999, // Way too high
-                'local/broken': -50          // Way too low
+                'local/broken': -50,
+                'ollama/tinyllama': 9999999
             }
         };
 

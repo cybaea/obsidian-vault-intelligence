@@ -5,6 +5,7 @@
 import { App, Platform, requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi, Mock } from 'vitest';
 
+import { ModelRegistry } from '../../src/services/ModelRegistry';
 import { OllamaProvider } from '../../src/services/OllamaProvider';
 import { VaultIntelligenceSettings } from '../../src/settings/types';
 
@@ -70,9 +71,21 @@ describe('OllamaProvider', () => {
             };
 
             (requestUrl as Mock).mockResolvedValue({
-                json: { model_info: { 'llama.context_length': 8192 } },
+                json: { 
+                    model_info: { 'llama.context_length': 8192 },
+                    template: "{{ .Tools }}"
+                },
                 status: 200
             });
+
+            // Mock ModelRegistry to return the model so JIT details can be applied
+            const mockModel = { 
+                id: 'ollama/llama3', 
+                inputTokenLimit: 8192,
+                provider: 'ollama', 
+                supportedMethods: ['generateContent', 'nativeTools']
+            };
+            (ModelRegistry as any).fetchOllamaModelDetails = vi.fn().mockResolvedValue(mockModel);
 
             const body = await (service as any).prepareRequestBody(messages, options, false);
             

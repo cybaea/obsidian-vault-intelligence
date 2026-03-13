@@ -107,8 +107,7 @@ describe('ModelRegistry', () => {
         });
 
         it('should gracefully handle undefined customMapping', () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const budget = ModelRegistry.resolveContextBudget('ollama/qwen2', undefined as any, 200000);
+            const budget = ModelRegistry.resolveContextBudget('ollama/qwen2', undefined as any as Record<string, number>, 200000);
             expect(budget).toBe(8192);
         });
     });

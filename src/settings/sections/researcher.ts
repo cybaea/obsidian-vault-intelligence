@@ -1,6 +1,6 @@
 import { Setting, App, Plugin } from "obsidian";
 
-import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
+import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
