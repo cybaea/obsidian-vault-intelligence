@@ -465,15 +465,54 @@ export class ResearchChatView extends ItemView {
     }
 
     private populateModelDropdown(modelDropdown: DropdownComponent) {
-        modelDropdown.selectEl.empty();
+        const selectEl = modelDropdown.selectEl;
+        selectEl.innerHTML = '';
+        
         const chatModels = ModelRegistry.getChatModels();
-        for (const m of chatModels) {
-            modelDropdown.addOption(m.id, m.label);
+        const hasApiKey = !!this.plugin.settings.googleApiKey;
+        const hasOllama = !!this.plugin.settings.ollamaEndpoint;
+        const canUseChat = hasApiKey || hasOllama;
+
+        if (!canUseChat) {
+            modelDropdown.addOption('none', 'Configure provider to enable selection...');
+            modelDropdown.setDisabled(true);
+            return;
         }
-        modelDropdown.addOption("custom", "Custom...");
+
+        const googleModels = chatModels.filter(m => m.provider === 'gemini');
+        const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
+
+        if (googleModels.length > 0) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+            for (const m of googleModels) {
+                group.createEl('option', { text: m.label, value: m.id });
+            }
+        }
+
+        if (ollamaModels.length > 0) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            for (const m of ollamaModels) {
+                group.createEl('option', { text: m.label, value: m.id });
+            }
+        } else if (this.plugin.settings.ollamaEndpoint) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            group.createEl('option', {
+                attr: { disabled: 'true' },
+                text: 'No models found',
+                value: 'none'
+            });
+        }
+
+        selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
 
         const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
         const isPreset = chatModels.some(m => m.id === currentModel);
         modelDropdown.setValue(isPreset ? currentModel : "custom");
+
+        for (let i = 0; i < selectEl.options.length; i++) {
+            const opt = selectEl.options.item(i);
+            if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+        }
     }
+
 }
