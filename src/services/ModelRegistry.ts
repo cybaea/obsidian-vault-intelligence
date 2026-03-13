@@ -303,9 +303,13 @@ export class ModelRegistry {
                 
                 // O(1) synchronous classification using details.family
                 // Note: We'll fetch inputTokenLimit JIT later to fix the NaN clamping paradox.
+                const lowerName = m.name.toLowerCase();
                 const isEmbedding = family.includes('bert') || 
                                    family.includes('nomic') || 
-                                   families.some(f => f.includes('bert') || f.includes('nomic'));
+                                   families.some(f => f.includes('bert') || f.includes('nomic')) ||
+                                   lowerName.includes('embed') || 
+                                   lowerName.includes('bge') ||
+                                   lowerName.includes('minilm');
 
                 return {
                     description: `Local model: ${m.name}`,
@@ -517,6 +521,6 @@ export class ModelRegistry {
 function idLooksLikeChat(id: string): boolean {
     const lower = id.toLowerCase();
     const isGeminiChat = lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
-    const isOllamaChat = lower.startsWith('ollama/'); 
+    const isOllamaChat = lower.startsWith('ollama/') && !lower.includes('embed') && !lower.includes('bge'); 
     return isGeminiChat || isOllamaChat;
 }
