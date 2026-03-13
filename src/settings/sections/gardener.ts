@@ -24,6 +24,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const canUseChat = hasApiKey || hasOllama;
 
 
     // --- 1. Model & Limits ---
@@ -35,8 +37,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .setName('Gardener model')
         .setDesc('The model used for analysis and suggesting improvements.')
         .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
+            if (!canUseChat) {
+                dropdown.addOption('none', 'Configure provider to enable selection...');
                 dropdown.setDisabled(true);
                 return;
             }
@@ -70,7 +72,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             });
         });
 
-    if (hasApiKey && !isGardenerPreset) {
+    if (canUseChat && !isGardenerPreset) {
         new Setting(containerEl)
             .setName('Custom gardener model')
             .setDesc('Enter the specific Gemini model ID.')

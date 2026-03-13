@@ -22,6 +22,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
 
 
     const providerDesc = document.createDocumentFragment();
@@ -39,6 +40,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const gemini = "Gemini";
             const transformers = "Transformers.js";
             dropdown.addOption('gemini', `${google} ${gemini} (cloud)`)
+                .addOption('ollama', 'Ollama (local server)')
                 .addOption('local', `${transformers} (local)`)
                 .setValue(plugin.settings.embeddingProvider)
                 .onChange((value) => {
@@ -78,16 +80,19 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .setName('Embedding model')
         .setDesc(`The specific model used to generate vector embeddings.`);
 
-    if (plugin.settings.embeddingProvider === 'gemini') {
-        const geminiEmbeddingModels = ModelRegistry.getEmbeddingModels('gemini');
-        if (hasApiKey) {
+    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama') {
+        const providerName = plugin.settings.embeddingProvider;
+        const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
+        const providerEnabled = providerName === 'gemini' ? hasApiKey : hasOllama;
+
+        if (providerEnabled) {
             embeddingSetting.addDropdown(dropdown => {
-                for (const m of geminiEmbeddingModels) {
+                for (const m of onlineEmbeddingModels) {
                     dropdown.addOption(m.id, m.label);
                 }
                 dropdown.addOption('custom', 'Custom model ID...');
                 const current = plugin.settings.embeddingModel;
-                const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+                const isPreset = onlineEmbeddingModels.some(m => m.id === current);
                 dropdown.setValue(isPreset ? current : 'custom');
 
                 dropdown.onChange((val) => {
@@ -107,12 +112,12 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             });
 
             const current = plugin.settings.embeddingModel;
-            const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+            const isPreset = onlineEmbeddingModels.some(m => m.id === current);
             if (!isPreset) {
-                const gemini = "Gemini";
+                const labelName = providerName === 'gemini' ? "Gemini" : "Ollama";
                 new Setting(containerEl)
-                    .setName(`Custom ${gemini} model`)
-                    .setDesc('Enter the specific Gemini embedding model ID.')
+                    .setName(`Custom ${labelName} model`)
+                    .setDesc(`Enter the specific ${labelName} embedding model ID.`)
                     .addText(text => text
                         .setValue(current)
                         .onChange(async (val) => {
@@ -121,8 +126,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         }));
             }
         } else {
+            const labelName = providerName === 'gemini' ? 'API key' : 'Ollama endpoint';
             embeddingSetting.addText(text => text
-                .setPlaceholder('Enter API key to enable Gemini selection')
+                .setPlaceholder(`Configure ${labelName} to enable selection`)
                 .setDisabled(true));
         }
 
@@ -150,7 +156,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingDimension = num;
 
                             // Proactive: If they select high dims but are on an old model, suggest the upgrade
-                            if (num > 768 && !isModern) {
+                            if (num > 768 && !isModern && providerName === 'gemini') {
                                 new Notice("This dimension works best with text-embedding-004. Please check your model selection.");
                             }
 

@@ -24,7 +24,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
-
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const canUseChat = hasApiKey || hasOllama;
 
     // --- 1. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
@@ -35,8 +36,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         .setName('Chat model')
         .setDesc('The main engine used for reasoning and answering questions.')
         .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
+            if (!canUseChat) {
+                dropdown.addOption('none', 'Configure provider to enable selection...');
                 dropdown.setDisabled(true);
                 return;
             }
@@ -104,7 +105,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             });
         });
 
-    if (hasApiKey && !isChatPreset) {
+    if (canUseChat && !isChatPreset) {
         new Setting(containerEl)
             .setName('Custom chat model')
             .setDesc('Enter the specific Gemini model ID.')
@@ -406,8 +407,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             .setName('Code execution model')
             .setDesc(`Specific model used for generating ${python} code.`)
             .addDropdown(dropdown => {
-                if (!hasApiKey) {
-                    dropdown.addOption('none', 'Enter API key to enable...');
+                if (!canUseChat) {
+                    dropdown.addOption('none', 'Configure provider to enable selection...');
                     dropdown.setDisabled(true);
                     return;
                 }
@@ -435,7 +436,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 });
             });
 
-        if (hasApiKey && !isCodePreset) {
+        if (canUseChat && !isCodePreset) {
             new Setting(containerEl)
                 .setName('Custom code model')
                 .setDesc('Enter the specific Gemini model ID.')

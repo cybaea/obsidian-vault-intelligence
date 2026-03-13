@@ -167,30 +167,31 @@ export class ModelRegistry {
      * @param cacheDurationDays - How many days to cache the results for.
      */
     public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false): Promise<void> {
-        if (!apiKey || this.isFetching) return;
+        if (this.isFetching) return;
 
-        // 1. Check Memory Cache
         const now = Date.now();
         const cacheDurationMs = cacheDurationDays * 24 * 60 * 60 * 1000;
+        
+        let geminiModels: ModelDefinition[] = [];
+        let ollamaModels: ModelDefinition[] = [];
+        let useGeminiCache = false;
 
-        if (this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
-            // Even if cached, we might want to refresh Ollama if it's local
-            if (!forceUpdate) return;
-        }
-
-        // 2. Check LocalStorage Cache
-        if (cacheDurationDays > 0) {
+        // 1. Check Memory Cache for Gemini
+        if (!forceUpdate && this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
+            useGeminiCache = true;
+            geminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
+        } else if (!forceUpdate && cacheDurationDays > 0) {
+            // 2. Check LocalStorage Cache for Gemini
             const storage = (app as unknown as InternalApp);
             const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
             if (typeof cached === 'string') {
                 try {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
                     if (now - parsed.timestamp < cacheDurationMs) {
-                        logger.debug("Loaded models from cache", parsed.models.length);
-                        this.dynamicModels = parsed.models;
+                        useGeminiCache = true;
+                        geminiModels = parsed.models.filter(m => m.provider === 'gemini');
                         this.lastFetchTime = parsed.timestamp;
                         this.rawApiResponse = parsed.rawResponse || null;
-                        return;
                     }
                 } catch (e) {
                     logger.error("Failed to parse model cache", e);
@@ -198,25 +199,55 @@ export class ModelRegistry {
             }
         }
 
-        // 3. Fetch from APIs
+        // 3. Fetch from APIs Independently
         logger.debug("Fetching models from APIs...");
         this.isFetching = true;
         try {
-            const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("obsidian-vault-intelligence");
+            const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("vault-intelligence");
             const settings = plugin?.settings;
             if (!settings) throw new Error("Vault Intelligence settings not found during model fetch.");
             
-            // Parallel fetch
-            const [geminiResult, ollamaModels] = await Promise.all([
-                this.fetchGeminiModels(apiKey),
-                this.fetchOllamaModels(settings.ollamaEndpoint)
-            ]);
+            const tasks: Promise<void>[] = [];
 
-            this.dynamicModels = this.sortModels([...geminiResult.models, ...ollamaModels]);
-            this.rawApiResponse = geminiResult.rawResponse;
-            this.lastFetchTime = Date.now();
+            if (apiKey && !useGeminiCache) {
+                tasks.push(
+                    this.fetchGeminiModels(apiKey).then(res => {
+                        geminiModels = res.models;
+                        this.rawApiResponse = res.rawResponse;
+                        this.lastFetchTime = Date.now();
+                    }).catch(err => {
+                        logger.error("Error fetching Gemini models", err);
+                        if (throwOnError) throw err;
+                        if (geminiModels.length === 0) {
+                            geminiModels = [
+                                ...GEMINI_CHAT_MODELS,
+                                ...GEMINI_GROUNDING_MODELS,
+                                ...GEMINI_EMBEDDING_MODELS
+                            ];
+                        }
+                    })
+                );
+            } else if (!apiKey && !useGeminiCache) {
+                geminiModels = [
+                    ...GEMINI_CHAT_MODELS,
+                    ...GEMINI_GROUNDING_MODELS,
+                    ...GEMINI_EMBEDDING_MODELS
+                ];
+            }
 
-            if (cacheDurationDays > 0) {
+            if (settings.ollamaEndpoint) {
+                tasks.push(
+                    this.fetchOllamaModels(settings.ollamaEndpoint)
+                        .then(models => { ollamaModels = models; })
+                        .catch(err => { logger.debug("Ollama models not available", err); })
+                );
+            }
+
+            await Promise.allSettled(tasks);
+
+            this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels]);
+
+            if (cacheDurationDays > 0 && !useGeminiCache && apiKey) {
                 const cacheData: ModelCache = {
                     models: this.dynamicModels,
                     rawResponse: this.rawApiResponse || undefined,
@@ -225,17 +256,6 @@ export class ModelRegistry {
                 (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
             }
             app.workspace.trigger('vault-intelligence:models-updated');
-        } catch (error) {
-            logger.error("Error fetching Gemini models", error);
-            if (throwOnError) throw error;
-            // Fallback to hardcoded if fetch fails and no cache
-            if (this.dynamicModels.length === 0) {
-                this.dynamicModels = [
-                    ...GEMINI_CHAT_MODELS,
-                    ...GEMINI_GROUNDING_MODELS,
-                    ...GEMINI_EMBEDDING_MODELS
-                ];
-            }
         } finally {
             this.isFetching = false;
         }
@@ -359,7 +379,7 @@ export class ModelRegistry {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
-            (m.provider === 'gemini' || m.provider === 'ollama') &&
+            m.provider === provider &&
             (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding'))
         );
     }
