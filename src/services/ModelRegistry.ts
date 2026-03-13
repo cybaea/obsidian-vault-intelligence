@@ -457,8 +457,21 @@ export class ModelRegistry {
         const oldModel = this.getModelById(oldModelId);
         const newModel = this.getModelById(newModelId);
 
+        const isOldLocal = oldModel?.provider === 'ollama' || oldModel?.provider === 'local';
+        const isNewLocal = newModel?.provider === 'ollama' || newModel?.provider === 'local';
+
+        // Protection against Cloud -> Local context explosion
+        if (isNewLocal && !isOldLocal) {
+            return Math.min(currentBudget, 8192); // Safe consumer VRAM default
+        } else if (!isNewLocal && isOldLocal) {
+            // Revert towards a healthy cloud budget if they had it artificially constrained by local models
+            return Math.max(currentBudget, 200000);
+        }
+
         // If either is custom or unknown, we don't have hard data to scale with.
         if (!oldModel?.inputTokenLimit || !newModel?.inputTokenLimit) {
+            // Safety fallback for custom unknown local models
+            if (isNewLocal) return Math.min(currentBudget, 8192);
             return currentBudget;
         }
 

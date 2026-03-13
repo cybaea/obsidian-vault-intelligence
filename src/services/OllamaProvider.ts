@@ -124,6 +124,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     private static SOCKET_TIMEOUT = 30000; // 30s
     private supportsJsonSchema: boolean | null = null;
     private embeddingQueue: Promise<void> = Promise.resolve();
+    private activeModels: Set<string> = new Set();
 
     constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
 
@@ -141,10 +142,13 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         throw new ProviderError("Invalid Ollama endpoint (SSRF blocked).", "ollama");
                     }
 
+                    const pureModelStr = this.settings.embeddingModel.replace("ollama/", "");
+                    this.activeModels.add(pureModelStr);
+
                     const response = await requestUrl({
                         body: JSON.stringify({
                             input: [text],
-                            model: this.settings.embeddingModel.replace("ollama/", "")
+                            model: pureModelStr
                         }),
                         headers: { "Content-Type": "application/json" },
                         method: "POST",
@@ -288,21 +292,25 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Terminate provider - clear VRAM immediately.
+     * Terminate provider - clear used VRAM immediately.
      */
     async terminate(): Promise<void> {
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
-        const model = this.settings.chatModel.replace("ollama/", "");
-        try {
-            // Unload model from VRAM immediately using fetch with keepalive to ensure it fires even during shutdown
-            await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
-                body: JSON.stringify({ keep_alive: 0, messages: [], model }),
-                keepalive: true,
-                method: "POST"
-            });
-        } catch (e) {
-            logger.debug("[Ollama] Failed to unload model on termination", e);
+        
+        for (const model of this.activeModels) {
+            try {
+                // Unload only models we actively used from VRAM using keepalive 
+                // We use fetch since requestUrl doesn't guarantee fire-and-forget strictly on teardown
+                await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
+                    body: JSON.stringify({ keep_alive: 0, messages: [], model }),
+                    keepalive: true,
+                    method: "POST"
+                });
+            } catch (e) {
+                logger.debug(`[Ollama] Failed to unload model ${model} on termination`, e);
+            }
         }
+        this.activeModels.clear();
     }
 
     private async checkOllamaVersion(endpoint: string): Promise<boolean> {
@@ -509,12 +517,25 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
         // Context length clamping logic
         const nativeLimit = details?.inputTokenLimit || 4096;
-        const requestedLimit = options.contextWindowTokens || this.settings.contextWindowTokens;
+        let requestedLimit = options.contextWindowTokens || this.settings.contextWindowTokens;
+
+        // VRAM EXPLOSION GUARD
+        // Local models (like deepseek or qwen) often report native limits of 128k to 1M.
+        // If a user has a massive context budget from Gemini (e.g., 200k+), Ollama will attempt to 
+        // allocate the full Math.min(200k, 128k) = 128k VRAM context, instantly crashing AMD/NVIDIA drivers.
+        if (requestedLimit > 32768) {
+            logger.warn(`[OllamaProvider] Context budget too high for local inference (${requestedLimit}). Clamping to 8192 to prevent GPU explosion.`);
+            requestedLimit = 8192;
+        }
+
         const finalCtx = Math.min(requestedLimit, nativeLimit);
+        
+        const pureModelStr = modelId.replace("ollama/", "");
+        this.activeModels.add(pureModelStr);
 
         const requestBody: OllamaChatRequest = {
             messages: ollamaMessages,
-            model: modelId.replace("ollama/", ""),
+            model: pureModelStr,
             options: {
                 num_ctx: finalCtx
             },
