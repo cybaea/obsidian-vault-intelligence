@@ -58,12 +58,6 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
-                        const oldModelId = plugin.settings.gardenerModel;
-                        plugin.settings.gardenerContextBudget = ModelRegistry.calculateAdjustedBudget(
-                            plugin.settings.gardenerContextBudget,
-                            oldModelId,
-                            val
-                        );
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }
@@ -87,26 +81,32 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 }));
     }
 
-    const gardenerModelLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
+    const currentModelId = plugin.settings.gardenerModel;
+    const gardenerModelLimit = ModelRegistry.getModelById(currentModelId)?.inputTokenLimit ?? 1048576;
+    const hasOverride = currentModelId in plugin.settings.modelContextOverrides;
+    const resolvedBudget = ModelRegistry.resolveContextBudget(currentModelId, plugin.settings.modelContextOverrides, plugin.settings.gardenerContextBudget);
+    
+    const displayValue = Math.min(resolvedBudget, gardenerModelLimit);
+
     new Setting(containerEl)
         .setName("Context budget (tokens)")
-        .setDesc(`Max tokens allowed for a single analysis. (Model limit: ${gardenerModelLimit.toLocaleString()})`)
+        .setDesc(hasOverride 
+            ? `Max tokens allowed for a single analysis. Currently overridden for **${currentModelId}**. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)` 
+            : `Max tokens allowed for a single analysis. Currently using provider default. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`
+        )
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
-            .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
+            .setTooltip(`Reset to provider default`)
             .onClick(() => {
                 void (async () => {
-                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
-                    plugin.settings.gardenerContextBudget = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO);
+                    delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
             }))
         .addText(text => {
             text.setPlaceholder('50000')
-                .setValue(String(plugin.settings.gardenerContextBudget))
+                .setValue(String(displayValue))
                 .onChange((value) => {
                     void (async () => {
                         let num = parseInt(value);
@@ -115,7 +115,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                                 num = gardenerModelLimit;
                                 text.setValue(String(num));
                             }
-                            plugin.settings.gardenerContextBudget = Math.floor(num);
+                            plugin.settings.modelContextOverrides[currentModelId] = Math.floor(num);
                             await plugin.saveSettings();
                         }
                     })();

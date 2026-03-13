@@ -10,6 +10,7 @@ import { IEmbeddingClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, U
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
+import { ModelRegistry } from "./ModelRegistry";
 import { ProviderRegistry } from "./ProviderRegistry";
 import { SearchOrchestrator } from "./SearchOrchestrator";
 
@@ -178,7 +179,8 @@ export class AgentService {
                 score: 1.0
             }));
 
-            const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+            const activeModel = options.modelId || this.settings.chatModel;
+            const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
             const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
             const { context } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
@@ -401,7 +403,8 @@ export class AgentService {
 
         // Calculate budget
         // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
-        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+        const activeModel = this.settings.chatModel;
+        const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
 
         let currentSize = 0;

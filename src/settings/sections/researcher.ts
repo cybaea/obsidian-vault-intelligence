@@ -89,14 +89,6 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
-                        // Scale the budget proportionally to the new model's capacity
-                        const oldModelId = plugin.settings.chatModel;
-                        plugin.settings.contextWindowTokens = ModelRegistry.calculateAdjustedBudget(
-                            plugin.settings.contextWindowTokens,
-                            oldModelId,
-                            val
-                        );
-
                         plugin.settings.chatModel = val;
                         await plugin.saveSettings();
                     }
@@ -214,24 +206,32 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         });
 
     // --- 4. Context & Reasoning Limits ---
-    const chatModelLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
+    const currentModelId = plugin.settings.chatModel;
+    const chatModelLimit = ModelRegistry.getModelById(currentModelId)?.inputTokenLimit ?? 1048576;
+    const hasOverride = currentModelId in plugin.settings.modelContextOverrides;
+    const resolvedBudget = ModelRegistry.resolveContextBudget(currentModelId, plugin.settings.modelContextOverrides, plugin.settings.contextWindowTokens);
+    
+    const displayValue = Math.min(resolvedBudget, chatModelLimit);
+
     new Setting(containerEl)
         .setName('Context window budget (tokens)')
-        .setDesc(`Max tokens the AI can consider. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`)
+        .setDesc(hasOverride 
+            ? `Max tokens the AI can consider. Currently overridden for **${currentModelId}**. (Model limit: ${chatModelLimit.toLocaleString()} tokens)` 
+            : `Max tokens the AI can consider. Currently using provider default. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`
+        )
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO * 100}% of model limit)`)
+            .setTooltip(`Reset to provider default`)
             .onClick(() => {
                 void (async () => {
-                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
-                    plugin.settings.contextWindowTokens = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO);
+                    delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
             }))
         .addText(text => {
             text.setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
-                .setValue(String(plugin.settings.contextWindowTokens))
+                .setValue(String(displayValue))
                 .onChange((value) => {
                     void (async () => {
                         let num = parseInt(value);
@@ -240,7 +240,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                                 num = chatModelLimit;
                                 text.setValue(String(num));
                             }
-                            plugin.settings.contextWindowTokens = num;
+                            plugin.settings.modelContextOverrides[currentModelId] = num;
                             await plugin.saveSettings();
                         }
                     })();

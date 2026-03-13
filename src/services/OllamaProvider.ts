@@ -556,15 +556,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
         // Context length clamping logic
         const nativeLimit = details?.inputTokenLimit || 4096;
-        let requestedLimit = options.contextWindowTokens || this.settings.contextWindowTokens;
-
-        // VRAM EXPLOSION GUARD
-        // Local models (like deepseek or qwen) often report native limits of 128k to 1M.
-        // If a user has a massive context budget from Gemini (e.g., 200k+), Ollama will attempt to 
-        // allocate the full Math.min(200k, 128k) = 128k VRAM context, instantly crashing AMD/NVIDIA drivers.
-        if (requestedLimit > 32768) {
-            logger.warn(`[OllamaProvider] Context budget too high for local inference (${requestedLimit}). Clamping to 8192 to prevent GPU explosion.`);
-            requestedLimit = 8192;
+        
+        let requestedLimit = options.contextWindowTokens;
+        if (!requestedLimit) {
+            requestedLimit = ModelRegistry.resolveContextBudget(
+                modelId, 
+                this.settings.modelContextOverrides || {}, 
+                this.settings.contextWindowTokens
+            );
         }
 
         const finalCtx = Math.min(requestedLimit, nativeLimit);

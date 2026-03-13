@@ -5,6 +5,7 @@ import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
+import { ModelRegistry } from "../services/ModelRegistry";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
 import { IModelProvider, IReasoningClient, IToolDefinition } from "../types/providers";
 import { logger } from "../utils/logger";
@@ -306,7 +307,8 @@ export class ToolRegistry {
             return { result: "No relevant notes found." };
         }
 
-        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+        const activeModel = this.settings.chatModel;
+        const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
         const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, contextBudget);

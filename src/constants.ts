@@ -332,6 +332,8 @@ export const MODEL_REGISTRY_CONSTANTS = {
 export const SANITIZATION_CONSTANTS = {
     /** Default embedding dimension */
     DEFAULT_EMBEDDING_DIMENSION: 768,
+    /** Safe fallback context tokens for local LLMs */
+    DEFAULT_LOCAL_CONTEXT_TOKENS: 8192,
 
     /** Absolute maximum token limit used for sanity checks */
     MAX_TOKEN_LIMIT_SANITY: 1048576,

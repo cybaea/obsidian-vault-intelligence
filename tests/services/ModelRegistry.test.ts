@@ -87,6 +87,31 @@ describe('ModelRegistry', () => {
             expect(details?.inputTokenLimit).toBe(8192);
         });
     });
+    describe('resolveContextBudget', () => {
+        it('should prioritize explicit user overrides in customMapping', () => {
+            const customMapping = { 'ollama/llama3': 16000 };
+            const budget = ModelRegistry.resolveContextBudget('ollama/llama3', customMapping, 200000);
+            expect(budget).toBe(16000);
+        });
+
+        it('should fall back to safe default for local models if no override exists', () => {
+            const customMapping = { 'ollama/llama3': 16000 };
+            const budget = ModelRegistry.resolveContextBudget('ollama/qwen2', customMapping, 200000);
+            expect(budget).toBe(8192); // 8192 is DEFAULT_LOCAL_CONTEXT_TOKENS
+        });
+
+        it('should fall back to global basement budget for cloud models if no override exists', () => {
+            const customMapping = {};
+            const budget = ModelRegistry.resolveContextBudget('gemini-1.5-flash', customMapping, 200000);
+            expect(budget).toBe(200000);
+        });
+
+        it('should gracefully handle undefined customMapping', () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const budget = ModelRegistry.resolveContextBudget('ollama/qwen2', undefined as any, 200000);
+            expect(budget).toBe(8192);
+        });
+    });
 });
 
 /* eslint-enable @typescript-eslint/no-explicit-any -- End of private static method mocking */

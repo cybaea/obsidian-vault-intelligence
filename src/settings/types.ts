@@ -50,6 +50,7 @@ export interface VaultIntelligenceSettings {
     maxAgentSteps: number;
     minSimilarityScore: number;
     modelCacheDurationDays: number;
+    modelContextOverrides: Record<string, number>;
     ollamaEmbeddingArchitectures: string[] | null;
     ollamaEndpoint: string;
     ontologyPath: string;
@@ -166,6 +167,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
+    modelContextOverrides: {},
     ollamaEmbeddingArchitectures: null,
     ollamaEndpoint: 'http://localhost:11434',
     ontologyPath: 'Ontology',

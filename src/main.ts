@@ -435,6 +435,25 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerSystemInstruction = null;
 		}
 
+		// --- Tiered Context Control Migration (v8.2.0) ---
+		// Migrate legacy local context budgets to explicitly overridden model budgets
+		// Ensures users who heavily customized their local VRAM budget don't lose it on upgrade.
+		if ((this.settings.chatModel?.includes('ollama') || this.settings.chatModel?.includes('local') || this.settings.embeddingProvider === 'local' || this.settings.embeddingProvider === 'ollama') && this.settings.contextWindowTokens !== DEFAULT_SETTINGS.contextWindowTokens) {
+			if (this.settings.chatModel && typeof this.settings.contextWindowTokens === 'number') {
+				this.settings.modelContextOverrides[this.settings.chatModel] = this.settings.contextWindowTokens;
+				this.settings.contextWindowTokens = DEFAULT_SETTINGS.contextWindowTokens;
+				logger.info(`[Migration] Rescued local chat context budget into modelContextOverrides for ${this.settings.chatModel}`);
+			}
+		}
+
+		if ((this.settings.gardenerModel?.includes('ollama') || this.settings.gardenerModel?.includes('local')) && this.settings.gardenerContextBudget !== DEFAULT_SETTINGS.gardenerContextBudget) {
+			if (this.settings.gardenerModel && typeof this.settings.gardenerContextBudget === 'number') {
+				this.settings.modelContextOverrides[this.settings.gardenerModel] = this.settings.gardenerContextBudget;
+				this.settings.gardenerContextBudget = DEFAULT_SETTINGS.gardenerContextBudget;
+				logger.info(`[Migration] Rescued local gardener context budget into modelContextOverrides for ${this.settings.gardenerModel}`);
+			}
+		}
+
 		// Migration: Rename gardenerRecheckHours to gardenerRecheckDays (v8.1.0)
 		const rawData = data as Record<string, unknown>;
 		if (rawData && typeof rawData.gardenerRecheckHours === 'number') {
@@ -582,6 +601,30 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerModel,
 			DEFAULT_SETTINGS.gardenerContextBudget
 		);
+
+		// Sanitize all explicitly defined model overrides
+		if (this.settings.modelContextOverrides) {
+			for (const [modelId, overrideValue] of Object.entries(this.settings.modelContextOverrides)) {
+				// Determine the model's actual native limit if known, otherwise fallback to global max sanity
+				const modelNativeLimit = ModelRegistry.getModelById(modelId)?.inputTokenLimit ?? SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY;
+				let cleanedOverride = Number.isSafeInteger(overrideValue) ? overrideValue : SANITIZATION_CONSTANTS.DEFAULT_LOCAL_CONTEXT_TOKENS;
+
+				if (cleanedOverride > modelNativeLimit) {
+					cleanedOverride = modelNativeLimit;
+					changed = true;
+				}
+
+				if (cleanedOverride < SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT) {
+					cleanedOverride = SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT;
+					changed = true;
+				}
+
+				if (cleanedOverride !== overrideValue) {
+					this.settings.modelContextOverrides[modelId] = cleanedOverride;
+					changed = true;
+				}
+			}
+		}
 
 		if (changed) {
 			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);

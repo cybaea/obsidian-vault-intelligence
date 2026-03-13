@@ -1,6 +1,6 @@
 import { App, requestUrl } from "obsidian";
 
-import { MODEL_REGISTRY_CONSTANTS } from "../constants";
+import { MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
@@ -445,48 +445,27 @@ export class ModelRegistry {
     }
 
     /**
-     * Calculates a new budget proportional to the model's total capacity.
-     * Prevents context budgets from being nonsensical when switching between
-     * models with drastically different limits (e.g. 1M vs 32k).
-     * @param currentBudget - The current budget value.
-     * @param oldModelId - The ID of the previous model.
-     * @param newModelId - The ID of the new model.
-     * @returns The newly adjusted budget.
+     * Resolves the appropriate context budget for a given model.
+     * Prioritizes explicit user overrides, falls back to safe defaults for local models, 
+     * and uses the global baseline for cloud providers.
      */
-    public static calculateAdjustedBudget(currentBudget: number, oldModelId: string, newModelId: string): number {
-        const oldModel = this.getModelById(oldModelId);
-        const newModel = this.getModelById(newModelId);
-
-        const isOldLocal = oldModel?.provider === 'ollama' || oldModel?.provider === 'local';
-        const isNewLocal = newModel?.provider === 'ollama' || newModel?.provider === 'local';
-
-        // Protection against Cloud -> Local context explosion
-        if (isNewLocal && !isOldLocal) {
-            return Math.min(currentBudget, 8192); // Safe consumer VRAM default
-        } else if (!isNewLocal && isOldLocal) {
-            // Revert towards a healthy cloud budget if they had it artificially constrained by local models
-            return Math.max(currentBudget, 200000);
+    public static resolveContextBudget(
+        modelId: string,
+        customMapping: Record<string, number>,
+        defaultGlobalBudget: number
+    ): number {
+        // 1. Highest priority: User explicitly defined an override for this specific model
+        if (customMapping && typeof customMapping[modelId] === 'number') {
+            return customMapping[modelId];
         }
 
-        // If either is custom or unknown, we don't have hard data to scale with.
-        if (!oldModel?.inputTokenLimit || !newModel?.inputTokenLimit) {
-            // Safety fallback for custom unknown local models
-            if (isNewLocal) return Math.min(currentBudget, 8192);
-            return currentBudget;
+        // 2. Safe fallback: Local Ollama models (prevent cloud -> local explosion)
+        if (modelId.startsWith("ollama/") || modelId.startsWith("local/")) {
+            return SANITIZATION_CONSTANTS.DEFAULT_LOCAL_CONTEXT_TOKENS;
         }
 
-        // Safety: ensure currentBudget is within sane bounds before ratio calculation
-        // to prevent extreme floating point precision issues.
-        const safeCurrent = Math.min(currentBudget, oldModel.inputTokenLimit);
-
-        const ratio = safeCurrent / oldModel.inputTokenLimit;
-        const adjusted = Math.floor(ratio * newModel.inputTokenLimit);
-
-        // Safety: Cap at model max, but keep a reasonable floor
-        const result = Math.min(newModel.inputTokenLimit, Math.max(MODEL_REGISTRY_CONSTANTS.CONTEXT_ADJUSTMENT_FLOOR, adjusted));
-
-        // Final sanity check for JavaScript's MAX_SAFE_INTEGER
-        return Number.isSafeInteger(result) ? result : newModel.inputTokenLimit;
+        // 3. Baseline: Legacy setting/cloud models
+        return defaultGlobalBudget;
     }
 
     /**
