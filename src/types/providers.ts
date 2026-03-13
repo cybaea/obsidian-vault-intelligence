@@ -40,6 +40,7 @@ export interface StreamChunk {
     rawContent?: unknown[];
     status?: string;
     text?: string;
+    tokens?: number;
     toolCalls?: ToolCall[];
     toolResults?: ToolResult[];
 }

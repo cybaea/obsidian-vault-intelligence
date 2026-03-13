@@ -22,7 +22,7 @@ export interface ModelDefinition {
     isDefault?: boolean;
     label: string;
     outputTokenLimit?: number;
-    provider: 'gemini' | 'local';
+    provider: 'gemini' | 'local' | 'ollama';
     quantized?: boolean;
     supportedMethods?: string[];
 }
@@ -49,7 +49,7 @@ interface GeminiApiResponse {
 interface OllamaModel {
     details: {
         families: string[] | null;
-        family: string;
+        family?: string;
         format: string;
         parameter_size: string;
         quantization_level: string;
@@ -67,7 +67,7 @@ interface OllamaTagsResponse {
 interface OllamaShowResponse {
     details: {
         families: string[] | null;
-        family: string;
+        family?: string;
         format: string;
         parameter_size: string;
         quantization_level: string;
@@ -109,7 +109,7 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
 export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     {
         dimensions: 256,
-        id: 'MinishLab/potion-base-8M',
+        id: 'local/MinishLab/potion-base-8M',
         isDefault: false,
         label: 'Small (Potion-8M English only) - 256d [~15MB]',
         provider: 'local',
@@ -117,14 +117,14 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     },
     {
         dimensions: 384,
-        id: 'Xenova/multilingual-e5-small',
+        id: 'local/Xenova/multilingual-e5-small',
         isDefault: true,
         label: 'Balanced (European languages E5 Small) - 384d [~30MB]',
         provider: 'local'
     },
     {
         dimensions: 1024,
-        id: 'Xenova/bge-m3',
+        id: 'local/Xenova/bge-m3',
         isDefault: false,
         label: 'Advanced (BGE M3) - 1024d [~220MB]',
         provider: 'local'
@@ -277,33 +277,24 @@ export class ModelRegistry {
             if (response.status !== 200) return [];
             
             const data = response.json as OllamaTagsResponse;
-            const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => ({
-                description: `Local model: ${m.name}`,
-                id: `ollama/${m.name}`,
-                label: `${m.name} (Ollama)`,
-                provider: 'local' as const,
-                supportedMethods: ['generateContent'] 
-            }));
+            const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
+                const family = m.details.family?.toLowerCase() || "";
+                const families = (m.details.families || []).map(f => f.toLowerCase());
+                
+                // O(1) synchronous classification using details.family
+                // Note: We'll fetch inputTokenLimit JIT later to fix the NaN clamping paradox.
+                const isEmbedding = family.includes('bert') || 
+                                   family.includes('nomic') || 
+                                   families.some(f => f.includes('bert') || f.includes('nomic'));
 
-            // Fetch detail for first model or all if feasible (caching would be better)
-            for (const model of models) {
-                 try {
-                     const detailResponse = await requestUrl({
-                         body: JSON.stringify({ name: model.id.replace('ollama/', '') }),
-                         method: 'POST',
-                         url: `${endpoint}/api/show`
-                     });
-                     if (detailResponse.status === 200) {
-                         const details = detailResponse.json as OllamaShowResponse;
-                         const ctx = (details.model_info?.["llama.context_length"] as number) || 
-                                     (details.model_info?.["phi3.context_length"] as number) || 
-                                     (details.model_info?.["qwen2.context_length"] as number) || 4096;
-                         model.inputTokenLimit = ctx;
-                     }
-                 } catch (e) {
-                     logger.debug(`Failed to fetch details for ${model.id}`, e);
-                 }
-            }
+                return {
+                    description: `Local model: ${m.name}`,
+                    id: `ollama/${m.name}`,
+                    label: `${m.name} (Ollama)`,
+                    provider: 'ollama' as const,
+                    supportedMethods: isEmbedding ? ['embedContent'] : ['generateContent']
+                };
+            });
 
             return models;
         } catch (e) {
@@ -351,7 +342,7 @@ export class ModelRegistry {
     public static getChatModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
-            (m.provider === 'gemini' || m.provider === 'local') &&
+            (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&
@@ -364,11 +355,11 @@ export class ModelRegistry {
      * @param provider - Filter by provider ('gemini' or 'local').
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' = 'gemini'): ModelDefinition[] {
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini'): ModelDefinition[] {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
-            m.provider === 'gemini' &&
+            (m.provider === 'gemini' || m.provider === 'ollama') &&
             (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding'))
         );
     }
@@ -395,7 +386,7 @@ export class ModelRegistry {
      * @param provider - The provider.
      * @returns The default model ID string.
      */
-    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' = 'gemini'): string {
+    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' = 'gemini'): string {
         let models: ModelDefinition[] = [];
         if (type === 'chat') models = this.getChatModels();
         else if (type === 'grounding') models = this.getGroundingModels();
@@ -460,9 +451,52 @@ export class ModelRegistry {
         // Final sanity check for JavaScript's MAX_SAFE_INTEGER
         return Number.isSafeInteger(result) ? result : newModel.inputTokenLimit;
     }
+
+    /**
+     * Fetches details for a specific Ollama model JIT.
+     * Extracts context length for reasoning models and embedding dimensions for embedding models.
+     */
+    public static async fetchOllamaModelDetails(endpoint: string, modelId: string): Promise<ModelDefinition | undefined> {
+        const cleanId = modelId.replace('ollama/', '');
+        try {
+            const response = await requestUrl({
+                body: JSON.stringify({ name: cleanId }),
+                method: 'POST',
+                url: `${endpoint}/api/show`
+            });
+
+            if (response.status !== 200) return undefined;
+
+            const details = response.json as OllamaShowResponse;
+            const model = this.getModelById(modelId);
+            if (!model) return undefined;
+
+            // Extract Context Length
+            const ctx = (details.model_info?.["llama.context_length"] as number) || 
+                        (details.model_info?.["phi3.context_length"] as number) || 
+                        (details.model_info?.["qwen2.context_length"] as number) || 
+                        (details.model_info?.["context_length"] as number) || 4096;
+            
+            model.inputTokenLimit = ctx;
+
+            // Extract Embedding Dimensions
+            const arch = details.details.family || (Object.keys(details.model_info || {})[0]?.split('.')[0]);
+            const dim = (details.model_info?.[`${arch}.embedding_length`] as number) || 
+                        (details.model_info?.["embedding_length"] as number);
+            
+            if (dim) model.dimensions = dim;
+
+            return model;
+        } catch (e) {
+            logger.error(`Failed to fetch JIT details for ${modelId}`, e);
+            return undefined;
+        }
+    }
 }
 
 function idLooksLikeChat(id: string): boolean {
     const lower = id.toLowerCase();
-    return lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
+    const isGeminiChat = lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
+    const isOllamaChat = lower.startsWith('ollama/'); 
+    return isGeminiChat || isOllamaChat;
 }

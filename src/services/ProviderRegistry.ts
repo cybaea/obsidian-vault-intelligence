@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 
 import { VaultIntelligenceSettings } from "../settings/types";
-import { IModelProvider, IReasoningClient } from "../types/providers";
+import { IModelProvider, IReasoningClient, ProviderError } from "../types/providers";
 import { GeminiProvider } from "./GeminiProvider";
 import { OllamaProvider } from "./OllamaProvider";
 
@@ -22,6 +22,9 @@ export class ProviderRegistry {
      */
     public getReasoningClient(modelId?: string): IReasoningClient {
         const id = modelId || this.settings.chatModel;
+        if (!id) {
+            throw new ProviderError("No model selected. Please select a model in settings.", "ollama"); 
+        }
         if (id.startsWith("ollama/")) {
             return this.ollamaProvider;
         }
@@ -33,6 +36,9 @@ export class ProviderRegistry {
      */
     public getModelProvider(modelId?: string): IModelProvider {
         const id = modelId || this.settings.chatModel;
+        if (!id) {
+            throw new ProviderError("No model selected. Please select a model in settings.", "ollama");
+        }
         if (id.startsWith("ollama/")) {
             return this.ollamaProvider;
         }

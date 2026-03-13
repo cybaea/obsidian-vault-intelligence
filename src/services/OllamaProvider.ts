@@ -1,15 +1,55 @@
-import { App, requestUrl } from "obsidian";
+import { App, Platform, requestUrl } from "obsidian";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { VaultIntelligenceSettings } from "../settings/types";
-import { ChatOptions, IModelProvider, IReasoningClient, StreamChunk, UnifiedMessage, ProviderError } from "../types/providers";
+import { ChatOptions, IModelProvider, IReasoningClient, StreamChunk, UnifiedMessage, ProviderError, IEmbeddingClient } from "../types/providers";
 import { logger } from "../utils/logger";
+import { isExternalUrl } from "../utils/url";
+import { ModelRegistry } from "./ModelRegistry";
+
+/**
+ * Minimal interface for Node.js http/https response object.
+ */
+interface NodeResponse extends AsyncIterable<Uint8Array> {
+    destroy(): void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for node event emitters
+    on(event: string, listener: (...args: any[]) => void): this;
+}
+
+/**
+ * Minimal interface for WHATWG stream reader.
+ */
+interface StreamReader {
+    read(): Promise<{ done: boolean; value?: Uint8Array }>;
+    releaseLock(): void;
+}
+
+/**
+ * Minimal interface for Node.js http/https request object.
+ */
+interface NodeRequest {
+    destroy(error?: Error): void;
+    end(): void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for node event emitters
+    on(event: string, listener: (...args: any[]) => void): this;
+    setTimeout(msecs: number, callback?: () => void): this;
+    write(chunk: string | Uint8Array): void;
+}
+
+/**
+ * Local helper to bypass top-level builtin restrictions.
+ */
+interface NodeSystem {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic require is needed to bypass Obsidian's 'require' restriction for electron-only code
+    require: (m: string) => any;
+}
 
 /**
  * Interface for Ollama API chat request.
  */
 interface OllamaChatRequest {
-    format?: string;
+    format?: string | Record<string, unknown>;
     messages: OllamaMessage[];
     model: string;
     options: {
@@ -71,44 +111,94 @@ interface OllamaChatChunk {
     total_duration?: number;
 }
 
+interface OllamaVersionResponse {
+    version: string;
+}
+
 /**
  * Provider for local models via Ollama.
  * Uses Obsidian's requestUrl to bypass CORS and implement SSRF protection.
  */
-export class OllamaProvider implements IReasoningClient, IModelProvider {
-    constructor(private settings: VaultIntelligenceSettings, private app: App) {}
+export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbeddingClient {
+    private static MAX_BUFFER_SIZE = 1024 * 1024; // 1MB buffer cap
+    private static SOCKET_TIMEOUT = 30000; // 30s
+    private supportsJsonSchema: boolean | null = null;
+    private embeddingQueue: Promise<void> = Promise.resolve();
+
+    constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
+
+    async embedQuery(text: string): Promise<{ tokenCount: number; vector: number[] }> {
+        const { vectors } = await this.embedDocument(text);
+        return { tokenCount: 0, vector: vectors[0] || [] };
+    }
+
+    async embedDocument(text: string): Promise<{ tokenCount: number; vectors: number[][] }> {
+        return new Promise((resolve, reject) => {
+            this.embeddingQueue = this.embeddingQueue.then(async () => {
+                try {
+                    const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+                    if (!isExternalUrl(endpoint, true)) {
+                        throw new ProviderError("Invalid Ollama endpoint (SSRF blocked).", "ollama");
+                    }
+
+                    const response = await requestUrl({
+                        body: JSON.stringify({
+                            input: [text],
+                            model: this.settings.embeddingModel.replace("ollama/", "")
+                        }),
+                        headers: { "Content-Type": "application/json" },
+                        method: "POST",
+                        url: `${endpoint}/api/embed`
+                    });
+
+                    if (response.status !== 200) {
+                        throw new Error(`Ollama embedding failed: ${response.text}`);
+                    }
+
+                    const data = response.json as { embeddings: number[][] };
+                    resolve({ tokenCount: 0, vectors: data.embeddings });
+                } catch (err: unknown) {
+                    reject(err instanceof Error ? err : new Error(String(err)));
+                }
+            }).catch(() => {
+                // Prevent queue stalling on previous failures
+            });
+        });
+    }
 
     // Capabilities
     get supportsCodeExecution(): boolean { return false; }
-    get supportsStructuredOutput(): boolean { return true; } // Ollama supports "format: json"
-    get supportsTools(): boolean { return true; } // Recent Ollama versions (0.5.0+) support tools
+    get supportsStructuredOutput(): boolean { return true; } 
+    get supportsTools(): boolean { return true; } 
     get supportsWebGrounding(): boolean { return false; }
 
     /**
      * Non-streaming chat generation.
      */
     async generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage> {
-        const body = this.prepareRequestBody(messages, options, false);
+        const body = await this.prepareRequestBody(messages, options, false);
+        const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
         
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { 'Content-Type': 'application/json' },
-                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
                 throw: true,
-                url: `${this.settings.ollamaEndpoint}/api/chat`
+                url: `${endpoint}/api/chat`
             });
 
             const data = response.json as OllamaChatChunk;
             const msg = data.message;
+            if (!msg) throw new Error("Ollama returned an empty message.");
             
             return {
-                content: msg?.content || "",
+                content: msg.content || "",
                 role: "model", 
-                toolCalls: msg?.tool_calls?.map(tc => ({
+                toolCalls: msg.tool_calls ? msg.tool_calls.map(tc => ({
                     args: tc.function.arguments,
                     name: tc.function.name
-                }))
+                })) : undefined
             };
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
@@ -120,16 +210,26 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
      * Streaming chat generation using NDJSON.
      */
     async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
-        const body = this.prepareRequestBody(messages, options, true);
+        const body = await this.prepareRequestBody(messages, options, true);
+        const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+
+        // SSRF Protection
+        if (!isExternalUrl(endpoint, true)) {
+            throw new ProviderError("Invalid Ollama endpoint (SSRF blocked).", "ollama");
+        }
         
+        if (Platform.isDesktopApp) {
+            yield* this.generateNodeStream(endpoint, body, options);
+            return;
+        }
+
         try {
-            // eslint-disable-next-line no-restricted-globals -- fetch is required for NDJSON streaming; requestUrl buffers entire response
-            const response = await fetch(`${this.settings.ollamaEndpoint}/api/chat`, {
+            const response = await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                 body: JSON.stringify(body),
-                headers: { 'Content-Type': 'application/json' },
-                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
                 signal: options.signal
-            });
+            }) as { body: { getReader: () => StreamReader }, ok: boolean, status: number, text: () => Promise<string> };
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -145,9 +245,12 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
             try {
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    if (done || !value) break;
 
                     buffer += decoder.decode(value, { stream: true });
+                    if (buffer.length > OllamaProvider.MAX_BUFFER_SIZE) {
+                        throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
+                    }
                     const lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
@@ -178,9 +281,132 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
                 reader.releaseLock();
             }
         } catch (e: unknown) {
-            if (e instanceof Error && e.name === 'AbortError') return;
+            if (e instanceof Error && e.name === "AbortError") return;
             const message = e instanceof Error ? e.message : String(e);
             throw new ProviderError(message, "ollama");
+        }
+    }
+
+    /**
+     * Terminate provider - clear VRAM immediately.
+     */
+    async terminate(): Promise<void> {
+        const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+        const model = this.settings.chatModel.replace("ollama/", "");
+        try {
+            // Unload model from VRAM immediately using fetch with keepalive to ensure it fires even during shutdown
+            await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
+                body: JSON.stringify({ keep_alive: 0, messages: [], model }),
+                keepalive: true,
+                method: "POST"
+            });
+        } catch (e) {
+            logger.debug("[Ollama] Failed to unload model on termination", e);
+        }
+    }
+
+    private async checkOllamaVersion(endpoint: string): Promise<boolean> {
+        if (this.supportsJsonSchema !== null) return this.supportsJsonSchema;
+        try {
+            const response = await requestUrl({ method: "GET", url: `${endpoint}/api/version` });
+            if (response.status === 200) {
+                const data = response.json as OllamaVersionResponse;
+                if (data.version) {
+                    const parts = data.version.split(".").map(n => parseInt(n, 10));
+                    // Ollama 0.4.0+ supports exact JSON schema in "format"
+                    this.supportsJsonSchema = (parts[0] || 0) > 0 || (parts[1] || 0) >= 4;
+                } else {
+                    this.supportsJsonSchema = false;
+                }
+            } else {
+                this.supportsJsonSchema = false;
+            }
+        } catch {
+            this.supportsJsonSchema = false;
+        }
+        return this.supportsJsonSchema || false;
+    }
+
+    private async *generateNodeStream(endpoint: string, body: OllamaChatRequest, options: ChatOptions): AsyncIterableIterator<StreamChunk> {
+        const nodeRequire = (globalThis as unknown as NodeSystem).require;
+        const httpProvider = (endpoint.startsWith("https") ? nodeRequire("https") : nodeRequire("http")) as { request: (opts: unknown) => NodeRequest };
+        const url = new URL(`${endpoint}/api/chat`);
+        
+        const reqOptions = {
+            body: JSON.stringify(body),
+            headers: { "Content-Type": "application/json" },
+            hostname: url.hostname,
+            method: "POST",
+            path: url.pathname + url.search,
+            port: url.port || (url.protocol === "https:" ? 443 : 80),
+        };
+
+        const req = (httpProvider as { request: (opts: unknown) => NodeRequest }).request(reqOptions);
+        
+        // Timeout guard
+        req.setTimeout(OllamaProvider.SOCKET_TIMEOUT, () => {
+            req.destroy(new ProviderError("Connection timeout: Ollama is unreachable.", "ollama"));
+        });
+
+        const abortHandler = () => req.destroy();
+        options.signal?.addEventListener("abort", abortHandler);
+
+        const promise = new Promise<NodeResponse>((resolve, reject) => {
+            req.on("error", (err: Error) => {
+                options.signal?.removeEventListener("abort", abortHandler);
+                reject(new ProviderError(err.message, "ollama"));
+            });
+            req.on("response", (res: NodeResponse) => {
+                res.on("error", (err: Error) => reject(new ProviderError(err.message, "ollama")));
+                resolve(res);
+            });
+        });
+
+        if (reqOptions.body) req.write(reqOptions.body);
+        req.end();
+
+        const res = await promise;
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        try {
+            for await (const chunk of res) {
+                buffer += decoder.decode(chunk as BufferSource, { stream: true });
+                if (buffer.length > OllamaProvider.MAX_BUFFER_SIZE) {
+                    throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
+                }
+
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    const data = JSON.parse(line) as OllamaChatChunk;
+                    
+                    if (data.message) {
+                        yield {
+                            text: data.message.content,
+                            toolCalls: data.message.tool_calls?.map(tc => ({
+                                args: tc.function.arguments,
+                                name: tc.function.name
+                            }))
+                        };
+                    }
+
+                    if (data.done) {
+                        // Pass exact token telemetry back to service
+                        yield { 
+                            isDone: true,
+                            tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0)
+                        };
+                    }
+                }
+            }
+        } finally {
+            options.signal?.removeEventListener("abort", abortHandler);
+            if (res && typeof res === "object" && "destroy" in res) {
+                (res as { destroy: () => void }).destroy();
+            }
         }
     }
 
@@ -188,27 +414,35 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
      * Structured output using Ollama's JSON mode.
      */
     async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
+        const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+        const supportsSchema = await this.checkOllamaVersion(endpoint);
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- zod-to-json-schema's ZodTypeAny type is not perfectly compatible with all z.ZodType<T> versions in Obsidian's environment. any cast is used as safe fallback for schema compatibility.
+        const jsonSchema = zodToJsonSchema(schema as any) as Record<string, unknown>;
+
         const body: OllamaChatRequest = {
-            ...this.prepareRequestBody(messages, options, false),
-            format: "json" // Tell Ollama to output JSON
+            ...await this.prepareRequestBody(messages, options, false),
+            // Ollama 0.4.0+ supports exact schema, else fallback to generic "json"
+            format: supportsSchema ? jsonSchema : "json"
         };
 
-        // Add instruction to system prompt to follow the schema
-        const schemaPrompt = "IMPORTANT: Your response MUST be a valid JSON object.";
-        const firstMessage = body.messages[0];
-        if (firstMessage && firstMessage.role === 'system') {
-            firstMessage.content += `\n\n${schemaPrompt}`;
-        } else {
-            body.messages.unshift({ content: schemaPrompt, role: 'system' });
+        // If generic mode, append instructions to ensure compatibility with older models
+        if (!supportsSchema) {
+            const schemaPrompt = `IMPORTANT: Your response MUST be a valid JSON object matching this schema: ${JSON.stringify(jsonSchema)}`;
+            if (body.messages[0]?.role === "system") {
+                body.messages[0].content += `\n\n${schemaPrompt}`;
+            } else {
+                body.messages.unshift({ content: schemaPrompt, role: "system" });
+            }
         }
 
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { 'Content-Type': 'application/json' },
-                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                method: "POST",
                 throw: true,
-                url: `${this.settings.ollamaEndpoint}/api/chat`
+                url: `${endpoint}/api/chat`
             });
 
             const data = response.json as OllamaChatChunk;
@@ -226,23 +460,36 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
         }
     }
 
-    // Unimplemented for local models (require cloud infrastructure)
+    /**
+     * Web search is not supported for local models.
+     */
     searchWithGrounding(): Promise<{ text: string }> {
-        return Promise.reject(new Error("Web grounding is not supported for local Ollama models."));
+        return Promise.reject(new ProviderError("Web grounding is not supported for local Ollama models.", "ollama"));
     }
+
+    /**
+     * Native code execution is not supported for local models.
+     */
     solveWithCode(): Promise<{ text: string }> {
-        return Promise.reject(new Error("Native code execution is not supported for local Ollama models."));
+        return Promise.reject(new ProviderError("Native code execution is not supported for local Ollama models.", "ollama"));
     }
 
     /**
      * Shared logic to prepare Ollama request body.
      */
-    private prepareRequestBody(messages: UnifiedMessage[], options: ChatOptions, stream: boolean): OllamaChatRequest {
+    private async prepareRequestBody(messages: UnifiedMessage[], options: ChatOptions, stream: boolean): Promise<OllamaChatRequest> {
+        const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+        const modelId = options.modelId || this.settings.chatModel;
+        
+        // JIT Fetch Model Details (Context Length / Dimensions)
+        const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId);
+
         // Map UnifiedMessage roles/content to Ollama format
         const ollamaMessages: OllamaMessage[] = messages.map(m => ({
             content: m.content,
-            role: m.role === 'model' ? 'assistant' : m.role,
-            // Map tool results back if needed
+            // Ollama expects 'assistant' and 'tool' (recent versions)
+            role: m.role === "model" ? "assistant" : m.role,
+            // Map tool results back correctly
             tool_call_id: m.toolResults?.[0]?.id,
             tool_calls: m.toolCalls?.map(tc => ({
                 function: {
@@ -256,17 +503,20 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
         if (options.systemInstruction) {
             ollamaMessages.unshift({ 
                 content: options.systemInstruction, 
-                role: 'system',
-                tool_call_id: undefined,
-                tool_calls: undefined
+                role: "system"
             });
         }
 
+        // Context length clamping logic
+        const nativeLimit = details?.inputTokenLimit || 4096;
+        const requestedLimit = options.contextWindowTokens || this.settings.contextWindowTokens;
+        const finalCtx = Math.min(requestedLimit, nativeLimit);
+
         const requestBody: OllamaChatRequest = {
             messages: ollamaMessages,
-            model: options.modelId?.replace('ollama/', '') || this.settings.chatModel.replace('ollama/', ''),
+            model: modelId.replace("ollama/", ""),
             options: {
-                num_ctx: options.contextWindowTokens || this.settings.contextWindowTokens
+                num_ctx: finalCtx
             },
             stream: stream
         };
@@ -281,7 +531,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider {
                         name: t.name,
                         parameters: params
                     },
-                    type: 'function'
+                    type: "function"
                 };
             });
         }

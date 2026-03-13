@@ -472,8 +472,23 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		await this.sanitizeBudgets();
 
+		// --- Model ID Prefix Migration (v8.1.0) ---
+		let prefixChanged = false;
+		if (this.settings.embeddingProvider === 'local' && !this.settings.embeddingModel.startsWith('local/')) {
+			this.settings.embeddingModel = `local/${this.settings.embeddingModel}`;
+			prefixChanged = true;
+		} else if (this.settings.embeddingProvider === 'ollama' && !this.settings.embeddingModel.startsWith('ollama/')) {
+			this.settings.embeddingModel = `ollama/${this.settings.embeddingModel}`;
+			prefixChanged = true;
+		}
+
+		if (prefixChanged) {
+			logger.info(`[Migration] Updated model ID with prefix: ${this.settings.embeddingModel}`);
+			await this.saveData(this.settings);
+		}
+
 		// Sanity check: Ensure dimensions match presets if using a local provider
-		if (this.settings.embeddingProvider === 'local') {
+		if (this.settings.embeddingModel.startsWith('local/')) {
 			const modelId = this.settings.embeddingModel;
 			const modelDef = LOCAL_EMBEDDING_MODELS.find(m => m.id === modelId);
 
@@ -484,8 +499,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			}
 
 			// Migration: v1.5 -> v1 (v1.5 seems to be broken/unavailable in Xenova repo)
-			if (modelId === 'Xenova/nomic-embed-text-v1.5') {
-				const nomicV1 = 'Xenova/nomic-embed-text-v1';
+			if (modelId === 'local/Xenova/nomic-embed-text-v1.5') {
+				const nomicV1 = 'local/Xenova/nomic-embed-text-v1';
 				logger.info(`Migrating model from v1.5 to v1: ${modelId} -> ${nomicV1}`);
 				this.settings.embeddingModel = nomicV1;
 				this.settings.embeddingDimension = SANITIZATION_CONSTANTS.DEFAULT_EMBEDDING_DIMENSION;

@@ -1,4 +1,4 @@
-import { Setting, TextComponent, App, setIcon, Notice, SecretComponent } from "obsidian";
+import { Setting, TextComponent, App, setIcon, Notice, SecretComponent, requestUrl } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
@@ -127,17 +127,46 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         });
     }
 
-    // --- 2. Ollama Endpoint Setting ---
+    const statusEl = containerEl.createDiv({ cls: 'vi-ollama-status' });
+    const updateStatus = async (url: string) => {
+        if (!url) {
+            statusEl.setText("");
+            return;
+        }
+        try {
+            const endpoint = url.replace(/\/+$/, '');
+            const response = await requestUrl({ url: `${endpoint}/api/version` });
+            if (response.status === 200) {
+                statusEl.setText("Ollama is online");
+                statusEl.className = 'vi-ollama-status vi-status-success';
+            } else {
+                statusEl.setText("Ollama is offline");
+                statusEl.className = 'vi-ollama-status vi-status-error';
+            }
+        } catch {
+            statusEl.setText("Ollama is offline");
+            statusEl.className = 'vi-ollama-status vi-status-error';
+        }
+    };
+
     new Setting(containerEl)
         .setName('Ollama endpoint')
         .setDesc('Server url for local model provider.')
         .addText(text => text
-            .setPlaceholder('')
+            .setPlaceholder('Enter endpoint (e.g., http://localhost:11434)')
             .setValue(plugin.settings.ollamaEndpoint || '')
             .onChange(async (value) => {
-                plugin.settings.ollamaEndpoint = value;
+                let url = value.trim();
+                if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = `http://${url}`;
+                    text.setValue(url);
+                }
+                plugin.settings.ollamaEndpoint = url;
                 await plugin.saveSettings();
+                await updateStatus(url);
             }));
+
+    void updateStatus(plugin.settings.ollamaEndpoint);
 
     // --- 3. Model List Management ---
     new Setting(containerEl).setName('Model management').setHeading();

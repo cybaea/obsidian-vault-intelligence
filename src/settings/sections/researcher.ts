@@ -44,15 +44,46 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
+            
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleModels = chatModels.filter(m => m.provider === 'gemini');
+            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
 
-            // Add tooltips to each option
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
+
+            if (googleModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
             }
 
-            dropdown.addOption('custom', 'Custom model string...');
+            if (ollamaModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            } else if (plugin.settings.ollamaEndpoint) {
+                // Show placeholder if endpoint exists but no models found
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                group.createEl('option', {
+                    attr: { disabled: 'true' },
+                    text: 'No models found',
+                    value: 'none'
+                });
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            // Set value after rebuilding
             dropdown.setValue(isChatPreset ? chatModelCurrent : 'custom');
+
+            // tooltips logic preserved if needed, though optgroup might change indexing
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+            }
 
             dropdown.onChange((val) => {
                 void (async () => {
@@ -283,13 +314,35 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 dropdown.addOption(m.id, m.label);
             }
 
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleGrounding = groundingModels.filter(m => m.provider === 'gemini');
+            const ollamaGrounding = groundingModels.filter(m => m.provider === 'ollama');
+
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = '';
+
+            if (googleGrounding.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleGrounding) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            }
+
+            if (ollamaGrounding.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaGrounding) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
+
             for (let i = 0; i < dropdown.selectEl.options.length; i++) {
                 const opt = dropdown.selectEl.options.item(i);
                 if (opt && opt.value !== 'custom') opt.title = opt.value;
             }
-
-            dropdown.addOption('custom', 'Custom model string...');
-            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
 
             dropdown.onChange((val) => {
                 void (async () => {

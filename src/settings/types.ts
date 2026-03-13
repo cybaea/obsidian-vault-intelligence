@@ -9,10 +9,9 @@ import { PersistenceManager } from "../services/PersistenceManager";
 import { IEmbeddingClient } from "../types/providers";
 import { LogLevel } from "../utils/logger";
 
-export type EmbeddingProvider = 'gemini' | 'local';
+export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
 export interface VaultIntelligenceSettings {
-    // New: Language Support
     agentLanguage: string;
     allowLocalNetworkAccess: boolean;
     authorName: string;
@@ -27,7 +26,6 @@ export interface VaultIntelligenceSettings {
     embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
-    // New: Provider Selector
     embeddingProvider: EmbeddingProvider;
     embeddingSimd: boolean;
     embeddingThreads: number;
@@ -52,6 +50,7 @@ export interface VaultIntelligenceSettings {
     maxAgentSteps: number;
     minSimilarityScore: number;
     modelCacheDurationDays: number;
+    ollamaEmbeddingArchitectures: string[] | null;
     ollamaEndpoint: string;
     ontologyPath: string;
     plansRetentionDays: number;
@@ -143,7 +142,6 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingChunkSize: 512,
     embeddingDimension: 768,
     embeddingModel: 'gemini-embedding-001',
-    // Default to Gemini for now to preserve existing behavior
     embeddingProvider: 'gemini',
     embeddingSimd: !Platform.isMobile,
     embeddingThreads: Platform.isMobile ? 1 : 2,
@@ -168,6 +166,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
+    ollamaEmbeddingArchitectures: null,
     ollamaEndpoint: 'http://localhost:11434',
     ontologyPath: 'Ontology',
     plansRetentionDays: 7,
