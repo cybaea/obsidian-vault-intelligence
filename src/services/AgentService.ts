@@ -172,16 +172,10 @@ export class AgentService {
             }));
 
         // 2. De-duplicate if the UI already added this message to history
-        // We look for the last 'user' role message in the filtered history.
-        if (filteredMessages.length > 0) {
-            const lastUserMsgIndex = [...filteredMessages].reverse().findIndex(m => m.role === 'user');
-            if (lastUserMsgIndex !== -1) {
-                const actualIndex = filteredMessages.length - 1 - lastUserMsgIndex;
-                const lastUserMsg = filteredMessages[actualIndex];
-                if (lastUserMsg && lastUserMsg.content === currentPrompt) {
-                    filteredMessages.splice(actualIndex, 1);
-                }
-            }
+        // We look for any 'user' role message that matches the current prompt exactly.
+        const duplicateIndex = filteredMessages.findIndex(m => m.role === 'user' && m.content === currentPrompt);
+        if (duplicateIndex !== -1) {
+            filteredMessages.splice(duplicateIndex, 1);
         }
 
         const formattedHistory: UnifiedMessage[] = filteredMessages;
@@ -218,6 +212,11 @@ export class AgentService {
 
         const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
         formattedHistory.push({ content: currentPrompt, role: "user" });
+
+        logger.debug(`[Agent] Calling model: ${options.modelId || this.settings.chatModel}`);
+        logger.debug(`[Agent] History turns: ${formattedHistory.length}`);
+        const debugPrompt = currentPrompt.length > 500 ? currentPrompt.substring(0, 500) + "..." : currentPrompt;
+        logger.debug(`[Agent] Final Enriched Prompt Preview:\n${debugPrompt}`);
 
         try {
             let loops = 0;
@@ -348,7 +347,6 @@ export class AgentService {
     /**
      * Prepares the context for a chat message by resolving file references (`@Filename`).
      * This separates the view logic from the business logic.
-     * @param inputMessage - The raw message from the user.
      * @returns Object containing resolved context files, the clean message, and any warnings.
      */
     public async prepareContext(inputMessage: string, modelId?: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
@@ -427,7 +425,17 @@ export class AgentService {
         // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
         const activeModel = modelId || this.settings.chatModel;
         const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
-        const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
+        const budgetTokens = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN * 0.5); // 50% for folder context
+        const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+
+        // Starvation Protection
+        // If only one document, let it take the whole budget. If multiple, apply soft limit.
+        const effectiveLimitRatio = sortedFiles.length <= 1 ? 1.0 : SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO;
+        const singleDocSoftLimitTokens = Math.floor(budgetTokens * effectiveLimitRatio);
+        const singleDocSoftLimitChars = Math.floor(budgetChars * effectiveLimitRatio);
+
+        logger.debug(`[ContextAssembler] Folder "${folder.name}" Budget: ${budgetTokens} tokens. Soft Cap (${(effectiveLimitRatio * 100).toFixed(0)}%): ${singleDocSoftLimitTokens} tokens.`);
+
         const maxFiles = this.settings.contextMaxFiles || SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES;
 
         let currentSize = 0;
@@ -435,7 +443,15 @@ export class AgentService {
 
         for (const file of sortedFiles) {
             const size = file.stat.size;
-            if (currentSize + size > charBudget || filesToInclude.length >= maxFiles) break;
+            // Apply soft limit for individual files if there are multiple files
+            if (sortedFiles.length > 1 && currentSize + size > singleDocSoftLimitChars && filesToInclude.length > 0) {
+                logger.debug(`[ContextAssembler] Skipping "${file.name}" due to single document soft limit. Current size: ${currentSize}, File size: ${size}, Soft limit: ${singleDocSoftLimitChars}`);
+                continue; // Skip this file but continue trying others
+            }
+            if (currentSize + size > budgetChars || filesToInclude.length >= maxFiles) {
+                logger.debug(`[ContextAssembler] Stopping file inclusion for folder "${folder.name}". Current size: ${currentSize}, File size: ${size}, Budget: ${budgetChars}, Files included: ${filesToInclude.length}, Max files: ${maxFiles}`);
+                break;
+            }
 
             filesToInclude.push(file);
             currentSize += size;

@@ -85,8 +85,8 @@ export const SEARCH_CONSTANTS = {
     /** Scoring: Boost for exact title match */
     SCORE_TITLE_MATCH: 3.0,
 
-    /** Max % of the budget a single document can consume if others are present */
-    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
+    /** Max % of the budget a single document can consume if others are present (Starvation Protection) */
+    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.30,
 
     /** Default weight for spreading activation */
     SPREADING_ACTIVATION_WEIGHT: 0.6,

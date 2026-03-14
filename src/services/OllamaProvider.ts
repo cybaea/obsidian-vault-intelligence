@@ -531,8 +531,10 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 };
             }
             
+            const content = m.content || (m.toolCalls && !useNativeTools ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : " ");
+            
             return {
-                content: m.content || (m.toolCalls && !useNativeTools ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : ""),
+                content: content,
                 // Ollama expects 'assistant' and 'tool' (recent versions)
                 role: m.role === "model" ? "assistant" : m.role,
                 // Map tool results back correctly (only for native)
