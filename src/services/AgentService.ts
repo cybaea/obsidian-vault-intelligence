@@ -117,21 +117,12 @@ export class AgentService {
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
+
         const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
         const provider: IModelProvider = this.providerRegistry.getModelProvider(options.modelId);
 
         // Update ToolRegistry for this turn if model changed
         this.toolRegistry.updateProvider(reasoningClient, provider);
-
-        const history: UnifiedMessage[] = [
-            ...messages.map(h => ({
-                content: h.text,
-                rawContent: h.rawContent,
-                role: h.role as "user" | "model" | "tool",
-                toolCalls: h.toolCalls,
-                toolResults: h.toolResults
-            }))
-        ];
 
         if (contextFiles.length === 0) {
             const activeFile = this.app.workspace.getActiveFile();
@@ -163,10 +154,19 @@ export class AgentService {
         const createdFiles = new Set<string>();
         const wereFilesExplicitlyMentioned = contextFiles.length > 0;
 
-        const formattedHistory: UnifiedMessage[] = history.map(h => ({
-            content: h.content,
+        // De-duplicate if the UI already added this message to history
+        const deduplicatedMessages = [...messages];
+        if (deduplicatedMessages.length > 0) {
+            const lastMsg = deduplicatedMessages[deduplicatedMessages.length - 1];
+            if (lastMsg && lastMsg.role === 'user' && lastMsg.text === currentPrompt) {
+                deduplicatedMessages.pop();
+            }
+        }
+
+        const formattedHistory: UnifiedMessage[] = deduplicatedMessages.map(h => ({
+            content: h.text,
             rawContent: h.rawContent,
-            role: h.role,
+            role: h.role as "user" | "model" | "tool",
             toolCalls: h.toolCalls,
             toolResults: h.toolResults
         }));

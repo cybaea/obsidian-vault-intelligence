@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AgentService } from '../../src/services/AgentService';
+import { AgentService, ChatMessage } from '../../src/services/AgentService';
 import { GraphService } from '../../src/services/GraphService';
 import { ProviderRegistry } from '../../src/services/ProviderRegistry';
 import { VaultIntelligenceSettings } from '../../src/settings';
@@ -194,5 +194,34 @@ describe('AgentService Integration', () => {
         const promptSentToModel = firstCallHistory[0]?.content || "";
         
         expect(promptSentToModel).toContain('[SYSTEM NOTE: 1 context files were skipped');
+    });
+
+    it('should de-duplicate user messages in history if the last message matches the current prompt', async () => {
+        mockReasoningClient.generateMessageStream.mockImplementationOnce(() => {
+            return (async function* () {
+                await Promise.resolve(); // satisfy require-await
+                yield { text: "Response" };
+                yield { isDone: true };
+            })();
+        });
+
+        const history: ChatMessage[] = [{ role: 'user', text: 'Persistent Message' }];
+        const currentPrompt = 'Persistent Message'; // Sent by view after adding to history
+
+        const stream = agentService.chatStream(history, currentPrompt, [], {});
+        await stream.next();
+
+        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
+        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
+        
+        const firstCall = gm.mock.calls[0] as unknown[] | undefined;
+        const sentHistory = firstCall?.[0] as UnifiedMessage[] | undefined;
+
+        const userMessages = (sentHistory ?? []).filter(m => m.role === 'user');
+        expect(userMessages.length).toBe(1);
+        if (userMessages[0]) {
+            expect(userMessages[0].content).toContain('Persistent Message');
+        }
     });
 });
