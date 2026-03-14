@@ -63,4 +63,28 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
         // 9999999 should be capped. If model is unknown, default max sanity is used (1048576)
         expect(plugin.settings.modelContextOverrides['ollama/tinyllama']).toBeLessThanOrEqual(1048576); 
     });
+
+    it('should migrate gardenerRecheckHours to gardenerRecheckDays and remove legacy key', async () => {
+        // Mock the environment
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '8.1.0' } as PluginManifest;
+
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+        
+        const legacyData = {
+            gardenerRecheckHours: 48,
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+        plugin.saveSettings = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        // Check if migration happened
+        expect(plugin.settings.gardenerRecheckDays).toBe(2);
+        
+        // Use any to check for non-existent key in type
+        expect((plugin.settings as unknown as Record<string, unknown>)['gardenerRecheckHours']).toBeUndefined();
+    });
 });

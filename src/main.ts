@@ -461,6 +461,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			// Convert to days and round to 3 decimal places to avoid float jitter
 			this.settings.gardenerRecheckDays = Math.round((hours / 24) * 1000) / 1000;
 			delete rawData.gardenerRecheckHours;
+			delete (this.settings as unknown as Record<string, unknown>)['gardenerRecheckHours'];
 			await this.saveSettings();
 			logger.info(`Migrating gardenerRecheckHours (${hours}) to gardenerRecheckDays (${this.settings.gardenerRecheckDays})`);
 		}
