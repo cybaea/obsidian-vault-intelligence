@@ -196,17 +196,20 @@ describe('AgentService Integration', () => {
         expect(promptSentToModel).toContain('[SYSTEM NOTE: 1 context files were skipped');
     });
 
-    it('should de-duplicate user messages in history if the last message matches the current prompt', async () => {
+    it('should de-duplicate user messages even if separated by UI-only system messages', async () => {
         mockReasoningClient.generateMessageStream.mockImplementationOnce(() => {
             return (async function* () {
-                await Promise.resolve(); // satisfy require-await
+                await Promise.resolve();
                 yield { text: "Response" };
                 yield { isDone: true };
             })();
         });
 
-        const history: ChatMessage[] = [{ role: 'user', text: 'Persistent Message' }];
-        const currentPrompt = 'Persistent Message'; // Sent by view after adding to history
+        const history: ChatMessage[] = [
+            { role: 'user', text: 'Persistent Message' },
+            { role: 'system', text: '' } // UI-only spotlight message
+        ];
+        const currentPrompt = 'Persistent Message';
 
         const stream = agentService.chatStream(history, currentPrompt, [], {});
         await stream.next();
@@ -218,10 +221,12 @@ describe('AgentService Integration', () => {
         const firstCall = gm.mock.calls[0] as unknown[] | undefined;
         const sentHistory = firstCall?.[0] as UnifiedMessage[] | undefined;
 
-        const userMessages = (sentHistory ?? []).filter(m => m.role === 'user');
-        expect(userMessages.length).toBe(1);
-        if (userMessages[0]) {
-            expect(userMessages[0].content).toContain('Persistent Message');
+        // UI-only system msg should be filtered out, and user msg de-duplicated
+        const validMessages = (sentHistory ?? []).filter(m => m.role === 'user' || (m.role === 'system' && m.content));
+        expect(validMessages.length).toBe(1); 
+        if (validMessages[0]) {
+            expect(validMessages[0].role).toBe('user');
+            expect(validMessages[0].content).toContain('Persistent Message');
         }
     });
 });

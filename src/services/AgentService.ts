@@ -154,22 +154,37 @@ export class AgentService {
         const createdFiles = new Set<string>();
         const wereFilesExplicitlyMentioned = contextFiles.length > 0;
 
-        // De-duplicate if the UI already added this message to history
-        const deduplicatedMessages = [...messages];
-        if (deduplicatedMessages.length > 0) {
-            const lastMsg = deduplicatedMessages[deduplicatedMessages.length - 1];
-            if (lastMsg && lastMsg.role === 'user' && lastMsg.text === currentPrompt) {
-                deduplicatedMessages.pop();
+        // 1. Filter out UI-only messages (e.g., Spotlight results) and map to UnifiedMessage
+        const filteredMessages: UnifiedMessage[] = messages
+            .filter(msg => {
+                // Keep if it has text, tool calls, or tool results
+                if (msg.text?.trim() || msg.toolCalls?.length || msg.toolResults?.length) return true;
+                // Keep if it has raw content parts
+                if (msg.rawContent?.length) return true;
+                return false;
+            })
+            .map(h => ({
+                content: h.text,
+                rawContent: h.rawContent,
+                role: h.role,
+                toolCalls: h.toolCalls,
+                toolResults: h.toolResults
+            }));
+
+        // 2. De-duplicate if the UI already added this message to history
+        // We look for the last 'user' role message in the filtered history.
+        if (filteredMessages.length > 0) {
+            const lastUserMsgIndex = [...filteredMessages].reverse().findIndex(m => m.role === 'user');
+            if (lastUserMsgIndex !== -1) {
+                const actualIndex = filteredMessages.length - 1 - lastUserMsgIndex;
+                const lastUserMsg = filteredMessages[actualIndex];
+                if (lastUserMsg && lastUserMsg.content === currentPrompt) {
+                    filteredMessages.splice(actualIndex, 1);
+                }
             }
         }
 
-        const formattedHistory: UnifiedMessage[] = deduplicatedMessages.map(h => ({
-            content: h.text,
-            rawContent: h.rawContent,
-            role: h.role as "user" | "model" | "tool",
-            toolCalls: h.toolCalls,
-            toolResults: h.toolResults
-        }));
+        const formattedHistory: UnifiedMessage[] = filteredMessages;
 
         if (contextFiles.length > 0) {
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
