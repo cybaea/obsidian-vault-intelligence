@@ -144,12 +144,25 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .setDesc(dimensionDesc)
             .addDropdown(dropdown => {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
-                const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';
+                const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
 
-                dropdown.addOption('768', '768 (flash / standard)')
-                    .addOption('1536', '1536 (balanced)')
-                    .addOption('3072', '3072 (max / v4 default)')
-                    .setValue(String(plugin.settings.embeddingDimension))
+                if (providerName === 'ollama') {
+                    const nativeDim = currentModel?.dimensions || 768;
+                    dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
+
+                    if (plugin.settings.embeddingModel.includes('nomic')) {
+                        if (nativeDim > 512) dropdown.addOption('512', '512 (${"Matryoshka"})');
+                        if (nativeDim > 256) dropdown.addOption('256', '256 (${"Matryoshka"})');
+                        if (nativeDim > 128) dropdown.addOption('128', '128 (${"Matryoshka)}');
+                        dropdown.addOption('64', '64 (${"Matryoshka"})');
+                    }
+                } else {
+                    dropdown.addOption('768', '768 (flash / standard)')
+                        .addOption('1536', '1536 (balanced)')
+                        .addOption('3072', '3072 (max / v4 default)');
+                }
+
+                dropdown.setValue(String(plugin.settings.embeddingDimension))
                     .onChange(async (value) => {
                         const num = parseInt(value);
                         if (num !== plugin.settings.embeddingDimension) {
@@ -157,7 +170,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                             // Proactive: If they select high dims but are on an old model, suggest the upgrade
                             if (num > 768 && !isModern && providerName === 'gemini') {
-                                new Notice("This dimension works best with text-embedding-004. Please check your model selection.");
+                                new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
                             }
 
                             await plugin.saveSettings(true);
