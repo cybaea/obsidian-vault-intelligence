@@ -321,11 +321,12 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                     }
                                 }
 
-                                if (newText) {
+                                if (newText || (chunk.message.tool_calls && chunk.message.tool_calls.length > 0)) {
                                     yield {
                                         text: newText,
                                         toolCalls: chunk.message.tool_calls?.map(tc => ({
                                             args: tc.function.arguments,
+                                            id: tc.id || crypto.randomUUID(),
                                             name: tc.function.name
                                         }))
                                     };
@@ -334,24 +335,26 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
                             if (chunk.done) {
                                 let extractedToolCalls;
+                                let scrubbedText;
                                 const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
                                 if (toolMatch && toolMatch[1]) {
                                     try {
                                         extractedToolCalls = [JSON.parse(toolMatch[1])];
+                                        scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
                                     } catch (parseErr) {
                                         logger.warn("[Ollama] Failed to parse ReAct JSON", parseErr, toolMatch[1]);
                                     }
                                 } else {
-                                    // Fallback parser for malformed tool calls (e.g. wrapped in markdown block or asterisks)
-                                    // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
                                     const extraction = this.extractFallbackToolCalls(fullMessageText);
                                     if (extraction.toolCalls.length > 0) {
                                         extractedToolCalls = extraction.toolCalls;
+                                        scrubbedText = extraction.scrubbedText;
                                     }
                                 }
 
                                 yield { 
                                     isDone: true,
+                                    replaceText: scrubbedText,
                                     toolCalls: extractedToolCalls
                                 };
                             }
@@ -461,6 +464,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         let fullMessageText = "";
         let inToolCall = false;
         let tempToolCallBuffer = "";
+        let emittedNativeTools = false;
 
         try {
             for await (const chunk of res) {
@@ -505,12 +509,15 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 }
                             }
 
-                            if (newText) {
+                            if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
+                                if (data.message.tool_calls && data.message.tool_calls.length > 0) {
+                                    emittedNativeTools = true;
+                                }
                                 yield {
                                     text: newText,
                                     toolCalls: data.message.tool_calls?.map(tc => ({
                                         args: tc.function.arguments,
-                                        id: tc.id,
+                                        id: tc.id || crypto.randomUUID(),
                                         name: tc.function.name
                                     }))
                                 };
@@ -519,25 +526,31 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
                         if (data.done) {
                             let extractedToolCalls;
+                            let scrubbedText;
                             const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
                             if (toolMatch && toolMatch[1]) {
                                 try {
                                     extractedToolCalls = [JSON.parse(toolMatch[1])];
+                                    scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
                                 } catch (parseErr) {
                                     logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
                                 }
                             } else {
-                                // Fallback parser for malformed tool calls
-                                // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
                                 const extraction = this.extractFallbackToolCalls(fullMessageText);
                                 if (extraction.toolCalls.length > 0) {
                                     extractedToolCalls = extraction.toolCalls;
+                                    scrubbedText = extraction.scrubbedText;
                                 }
+                            }
+
+                            if (emittedNativeTools || (extractedToolCalls && extractedToolCalls.length > 0)) {
+                                scrubbedText = "";
                             }
 
                             // Pass exact token telemetry back to service
                             yield { 
                                 isDone: true,
+                                replaceText: scrubbedText,
                                 tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
                                 toolCalls: extractedToolCalls
                             };
@@ -574,12 +587,15 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             }
                         }
 
-                        if (newText) {
+                        if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
+                            if (data.message.tool_calls && data.message.tool_calls.length > 0) {
+                                emittedNativeTools = true;
+                            }
                             yield {
                                 text: newText,
                                 toolCalls: data.message.tool_calls?.map(tc => ({
                                     args: tc.function.arguments,
-                                    id: tc.id,
+                                    id: tc.id || crypto.randomUUID(),
                                     name: tc.function.name
                                 }))
                             };
@@ -588,10 +604,12 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
                     if (data.done) {
                         let extractedToolCalls;
+                        let scrubbedText;
                         const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
                         if (toolMatch && toolMatch[1]) {
                             try {
                                 extractedToolCalls = [JSON.parse(toolMatch[1])];
+                                scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
                             } catch (parseErr) {
                                 logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
                             }
@@ -599,11 +617,17 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             const extraction = this.extractFallbackToolCalls(fullMessageText);
                             if (extraction.toolCalls.length > 0) {
                                 extractedToolCalls = extraction.toolCalls;
+                                scrubbedText = extraction.scrubbedText;
                             }
+                        }
+
+                        if (emittedNativeTools || (extractedToolCalls && extractedToolCalls.length > 0)) {
+                            scrubbedText = "";
                         }
 
                         yield { 
                             isDone: true,
+                            replaceText: scrubbedText,
                             tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
                             toolCalls: extractedToolCalls
                         };
@@ -739,10 +763,10 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             currentIndex = startIdx + 1;
         }
 
-        // Clean up empty markdown json fences that might be left behind: ```json\n\n```
-        scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n\s*```/g, '');
+        // Clean up empty markdown json fences that might be left behind: ```json\n\n``` or ```\n\n```
+        scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n*\s*```/g, '').trim();
 
-        return { scrubbedText: scrubbedText.trim(), toolCalls };
+        return { scrubbedText, toolCalls };
     }
 
     /**
@@ -785,7 +809,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             return [{
                 content: content,
                 // Ollama expects 'assistant' and 'tool' (recent versions)
-                role: m.role === "model" ? "assistant" : m.role as "user" | "system" | "assistant" | "tool",
+                role: m.role as "user" | "system" | "assistant" | "tool",
                 tool_calls: useNativeTools && m.toolCalls ? m.toolCalls.map(tc => ({
                     function: {
                         arguments: tc.args,

@@ -260,6 +260,10 @@ export class AgentService {
                     if (chunk.toolCalls) {
                         loopToolCalls.push(...chunk.toolCalls);
                     }
+                    if (chunk.replaceText !== undefined) {
+                        loopText = chunk.replaceText;
+                        yield { replaceText: chunk.replaceText };
+                    }
                     if (chunk.text !== undefined) {
                         loopText += chunk.text;
                         yield { text: chunk.text };

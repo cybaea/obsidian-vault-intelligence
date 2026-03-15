@@ -38,6 +38,7 @@ export interface StreamChunk {
      * Yielded when a turn or tool-loop step is complete.
      */
     rawContent?: unknown[];
+    replaceText?: string;
     status?: string;
     text?: string;
     tokens?: number;

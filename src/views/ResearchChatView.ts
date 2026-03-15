@@ -263,7 +263,7 @@ export class ResearchChatView extends ItemView {
                     await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
                     
                     let savedSelection: { startOffset: number; endOffset: number } | null = null;
-                    const selection = window.getSelection();
+                    const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
 
                     if (selection && selection.rangeCount > 0 && lastMessageNode && lastMessageNode.contains(selection.anchorNode)) {
                         const getOffset = (node: Node | null, offset: number) => {
@@ -328,7 +328,10 @@ export class ResearchChatView extends ItemView {
             for await (const chunk of stream) {
                 if (this.currentAbortController?.signal.aborted) break;
 
-                if (chunk.text) {
+                if (chunk.replaceText !== undefined) {
+                    modelMsg.text = chunk.replaceText;
+                    void updateStreamingUI();
+                } else if (chunk.text) {
                     modelMsg.text += chunk.text;
                     void updateStreamingUI();
                 }
