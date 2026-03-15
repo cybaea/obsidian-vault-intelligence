@@ -55,6 +55,14 @@ If you are running Ollama v0.12+ (released late 2025), ensure these environment 
 1.  **`OLLAMA_FLASH_ATTENTION=1`**: Essential for context windows over 4K. Reduces VRAM usage and speeds up processing on modern NVIDIA/AMD cards.
 2.  **`OLLAMA_KV_CACHE_TYPE=q4_0`**: Quantizes the context window memory. This allows you to double your Context Budget in Vault Intelligence without buying a new GPU.
 
+### Embedding Chunk Size
+
+The "Embedding chunk size" setting (found in Advanced Settings) controls how large each piece of text is before being vectorized.
+
+*   **Granular (256 - 1024)**: The default. Excellent for precise semantic matching and finding specific paragraphs. Ideal for models like `bge-small-en-v1.5` which have hard context limits.
+*   **Document Scale (4096 - 8192)**: Useful for finding broad themes across entire documents and speeding up vault indexing. **Only use this** if your selected embedding model explicitly supports massive context windows (e.g., `nomic-embed-text`).
+*   **The Risk**: If you set the chunk size larger than your model's maximum context window, Ollama will silently truncate the text, leading to missing information and poor search quality.
+
 ## 4. Debugging & Common Issues
 
 *   **Plugin cannot connect to Ollama**: Ensure Ollama is running and your `Ollama endpoint` in Vault Intelligence is correct (default: `http://localhost:11434`). If Obsidian and Ollama are on different machines, you must set `OLLAMA_HOST=0.0.0.0` on the Ollama server.

@@ -74,6 +74,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .addOption('1024', '1024 (high context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
+            .addOption('4096', `4096 (large context)`)
+            .addOption('8192', `8192 (document scale)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
                 const suggested = parseInt(value);
