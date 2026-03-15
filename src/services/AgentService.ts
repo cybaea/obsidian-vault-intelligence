@@ -214,9 +214,18 @@ export class AgentService {
         
         // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
         if (!tools.find(t => t.name === "google_search")) {
-            // Find variants of the google search rule
-            // e.g., " - Use 'google_search' for live news..." or "2. **Verification**: When users ask for facts..."
-            systemInstruction = systemInstruction.replace(/.*?google_search.*?(\r?\n|$)/gi, "");
+            // Strip google_search rule if unsupported to prevent hallucinations
+            const activeModelStr = options.modelId || this.settings.chatModel;
+            const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : "gemini";
+            const supportsWeb = provider.supportsWebGrounding;
+
+            if (!supportsWeb && typeof systemInstruction === 'string') {
+                // Replace the verification step to avoid mentioning google_search while preserving the numbered list
+                systemInstruction = systemInstruction.replace(/2\.\s\*\*Verification\*\*[\s\S]*?(?=\n3\.)/i, "2. **Verification**: Always double-check facts against the user's notes.");
+                // Remove the specific bullet point for the google_search tool
+                systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?google_search'?[\s\S]*?(?=\n)/gi, "");
+                logger.debug("[Agent] Dynamically stripped google_search instruction from system prompt", { provider: providerName });
+            }
         }
         
         formattedHistory.push({ content: currentPrompt, role: "user" });

@@ -575,6 +575,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         if (parsed.name && (parsed.arguments || parsed.parameters || parsed.args)) {
                             toolCalls.push({
                                 args: parsed.parameters || parsed.arguments || parsed.args || {},
+                                id: crypto.randomUUID(), // Ollama requires ID to map results
                                 name: parsed.name
                             });
                             // Append text before JSON
@@ -613,31 +614,34 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         // Map UnifiedMessage roles/content to Ollama format
         const useNativeTools = details?.supportedMethods?.includes("nativeTools");
 
-        const ollamaMessages: OllamaMessage[] = messages.map(m => {
+        const ollamaMessages: OllamaMessage[] = messages.flatMap(m => {
             if (m.role === "tool" && !useNativeTools) {
-                return {
+                return [{
                     content: `Tool Execution Result:\n${JSON.stringify(m.toolResults)}\n\nAnalyze the result and continue your response.`,
                     role: "user" // Fallback for lack of tool role
-                };
+                }];
             }
-            let content = m.content || "";
             if (m.role === "tool" && useNativeTools && m.toolResults) {
-                // Return stringified result as expected by native tool support
-                content = JSON.stringify(m.toolResults.length === 1 ? m.toolResults[0]?.result : m.toolResults.map(tr => tr.result));
-            } else if (!content) {
+                // Ollama Native Tool API requires one message per tool result
+                return m.toolResults.map(tr => ({
+                    content: JSON.stringify(tr.result),
+                    role: "tool",
+                    tool_call_id: tr.id // ID is required to link result back to the specific call
+                })) as OllamaMessage[];
+            }
+            
+            let content = m.content || "";
+            if (!content && m.role !== "tool") {
                 content = (m.toolCalls && m.toolCalls.length > 0 && !useNativeTools) ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : " ";
             } else if (m.role === "model") {
                 // Always scrub potential hallucinated tool calls from the history payload sent back to Ollama
                 content = this.extractFallbackToolCalls(content).scrubbedText || " ";
             }
             
-            return {
+            return [{
                 content: content,
-                name: m.role === "tool" && useNativeTools ? m.toolResults?.[0]?.name : undefined,
                 // Ollama expects 'assistant' and 'tool' (recent versions)
-                role: m.role === "model" ? "assistant" : m.role,
-                // Map tool results back correctly (only for native)
-                tool_call_id: useNativeTools ? m.toolResults?.[0]?.id : undefined,
+                role: m.role === "model" ? "assistant" : m.role as "user" | "system" | "assistant" | "tool",
                 tool_calls: useNativeTools && m.toolCalls ? m.toolCalls.map(tc => ({
                     function: {
                         arguments: tc.args,
@@ -645,7 +649,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     },
                     id: tc.id
                 })) : undefined
-            };
+            }];
         });
 
         // Insert system instruction if provided
