@@ -159,14 +159,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.providerRegistry = new ProviderRegistry(this.settings, this.app, this.geminiService);
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (this.settings.googleApiKey) {
+		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
 			void (async () => {
-				const apiKey = await this.geminiService.getApiKey(); // Asynchronous call
-				if (apiKey) {
-					await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays);
-					// Re-sanitize after fetch completes in case dynamic limits are different
-					await this.sanitizeBudgets();
-				}
+				const apiKey = await this.geminiService.getApiKey() || ""; 
+				// Pass skipOllamaFetch=true so we exclusively use the Ollama cache on startup to save costs
+				await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays, false, false, true);
+				// Re-sanitize after fetch completes in case dynamic limits are different
+				await this.sanitizeBudgets();
 			})();
 		}
 

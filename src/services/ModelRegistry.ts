@@ -168,7 +168,7 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false): Promise<void> {
+    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
         if (this.isFetching) return;
 
         const now = Date.now();
@@ -179,24 +179,37 @@ export class ModelRegistry {
         let useGeminiCache = false;
         let useOllamaCache = false;
 
-        // 1. Check Memory Cache for models
-        if (!forceUpdate && this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
-            useGeminiCache = true;
-            useOllamaCache = true;
-            geminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
-            ollamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
-        } else if (!forceUpdate && cacheDurationDays > 0) {
-            // 2. Check LocalStorage Cache for models
+        let cachedOllamaModels: ModelDefinition[] | null = null;
+        let cachedGeminiModels: ModelDefinition[] | null = null;
+
+        // 1. Check Memory Cache for models first
+        if (this.dynamicModels.length > 0) {
+            cachedGeminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
+            cachedOllamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
+            
+            if (!forceUpdate && (now - this.lastFetchTime < cacheDurationMs)) {
+                useGeminiCache = true;
+                useOllamaCache = true;
+                geminiModels = cachedGeminiModels;
+                ollamaModels = cachedOllamaModels;
+            }
+        } 
+        
+        // 2. Check LocalStorage Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
+        if (!cachedOllamaModels || !cachedGeminiModels) {
             const storage = (app as unknown as InternalApp);
             const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
             if (typeof cached === 'string') {
                 try {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
-                    if (now - parsed.timestamp < cacheDurationMs) {
+                    cachedGeminiModels = parsed.models.filter(m => m.provider === 'gemini');
+                    cachedOllamaModels = parsed.models.filter(m => m.provider === 'ollama');
+
+                    if (!forceUpdate && cacheDurationDays > 0 && (now - parsed.timestamp < cacheDurationMs)) {
                         useGeminiCache = true;
                         useOllamaCache = true;
-                        geminiModels = parsed.models.filter(m => m.provider === 'gemini');
-                        ollamaModels = parsed.models.filter(m => m.provider === 'ollama');
+                        geminiModels = cachedGeminiModels;
+                        ollamaModels = cachedOllamaModels;
                         this.lastFetchTime = parsed.timestamp;
                         this.rawApiResponse = parsed.rawResponse || null;
                         this.rawOllamaResponse = parsed.rawOllamaResponse || null;
@@ -244,14 +257,33 @@ export class ModelRegistry {
             }
 
             if (settings.ollamaEndpoint && !useOllamaCache) {
-                tasks.push(
-                    this.fetchOllamaModels(settings.ollamaEndpoint)
-                        .then(res => { 
-                            ollamaModels = res.models; 
-                            this.rawOllamaResponse = res.rawResponse;
-                        })
-                        .catch(err => { logger.debug("Ollama models not available", err); })
-                );
+                if (skipOllamaFetch) {
+                    if (cachedOllamaModels) {
+                        ollamaModels = cachedOllamaModels;
+                        useOllamaCache = true; // Pretend we used cache to prevent saving over it
+                    }
+                } else {
+                    tasks.push(
+                        this.fetchOllamaModels(settings.ollamaEndpoint)
+                            .then(res => { 
+                                if (res.success) {
+                                    ollamaModels = res.models; 
+                                    this.rawOllamaResponse = res.rawResponse;
+                                } else if (cachedOllamaModels) {
+                                    // Fallback to stale cache if server is offline
+                                    ollamaModels = cachedOllamaModels;
+                                    useOllamaCache = true; // prevent saving over
+                                }
+                            })
+                            .catch(err => { 
+                                logger.debug("Ollama models not available", err); 
+                                if (cachedOllamaModels) {
+                                    ollamaModels = cachedOllamaModels;
+                                    useOllamaCache = true;
+                                }
+                            })
+                    );
+                }
             }
 
             await Promise.allSettled(tasks);
@@ -298,8 +330,8 @@ export class ModelRegistry {
         return { models, rawResponse: data };
     }
 
-    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null }> {
-        if (!endpoint) return { models: [], rawResponse: null };
+    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null, success: boolean }> {
+        if (!endpoint) return { models: [], rawResponse: null, success: false };
         
         try {
             const response = await requestUrl({
@@ -307,7 +339,7 @@ export class ModelRegistry {
                 url: `${endpoint}/api/tags`
             });
 
-            if (response.status !== 200) return { models: [], rawResponse: null };
+            if (response.status !== 200) return { models: [], rawResponse: null, success: false };
             
             const data = response.json as OllamaTagsResponse;
             const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
@@ -333,10 +365,10 @@ export class ModelRegistry {
                 };
             });
 
-            return { models, rawResponse: data };
+            return { models, rawResponse: data, success: true };
         } catch (e) {
             logger.debug("Ollama models not available", e);
-            return { models: [], rawResponse: null };
+            return { models: [], rawResponse: null, success: false };
         }
     }
 
