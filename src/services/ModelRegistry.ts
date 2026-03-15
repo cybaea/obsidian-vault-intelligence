@@ -4,10 +4,7 @@ import { MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
-interface InternalApp {
-    loadLocalStorage?(key: string): string | null;
-    saveLocalStorage?(key: string, value: string): void;
-}
+// Removed InternalApp requirement
 
 /**
  * Central registry for AI models used by the plugin.
@@ -197,8 +194,7 @@ export class ModelRegistry {
         
         // 2. Check LocalStorage Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
         if (!cachedOllamaModels || !cachedGeminiModels) {
-            const storage = (app as unknown as InternalApp);
-            const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
+            const cached = window.localStorage.getItem(this.CACHE_KEY);
             if (typeof cached === 'string') {
                 try {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
@@ -298,7 +294,7 @@ export class ModelRegistry {
                     rawResponse: this.rawApiResponse || undefined,
                     timestamp: this.lastFetchTime
                 };
-                (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
+                window.localStorage.setItem(this.CACHE_KEY, JSON.stringify(cacheData));
             }
             app.workspace.trigger('vault-intelligence:models-updated');
         } finally {
