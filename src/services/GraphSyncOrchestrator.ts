@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink';
 import { App, TFile, Events, Notice } from "obsidian";
 
-import { GRAPH_CONSTANTS } from "../constants";
+import { GRAPH_CONSTANTS, DOCUMENTATION_URLS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { WorkerAPI, WorkerConfig, FileUpdateData } from "../types/graph";
 import { logger } from "../utils/logger";
@@ -249,7 +249,7 @@ export class GraphSyncOrchestrator {
                 
                 // Append clickable link to the notice DOM
                 notice.messageEl.createEl('a', {
-                    href: 'https://cybaea.github.io/obsidian-vault-intelligence/docs/guides/ollama.html#debugging-common-issues',
+                    href: DOCUMENTATION_URLS.SECTIONS.OLLAMA_DEBUG,
                     text: `View the ${'Ollama'} guide to troubleshoot`
                 });
             }

@@ -380,6 +380,7 @@ export const DOCUMENTATION_URLS = {
         CONNECTION: `${DOCS_CONFIG}#connection`,
         EXPLORER: `${DOCS_CONFIG}#explorer`,
         GARDENER: `${DOCS_CONFIG}#gardener`,
+        OLLAMA_DEBUG: `${DOCS_BASE}docs/guides/ollama.html#debugging-common-issues`,
         PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
         RESEARCHER: `${DOCS_CONFIG}#researcher`,
     },
