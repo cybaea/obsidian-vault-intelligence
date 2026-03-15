@@ -128,6 +128,8 @@ export class WorkerManager {
             this.worker.terminate();
             this.worker = null;
             this.api = null;
+            this.activeModelId = null;
+            this.activeDimension = null;
             this.mutationQueue = Promise.resolve(); // Reset queue
         }
     }

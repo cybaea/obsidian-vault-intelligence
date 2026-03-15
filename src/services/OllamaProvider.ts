@@ -161,7 +161,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     const response = await requestUrl({
                         body: JSON.stringify({
                             input: [text],
-                            model: pureModelStr
+                            model: pureModelStr,
+                            truncate: true
                         }),
                         headers: { "Content-Type": "application/json" },
                         method: "POST",
@@ -173,7 +174,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     }
 
                     const data = response.json as { embeddings: number[][] };
-                    resolve({ tokenCount: 0, vectors: data.embeddings });
+                    
+                    // Matryoshka dimensionality support (slice vector if requested dimension is smaller)
+                    const targetDim = this.settings.embeddingDimension;
+                    const finalVectors = data.embeddings.map(vec => 
+                        (vec.length > targetDim) ? vec.slice(0, targetDim) : vec
+                    );
+
+                    resolve({ tokenCount: 0, vectors: finalVectors });
                 } catch (err: unknown) {
                     reject(err instanceof Error ? err : new Error(String(err)));
                 }
