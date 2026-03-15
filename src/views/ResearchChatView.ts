@@ -134,8 +134,6 @@ export class ResearchChatView extends ItemView {
                 this.currentAbortController?.abort();
                 this.messages = [];
                 this.isThinking = false;
-                this.temporaryModelId = null;
-                this.temporaryWriteAccess = null;
                 void this.renderMessages();
                 new Notice("Chat cleared");
             });

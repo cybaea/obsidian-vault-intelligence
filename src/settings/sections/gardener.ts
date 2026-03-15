@@ -47,13 +47,45 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 dropdown.addOption(m.id, m.label);
             }
 
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleModels = chatModels.filter(m => m.provider === 'gemini');
+            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
+
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
+
+            if (googleModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
             }
 
-            dropdown.addOption('custom', 'Custom model string...');
+            if (ollamaModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            } else if (plugin.settings.ollamaEndpoint) {
+                // Show placeholder if endpoint exists but no models found
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                group.createEl('option', {
+                    attr: { disabled: 'true' },
+                    text: 'No models found',
+                    value: 'none'
+                });
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            // Set value after rebuilding
             dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
+
+            // tooltips logic preserved if needed, though optgroup might change indexing
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+            }
 
             dropdown.onChange((val) => {
                 void (async () => {
