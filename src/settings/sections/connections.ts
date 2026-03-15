@@ -137,14 +137,14 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             const endpoint = url.replace(/\/+$/, '');
             const response = await requestUrl({ url: `${endpoint}/api/version` });
             if (response.status === 200) {
-                statusEl.setText("Ollama is online");
+                statusEl.setText("Online");
                 statusEl.className = 'vi-ollama-status vi-status-success';
             } else {
-                statusEl.setText("Ollama is offline");
+                statusEl.setText("Offline");
                 statusEl.className = 'vi-ollama-status vi-status-error';
             }
         } catch {
-            statusEl.setText("Ollama is offline");
+            statusEl.setText("Offline");
             statusEl.className = 'vi-ollama-status vi-status-error';
         }
     };
@@ -163,10 +163,16 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 }
                 plugin.settings.ollamaEndpoint = url;
                 await plugin.saveSettings();
-                await updateStatus(url);
+            }))
+        .addButton(btn => btn
+            .setButtonText("Test connection")
+            .onClick(async () => {
+                btn.setButtonText("Testing...");
+                btn.setDisabled(true);
+                await updateStatus(plugin.settings.ollamaEndpoint);
+                btn.setDisabled(false);
+                btn.setButtonText("Test connection");
             }));
-
-    void updateStatus(plugin.settings.ollamaEndpoint);
 
     // --- 3. Model List Management ---
     new Setting(containerEl).setName('Model management').setHeading();

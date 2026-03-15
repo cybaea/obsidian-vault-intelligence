@@ -29,6 +29,7 @@ export interface ModelDefinition {
 
 export interface ModelCache {
     models: ModelDefinition[];
+    rawOllamaResponse?: OllamaTagsResponse | null;
     rawResponse?: GeminiApiResponse;
     timestamp: number;
 }
@@ -176,13 +177,16 @@ export class ModelRegistry {
         let geminiModels: ModelDefinition[] = [];
         let ollamaModels: ModelDefinition[] = [];
         let useGeminiCache = false;
+        let useOllamaCache = false;
 
-        // 1. Check Memory Cache for Gemini
+        // 1. Check Memory Cache for models
         if (!forceUpdate && this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
             useGeminiCache = true;
+            useOllamaCache = true;
             geminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
+            ollamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
         } else if (!forceUpdate && cacheDurationDays > 0) {
-            // 2. Check LocalStorage Cache for Gemini
+            // 2. Check LocalStorage Cache for models
             const storage = (app as unknown as InternalApp);
             const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
             if (typeof cached === 'string') {
@@ -190,9 +194,12 @@ export class ModelRegistry {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
                     if (now - parsed.timestamp < cacheDurationMs) {
                         useGeminiCache = true;
+                        useOllamaCache = true;
                         geminiModels = parsed.models.filter(m => m.provider === 'gemini');
+                        ollamaModels = parsed.models.filter(m => m.provider === 'ollama');
                         this.lastFetchTime = parsed.timestamp;
                         this.rawApiResponse = parsed.rawResponse || null;
+                        this.rawOllamaResponse = parsed.rawOllamaResponse || null;
                     }
                 } catch (e) {
                     logger.error("Failed to parse model cache", e);
@@ -236,7 +243,7 @@ export class ModelRegistry {
                 ];
             }
 
-            if (settings.ollamaEndpoint) {
+            if (settings.ollamaEndpoint && !useOllamaCache) {
                 tasks.push(
                     this.fetchOllamaModels(settings.ollamaEndpoint)
                         .then(res => { 
@@ -251,9 +258,11 @@ export class ModelRegistry {
 
             this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels]);
 
-            if (cacheDurationDays > 0 && !useGeminiCache && apiKey) {
+            if (cacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache) && (apiKey || settings.ollamaEndpoint)) {
+                if (this.lastFetchTime === 0) this.lastFetchTime = Date.now();
                 const cacheData: ModelCache = {
                     models: this.dynamicModels,
+                    rawOllamaResponse: this.rawOllamaResponse || undefined,
                     rawResponse: this.rawApiResponse || undefined,
                     timestamp: this.lastFetchTime
                 };
