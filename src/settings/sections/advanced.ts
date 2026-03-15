@@ -316,6 +316,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 }
                 if (rawOllama) {
                     console.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
+                } else if (plugin.settings.ollamaEndpoint) {
+                    console.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
                 }
             }));
 

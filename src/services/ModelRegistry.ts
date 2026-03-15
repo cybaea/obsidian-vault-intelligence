@@ -289,8 +289,8 @@ export class ModelRegistry {
         return { models, rawResponse: data };
     }
 
-    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse }> {
-        if (!endpoint) return { models: [], rawResponse: { models: [] } };
+    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null }> {
+        if (!endpoint) return { models: [], rawResponse: null };
         
         try {
             const response = await requestUrl({
@@ -298,7 +298,7 @@ export class ModelRegistry {
                 url: `${endpoint}/api/tags`
             });
 
-            if (response.status !== 200) return { models: [], rawResponse: { models: [] } };
+            if (response.status !== 200) return { models: [], rawResponse: null };
             
             const data = response.json as OllamaTagsResponse;
             const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
@@ -327,7 +327,7 @@ export class ModelRegistry {
             return { models, rawResponse: data };
         } catch (e) {
             logger.debug("Ollama models not available", e);
-            return { models: [], rawResponse: { models: [] } };
+            return { models: [], rawResponse: null };
         }
     }
 
