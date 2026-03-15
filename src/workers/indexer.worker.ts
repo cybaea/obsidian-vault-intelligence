@@ -1080,13 +1080,20 @@ function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: nu
         if ((currentChunk.length + part.length + sep.length) > chunkSize) {
             if (currentChunk.length > 0) {
                 finalChunks.push(currentChunk);
-                currentChunk = currentChunk.slice(-overlap) + sep + part;
-            } else {
-                for (let k = 0; k < part.length; k += chunkSize) {
-                    finalChunks.push(part.slice(k, k + chunkSize));
+                currentChunk = currentChunk.slice(-overlap);
+            }
+            
+            // Now handle the incoming part. If it's still too large even on its own, forcefully split it
+            if (currentChunk.length + part.length + sep.length > chunkSize) {
+                let textToSplit = currentChunk + (currentChunk.length > 0 ? sep : "") + part;
+                for (let k = 0; k < textToSplit.length; k += chunkSize) {
+                    finalChunks.push(textToSplit.slice(k, k + chunkSize));
                 }
                 currentChunk = "";
+            } else {
+                currentChunk += (currentChunk.length > 0 ? sep : "") + part;
             }
+
         } else {
             currentChunk += (currentChunk.length > 0 ? sep : "") + part;
         }
