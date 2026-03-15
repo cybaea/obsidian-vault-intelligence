@@ -268,14 +268,21 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             try {
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done || !value) break;
 
-                    buffer += decoder.decode(value, { stream: true });
+                    if (value) {
+                        buffer += decoder.decode(value, { stream: true });
+                    }
+                    if (done && buffer.trim()) {
+                        buffer += "\n";
+                    } else if (done) {
+                        break;
+                    }
+
                     if (buffer.length > OllamaProvider.MAX_BUFFER_SIZE) {
                         throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
                     }
                     const lines = buffer.split("\n");
-                    buffer = lines.pop() || "";
+                    buffer = done ? "" : (lines.pop() || "");
 
                     for (const line of lines) {
                         if (!line.trim()) continue;
@@ -320,6 +327,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             logger.error("[Ollama] Failed to parse NDJSON line", parseError, line);
                         }
                     }
+
+                    if (done) break;
                 }
             } finally {
                 reader.releaseLock();
@@ -430,7 +439,55 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
-                    const data = JSON.parse(line) as OllamaChatChunk;
+                    try {
+                        const data = JSON.parse(line) as OllamaChatChunk;
+                        
+                        if (data.message) {
+                            fullMessageText += data.message.content;
+                            yield {
+                                text: data.message.content,
+                                toolCalls: data.message.tool_calls?.map(tc => ({
+                                    args: tc.function.arguments,
+                                    id: tc.id,
+                                    name: tc.function.name
+                                }))
+                            };
+                        }
+
+                        if (data.done) {
+                            let extractedToolCalls;
+                            const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+                            if (toolMatch && toolMatch[1]) {
+                                try {
+                                    extractedToolCalls = [JSON.parse(toolMatch[1])];
+                                } catch (parseErr) {
+                                    logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
+                                }
+                            } else {
+                                // Fallback parser for malformed tool calls
+                                // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
+                                const extraction = this.extractFallbackToolCalls(fullMessageText);
+                                if (extraction.toolCalls.length > 0) {
+                                    extractedToolCalls = extraction.toolCalls;
+                                }
+                            }
+
+                            // Pass exact token telemetry back to service
+                            yield { 
+                                isDone: true,
+                                tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
+                                toolCalls: extractedToolCalls
+                            };
+                        }
+                    } catch (parseError) {
+                        logger.error("[Ollama] Failed to parse NDJSON line in node stream", parseError, line);
+                    }
+                }
+            }
+
+            if (buffer.trim()) {
+                try {
+                    const data = JSON.parse(buffer) as OllamaChatChunk;
                     
                     if (data.message) {
                         fullMessageText += data.message.content;
@@ -454,21 +511,20 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
                             }
                         } else {
-                            // Fallback parser for malformed tool calls
-                            // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
                             const extraction = this.extractFallbackToolCalls(fullMessageText);
                             if (extraction.toolCalls.length > 0) {
                                 extractedToolCalls = extraction.toolCalls;
                             }
                         }
 
-                        // Pass exact token telemetry back to service
                         yield { 
                             isDone: true,
                             tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
                             toolCalls: extractedToolCalls
                         };
                     }
+                } catch (parseError) {
+                    logger.error("[Ollama] Failed to parse remaining NDJSON buffer in node stream", parseError, buffer);
                 }
             }
         } finally {
