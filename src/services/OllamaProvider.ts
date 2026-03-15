@@ -284,6 +284,25 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                     } catch (parseErr) {
                                         logger.warn("[Ollama] Failed to parse ReAct JSON", parseErr, toolMatch[1]);
                                     }
+                                } else {
+                                    // Fallback parser for malformed tool calls (e.g. wrapped in markdown block or asterisks)
+                                    const startIdx = fullMessageText.indexOf('{');
+                                    const endIdx = fullMessageText.lastIndexOf('}');
+                                    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                                        const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
+                                        try {
+                                            const parsed = JSON.parse(potentialJson) as { arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
+                                            if (parsed.name) {
+                                                // Convert to expected format depending on what Ollama might output
+                                                extractedToolCalls = [{
+                                                    arguments: parsed.parameters || parsed.arguments || {},
+                                                    name: parsed.name
+                                                }];
+                                            }
+                                        } catch (parseErr) {
+                                            // Silent fail for fallback parser
+                                        }
+                                    }
                                 }
 
                                 yield { 
@@ -426,6 +445,24 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 extractedToolCalls = [JSON.parse(toolMatch[1])];
                             } catch (parseErr) {
                                 logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
+                            }
+                        } else {
+                            // Fallback parser for malformed tool calls
+                            const startIdx = fullMessageText.indexOf('{');
+                            const endIdx = fullMessageText.lastIndexOf('}');
+                            if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                                const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
+                                try {
+                                    const parsed = JSON.parse(potentialJson) as { arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
+                                    if (parsed.name) {
+                                        extractedToolCalls = [{
+                                            arguments: parsed.parameters || parsed.arguments || {},
+                                            name: parsed.name
+                                        }];
+                                    }
+                                } catch (parseErr) {
+                                    // Silent fail for fallback parser
+                                }
                             }
                         }
 
