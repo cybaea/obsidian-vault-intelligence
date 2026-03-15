@@ -302,15 +302,13 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addButton(btn => btn
             .setIcon('terminal')
             .onClick(async () => {
-                let raw = ModelRegistry.getRawResponse();
-                let rawOllama = ModelRegistry.getRawOllamaResponse();
                 const apiKey = await plugin.geminiService.getApiKey();
-                // If we don't have either response and we have an api key OR an ollama endpoint, force a fetch
-                if (!raw && !rawOllama && (apiKey || plugin.settings.ollamaEndpoint)) {
-                    await ModelRegistry.fetchModels(plugin.app, apiKey || '', 0);
-                    raw = ModelRegistry.getRawResponse();
-                    rawOllama = ModelRegistry.getRawOllamaResponse();
-                }
+                
+                // Always force a fresh fetch when the user clicks debug so we don't rely on stale state
+                await ModelRegistry.fetchModels(plugin.app, apiKey || '', 0, true);
+                
+                const raw = ModelRegistry.getRawResponse();
+                const rawOllama = ModelRegistry.getRawOllamaResponse();
                 if (raw) {
                     console.debug("[VaultIntelligence] Raw Gemini models:", raw);
                 }
