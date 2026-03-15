@@ -20,7 +20,7 @@ We implemented a **Strategy Pattern** via `RoutingEmbeddingService`.
 *   **Interface**: `IEmbeddingService` defines the contract (`embedQuery`, `embedDocument`).
 *   **Implementations**:
     *   `LocalEmbeddingService`: Wraps `Transformers.js` in a Web Worker.
-    *   `GeminiEmbeddingService`: Wraps the Google Generative AI API.
+    *   `GeminiProvider`: Wraps the Google Generative AI API for embeddings.
 *   **Router**: `RoutingEmbeddingService` dynamically delegates calls to the active provider based on user settings.
 
 ## Consequences

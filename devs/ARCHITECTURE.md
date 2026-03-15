@@ -63,7 +63,7 @@ C4Context
 
 The system follows a _Service-Oriented Architecture (SOA)_ adapted for a monolithic client-side application.
 
--   **Services** (eg `GraphService`, `GeminiService`) encapsulate business logic and are instantiated as singletons in `main.ts`.
+-   **Services** (eg `GraphService`, `ProviderRegistry`) encapsulate business logic and are instantiated as singletons in `main.ts`.
 -   **Strategy pattern** is used for the embedding layer (`RoutingEmbeddingService` switches between `Local` and `Gemini`).
 -   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication. It provides high-level methods like `getGraphEnhancedSimilar` for views.
 -   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`. It exposes `reflexSearch` for fast-path UI feedback.
@@ -372,7 +372,16 @@ classDiagram
         +search(vector)
         +updateFile()
     }
-    class GeminiService {
+    class ProviderRegistry {
+        +getReasoningClient(providerId)
+        +getEmbeddingClient(providerId)
+    }
+    class GeminiProvider {
+        +Google Generative AI SDK
+    }
+    class OllamaProvider {
+        +Local Inference API
+    }
         +startChat()
         +generateContent()
     }

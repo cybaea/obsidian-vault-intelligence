@@ -29,7 +29,7 @@ We will implement a sharded storage architecture and native token tracking acros
 
 ### 2. Native token tracking
 
--   **API integration**: `GeminiService` will extract `usageMetadata` (prompt + candidate counts) from every response and return it to callers.
+-   **API integration**: `GeminiProvider` will extract `usageMetadata` (prompt + candidate counts) from every response and return it to callers.
 -   **Local tokenization**: `LocalEmbeddingService` will return the actual token count produced by the Transformers.js tokenizer.
 -   **RAG propagation**: `GraphSearchResult` and `VaultSearchResult` will include an optional `tokenCount`.
 -   **Budget management**: `ContextAssembler` will use these verified token counts for context packing, falling back to `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` only for un-indexed or legacy documents.
