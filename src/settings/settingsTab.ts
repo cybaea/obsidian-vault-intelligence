@@ -68,6 +68,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
     override hide(): void {
         super.hide();
+        if (this.plugin.requiresWorkerRestartOnExit) {
+            this.plugin.requiresWorkerRestartOnExit = false;
+            void this.plugin.graphSyncOrchestrator?.commitConfigChange();
+        }
     }
 
     private activateTab(id: TabId, tabs: TabDefinition[], contentWrapper: HTMLElement): void {

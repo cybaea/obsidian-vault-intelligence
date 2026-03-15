@@ -193,6 +193,7 @@ export interface IVaultIntelligencePlugin {
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
     persistenceManager: PersistenceManager;
+    requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;
     settings: VaultIntelligenceSettings;
 }

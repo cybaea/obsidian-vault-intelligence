@@ -103,7 +103,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             if (modelDef?.dimensions) {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
                             }
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }
                         containerEl.empty();
                         renderExplorerSettings(context);
@@ -122,7 +123,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .setValue(current)
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }));
             }
         } else {
@@ -175,7 +177,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
                             }
 
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                             containerEl.empty();
                             renderExplorerSettings(context);
                         }
@@ -224,7 +227,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     .onChange((value) => {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         })();
                     }))
                 .addButton(btn => btn
@@ -239,7 +243,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice(`Valid! Dims: ${result.recommendedDims}`);
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
-                                    await plugin.saveSettings(true);
+                                    plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
                                 }
@@ -260,7 +265,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         const num = parseInt(value);
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }
                     }));
         }
