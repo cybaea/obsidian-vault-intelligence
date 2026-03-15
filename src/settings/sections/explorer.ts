@@ -151,10 +151,12 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
 
                     if (plugin.settings.embeddingModel.includes('nomic')) {
-                        if (nativeDim > 512) dropdown.addOption('512', '512 (${"Matryoshka"})');
-                        if (nativeDim > 256) dropdown.addOption('256', '256 (${"Matryoshka"})');
-                        if (nativeDim > 128) dropdown.addOption('128', '128 (${"Matryoshka)}');
-                        dropdown.addOption('64', '64 (${"Matryoshka"})');
+                        // Nomic models support Matryoshka compression
+                        const name = 'Matryoshka';
+                        if (nativeDim > 512) dropdown.addOption('512', `512 (${name})`);
+                        if (nativeDim > 256) dropdown.addOption('256', `256 (${name})`);
+                        if (nativeDim > 128) dropdown.addOption('128', `128 (${name})`);
+                        dropdown.addOption('64', `64 (${name})`);
                     }
                 } else {
                     dropdown.addOption('768', '768 (flash / standard)')
