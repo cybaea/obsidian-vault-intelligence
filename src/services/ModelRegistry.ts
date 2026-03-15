@@ -157,7 +157,11 @@ export class ModelRegistry {
     private static rawOllamaResponse: OllamaTagsResponse | null = null;
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
-    private static CACHE_KEY = 'vault-intelligence-model-cache';
+    private static getCachePath(app: App): string {
+        const plugin = (app as unknown as { plugins: { getPlugin(id: string): { manifest?: { dir?: string } } } }).plugins?.getPlugin("vault-intelligence");
+        const dir = plugin?.manifest?.dir || `${app.vault.configDir}/plugins/vault-intelligence`;
+        return `${dir}/model-cache.json`;
+    }
 
     /**
      * Fetches the list of available Gemini models from the API and caches them.
@@ -192,11 +196,12 @@ export class ModelRegistry {
             }
         } 
         
-        // 2. Check LocalStorage Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
+        // 2. Check File Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
         if (!cachedOllamaModels || !cachedGeminiModels) {
-            const cached = window.localStorage.getItem(this.CACHE_KEY);
-            if (typeof cached === 'string') {
+            const cachePath = this.getCachePath(app);
+            if (await app.vault.adapter.exists(cachePath)) {
                 try {
+                    const cached = await app.vault.adapter.read(cachePath);
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
                     cachedGeminiModels = parsed.models.filter(m => m.provider === 'gemini');
                     cachedOllamaModels = parsed.models.filter(m => m.provider === 'ollama');
@@ -211,7 +216,7 @@ export class ModelRegistry {
                         this.rawOllamaResponse = parsed.rawOllamaResponse || null;
                     }
                 } catch (e) {
-                    logger.error("Failed to parse model cache", e);
+                    logger.error("Failed to parse model cache file", e);
                 }
             }
         }
@@ -286,7 +291,7 @@ export class ModelRegistry {
 
             this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels]);
 
-            if (cacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache) && (apiKey || settings.ollamaEndpoint)) {
+            if (settings.modelCacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache) && (apiKey || settings.ollamaEndpoint)) {
                 if (this.lastFetchTime === 0) this.lastFetchTime = Date.now();
                 const cacheData: ModelCache = {
                     models: this.dynamicModels,
@@ -294,7 +299,8 @@ export class ModelRegistry {
                     rawResponse: this.rawApiResponse || undefined,
                     timestamp: this.lastFetchTime
                 };
-                window.localStorage.setItem(this.CACHE_KEY, JSON.stringify(cacheData));
+                const cachePath = this.getCachePath(app);
+                await app.vault.adapter.write(cachePath, JSON.stringify(cacheData));
             }
             app.workspace.trigger('vault-intelligence:models-updated');
         } finally {
