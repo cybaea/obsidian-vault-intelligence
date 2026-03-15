@@ -301,7 +301,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                                         name: parsed.name
                                                     }];
                                                 }
-                                            } catch (parseErr) {
+                                            } catch {
                                                 // Silent fail for fallback parser
                                             }
                                         }
@@ -465,7 +465,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                                 name: parsed.name
                                             }];
                                         }
-                                    } catch (parseErr) {
+                                    } catch {
                                         // Silent fail for fallback parser
                                     }
                                 }
@@ -573,8 +573,13 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     role: "user" // Fallback for lack of tool role
                 };
             }
-            
-            const content = m.content || (m.toolCalls && !useNativeTools ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : " ");
+            let content = m.content || "";
+            if (m.role === "tool" && useNativeTools && m.toolResults) {
+                // Return stringified result as expected by native tool support
+                content = JSON.stringify(m.toolResults.length === 1 ? m.toolResults[0]?.result : m.toolResults.map(tr => tr.result));
+            } else if (!content) {
+                content = (m.toolCalls && m.toolCalls.length > 0 && !useNativeTools) ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : " ";
+            }
             
             return {
                 content: content,
