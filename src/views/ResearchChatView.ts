@@ -262,10 +262,62 @@ export class ResearchChatView extends ItemView {
                     // 3. Render into the temporary component, NOT `this`
                     await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
                     
+                    let savedSelection: { startOffset: number; endOffset: number } | null = null;
+                    const selection = window.getSelection();
+
+                    if (selection && selection.rangeCount > 0 && lastMessageNode && lastMessageNode.contains(selection.anchorNode)) {
+                        const getOffset = (node: Node | null, offset: number) => {
+                            if (!node) return 0;
+                            let totalOffset = offset;
+                            const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                            let currentNode: Node | null = walker.nextNode();
+                            while (currentNode && currentNode !== node) {
+                                totalOffset += currentNode.textContent?.length || 0;
+                                currentNode = walker.nextNode();
+                            }
+                            return totalOffset;
+                        };
+
+                        savedSelection = {
+                            endOffset: getOffset(selection.focusNode, selection.focusOffset),
+                            startOffset: getOffset(selection.anchorNode, selection.anchorOffset)
+                        };
+                    }
+
                     if (lastMessageNode) {
                         // 4. Optimization: Use replaceChildren instead of manual while loop
                         lastMessageNode.replaceChildren(...Array.from(tempEl.childNodes));
-                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                        
+                        if (savedSelection && selection) {
+                            const findNodeAndOffset = (targetOffset: number) => {
+                                const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                                let currentNode: Node | null = walker.nextNode();
+                                let currentOffset = 0;
+                                let lastTextNode: Node | null = null;
+                                
+                                while (currentNode) {
+                                    lastTextNode = currentNode;
+                                    const nodeLength = currentNode.textContent?.length || 0;
+                                    if (currentOffset + nodeLength >= targetOffset) {
+                                        return { node: currentNode, offset: targetOffset - currentOffset };
+                                    }
+                                    currentOffset += nodeLength;
+                                    currentNode = walker.nextNode();
+                                }
+                                return { node: lastTextNode, offset: lastTextNode?.textContent?.length || 0 };
+                            };
+                            
+                            const anchor = findNodeAndOffset(savedSelection.startOffset);
+                            const focus = findNodeAndOffset(savedSelection.endOffset);
+                            
+                            if (anchor.node && focus.node) {
+                                selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+                            }
+                        }
+
+                        if (!selection || selection.isCollapsed) {
+                            this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                        }
                     }
                     lastRenderTime = Date.now();
                 } finally {
