@@ -287,17 +287,17 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 } else {
                                     // Fallback parser for malformed tool calls (e.g. wrapped in markdown block or asterisks)
                                     // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
-                                    if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"'))) {
+                                    if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"') || fullMessageText.includes('"args"'))) {
                                         const startIdx = fullMessageText.indexOf('{');
                                         const endIdx = fullMessageText.lastIndexOf('}');
                                         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
                                             const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
                                             try {
-                                                const parsed = JSON.parse(potentialJson) as { arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
+                                                const parsed = JSON.parse(potentialJson) as { args?: Record<string, unknown>; arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
                                                 if (parsed.name) {
                                                     // Convert to expected format depending on what Ollama might output
                                                     extractedToolCalls = [{
-                                                        arguments: parsed.parameters || parsed.arguments || {},
+                                                        args: parsed.parameters || parsed.arguments || parsed.args || {},
                                                         name: parsed.name
                                                     }];
                                                 }
@@ -452,16 +452,16 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         } else {
                             // Fallback parser for malformed tool calls
                             // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
-                            if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"'))) {
+                            if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"') || fullMessageText.includes('"args"'))) {
                                 const startIdx = fullMessageText.indexOf('{');
                                 const endIdx = fullMessageText.lastIndexOf('}');
                                 if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
                                     const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
                                     try {
-                                        const parsed = JSON.parse(potentialJson) as { arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
+                                        const parsed = JSON.parse(potentialJson) as { args?: Record<string, unknown>; arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
                                         if (parsed.name) {
                                             extractedToolCalls = [{
-                                                arguments: parsed.parameters || parsed.arguments || {},
+                                                args: parsed.parameters || parsed.arguments || parsed.args || {},
                                                 name: parsed.name
                                             }];
                                         }
