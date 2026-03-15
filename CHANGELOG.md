@@ -15,6 +15,9 @@ New features are added in the "Unreleased" section.
 -   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token with live Markdown formatting (bold, lists, headers) and a flicker-free rendering strategy.
 -   **Real-time tool status**: The chat interface now displays live status updates (eg "Thinking...", "Searching...") when the agent is performing background tasks.
 -   **Stop button**: Added a "Stop" button to cancel long-running agent responses or recursive tool loops instantly.
+-   **Model selection improvements**: Model selection dropdowns now group models by provider, display tooltips with internal model IDs, and disable unconfigured providers.
+-   **Context management refinements**: Context window budgets are now configured per model rather than globally. The context assembler has been improved to prevent single documents from dominating the context window.
+-   **Enhanced embedding configuration**: For local Ollama embedding models (eg `nomic-embed-text`), you can now dynamically select the desired embedding dimension (Matryoshka representation) with improved visual labels.
 
 ### Fixes
 
@@ -23,6 +26,7 @@ New features are added in the "Unreleased" section.
 -   **Researcher UI stability**: Fixed a critical bug where the UI would freeze or layout would thrash during streaming.
 -   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
 -   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.
+-   **Chat deduplication**: Resolved an issue that could cause user messages to be duplicated in the chat history.
 
 ### Developer features
 
@@ -30,7 +34,9 @@ New features are added in the "Unreleased" section.
 -   **Typed model discovery**: Implemented explicit interfaces for Ollama model listing and metadata extraction in `ModelRegistry`, eliminating all `any` usages in the retrieval pipeline.
 -   **Hardened test suite**: Eliminated all `any` mocks and lint bypasses from `AgentService.test.ts`, ensuring 100% type coverage for agent orchestration tests.
 -   **Standardised sorting**: Enforced strict alphabetical sorting across all service interfaces and plugin settings to maintain a premium codebase.
-
+-   **Provider registry architecture**: Introduced a central `ProviderRegistry` to dynamically manage multiple AI model providers (Gemini, Ollama), decoupling model capability discovery from the `AgentService`.
+-   **API normalization**: Standardised Gemini API interactions to pass `systemInstruction` and `tools` at the top level for better SDK unification.
+-   **Settings debouncing**: Deferred worker restarts for embedding model and dimension changes until the settings tab is closed, preventing performance thrashing during configuration.
 -   **Asynchronous streaming architecture (Phase 2)**: Refactored `AgentService` and `GeminiProvider` to support true token-by-token streaming via asynchronous generators.
 -   **Recursive tool loop streaming**: Implemented a streaming orchestrator in `AgentService.chatStream` that allows for interleaving text tokens with tool status updates and recursive calls without breaking the stream.
 -   **Cancellation support**: Integrated `AbortController` and `AbortSignal` across all layers (UI -> Agent -> Provider), enabling clean interruption of active network requests and background loops.

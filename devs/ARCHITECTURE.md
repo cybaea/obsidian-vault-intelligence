@@ -27,6 +27,7 @@ C4Context
     }
 
     System_Ext(gemini, "AI Provider (Google Gemini)", "LLM Reasoning, Code Execution, Web Grounding")
+    System_Ext(local_ai, "Local AI (Ollama)", "Local Reasoning and Embeddings")
     System_Ext(huggingface, "Hugging Face", "Model Downloads (CDN)")
     System_Ext(cdn, "jsDelivr", "WASM Runtime Assets")
 
@@ -38,6 +39,7 @@ C4Context
     Rel(gardener, ontology, "Consults knowledge model")
     
     Rel(plugin, gemini, "Sends prompts/context to", "HTTPS/REST (via Provider Abstraction)")
+    Rel(plugin, local_ai, "Sends prompts/context to", "HTTP/REST (via Provider Abstraction)")
     Rel(plugin, huggingface, "Downloads ONNX models from", "HTTPS")
     Rel(worker, cdn, "Fetches WASM binaries from", "HTTPS")
 
@@ -80,6 +82,7 @@ Manual Dependency Injection is used in `main.ts`. Services are instantiated in a
 ```typescript
 // main.ts
 this.geminiProvider = new GeminiProvider(settings); // Implements IModelProvider, IReasoningClient, IEmbeddingClient
+this.providerRegistry = new ProviderRegistry(settings, app, this.geminiProvider); // Manages available AI providers (Gemini, Ollama)
 this.embeddingService = new RoutingEmbeddingService(..., this.geminiProvider); // Injects dependency
 this.graphService = new GraphService(..., this.embeddingService); // Injects dependency
 ```
@@ -607,7 +610,7 @@ export class SearchOrchestrator {
 
 ### LLM provider abstraction
 
-As of Version 6.0.0, the system is provider-agnostic. While Google Gemini is currently the primary implementation (`GeminiProvider`), all core services (`AgentService`, `GardenerService`, `SearchOrchestrator`) communicate via generic interfaces:
+As of Version 8.1.0, the system is provider-agnostic and uses a `ProviderRegistry` to dynamically manage multiple AI engines. While Google Gemini is the default cloud implementation (`GeminiProvider`), it also supports fully local models (`OllamaProvider`). All core services (`AgentService`, `GardenerService`, `SearchOrchestrator`) communicate via generic interfaces:
 
 -   **Reasoning**: `IReasoningClient` (Messages, Structured JSON, Grounding, Code).
 -   **Embeddings**: `IEmbeddingClient` (Vectors).
