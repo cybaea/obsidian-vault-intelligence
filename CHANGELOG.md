@@ -238,8 +238,6 @@ New features are added in the "Unreleased" section.
 
 -   **Fast Startup**: Optimized the plugin initialization process to load the application faster, even with large vaults.
 
-### Developer features
-
 ## [5.1.0] - 2026-02-06
 
 ### User features
@@ -361,8 +359,6 @@ New features are added in the "Unreleased" section.
 -   **Defensive binary I/O**: Added buffer-aware slicing to ensure strictly-sized binary writes, preventing file corruption from encoder over-allocation.
 
 ## [4.1.1] - 2026-01-27
-
-### User features
 
 ### Developer features
 
