@@ -156,6 +156,7 @@ export class ModelRegistry {
 
     private static dynamicModels: ModelDefinition[] = [];
     private static rawApiResponse: GeminiApiResponse | null = null;
+    private static rawOllamaResponse: OllamaTagsResponse | null = null;
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
     private static CACHE_KEY = 'vault-intelligence-model-cache';
@@ -238,7 +239,10 @@ export class ModelRegistry {
             if (settings.ollamaEndpoint) {
                 tasks.push(
                     this.fetchOllamaModels(settings.ollamaEndpoint)
-                        .then(models => { ollamaModels = models; })
+                        .then(res => { 
+                            ollamaModels = res.models; 
+                            this.rawOllamaResponse = res.rawResponse;
+                        })
                         .catch(err => { logger.debug("Ollama models not available", err); })
                 );
             }
@@ -285,8 +289,8 @@ export class ModelRegistry {
         return { models, rawResponse: data };
     }
 
-    private static async fetchOllamaModels(endpoint: string): Promise<ModelDefinition[]> {
-        if (!endpoint) return [];
+    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse }> {
+        if (!endpoint) return { models: [], rawResponse: { models: [] } };
         
         try {
             const response = await requestUrl({
@@ -294,7 +298,7 @@ export class ModelRegistry {
                 url: `${endpoint}/api/tags`
             });
 
-            if (response.status !== 200) return [];
+            if (response.status !== 200) return { models: [], rawResponse: { models: [] } };
             
             const data = response.json as OllamaTagsResponse;
             const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
@@ -320,10 +324,10 @@ export class ModelRegistry {
                 };
             });
 
-            return models;
+            return { models, rawResponse: data };
         } catch (e) {
             logger.debug("Ollama models not available", e);
-            return [];
+            return { models: [], rawResponse: { models: [] } };
         }
     }
 
@@ -442,6 +446,14 @@ export class ModelRegistry {
      */
     public static getRawResponse(): GeminiApiResponse | null {
         return this.rawApiResponse;
+    }
+
+    /**
+     * Returns the raw API response from Ollama for debugging purposes.
+     * @returns The OllamaTagsResponse object or null.
+     */
+    public static getRawOllamaResponse(): OllamaTagsResponse | null {
+        return this.rawOllamaResponse;
     }
 
     /**

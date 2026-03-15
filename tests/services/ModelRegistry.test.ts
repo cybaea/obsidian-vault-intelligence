@@ -47,7 +47,8 @@ describe('ModelRegistry', () => {
 
             // Use any cast locally for private static method access
             const modelRegistry = ModelRegistry as any;
-            const models = await modelRegistry.fetchOllamaModels(mockSettings.ollamaEndpoint);
+            const result = await modelRegistry.fetchOllamaModels(mockSettings.ollamaEndpoint);
+            const models = result.models;
             
             expect(models).toHaveLength(2);
             

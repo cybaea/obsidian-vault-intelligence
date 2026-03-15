@@ -303,13 +303,19 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .setIcon('terminal')
             .onClick(async () => {
                 let raw = ModelRegistry.getRawResponse();
+                let rawOllama = ModelRegistry.getRawOllamaResponse();
                 const apiKey = await plugin.geminiService.getApiKey();
-                if (!raw && apiKey) {
-                    await ModelRegistry.fetchModels(plugin.app, apiKey, 0);
+                // If we don't have either response and we have an api key OR an ollama endpoint, force a fetch
+                if (!raw && !rawOllama && (apiKey || plugin.settings.ollamaEndpoint)) {
+                    await ModelRegistry.fetchModels(plugin.app, apiKey || '', 0);
                     raw = ModelRegistry.getRawResponse();
+                    rawOllama = ModelRegistry.getRawOllamaResponse();
                 }
                 if (raw) {
-                    console.debug("[VaultIntelligence] Raw models:", raw);
+                    console.debug("[VaultIntelligence] Raw Gemini models:", raw);
+                }
+                if (rawOllama) {
+                    console.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
                 }
             }));
 
