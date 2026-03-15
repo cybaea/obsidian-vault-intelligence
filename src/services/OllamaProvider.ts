@@ -390,6 +390,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const url = new URL(`${endpoint}/api/chat`);
         
         const reqOptions = {
+            ...(url.username || url.password ? { auth: `${url.username}:${url.password}` } : {}),
             body: JSON.stringify(body),
             headers: { "Content-Type": "application/json" },
             hostname: url.hostname,
