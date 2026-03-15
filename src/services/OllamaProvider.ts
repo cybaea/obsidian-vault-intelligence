@@ -23,8 +23,7 @@ import { ModelRegistry } from "./ModelRegistry";
  */
 interface NodeResponse extends AsyncIterable<Uint8Array> {
     destroy(): void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for node event emitters
-    on(event: string, listener: (...args: any[]) => void): this;
+    on(event: string, listener: (...args: unknown[]) => void): this;
 }
 
 /**
@@ -41,8 +40,7 @@ interface StreamReader {
 interface NodeRequest {
     destroy(error?: Error): void;
     end(): void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Required for node event emitters
-    on(event: string, listener: (...args: any[]) => void): this;
+    on(event: string, listener: (...args: unknown[]) => void): this;
     setTimeout(msecs: number, callback?: () => void): this;
     write(chunk: string | Uint8Array): void;
 }
@@ -51,8 +49,7 @@ interface NodeRequest {
  * Local helper to bypass top-level builtin restrictions.
  */
 interface NodeSystem {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic require is needed to bypass Obsidian's 'require' restriction for electron-only code
-    require: (m: string) => any;
+    require: (m: string) => unknown;
 }
 
 /**
@@ -488,9 +485,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
         const supportsSchema = await this.checkOllamaVersion(endpoint);
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- zod-to-json-schema's ZodTypeAny type is not perfectly compatible with all z.ZodType<T> versions in Obsidian's environment. any cast is used as safe fallback for schema compatibility.
-        const jsonSchema = zodToJsonSchema(schema as any) as Record<string, unknown>;
+        const jsonSchema = zodToJsonSchema(schema as unknown as Parameters<typeof zodToJsonSchema>[0]) as Record<string, unknown>;
 
         const body: OllamaChatRequest = {
             ...await this.prepareRequestBody(messages, options, false),
