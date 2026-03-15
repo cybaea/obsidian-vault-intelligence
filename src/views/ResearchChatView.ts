@@ -23,6 +23,7 @@ export class ResearchChatView extends ItemView {
     private temporaryWriteAccess: boolean | null = null;
     private lastRenderId = 0;
     private stopButton: ButtonComponent | null = null;
+    private messageComponents: Component[] = [];
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -58,6 +59,8 @@ export class ResearchChatView extends ItemView {
     async onClose() {
         this.currentAbortController?.abort();
         this.currentAbortController = null;
+        this.messageComponents.forEach(c => c.unload());
+        this.messageComponents = [];
         await Promise.resolve();
     }
 
@@ -200,6 +203,8 @@ export class ResearchChatView extends ItemView {
         this.isThinking = true;
         this.addMessage("user", text);
 
+        let streamingComponent: Component | null = null;
+
         try {
             const reflexResults = await this.agent.reflexSearch(text, 5);
             if (reflexResults.length > 0) {
@@ -240,7 +245,6 @@ export class ResearchChatView extends ItemView {
             let lastStatus = "";
             let lastRenderTime = 0;
             let renderInProgress = false;
-            let streamingComponent: Component | null = null;
 
             const updateStreamingUI = async (force = false) => {
                 const now = Date.now();
@@ -393,11 +397,19 @@ export class ResearchChatView extends ItemView {
             // Check for intentional abortion
             if (this.currentAbortController?.signal.aborted) {
                 this.currentAbortController = null;
+                if (streamingComponent) {
+                    (streamingComponent as Component).unload();
+                    streamingComponent = null;
+                }
                 void this.renderMessages();
                 return;
             }
             
             this.currentAbortController = null;
+            if (streamingComponent) {
+                (streamingComponent as Component).unload();
+                streamingComponent = null;
+            }
             const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
@@ -425,9 +437,15 @@ export class ResearchChatView extends ItemView {
         if (!this.chatContainer) return;
 
         const renderId = ++this.lastRenderId;
+        this.messageComponents.forEach(c => c.unload());
+        this.messageComponents = [];
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
+            const msgComponent = new Component();
+            this.messageComponents.push(msgComponent);
+            msgComponent.load();
+
             const msgDiv = this.chatContainer.createDiv({
                 cls: `chat-message ${msg.role}`
             });
@@ -471,7 +489,7 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
-                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", msgComponent);
                 }
                 if (renderId !== this.lastRenderId) return;
 

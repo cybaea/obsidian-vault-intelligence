@@ -157,6 +157,7 @@ export class ModelRegistry {
     private static rawOllamaResponse: OllamaTagsResponse | null = null;
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
+    private static ollamaDetailsCache = new Set<string>();
     private static getCachePath(app: App): string {
         const plugin = (app as unknown as { plugins: { getPlugin(id: string): { manifest?: { dir?: string } } } }).plugins?.getPlugin("vault-intelligence");
         const dir = plugin?.manifest?.dir || `${app.vault.configDir}/plugins/vault-intelligence`;
@@ -528,6 +529,13 @@ export class ModelRegistry {
      * Extracts context length for reasoning models and embedding dimensions for embedding models.
      */
     public static async fetchOllamaModelDetails(endpoint: string, modelId: string): Promise<ModelDefinition | undefined> {
+        const model = this.getModelById(modelId);
+        if (!model) return undefined;
+
+        if (this.ollamaDetailsCache.has(modelId)) {
+            return model;
+        }
+
         const cleanId = modelId.replace('ollama/', '');
         try {
             const response = await requestUrl({
@@ -539,8 +547,6 @@ export class ModelRegistry {
             if (response.status !== 200) return undefined;
 
             const details = response.json as OllamaShowResponse;
-            const model = this.getModelById(modelId);
-            if (!model) return undefined;
 
             // Extract Context Length
             const ctx = (details.model_info?.["llama.context_length"] as number) || 
@@ -567,6 +573,7 @@ export class ModelRegistry {
                 }
             }
 
+            this.ollamaDetailsCache.add(modelId);
             return model;
         } catch (e) {
             logger.error(`Failed to fetch JIT details for ${modelId}`, e);
