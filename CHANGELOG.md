@@ -19,6 +19,7 @@ New features are added in the "Unreleased" section.
 ### Fixes
 
 -   **Ollama tool parsing**: Fixed an issue where the local Ollama provider would fail to execute tools if the model wrapped the JSON in markdown blocks or asterisks by implementing a more resilient JSON extraction method.
+-   **Dynamic system prompts**: The default system instructions are now dynamically trimmed to remove references to `google_search` when the active model provider does not support web grounding, preventing unfulfillable tool hallucinations.
 -   **Researcher UI stability**: Fixed a critical bug where the UI would freeze or layout would thrash during streaming.
 -   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
 -   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.

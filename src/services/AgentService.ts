@@ -211,6 +211,14 @@ export class AgentService {
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
         const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
+        
+        // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
+        if (!tools.find(t => t.name === "google_search")) {
+            // Find variants of the google search rule
+            // e.g., " - Use 'google_search' for live news..." or "2. **Verification**: When users ask for facts..."
+            systemInstruction = systemInstruction.replace(/.*?google_search.*?(\r?\n|$)/gi, "");
+        }
+        
         formattedHistory.push({ content: currentPrompt, role: "user" });
 
         logger.debug(`[Agent] Calling model: ${options.modelId || this.settings.chatModel}`);

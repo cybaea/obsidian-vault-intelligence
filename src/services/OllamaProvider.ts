@@ -2,8 +2,18 @@ import { App, Platform, requestUrl } from "obsidian";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
+import type { 
+    ChatOptions, 
+    IEmbeddingClient,
+    IModelProvider, 
+    IReasoningClient, 
+    StreamChunk, 
+    ToolCall,
+    UnifiedMessage 
+} from "../types/providers";
+
 import { VaultIntelligenceSettings } from "../settings/types";
-import { ChatOptions, IModelProvider, IReasoningClient, StreamChunk, UnifiedMessage, ProviderError, IEmbeddingClient } from "../types/providers";
+import { ProviderError } from "../types/providers";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
 import { ModelRegistry } from "./ModelRegistry";
@@ -64,6 +74,7 @@ interface OllamaChatRequest {
  */
 interface OllamaMessage {
     content: string;
+    name?: string;
     role: string;
     tool_call_id?: string;
     tool_calls?: Array<{
@@ -71,6 +82,7 @@ interface OllamaMessage {
             arguments: Record<string, unknown>;
             name: string;
         };
+        id?: string;
     }>;
 }
 
@@ -103,6 +115,7 @@ interface OllamaChatChunk {
                 arguments: Record<string, unknown>;
                 name: string;
             };
+            id?: string;
         }>;
     };
     model: string;
@@ -287,24 +300,9 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 } else {
                                     // Fallback parser for malformed tool calls (e.g. wrapped in markdown block or asterisks)
                                     // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
-                                    if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"') || fullMessageText.includes('"args"'))) {
-                                        const startIdx = fullMessageText.indexOf('{');
-                                        const endIdx = fullMessageText.lastIndexOf('}');
-                                        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-                                            const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
-                                            try {
-                                                const parsed = JSON.parse(potentialJson) as { args?: Record<string, unknown>; arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
-                                                if (parsed.name) {
-                                                    // Convert to expected format depending on what Ollama might output
-                                                    extractedToolCalls = [{
-                                                        args: parsed.parameters || parsed.arguments || parsed.args || {},
-                                                        name: parsed.name
-                                                    }];
-                                                }
-                                            } catch {
-                                                // Silent fail for fallback parser
-                                            }
-                                        }
+                                    const extraction = this.extractFallbackToolCalls(fullMessageText);
+                                    if (extraction.toolCalls.length > 0) {
+                                        extractedToolCalls = extraction.toolCalls;
                                     }
                                 }
 
@@ -435,6 +433,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             text: data.message.content,
                             toolCalls: data.message.tool_calls?.map(tc => ({
                                 args: tc.function.arguments,
+                                id: tc.id,
                                 name: tc.function.name
                             }))
                         };
@@ -452,23 +451,9 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         } else {
                             // Fallback parser for malformed tool calls
                             // Ensure simple heuristics so we don't accidentally parse document frontmatter or generic JSON blocks as tool calls.
-                            if (fullMessageText.includes('"name"') && (fullMessageText.includes('"arguments"') || fullMessageText.includes('"parameters"') || fullMessageText.includes('"args"'))) {
-                                const startIdx = fullMessageText.indexOf('{');
-                                const endIdx = fullMessageText.lastIndexOf('}');
-                                if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-                                    const potentialJson = fullMessageText.substring(startIdx, endIdx + 1);
-                                    try {
-                                        const parsed = JSON.parse(potentialJson) as { args?: Record<string, unknown>; arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
-                                        if (parsed.name) {
-                                            extractedToolCalls = [{
-                                                args: parsed.parameters || parsed.arguments || parsed.args || {},
-                                                name: parsed.name
-                                            }];
-                                        }
-                                    } catch {
-                                        // Silent fail for fallback parser
-                                    }
-                                }
+                            const extraction = this.extractFallbackToolCalls(fullMessageText);
+                            if (extraction.toolCalls.length > 0) {
+                                extractedToolCalls = extraction.toolCalls;
                             }
                         }
 
@@ -552,6 +537,68 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     solveWithCode(): Promise<{ text: string }> {
         return Promise.reject(new ProviderError("Native code execution is not supported for local Ollama models.", "ollama"));
     }
+    /**
+     * Helper to extract standard JSON tool calls (like React or general instruction-tuned fallback)
+     * AND scrub them from the yielded text to avoid polluting conversation history context.
+     */
+    private extractFallbackToolCalls(text: string): { scrubbedText: string; toolCalls: ToolCall[] } {
+        const toolCalls: ToolCall[] = [];
+        let scrubbedText = "";
+        let currentIndex = 0;
+
+        while (currentIndex < text.length) {
+            const startIdx = text.indexOf('{', currentIndex);
+            if (startIdx === -1) {
+                scrubbedText += text.substring(currentIndex);
+                break;
+            }
+
+            let braceCount = 0;
+            let endIdx = -1;
+            for (let i = startIdx; i < text.length; i++) {
+                if (text[i] === '{') braceCount++;
+                else if (text[i] === '}') {
+                    braceCount--;
+                    if (braceCount === 0) {
+                        endIdx = i;
+                        break;
+                    }
+                }
+            }
+
+            if (endIdx !== -1) {
+                const potentialJson = text.substring(startIdx, endIdx + 1);
+                // Check simple heuristics FIRST before trying to parse
+                if (potentialJson.includes('"name"') && (potentialJson.includes('"arguments"') || potentialJson.includes('"parameters"') || potentialJson.includes('"args"'))) {
+                    try {
+                        const parsed = JSON.parse(potentialJson) as { args?: Record<string, unknown>; arguments?: Record<string, unknown>; name?: string; parameters?: Record<string, unknown> };
+                        if (parsed.name && (parsed.arguments || parsed.parameters || parsed.args)) {
+                            toolCalls.push({
+                                args: parsed.parameters || parsed.arguments || parsed.args || {},
+                                name: parsed.name
+                            });
+                            // Append text before JSON
+                            scrubbedText += text.substring(currentIndex, startIdx);
+                            // Skip the JSON string
+                            currentIndex = endIdx + 1;
+                            continue;
+                        }
+                    } catch {
+                        // Silent fail
+                    }
+                }
+            }
+            
+            // If we reach here, either it wasn't balanced or wasn't a valid tool call
+            scrubbedText += text.substring(currentIndex, startIdx + 1);
+            currentIndex = startIdx + 1;
+        }
+
+        // Clean up empty markdown json fences that might be left behind: ```json\n\n```
+        scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n\s*```/g, '');
+
+        return { scrubbedText: scrubbedText.trim(), toolCalls };
+    }
 
     /**
      * Shared logic to prepare Ollama request body.
@@ -579,10 +626,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 content = JSON.stringify(m.toolResults.length === 1 ? m.toolResults[0]?.result : m.toolResults.map(tr => tr.result));
             } else if (!content) {
                 content = (m.toolCalls && m.toolCalls.length > 0 && !useNativeTools) ? `<tool_call>${JSON.stringify(m.toolCalls[0])}</tool_call>` : " ";
+            } else if (m.role === "model") {
+                // Always scrub potential hallucinated tool calls from the history payload sent back to Ollama
+                content = this.extractFallbackToolCalls(content).scrubbedText || " ";
             }
             
             return {
                 content: content,
+                name: m.role === "tool" && useNativeTools ? m.toolResults?.[0]?.name : undefined,
                 // Ollama expects 'assistant' and 'tool' (recent versions)
                 role: m.role === "model" ? "assistant" : m.role,
                 // Map tool results back correctly (only for native)
@@ -591,7 +642,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     function: {
                         arguments: tc.args,
                         name: tc.name
-                    }
+                    },
+                    id: tc.id
                 })) : undefined
             };
         });
