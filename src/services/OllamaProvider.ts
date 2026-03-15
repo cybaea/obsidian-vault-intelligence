@@ -264,6 +264,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             const decoder = new TextDecoder();
             let buffer = "";
             let fullMessageText = "";
+            let inToolCall = false;
+            let tempToolCallBuffer = "";
 
             try {
                 while (true) {
@@ -290,14 +292,44 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             const chunk = JSON.parse(line) as OllamaChatChunk;
                             
                             if (chunk.message) {
-                                fullMessageText += chunk.message.content;
-                                yield {
-                                    text: chunk.message.content,
-                                    toolCalls: chunk.message.tool_calls?.map(tc => ({
-                                        args: tc.function.arguments,
-                                        name: tc.function.name
-                                    }))
-                                };
+                                let newText = chunk.message.content;
+                                fullMessageText += newText;
+                                
+                                // Buffer and strip <tool_call> block from UI output
+                                if (!inToolCall && newText.includes("<tool_call>")) {
+                                    const split = newText.split("<tool_call>");
+                                    if (split[0]) {
+                                        yield { text: split[0] };
+                                    }
+                                    inToolCall = true;
+                                    tempToolCallBuffer = split.slice(1).join("<tool_call>");
+                                    newText = "";
+                                } else if (inToolCall) {
+                                    tempToolCallBuffer += newText;
+                                    if (tempToolCallBuffer.includes("</tool_call>")) {
+                                        inToolCall = false;
+                                        const split = tempToolCallBuffer.split("</tool_call>");
+                                        tempToolCallBuffer = "";
+                                        // Yield whatever comes after the closing tag
+                                        if (split.length > 1 && split[1]) {
+                                            newText = split[1];
+                                        } else {
+                                            newText = "";
+                                        }
+                                    } else {
+                                        newText = "";
+                                    }
+                                }
+
+                                if (newText) {
+                                    yield {
+                                        text: newText,
+                                        toolCalls: chunk.message.tool_calls?.map(tc => ({
+                                            args: tc.function.arguments,
+                                            name: tc.function.name
+                                        }))
+                                    };
+                                }
                             }
 
                             if (chunk.done) {
@@ -427,6 +459,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const decoder = new TextDecoder();
         let buffer = "";
         let fullMessageText = "";
+        let inToolCall = false;
+        let tempToolCallBuffer = "";
 
         try {
             for await (const chunk of res) {
@@ -444,15 +478,43 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         const data = JSON.parse(line) as OllamaChatChunk;
                         
                         if (data.message) {
-                            fullMessageText += data.message.content;
-                            yield {
-                                text: data.message.content,
-                                toolCalls: data.message.tool_calls?.map(tc => ({
-                                    args: tc.function.arguments,
-                                    id: tc.id,
-                                    name: tc.function.name
-                                }))
-                            };
+                            let newText = data.message.content;
+                            fullMessageText += newText;
+
+                            if (!inToolCall && newText.includes("<tool_call>")) {
+                                const split = newText.split("<tool_call>");
+                                if (split[0]) {
+                                    yield { text: split[0] };
+                                }
+                                inToolCall = true;
+                                tempToolCallBuffer = split.slice(1).join("<tool_call>");
+                                newText = "";
+                            } else if (inToolCall) {
+                                tempToolCallBuffer += newText;
+                                if (tempToolCallBuffer.includes("</tool_call>")) {
+                                    inToolCall = false;
+                                    const split = tempToolCallBuffer.split("</tool_call>");
+                                    tempToolCallBuffer = "";
+                                    if (split.length > 1 && split[1]) {
+                                        newText = split[1];
+                                    } else {
+                                        newText = "";
+                                    }
+                                } else {
+                                    newText = "";
+                                }
+                            }
+
+                            if (newText) {
+                                yield {
+                                    text: newText,
+                                    toolCalls: data.message.tool_calls?.map(tc => ({
+                                        args: tc.function.arguments,
+                                        id: tc.id,
+                                        name: tc.function.name
+                                    }))
+                                };
+                            }
                         }
 
                         if (data.done) {
@@ -491,15 +553,37 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     const data = JSON.parse(buffer) as OllamaChatChunk;
                     
                     if (data.message) {
-                        fullMessageText += data.message.content;
-                        yield {
-                            text: data.message.content,
-                            toolCalls: data.message.tool_calls?.map(tc => ({
-                                args: tc.function.arguments,
-                                id: tc.id,
-                                name: tc.function.name
-                            }))
-                        };
+                        let newText = data.message.content;
+                        fullMessageText += newText;
+
+                        if (!inToolCall && newText.includes("<tool_call>")) {
+                            const split = newText.split("<tool_call>");
+                            if (split[0]) yield { text: split[0] };
+                            inToolCall = true;
+                            tempToolCallBuffer = split.slice(1).join("<tool_call>");
+                            newText = "";
+                        } else if (inToolCall) {
+                            tempToolCallBuffer += newText;
+                            if (tempToolCallBuffer.includes("</tool_call>")) {
+                                inToolCall = false;
+                                const split = tempToolCallBuffer.split("</tool_call>");
+                                tempToolCallBuffer = "";
+                                newText = split.length > 1 && split[1] ? split[1] : "";
+                            } else {
+                                newText = "";
+                            }
+                        }
+
+                        if (newText) {
+                            yield {
+                                text: newText,
+                                toolCalls: data.message.tool_calls?.map(tc => ({
+                                    args: tc.function.arguments,
+                                    id: tc.id,
+                                    name: tc.function.name
+                                }))
+                            };
+                        }
                     }
 
                     if (data.done) {
