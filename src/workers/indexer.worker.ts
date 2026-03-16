@@ -13,7 +13,7 @@ import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizeP
 let graph: Graph;
 let orama: AnyOrama;
 let config: WorkerConfig;
-let embedderProxy: ((text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) | null = null;
+let embedderProxy: ((text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
 let latestGraphUpdateId = 0;
 let currentStopWords: string[] = []; // Loaded dynamically
@@ -969,35 +969,48 @@ const IndexerWorker: WorkerAPI = {
 
         const batchedDocs: OramaDocument[] = [];
         let totalTokens = 0;
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            if (!chunk) continue;
+        
+        const fullTexts = chunks.map(chunk => (context + "\n" + chunk.text).trim());
+        const validFullTexts = fullTexts.filter(text => text.length > 0);
 
-            const fullText = (context + "\n" + chunk.text).trim();
-            const chunkId = `${normalizedPath}#${i}`;
+        if (validFullTexts.length > 0) {
+            const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
+            totalTokens = res.tokenCount;
+            // The res.vectors contains the batched embeddings for the full texts
+            // We need to zip them back. If a chunk resulted in an empty string it was skipped in validFullTexts.
+            let vectorIdx = 0;
+            
+            for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
+                if (!chunk) continue;
 
-            if (fullText.length === 0) continue;
+                const fullText = (context + "\n" + chunk.text).trim();
+                const chunkId = `${normalizedPath}#${i}`;
 
-            const { tokenCount, vector } = await generateEmbedding(fullText, title);
-            totalTokens += tokenCount;
+                if (fullText.length === 0) continue;
 
-            batchedDocs.push({
-                anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
-                author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
-                content: chunk.text, // Live index keeps content (pure)
-                context: context, // Metadata header
-                created: mtime,
-                embedding: vector,
-                end: chunk.end + bodyOffset,
-                id: chunkId,
-                mtime: mtime,
-                params: [], // Simplified for now
-                path: normalizedPath,
-                start: chunk.start + bodyOffset,
-                status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
-                title: title,
-                tokenCount: tokenCount,
-            });
+                const resVectors = res.vectors;
+                const resVector = res.vector;
+                const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[]; // Fallback to single vector if worker didn't respect batch (legacy)
+
+                batchedDocs.push({
+                    anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
+                    author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
+                    content: chunk.text, // Live index keeps content (pure)
+                    context: context, // Metadata header
+                    created: mtime,
+                    embedding: vector,
+                    end: chunk.end + bodyOffset,
+                    id: chunkId,
+                    mtime: mtime,
+                    params: [], // Simplified for now
+                    path: normalizedPath,
+                    start: chunk.start + bodyOffset,
+                    status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
+                    title: title,
+                    tokenCount: totalTokens / validFullTexts.length, // Distribute total tokens roughly
+                });
+            }
         }
 
         for (const doc of batchedDocs) {
@@ -1230,9 +1243,14 @@ function extractHeaders(text: string): string[] {
     return text.split('\n').filter(l => l.match(/^(#{1,3})\s+(.*)$/)).map(l => l.trim());
 }
 
-async function generateEmbedding(text: string, title: string): Promise<{ vector: number[], tokenCount: number }> {
+async function generateEmbedding(text: string | string[], title: string): Promise<{ vector: number[]; vectors?: number[][]; tokenCount: number }> {
     if (!embedderProxy) throw new Error("Embedding proxy not initialized.");
-    return embedderProxy(text, title);
+    const res = await embedderProxy(text, title);
+    return {
+        tokenCount: res.tokenCount,
+        vector: res.vector,
+        vectors: res.vectors
+    };
 }
 
 function parseYaml(text: string): Record<string, unknown> {

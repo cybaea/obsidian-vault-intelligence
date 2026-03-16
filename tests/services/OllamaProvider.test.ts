@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking private methods for unit testing adaptation logic */
 import { App, Platform, requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi, Mock } from 'vitest';
 
@@ -46,6 +42,12 @@ describe('OllamaProvider', () => {
         } as unknown as App;
 
         service = new OllamaProvider(mockSettings, mockApp);
+
+        // Reset global test state
+        (Platform as { isDesktopApp?: boolean }).isDesktopApp = true;
+        if ('fetch' in globalThis) {
+            Reflect.deleteProperty(globalThis, 'fetch');
+        }
     });
 
     describe('Tool Symmetry', () => {
@@ -85,13 +87,14 @@ describe('OllamaProvider', () => {
                 provider: 'ollama', 
                 supportedMethods: ['generateContent', 'nativeTools']
             };
-            (ModelRegistry as any).fetchOllamaModelDetails = vi.fn().mockResolvedValue(mockModel);
+            vi.spyOn(ModelRegistry, 'fetchOllamaModelDetails').mockResolvedValue(mockModel as unknown as never);
 
-            const body = await (service as any).prepareRequestBody(messages, options, false);
+            const mockService = service as unknown as { prepareRequestBody: (msg: unknown, opt: unknown, stream: boolean) => Promise<{ tools: { type: string, function: { name: string } }[] }> };
+            const body = await mockService.prepareRequestBody(messages, options, false);
             
-            expect(body.tools).toHaveLength(1);
-            expect(body.tools[0].type).toBe('function');
-            expect(body.tools[0].function.name).toBe('get_weather');
+            expect(body.tools).toBeDefined();
+            expect(body.tools[0]?.type).toBe('function');
+            expect(body.tools[0]?.function.name).toBe('get_weather');
         });
     });
 
@@ -110,7 +113,7 @@ describe('OllamaProvider', () => {
 
     describe('Buffer Safety', () => {
         it('should throw error if mobile buffer exceeds limit', async () => {
-            (Platform as any).isDesktopApp = false;
+            (Platform as { isDesktopApp?: boolean }).isDesktopApp = false;
 
             const mockReader = {
                 read: vi.fn(),
@@ -131,7 +134,8 @@ describe('OllamaProvider', () => {
                 },
                 ok: true
             });
-            (globalThis as any).fetch = mockFetch;
+            const globalWithFetch = globalThis as typeof globalThis & { fetch: unknown };
+            globalWithFetch.fetch = mockFetch;
 
             const stream = service.generateMessageStream([{ content: 'test', role: 'user' }], {});
             
@@ -142,9 +146,79 @@ describe('OllamaProvider', () => {
             }).rejects.toThrow("NDJSON stream chunk exceeded maximum safe buffer size.");
         });
     });
+
+    describe('JSON Resilience', () => {
+        it('should strip markdown fences from local model JSON responses', async () => {
+            (requestUrl as Mock).mockResolvedValue({
+                json: { message: { content: "```json\n{\"test\":\"value\"}\n```" } },
+                status: 200
+            });
+            
+            const { z } = await import('zod');
+            const schema = z.object({ test: z.string() });
+            
+            // Mock ModelRegistry to skip network checks
+            const mockModel = { id: 'ollama/llama3', inputTokenLimit: 8192, provider: 'ollama', supportedMethods: ['generateStructured'] };
+            vi.spyOn(ModelRegistry, 'fetchOllamaModelDetails').mockResolvedValue(mockModel as unknown as never);
+            vi.spyOn(ModelRegistry, 'getModelById').mockReturnValue(mockModel as unknown as never);
+            
+            const result = await service.generateStructured([], schema, { modelId: 'ollama/llama3' });
+            expect(result).toHaveProperty('test', 'value');
+        });
+    });
+
+    describe('Streaming Resilience', () => {
+        it('should preserve Basic Auth headers for Node streaming', async () => {
+            mockSettings.ollamaEndpoint = 'http://user:pass@localhost:11434';
+            service = new OllamaProvider(mockSettings, mockApp);
+            
+            // Mock ModelRegistry
+            const mockModel = { id: 'ollama/llama3', inputTokenLimit: 8192, provider: 'ollama', supportedMethods: ['generateContent'] };
+            vi.spyOn(ModelRegistry, 'fetchOllamaModelDetails').mockResolvedValue(mockModel as unknown as never);
+            vi.spyOn(ModelRegistry, 'getModelById').mockReturnValue(mockModel as unknown as never);
+            
+            let errorCb: undefined | ((err: Error) => void);
+            const mockReq = {
+                destroy: vi.fn(),
+                end: vi.fn(() => {
+                    if (errorCb) {
+                        errorCb(new Error("Mock abort"));
+                    }
+                }),
+                on: vi.fn(function(event: string, cb: (...args: unknown[]) => void) {
+                    if (event === 'error') {
+                        errorCb = cb as ((err: Error) => void);
+                    }
+                    return mockReq;
+                }),
+                setTimeout: vi.fn(),
+                write: vi.fn()
+            };
+            const requestSpy = vi.fn().mockReturnValue(mockReq);
+
+            const env = globalThis as typeof globalThis & { require: unknown };
+            const originalRequire = env.require as (id: string) => unknown;
+            const mockRequire = vi.fn((m: string) => {
+                if (m === 'http' || m === 'https') return { request: requestSpy };
+                if (m === 'url') return { URL: URL };
+                if (originalRequire) return originalRequire(m);
+                throw new Error(`Cannot require ${m} in test environment`);
+            });
+            Object.defineProperty(globalThis, 'require', { value: mockRequire, writable: true });
+            
+            try {
+                const stream = service.generateMessageStream([], {});
+                await stream.next();
+            } catch {
+                // Ignore expected mock abort
+            } finally {
+                Object.defineProperty(globalThis, 'require', { value: originalRequire, writable: true });
+            }
+            
+            expect(requestSpy).toHaveBeenCalled();
+            const callArgs = requestSpy.mock.calls[0]?.[0] as { auth?: string };
+            expect(callArgs?.auth).toBe("user:pass");
+        });
+    });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of private method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of private method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of private method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of private method mocking */

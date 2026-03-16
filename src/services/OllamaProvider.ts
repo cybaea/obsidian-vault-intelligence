@@ -57,6 +57,7 @@ interface NodeSystem {
  */
 interface OllamaChatRequest {
     format?: string | Record<string, unknown>;
+    keep_alive?: string | number;
     messages: OllamaMessage[];
     model: string;
     options: {
@@ -137,6 +138,61 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     private activeModels: Set<string> = new Set();
 
     constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
+
+    // --- IEmbeddingClient Implementation ---
+
+    public get modelName(): string {
+        return this.settings.embeddingModel;
+    }
+
+    public get dimensions(): number {
+        return this.settings.embeddingDimension;
+    }
+
+    public async embedChunks(texts: string[]): Promise<{ tokenCount: number; vectors: number[][] }> {
+        return new Promise((resolve, reject) => {
+            this.embeddingQueue = this.embeddingQueue.then(async () => {
+                try {
+                    const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
+                    if (!isExternalUrl(endpoint, true)) {
+                        throw new ProviderError("Invalid Ollama endpoint (SSRF blocked).", "ollama");
+                    }
+
+                    const pureModelStr = this.settings.embeddingModel.replace("ollama/", "");
+                    this.activeModels.add(pureModelStr);
+
+                    const response = await requestUrl({
+                        body: JSON.stringify({
+                            input: texts,
+                            model: pureModelStr,
+                            truncate: true
+                        }),
+                        headers: { "Content-Type": "application/json" },
+                        method: "POST",
+                        url: `${endpoint}/api/embed`
+                    });
+
+                    if (response.status !== 200) {
+                        throw new ProviderError(`Ollama embedding error: ${response.status}`, "ollama", response.status);
+                    }
+
+                    const json = response.json as { embeddings: number[][], prompt_eval_count?: number };
+                    if (!json.embeddings || json.embeddings.length === 0) {
+                        throw new Error("No embeddings returned by Ollama.");
+                    }
+
+                    const tokens = json.prompt_eval_count || Math.ceil(texts.join("").length / 4);
+
+                    resolve({ tokenCount: tokens, vectors: json.embeddings });
+
+                } catch (e: unknown) {
+                    const message = e instanceof Error ? e.message : String(e);
+                    logger.error("Ollama Provider embedChunks logic error:", message);
+                    reject(new ProviderError(message, "ollama"));
+                }
+            });
+        });
+    }
 
     async embedQuery(text: string): Promise<{ tokenCount: number; vector: number[] }> {
         const { vectors } = await this.embedDocument(text);
@@ -678,7 +734,16 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             });
 
             const data = response.json as OllamaChatChunk;
-            const content = data.message?.content || "{}";
+            let content = data.message?.content || "{}";
+            
+            // Strip markdown fences for robust parsing of local tools that ignore `format: json`
+            content = content.trim();
+            if (content.startsWith('```')) {
+                const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (match && match[1]) {
+                    content = match[1].trim();
+                }
+            }
             
             try {
                 return JSON.parse(content) as T;
@@ -846,6 +911,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         this.activeModels.add(pureModelStr);
 
         const requestBody: OllamaChatRequest = {
+            keep_alive: "5m",
             messages: ollamaMessages,
             model: pureModelStr,
             options: {

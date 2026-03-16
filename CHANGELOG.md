@@ -30,6 +30,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Ollama embedding batching**: Improved local indexing performance by natively batching document chunks to the Ollama embedding endpoint.
+-   **Ollama memory management**: Added explicit `keep_alive` logic for active chat models to avoid memory locks and cold start penalties.
 -   **Ollama integration (Phase 3)**: Finalised the local model provider with strict type safety, NDJSON streaming, and high-fidelity JSON mode support.
 -   **Typed model discovery**: Implemented explicit interfaces for Ollama model listing and metadata extraction in `ModelRegistry`, eliminating all `any` usages in the retrieval pipeline.
 -   **Hardened test suite**: Eliminated all `any` mocks and lint bypasses from `AgentService.test.ts`, ensuring 100% type coverage for agent orchestration tests.
