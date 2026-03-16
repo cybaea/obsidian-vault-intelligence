@@ -417,7 +417,7 @@ export const URL_CONSTANTS = {
 
 export const REGEX_CONSTANTS = {
     /** Pattern to match @[link] or @link mentions */
-    MENTION: /@(?:\[\[([^\]]+)\]\]|(\b[a-zA-Z0-9_\-./]+\b))/g
+    MENTION: /@(?:\[\[([^\]]+)\]\]|"([^"]+)"|(\b[a-zA-Z0-9_\-./]+\b))/g
 };
 
 export const MODEL_CONSTANTS = {

@@ -387,7 +387,7 @@ export class AgentService {
         // But we could optionally clean them. ResearchChatView didn't clean them, so we won't either.
 
         for (const match of matches) {
-            const pathOrName = match[1] || match[2];
+            const pathOrName = match[1] || match[2] || match[3];
             if (pathOrName) {
                 // First try direct path
                 let abstractFile = this.app.vault.getAbstractFileByPath(pathOrName);

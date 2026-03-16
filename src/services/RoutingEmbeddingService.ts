@@ -64,6 +64,21 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         return this.currentService.embedDocument(text, title, priority);
     }
 
+    async embedChunks(texts: string[], title?: string, priority?: EmbeddingPriority): Promise<{ tokenCount: number; vectors: number[][] }> {
+        if (this.currentService.embedChunks) {
+            return this.currentService.embedChunks(texts, title, priority);
+        }
+        // Fallback for providers that don't implement batching
+        const vectors: number[][] = [];
+        let totalTokens = 0;
+        for (const t of texts) {
+            const res = await this.currentService.embedDocument(t, title, priority);
+            vectors.push(res.vectors[0] || []);
+            totalTokens += res.tokenCount;
+        }
+        return { tokenCount: totalTokens, vectors };
+    }
+
     updateConfiguration() {
         if (this.localService.updateConfiguration) {
             this.localService.updateConfiguration();

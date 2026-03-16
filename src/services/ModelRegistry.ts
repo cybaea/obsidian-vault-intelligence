@@ -173,6 +173,8 @@ export class ModelRegistry {
     public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
         if (this.isFetching) return;
 
+        this.ollamaDetailsCache.clear();
+
         const now = Date.now();
         const cacheDurationMs = cacheDurationDays * 24 * 60 * 60 * 1000;
         

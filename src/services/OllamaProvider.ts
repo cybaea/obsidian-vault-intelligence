@@ -181,9 +181,15 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         throw new Error("No embeddings returned by Ollama.");
                     }
 
+                    // Matryoshka dimensionality support (slice vector if requested dimension is smaller)
+                    const targetDim = this.settings.embeddingDimension;
+                    const finalVectors = json.embeddings.map(vec => 
+                        (vec.length > targetDim) ? vec.slice(0, targetDim) : vec
+                    );
+
                     const tokens = json.prompt_eval_count || Math.ceil(texts.join("").length / 4);
 
-                    resolve({ tokenCount: tokens, vectors: json.embeddings });
+                    resolve({ tokenCount: tokens, vectors: finalVectors });
 
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);
@@ -520,7 +526,6 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         let fullMessageText = "";
         let inToolCall = false;
         let tempToolCallBuffer = "";
-        let emittedNativeTools = false;
 
         try {
             for await (const chunk of res) {
@@ -566,9 +571,6 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             }
 
                             if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
-                                if (data.message.tool_calls && data.message.tool_calls.length > 0) {
-                                    emittedNativeTools = true;
-                                }
                                 yield {
                                     text: newText,
                                     toolCalls: data.message.tool_calls?.map(tc => ({
@@ -599,9 +601,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 }
                             }
 
-                            if (emittedNativeTools || (extractedToolCalls && extractedToolCalls.length > 0)) {
-                                scrubbedText = "";
-                            }
+                            // Do not erase scrubbedText aggressively here to avoid wiping out valid pre-tool-call text
 
                             // Pass exact token telemetry back to service
                             yield { 
@@ -644,9 +644,6 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         }
 
                         if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
-                            if (data.message.tool_calls && data.message.tool_calls.length > 0) {
-                                emittedNativeTools = true;
-                            }
                             yield {
                                 text: newText,
                                 toolCalls: data.message.tool_calls?.map(tc => ({
@@ -677,9 +674,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             }
                         }
 
-                        if (emittedNativeTools || (extractedToolCalls && extractedToolCalls.length > 0)) {
-                            scrubbedText = "";
-                        }
+                        // Do not erase scrubbedText aggressively here to avoid wiping out valid pre-tool-call text
 
                         yield { 
                             isDone: true,
@@ -738,11 +733,9 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             
             // Strip markdown fences for robust parsing of local tools that ignore `format: json`
             content = content.trim();
-            if (content.startsWith('```')) {
-                const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                if (match && match[1]) {
-                    content = match[1].trim();
-                }
+            const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (match && match[1]) {
+                content = match[1].trim();
             }
             
             try {
