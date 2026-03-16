@@ -102,7 +102,8 @@ export class AgentService {
         let finalCreatedFiles: string[] = [];
 
         for await (const chunk of stream) {
-            if (chunk.text) finalText += chunk.text;
+            if (chunk.replaceText !== undefined) finalText = chunk.replaceText;
+            else if (chunk.text) finalText += chunk.text;
             if (chunk.isDone) {
                 finalFiles = chunk.files || [];
                 finalCreatedFiles = chunk.createdFiles || [];
