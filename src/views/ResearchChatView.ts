@@ -143,6 +143,18 @@ export class ResearchChatView extends ItemView {
 
         this.chatContainer = container.createDiv({ cls: "chat-container" });
 
+        this.chatContainer.addEventListener("click", (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const linkElement = target.closest("a.internal-link");
+            if (linkElement) {
+                e.preventDefault();
+                const href = linkElement.getAttribute("data-href");
+                if (href) {
+                    void this.plugin.app.workspace.openLinkText(href, "", e.ctrlKey || e.metaKey);
+                }
+            }
+        });
+
         const inputContainer = container.createDiv({ cls: "input-container" });
         this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
