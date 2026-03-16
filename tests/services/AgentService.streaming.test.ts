@@ -1,10 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- We use any for complex model mocks in tests */
 import { App } from 'obsidian';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, Mock } from 'vitest';
 
 import { AgentService } from '../../src/services/AgentService';
 
@@ -12,16 +7,17 @@ vi.mock('../../src/tools/ToolRegistry', () => ({
     ToolRegistry: class {
         execute = vi.fn();
         getTools = vi.fn().mockReturnValue([]);
+        updateProvider = vi.fn();
     }
 }));
 
 describe('AgentService Streaming', () => {
     let service: AgentService;
     let mockApp: App;
-    let mockReasoningClient: any;
-    let mockGraphService: any;
-    let mockEmbeddingClient: any;
-    let mockSettings: any;
+    let mockReasoningClient: unknown;
+    let mockGraphService: unknown;
+    let mockEmbeddingClient: unknown;
+    let mockSettings: unknown;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -31,7 +27,7 @@ describe('AgentService Streaming', () => {
                 getActiveFile: vi.fn().mockReturnValue(null),
                 iterateRootLeaves: vi.fn()
             }
-        } as any;
+        } as unknown as App;
         mockReasoningClient = {
             generateMessageStream: vi.fn(),
             initialize: vi.fn(),
@@ -48,13 +44,17 @@ describe('AgentService Streaming', () => {
             systemInstruction: 'You are an agent.'
         };
 
+        const mockProviderRegistry = {
+            getModelProvider: vi.fn().mockReturnValue(mockReasoningClient),
+            getReasoningClient: vi.fn().mockReturnValue(mockReasoningClient)
+        };
+
         service = new AgentService(
             mockApp,
-            mockReasoningClient,
-            mockReasoningClient,
-            mockGraphService,
-            mockEmbeddingClient,
-            mockSettings
+            mockProviderRegistry as never,
+            mockGraphService as never,
+            mockEmbeddingClient as never,
+            mockSettings as never
         );
     });
 
@@ -66,28 +66,28 @@ describe('AgentService Streaming', () => {
             yield { isDone: true, text: '!' };
             yield { rawContent: [{ text: 'Hello world!' }] }; // Final metadata chunk from provider
         })();
-        mockReasoningClient.generateMessageStream.mockReturnValue(mockStream);
+        (mockReasoningClient as { generateMessageStream: Mock }).generateMessageStream.mockReturnValue(mockStream);
 
-        const chunks: any[] = [];
+        const chunks: unknown[] = [];
         for await (const chunk of service.chatStream([], 'test', [], {})) {
             chunks.push(chunk);
         }
 
         // Now expected 5 chunks: 'Hello', ' world', '!', model-metadata, final-isDone
         expect(chunks).toHaveLength(5);
-        expect(chunks[0].text).toBe('Hello');
-        expect(chunks[1].text).toBe(' world');
-        expect(chunks[2].text).toBe('!');
+        expect((chunks[0] as { text: string }).text).toBe('Hello');
+        expect((chunks[1] as { text: string }).text).toBe(' world');
+        expect((chunks[2] as { text: string }).text).toBe('!');
         // Chunk 3 is metadata (rawContent/toolCalls)
-        expect(chunks[3].rawContent).toBeDefined();
+        expect((chunks[3] as { rawContent: unknown[] }).rawContent).toBeDefined();
         // Chunk 4 is isDone: true
-        expect(chunks[4].isDone).toBe(true);
+        expect((chunks[4] as { isDone: boolean }).isDone).toBe(true);
     });
 
     it('should handle tool call loop in stream', async () => {
         // Mock ToolRegistry execute
         const toolExecuteMock = vi.fn().mockResolvedValue({ content: "Tool result" });
-        (service as any).toolRegistry.execute = toolExecuteMock;
+        (service as unknown as { toolRegistry: { execute: unknown } }).toolRegistry.execute = toolExecuteMock;
 
         // First stream returns a tool call
         const stream1 = (async function* () {
@@ -102,25 +102,25 @@ describe('AgentService Streaming', () => {
             yield { isDone: true };
         })();
 
-        mockReasoningClient.generateMessageStream
+        (mockReasoningClient as { generateMessageStream: Mock }).generateMessageStream
             .mockReturnValueOnce(stream1)
             .mockReturnValueOnce(stream2);
 
-        const chunks: any[] = [];
+        const chunks: unknown[] = [];
         for await (const chunk of service.chatStream([], 'test', [], {})) {
             chunks.push(chunk);
         }
 
-        const thinkingChunks = chunks.filter(c => c.status?.includes('Thinking'));
+        const thinkingChunks = chunks.filter(c => (c as { status?: string }).status?.includes('Thinking'));
         if (thinkingChunks.length === 0) {
             throw new Error(`No thinking chunks found. Received: ${JSON.stringify(chunks)}`);
         }
-        expect(chunks.find(c => c.text === 'Final answer')).toBeDefined();
+        expect(chunks.find(c => (c as { text?: string }).text === 'Final answer')).toBeDefined();
         
         // Check that toolResults were yielded
-        const toolResultChunk = chunks.find(c => c.toolResults);
+        const toolResultChunk = chunks.find(c => (c as { toolResults?: unknown[] }).toolResults) as { toolResults: { result: unknown }[] };
         expect(toolResultChunk).toBeDefined();
-        expect(toolResultChunk.toolResults[0].result).toEqual({ content: "Tool result" });
+        expect(toolResultChunk.toolResults[0]?.result).toEqual({ content: "Tool result" });
 
         expect(toolExecuteMock).toHaveBeenCalledTimes(1);
     });
@@ -133,9 +133,9 @@ describe('AgentService Streaming', () => {
             controller.abort();
             yield { text: 'Part 2' };
         })();
-        mockReasoningClient.generateMessageStream.mockReturnValue(mockStream);
+        (mockReasoningClient as { generateMessageStream: Mock }).generateMessageStream.mockReturnValue(mockStream);
 
-        const chunks: any[] = [];
+        const chunks: unknown[] = [];
         for await (const chunk of service.chatStream([], 'test', [], { signal: controller.signal })) {
             chunks.push(chunk);
         }
@@ -143,12 +143,6 @@ describe('AgentService Streaming', () => {
         if (chunks.length !== 1) {
             throw new Error(`Expected 1 chunk but got ${chunks.length}. Received: ${JSON.stringify(chunks)}`);
         }
-        expect(chunks[0].text).toBe('Part 1');
+        expect((chunks[0] as { text: string }).text).toBe('Part 1');
     });
 });
-
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-argument -- End of model mock section */

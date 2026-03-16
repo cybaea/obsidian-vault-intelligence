@@ -1,4 +1,4 @@
-import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentResponse, GoogleGenAI, Part } from "@google/genai";
+import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentParameters, GenerateContentResponse, GoogleGenAI, Part } from "@google/genai";
 import { App, Notice } from "obsidian";
 import { z } from "zod";
 
@@ -15,6 +15,13 @@ export interface EmbedOptions {
     outputDimensionality?: number;
     taskType?: string;
     title?: string;
+}
+
+/** Interface for Phase 8 SDK unification fix */
+interface UnifiedSDKParams extends GenerateContentParameters {
+    system_instruction?: unknown;
+    systemInstruction?: unknown;
+    tools?: unknown;
 }
 
 
@@ -110,14 +117,28 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 }
             }
 
-            const response = await client.models.generateContent({
-                config: {
-                    systemInstruction: systemInstruction,
-                    tools: tools.length > 0 ? [{ functionDeclarations: tools }] : undefined
-                },
+            // Phase 8 SDK unification fix: Move tools and systemInstruction to top-level as well as config
+            const requestParams: UnifiedSDKParams = {
+                config: {},
                 contents: contents,
                 model: options.modelId || this.settings.chatModel
-            });
+            };
+
+            if (tools && tools.length > 0) {
+                const toolsConfig = [{ functionDeclarations: tools }];
+                requestParams.tools = toolsConfig;
+                requestParams.config!.tools = toolsConfig;
+            }
+
+            if (systemInstruction) {
+                requestParams.systemInstruction = systemInstruction;
+                requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
+                requestParams.config!.systemInstruction = systemInstruction;
+            }
+
+            logger.debug("[Agent] Final Request Params", requestParams);
+
+            const response = await client.models.generateContent(requestParams);
 
             return this.parseResponse(response);
         });
@@ -136,14 +157,28 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
         }
 
-        const streamResponse = await client.models.generateContentStream({
-            config: {
-                systemInstruction: systemInstruction,
-                tools: tools.length > 0 ? [{ functionDeclarations: tools }] : undefined
-            },
+        // Phase 8 SDK unification fix: Move tools and systemInstruction to top-level as well as config
+        const requestParams: UnifiedSDKParams = {
+            config: {},
             contents: contents,
             model: options.modelId || this.settings.chatModel
-        });
+        };
+
+        if (tools && tools.length > 0) {
+            const toolsConfig = [{ functionDeclarations: tools }];
+            requestParams.tools = toolsConfig;
+            requestParams.config!.tools = toolsConfig;
+        }
+
+        if (systemInstruction) {
+            requestParams.systemInstruction = systemInstruction;
+            requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
+            requestParams.config!.systemInstruction = systemInstruction;
+        }
+
+        logger.debug("[Agent] Final Request Params", requestParams);
+
+        const streamResponse = await client.models.generateContentStream(requestParams);
 
         const accumulatedParts: Part[] = [];
         let activeThoughtSignature: string | undefined;
@@ -217,15 +252,25 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                                  options?.tools?.[0]?.parameters || 
                                  { type: "object" };
 
-            const response = await client.models.generateContent({
+            // Phase 8 SDK unification fix: Move systemInstruction to top-level as well as config
+            const requestParams: UnifiedSDKParams = {
                 config: {
                     responseMimeType: "application/json",
-                    responseSchema: responseSchema as Record<string, unknown>,
-                    systemInstruction: options.systemInstruction
+                    responseSchema: responseSchema as Record<string, unknown>
                 },
                 contents: contents,
                 model: options.modelId || this.settings.chatModel
-            });
+            };
+
+            if (options.systemInstruction) {
+                requestParams.systemInstruction = options.systemInstruction;
+                requestParams.system_instruction = options.systemInstruction; // SDK 2.0 fallback
+                requestParams.config!.systemInstruction = options.systemInstruction;
+            }
+
+            logger.debug("[Agent] Final Request Params (Structured)", requestParams);
+
+            const response = await client.models.generateContent(requestParams);
 
             const text = response.text || "{}";
             try {

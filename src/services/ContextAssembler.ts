@@ -25,10 +25,12 @@ export class ContextAssembler {
         // Fallback for character estimation if needed
         const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
         // Starvation Protection
-        const singleDocSoftLimitTokens = Math.floor(budgetTokens * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
-        const singleDocSoftLimitChars = Math.floor(budgetChars * SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO);
+        // If only one document, let it take the whole budget. If multiple, apply soft limit.
+        const effectiveLimitRatio = results.length <= 1 ? 1.0 : SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO;
+        const singleDocSoftLimitTokens = Math.floor(budgetTokens * effectiveLimitRatio);
+        const singleDocSoftLimitChars = Math.floor(budgetChars * effectiveLimitRatio);
 
-        logger.debug(`[ContextAssembler] Budget: ${budgetTokens} tokens. Soft Cap: ${singleDocSoftLimitTokens} tokens.`);
+        logger.debug(`[ContextAssembler] Budget: ${budgetTokens} tokens. Soft Cap (${(effectiveLimitRatio * 100).toFixed(0)}%): ${singleDocSoftLimitTokens} tokens.`);
 
         let constructedContext = "";
         let currentUsageTokens = 0;

@@ -39,7 +39,11 @@ export function isExternalUrl(urlString: string, allowLocal: boolean = false): b
             return false;
         }
 
-        const host = url.hostname.toLowerCase();
+        let host = url.hostname.toLowerCase().replace(/\.$/, '');
+        
+        // Normalize IPv4-mapped IPv6 loopbacks and variants to capture them in regular rules
+        host = host.replace(/^\[(?:0:0:0:0:0:ffff:|::ffff:)?(.*)\]$/, '$1');
+        host = host.replace(/^(?:0:0:0:0:0:ffff:|::ffff:)/, '');
 
         // 2. Cloud Metadata Service (ALWAYS BLOCKED regardless of setting)
         if (host === '169.254.169.254') return false;
@@ -59,7 +63,8 @@ export function isExternalUrl(urlString: string, allowLocal: boolean = false): b
             '::1',
             '::',
             '0:0:0:0:0:0:0:1',
-            '0:0:0:0:0:0:0:0'
+            '0:0:0:0:0:0:0:0',
+            '7f00:1'
         ];
         if (blockedHosts.includes(host)) return false;
 
@@ -70,6 +75,10 @@ export function isExternalUrl(urlString: string, allowLocal: boolean = false): b
         // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
         const isPrivate = /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host);
         if (isPrivate) return false;
+
+        // Block IPv4-mapped IPv6 loopbacks and metadata (Node format converts them to hex)
+        if (host === 'a9fe:a9fe' || host.startsWith('7f00:')) return false;
+        if (/^a\.|^c0\.a8\.|^ac\.(1[0-9]|2[0-9]|3[0-1])\./.test(host)) return false; // (Hex mappings for private)
 
         return true;
     } catch {

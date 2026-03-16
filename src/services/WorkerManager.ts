@@ -52,12 +52,26 @@ export class WorkerManager {
             return res.json as unknown;
         });
 
-        const embedder = Comlink.proxy(async (text: string, title: string) => {
+        const embedder = Comlink.proxy(async (textOrTexts: string | string[], title: string) => {
+            if (Array.isArray(textOrTexts)) {
+                if (this.embeddingService.embedChunks) {
+                    return await this.embeddingService.embedChunks(textOrTexts, title);
+                }
+                const vectors: number[][] = [];
+                let totalTokens = 0;
+                for (const t of textOrTexts) {
+                    const res = await this.embeddingService.embedDocument(t, title);
+                    vectors.push(res.vectors[0] || []);
+                    totalTokens += res.tokenCount;
+                }
+                return { tokenCount: totalTokens, vectors };
+            }
+
             if (title === 'Query') {
-                return await this.embeddingService.embedQuery(text);
+                return await this.embeddingService.embedQuery(textOrTexts);
             }
             // Default: Embed as document (for indexing)
-            const { tokenCount, vectors } = await this.embeddingService.embedDocument(text, title);
+            const { tokenCount, vectors } = await this.embeddingService.embedDocument(textOrTexts, title);
             return { tokenCount, vector: vectors[0] || [] };
         });
 
@@ -128,6 +142,8 @@ export class WorkerManager {
             this.worker.terminate();
             this.worker = null;
             this.api = null;
+            this.activeModelId = null;
+            this.activeDimension = null;
             this.mutationQueue = Promise.resolve(); // Reset queue
         }
     }

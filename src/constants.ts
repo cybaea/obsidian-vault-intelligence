@@ -85,8 +85,8 @@ export const SEARCH_CONSTANTS = {
     /** Scoring: Boost for exact title match */
     SCORE_TITLE_MATCH: 3.0,
 
-    /** Max % of the budget a single document can consume if others are present */
-    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.10,
+    /** Max % of the budget a single document can consume if others are present (Starvation Protection) */
+    SINGLE_DOC_SOFT_LIMIT_RATIO: 0.30,
 
     /** Default weight for spreading activation */
     SPREADING_ACTIVATION_WEIGHT: 0.6,
@@ -332,6 +332,8 @@ export const MODEL_REGISTRY_CONSTANTS = {
 export const SANITIZATION_CONSTANTS = {
     /** Default embedding dimension */
     DEFAULT_EMBEDDING_DIMENSION: 768,
+    /** Safe fallback context tokens for local LLMs */
+    DEFAULT_LOCAL_CONTEXT_TOKENS: 8192,
 
     /** Absolute maximum token limit used for sanity checks */
     MAX_TOKEN_LIMIT_SANITY: 1048576,
@@ -378,6 +380,7 @@ export const DOCUMENTATION_URLS = {
         CONNECTION: `${DOCS_CONFIG}#connection`,
         EXPLORER: `${DOCS_CONFIG}#explorer`,
         GARDENER: `${DOCS_CONFIG}#gardener`,
+        OLLAMA_DEBUG: `${DOCS_BASE}docs/guides/ollama.html#debugging-common-issues`,
         PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
         RESEARCHER: `${DOCS_CONFIG}#researcher`,
     },
@@ -414,7 +417,7 @@ export const URL_CONSTANTS = {
 
 export const REGEX_CONSTANTS = {
     /** Pattern to match @[link] or @link mentions */
-    MENTION: /@(?:\[\[([^\]]+)\]\]|(\b[a-zA-Z0-9_\-./]+\b))/g
+    MENTION: /@(?:\[\[([^\]]+)\]\]|"([^"]+)"|(\b[a-zA-Z0-9_\-./]+\b))/g
 };
 
 export const MODEL_CONSTANTS = {

@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink';
 import { App, TFile, Events, Notice } from "obsidian";
 
-import { GRAPH_CONSTANTS } from "../constants";
+import { GRAPH_CONSTANTS, DOCUMENTATION_URLS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { WorkerAPI, WorkerConfig, FileUpdateData } from "../types/graph";
 import { logger } from "../utils/logger";
@@ -35,6 +35,9 @@ export class GraphSyncOrchestrator {
     // Persistence state
     private saveTimeout: number | undefined = undefined;
     private savePromise: Promise<void> | null = null;
+
+    // Error Throttling
+    private lastErrorNoticeTime = 0;
 
     // Drift Quarantine (cap at 3 retries per session)
     private driftQuarantine: Map<string, number> = new Map();
@@ -235,6 +238,21 @@ export class GraphSyncOrchestrator {
         } catch (e) {
             if (e instanceof Error && e.message.includes("TaskDropped")) return;
             logger.error("[GraphSyncOrchestrator] Chunk processing failed:", e);
+            
+            // Throttle UI Error Notices to once every 30 seconds to prevent spam
+            if (!this.lastErrorNoticeTime || Date.now() - this.lastErrorNoticeTime > 30000) {
+                this.lastErrorNoticeTime = Date.now();
+                const notice = new Notice(
+                    "Background indexing failed. Is your AI provider offline?\n\nCheck the developer console for details or ",
+                    10000
+                );
+                
+                // Append clickable link to the notice DOM
+                notice.messageEl.createEl('a', {
+                    href: DOCUMENTATION_URLS.SECTIONS.OLLAMA_DEBUG,
+                    text: `View the ${'Ollama'} guide to troubleshoot`
+                });
+            }
         }
     }
 

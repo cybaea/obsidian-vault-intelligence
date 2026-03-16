@@ -74,6 +74,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .addOption('1024', '1024 (high context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
+            .addOption('4096', `4096 (large context)`)
+            .addOption('8192', `8192 (document scale)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
                 const suggested = parseInt(value);
@@ -300,14 +302,20 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addButton(btn => btn
             .setIcon('terminal')
             .onClick(async () => {
-                let raw = ModelRegistry.getRawResponse();
                 const apiKey = await plugin.geminiService.getApiKey();
-                if (!raw && apiKey) {
-                    await ModelRegistry.fetchModels(plugin.app, apiKey, 0);
-                    raw = ModelRegistry.getRawResponse();
-                }
+                
+                // Always force a fresh fetch when the user clicks debug so we don't rely on stale state
+                await ModelRegistry.fetchModels(plugin.app, apiKey || '', 0, true);
+                
+                const raw = ModelRegistry.getRawResponse();
+                const rawOllama = ModelRegistry.getRawOllamaResponse();
                 if (raw) {
-                    console.debug("[VaultIntelligence] Raw models:", raw);
+                    console.debug("[VaultIntelligence] Raw Gemini models:", raw);
+                }
+                if (rawOllama) {
+                    console.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
+                } else if (plugin.settings.ollamaEndpoint) {
+                    console.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
                 }
             }));
 

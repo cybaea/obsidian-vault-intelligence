@@ -11,6 +11,7 @@ import { MetadataManager } from "./services/MetadataManager";
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
 import { PersistenceManager } from "./services/PersistenceManager";
+import { ProviderRegistry } from "./services/ProviderRegistry";
 import { RoutingEmbeddingService } from "./services/RoutingEmbeddingService";
 import { VaultManager } from "./services/VaultManager";
 import { WorkerManager } from "./services/WorkerManager";
@@ -112,6 +113,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
 	settings: VaultIntelligenceSettings;
 	geminiService: GeminiProvider;
+	providerRegistry: ProviderRegistry;
 	embeddingService: IEmbeddingClient;
 	vaultManager: VaultManager;
 	graphService: GraphService;
@@ -152,18 +154,18 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Initialize Logger
 		logger.setLevel(this.settings.logLevel);
 
-		// 1. Initialize Base Services (Chat/Reasoning always needs Gemini for now)
+		// 1. Initialize Base Services
 		this.geminiService = new GeminiProvider(this.settings, this.app);
+		this.providerRegistry = new ProviderRegistry(this.settings, this.app, this.geminiService);
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (this.settings.googleApiKey) {
+		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
 			void (async () => {
-				const apiKey = await this.geminiService.getApiKey(); // Asynchronous call
-				if (apiKey) {
-					await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays);
-					// Re-sanitize after fetch completes in case dynamic limits are different
-					await this.sanitizeBudgets();
-				}
+				const apiKey = await this.geminiService.getApiKey() || ""; 
+				// Pass skipOllamaFetch=true so we exclusively use the Ollama cache on startup to save costs
+				await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays, false, false, true);
+				// Re-sanitize after fetch completes in case dynamic limits are different
+				await this.sanitizeBudgets();
 			})();
 		}
 
@@ -186,7 +188,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
 		this.gardenerStateService = new GardenerStateService(this.app, this);
-		this.gardenerService = new GardenerService(this.app, this.geminiService, this.ontologyService, this.settings, this.gardenerStateService);
+		this.gardenerService = new GardenerService(this.app, this.providerRegistry, this.ontologyService, this.settings, this.gardenerStateService);
 
 		// 5. Initialize GraphSyncOrchestrator (now that dependencies are ready)
 		this.graphSyncOrchestrator = new GraphSyncOrchestrator(
@@ -246,7 +248,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Register Views
 		this.registerView(
 			VIEW_TYPES.RESEARCH_CHAT,
-			(leaf) => new ResearchChatView(leaf, this, this.geminiService, this.geminiService, this.graphService, this.embeddingService)
+			(leaf) => new ResearchChatView(leaf, this, this.providerRegistry, this.graphService, this.embeddingService)
 		);
 		this.registerView(
 			VIEW_TYPES.SEMANTIC_GRAPH,
@@ -432,6 +434,25 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerSystemInstruction = null;
 		}
 
+		// --- Tiered Context Control Migration (v8.2.0) ---
+		// Migrate legacy local context budgets to explicitly overridden model budgets
+		// Ensures users who heavily customized their local VRAM budget don't lose it on upgrade.
+		if ((this.settings.chatModel?.includes('ollama') || this.settings.chatModel?.includes('local') || this.settings.embeddingProvider === 'local' || this.settings.embeddingProvider === 'ollama') && this.settings.contextWindowTokens !== DEFAULT_SETTINGS.contextWindowTokens) {
+			if (this.settings.chatModel && typeof this.settings.contextWindowTokens === 'number') {
+				this.settings.modelContextOverrides[this.settings.chatModel] = this.settings.contextWindowTokens;
+				this.settings.contextWindowTokens = DEFAULT_SETTINGS.contextWindowTokens;
+				logger.info(`[Migration] Rescued local chat context budget into modelContextOverrides for ${this.settings.chatModel}`);
+			}
+		}
+
+		if ((this.settings.gardenerModel?.includes('ollama') || this.settings.gardenerModel?.includes('local')) && this.settings.gardenerContextBudget !== DEFAULT_SETTINGS.gardenerContextBudget) {
+			if (this.settings.gardenerModel && typeof this.settings.gardenerContextBudget === 'number') {
+				this.settings.modelContextOverrides[this.settings.gardenerModel] = this.settings.gardenerContextBudget;
+				this.settings.gardenerContextBudget = DEFAULT_SETTINGS.gardenerContextBudget;
+				logger.info(`[Migration] Rescued local gardener context budget into modelContextOverrides for ${this.settings.gardenerModel}`);
+			}
+		}
+
 		// Migration: Rename gardenerRecheckHours to gardenerRecheckDays (v8.1.0)
 		const rawData = data as Record<string, unknown>;
 		if (rawData && typeof rawData.gardenerRecheckHours === 'number') {
@@ -439,6 +460,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			// Convert to days and round to 3 decimal places to avoid float jitter
 			this.settings.gardenerRecheckDays = Math.round((hours / 24) * 1000) / 1000;
 			delete rawData.gardenerRecheckHours;
+			delete (this.settings as unknown as Record<string, unknown>)['gardenerRecheckHours'];
 			await this.saveSettings();
 			logger.info(`Migrating gardenerRecheckHours (${hours}) to gardenerRecheckDays (${this.settings.gardenerRecheckDays})`);
 		}
@@ -469,8 +491,23 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 
 		await this.sanitizeBudgets();
 
+		// --- Model ID Prefix Migration (v8.1.0) ---
+		let prefixChanged = false;
+		if (this.settings.embeddingProvider === 'local' && !this.settings.embeddingModel.startsWith('local/')) {
+			this.settings.embeddingModel = `local/${this.settings.embeddingModel}`;
+			prefixChanged = true;
+		} else if (this.settings.embeddingProvider === 'ollama' && !this.settings.embeddingModel.startsWith('ollama/')) {
+			this.settings.embeddingModel = `ollama/${this.settings.embeddingModel}`;
+			prefixChanged = true;
+		}
+
+		if (prefixChanged) {
+			logger.info(`[Migration] Updated model ID with prefix: ${this.settings.embeddingModel}`);
+			await this.saveData(this.settings);
+		}
+
 		// Sanity check: Ensure dimensions match presets if using a local provider
-		if (this.settings.embeddingProvider === 'local') {
+		if (this.settings.embeddingModel.startsWith('local/')) {
 			const modelId = this.settings.embeddingModel;
 			const modelDef = LOCAL_EMBEDDING_MODELS.find(m => m.id === modelId);
 
@@ -481,8 +518,8 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			}
 
 			// Migration: v1.5 -> v1 (v1.5 seems to be broken/unavailable in Xenova repo)
-			if (modelId === 'Xenova/nomic-embed-text-v1.5') {
-				const nomicV1 = 'Xenova/nomic-embed-text-v1';
+			if (modelId === 'local/Xenova/nomic-embed-text-v1.5') {
+				const nomicV1 = 'local/Xenova/nomic-embed-text-v1';
 				logger.info(`Migrating model from v1.5 to v1: ${modelId} -> ${nomicV1}`);
 				this.settings.embeddingModel = nomicV1;
 				this.settings.embeddingDimension = SANITIZATION_CONSTANTS.DEFAULT_EMBEDDING_DIMENSION;
@@ -564,6 +601,30 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerModel,
 			DEFAULT_SETTINGS.gardenerContextBudget
 		);
+
+		// Sanitize all explicitly defined model overrides
+		if (this.settings.modelContextOverrides) {
+			for (const [modelId, overrideValue] of Object.entries(this.settings.modelContextOverrides)) {
+				// Determine the model's actual native limit if known, otherwise fallback to global max sanity
+				const modelNativeLimit = ModelRegistry.getModelById(modelId)?.inputTokenLimit ?? SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY;
+				let cleanedOverride = Number.isSafeInteger(overrideValue) ? overrideValue : SANITIZATION_CONSTANTS.DEFAULT_LOCAL_CONTEXT_TOKENS;
+
+				if (cleanedOverride > modelNativeLimit) {
+					cleanedOverride = modelNativeLimit;
+					changed = true;
+				}
+
+				if (cleanedOverride < SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT) {
+					cleanedOverride = SANITIZATION_CONSTANTS.MIN_TOKEN_LIMIT;
+					changed = true;
+				}
+
+				if (cleanedOverride !== overrideValue) {
+					this.settings.modelContextOverrides[modelId] = cleanedOverride;
+					changed = true;
+				}
+			}
+		}
 
 		if (changed) {
 			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);

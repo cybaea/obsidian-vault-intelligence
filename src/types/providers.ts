@@ -38,8 +38,10 @@ export interface StreamChunk {
      * Yielded when a turn or tool-loop step is complete.
      */
     rawContent?: unknown[];
+    replaceText?: string;
     status?: string;
     text?: string;
+    tokens?: number;
     toolCalls?: ToolCall[];
     toolResults?: ToolResult[];
 }
@@ -73,6 +75,7 @@ export interface IReasoningClient {
 }
 
 export interface IEmbeddingClient {
+    embedChunks?(texts: string[], title?: string, priority?: EmbeddingPriority): Promise<{ tokenCount: number; vectors: number[][] }>;
     embedDocument(text: string, title?: string, priority?: EmbeddingPriority): Promise<{ tokenCount: number; vectors: number[][] }>;
     embedQuery(text: string, priority?: EmbeddingPriority): Promise<{ tokenCount: number; vector: number[] }>;
     updateConfiguration?(): void;

@@ -1,12 +1,10 @@
 import { App, requestUrl } from "obsidian";
 
-import { MODEL_REGISTRY_CONSTANTS } from "../constants";
+import { MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
-interface InternalApp {
-    loadLocalStorage?(key: string): string | null;
-    saveLocalStorage?(key: string, value: string): void;
-}
+// Removed InternalApp requirement
 
 /**
  * Central registry for AI models used by the plugin.
@@ -21,13 +19,14 @@ export interface ModelDefinition {
     isDefault?: boolean;
     label: string;
     outputTokenLimit?: number;
-    provider: 'gemini' | 'local';
+    provider: 'gemini' | 'local' | 'ollama';
     quantized?: boolean;
     supportedMethods?: string[];
 }
 
 export interface ModelCache {
     models: ModelDefinition[];
+    rawOllamaResponse?: OllamaTagsResponse | null;
     rawResponse?: GeminiApiResponse;
     timestamp: number;
 }
@@ -43,6 +42,38 @@ interface GeminiModel {
 
 interface GeminiApiResponse {
     models: GeminiModel[];
+}
+
+interface OllamaModel {
+    details: {
+        families: string[] | null;
+        family?: string;
+        format: string;
+        parameter_size: string;
+        quantization_level: string;
+    };
+    digest: string;
+    modified_at: string;
+    name: string;
+    size: number;
+}
+
+interface OllamaTagsResponse {
+    models: OllamaModel[];
+}
+
+interface OllamaShowResponse {
+    details: {
+        families: string[] | null;
+        family?: string;
+        format: string;
+        parameter_size: string;
+        quantization_level: string;
+    };
+    model_info: Record<string, unknown>;
+    modelfile: string;
+    parameters: string;
+    template: string;
 }
 
 export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
@@ -76,7 +107,7 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
 export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     {
         dimensions: 256,
-        id: 'MinishLab/potion-base-8M',
+        id: 'local/MinishLab/potion-base-8M',
         isDefault: false,
         label: 'Small (Potion-8M English only) - 256d [~15MB]',
         provider: 'local',
@@ -84,14 +115,14 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     },
     {
         dimensions: 384,
-        id: 'Xenova/multilingual-e5-small',
+        id: 'local/Xenova/multilingual-e5-small',
         isDefault: true,
         label: 'Balanced (European languages E5 Small) - 384d [~30MB]',
         provider: 'local'
     },
     {
         dimensions: 1024,
-        id: 'Xenova/bge-m3',
+        id: 'local/Xenova/bge-m3',
         isDefault: false,
         label: 'Advanced (BGE M3) - 1024d [~220MB]',
         provider: 'local'
@@ -123,9 +154,15 @@ export class ModelRegistry {
 
     private static dynamicModels: ModelDefinition[] = [];
     private static rawApiResponse: GeminiApiResponse | null = null;
+    private static rawOllamaResponse: OllamaTagsResponse | null = null;
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
-    private static CACHE_KEY = 'vault-intelligence-model-cache';
+    private static ollamaDetailsCache = new Set<string>();
+    private static getCachePath(app: App): string {
+        const plugin = (app as unknown as { plugins: { getPlugin(id: string): { manifest?: { dir?: string } } } }).plugins?.getPlugin("vault-intelligence");
+        const dir = plugin?.manifest?.dir || `${app.vault.configDir}/plugins/vault-intelligence`;
+        return `${dir}/model-cache.json`;
+    }
 
     /**
      * Fetches the list of available Gemini models from the API and caches them.
@@ -133,94 +170,210 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, throwOnError: boolean = false): Promise<void> {
-        if (!apiKey || this.isFetching) return;
+    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
+        if (this.isFetching) return;
 
-        // 1. Check Memory Cache
+        this.ollamaDetailsCache.clear();
+
         const now = Date.now();
         const cacheDurationMs = cacheDurationDays * 24 * 60 * 60 * 1000;
+        
+        let geminiModels: ModelDefinition[] = [];
+        let ollamaModels: ModelDefinition[] = [];
+        let useGeminiCache = false;
+        let useOllamaCache = false;
 
-        if (this.dynamicModels.length > 0 && (now - this.lastFetchTime < cacheDurationMs)) {
-            return;
-        }
+        let cachedOllamaModels: ModelDefinition[] | null = null;
+        let cachedGeminiModels: ModelDefinition[] | null = null;
 
-        // 2. Check LocalStorage Cache
-        if (cacheDurationDays > 0) {
-            const storage = (app as unknown as InternalApp);
-            const cached = storage.loadLocalStorage?.(this.CACHE_KEY);
-            if (typeof cached === 'string') {
+        // 1. Check Memory Cache for models first
+        if (this.dynamicModels.length > 0) {
+            cachedGeminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
+            cachedOllamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
+            
+            if (!forceUpdate && (now - this.lastFetchTime < cacheDurationMs)) {
+                useGeminiCache = true;
+                useOllamaCache = true;
+                geminiModels = cachedGeminiModels;
+                ollamaModels = cachedOllamaModels;
+            }
+        } 
+        
+        // 2. Check File Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
+        if (!cachedOllamaModels || !cachedGeminiModels) {
+            const cachePath = this.getCachePath(app);
+            if (await app.vault.adapter.exists(cachePath)) {
                 try {
+                    const cached = await app.vault.adapter.read(cachePath);
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
-                    if (now - parsed.timestamp < cacheDurationMs) {
-                        logger.debug("Loaded models from cache", parsed.models.length);
-                        this.dynamicModels = parsed.models;
+                    cachedGeminiModels = parsed.models.filter(m => m.provider === 'gemini');
+                    cachedOllamaModels = parsed.models.filter(m => m.provider === 'ollama');
+
+                    if (!forceUpdate && cacheDurationDays > 0 && (now - parsed.timestamp < cacheDurationMs)) {
+                        useGeminiCache = true;
+                        useOllamaCache = true;
+                        geminiModels = cachedGeminiModels;
+                        ollamaModels = cachedOllamaModels;
                         this.lastFetchTime = parsed.timestamp;
                         this.rawApiResponse = parsed.rawResponse || null;
-                        return;
+                        this.rawOllamaResponse = parsed.rawOllamaResponse || null;
                     }
                 } catch (e) {
-                    logger.error("Failed to parse model cache", e);
+                    logger.error("Failed to parse model cache file", e);
                 }
             }
         }
 
-        // 3. Fetch from API
-        logger.debug("Fetching models from Gemini API...");
+        // 3. Fetch from APIs Independently
+        logger.debug("Fetching models from APIs...");
         this.isFetching = true;
         try {
-            const response = await requestUrl({
-                method: 'GET',
-                url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-            });
+            const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("vault-intelligence");
+            const settings = plugin?.settings;
+            if (!settings) throw new Error("Vault Intelligence settings not found during model fetch.");
+            
+            const tasks: Promise<void>[] = [];
 
-            if (response.status !== 200) {
-                logger.error(`API error ${response.status}`, response.text);
-                throw new Error(`Failed to fetch models: ${response.status}`);
-            }
-
-            const data = response.json as GeminiApiResponse;
-            if (!data || !data.models) {
-                logger.error("Invalid API response structure", data);
-                throw new Error("Invalid API response");
-            }
-
-            this.rawApiResponse = data;
-            const fetchedModels: ModelDefinition[] = data.models.map((m: GeminiModel) => ({
-                description: m.description,
-                id: m.name.replace('models/', ''),
-                inputTokenLimit: m.inputTokenLimit,
-                label: m.displayName,
-                outputTokenLimit: m.outputTokenLimit,
-                provider: 'gemini',
-                supportedMethods: m.supportedGenerationMethods || []
-            }));
-
-            logger.debug(`Successfully fetched ${fetchedModels.length} models`);
-            this.dynamicModels = this.sortModels(fetchedModels);
-            this.lastFetchTime = Date.now();
-
-            if (cacheDurationDays > 0) {
-                const cacheData: ModelCache = {
-                    models: this.dynamicModels,
-                    rawResponse: this.rawApiResponse || undefined,
-                    timestamp: this.lastFetchTime
-                };
-                (app as unknown as InternalApp).saveLocalStorage?.(this.CACHE_KEY, JSON.stringify(cacheData));
-            }
-            app.workspace.trigger('vault-intelligence:models-updated');
-        } catch (error) {
-            logger.error("Error fetching Gemini models", error);
-            if (throwOnError) throw error;
-            // Fallback to hardcoded if fetch fails and no cache
-            if (this.dynamicModels.length === 0) {
-                this.dynamicModels = [
+            if (apiKey && !useGeminiCache) {
+                tasks.push(
+                    this.fetchGeminiModels(apiKey).then(res => {
+                        geminiModels = res.models;
+                        this.rawApiResponse = res.rawResponse;
+                        this.lastFetchTime = Date.now();
+                    }).catch(err => {
+                        logger.error("Error fetching Gemini models", err);
+                        if (throwOnError) throw err;
+                        if (geminiModels.length === 0) {
+                            geminiModels = [
+                                ...GEMINI_CHAT_MODELS,
+                                ...GEMINI_GROUNDING_MODELS,
+                                ...GEMINI_EMBEDDING_MODELS
+                            ];
+                        }
+                    })
+                );
+            } else if (!apiKey && !useGeminiCache) {
+                geminiModels = [
                     ...GEMINI_CHAT_MODELS,
                     ...GEMINI_GROUNDING_MODELS,
                     ...GEMINI_EMBEDDING_MODELS
                 ];
             }
+
+            if (settings.ollamaEndpoint && !useOllamaCache) {
+                if (skipOllamaFetch) {
+                    if (cachedOllamaModels) {
+                        ollamaModels = cachedOllamaModels;
+                        useOllamaCache = true; // Pretend we used cache to prevent saving over it
+                    }
+                } else {
+                    tasks.push(
+                        this.fetchOllamaModels(settings.ollamaEndpoint)
+                            .then(res => { 
+                                if (res.success) {
+                                    ollamaModels = res.models; 
+                                    this.rawOllamaResponse = res.rawResponse;
+                                } else if (cachedOllamaModels) {
+                                    // Fallback to stale cache if server is offline
+                                    ollamaModels = cachedOllamaModels;
+                                    useOllamaCache = true; // prevent saving over
+                                }
+                            })
+                            .catch(err => { 
+                                logger.debug("Ollama models not available", err); 
+                                if (cachedOllamaModels) {
+                                    ollamaModels = cachedOllamaModels;
+                                    useOllamaCache = true;
+                                }
+                            })
+                    );
+                }
+            }
+
+            await Promise.allSettled(tasks);
+
+            this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels]);
+
+            if (settings.modelCacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache) && (apiKey || settings.ollamaEndpoint)) {
+                if (this.lastFetchTime === 0) this.lastFetchTime = Date.now();
+                const cacheData: ModelCache = {
+                    models: this.dynamicModels,
+                    rawOllamaResponse: this.rawOllamaResponse || undefined,
+                    rawResponse: this.rawApiResponse || undefined,
+                    timestamp: this.lastFetchTime
+                };
+                const cachePath = this.getCachePath(app);
+                await app.vault.adapter.write(cachePath, JSON.stringify(cacheData));
+            }
+            app.workspace.trigger('vault-intelligence:models-updated');
         } finally {
             this.isFetching = false;
+        }
+    }
+
+    private static async fetchGeminiModels(apiKey: string): Promise<{ models: ModelDefinition[], rawResponse: GeminiApiResponse }> {
+        const response = await requestUrl({
+            method: 'GET',
+            url: `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        });
+
+        if (response.status !== 200) {
+            throw new Error(`Gemini API error ${response.status}`);
+        }
+
+        const data = response.json as GeminiApiResponse;
+        const models = data.models.map((m: GeminiModel) => ({
+            description: m.description,
+            id: m.name.replace('models/', ''),
+            inputTokenLimit: m.inputTokenLimit,
+            label: m.displayName,
+            outputTokenLimit: m.outputTokenLimit,
+            provider: 'gemini' as const,
+            supportedMethods: m.supportedGenerationMethods || []
+        }));
+
+        return { models, rawResponse: data };
+    }
+
+    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null, success: boolean }> {
+        if (!endpoint) return { models: [], rawResponse: null, success: false };
+        
+        try {
+            const response = await requestUrl({
+                method: 'GET',
+                url: `${endpoint}/api/tags`
+            });
+
+            if (response.status !== 200) return { models: [], rawResponse: null, success: false };
+            
+            const data = response.json as OllamaTagsResponse;
+            const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
+                const family = m.details.family?.toLowerCase() || "";
+                const families = (m.details.families || []).map(f => f.toLowerCase());
+                
+                // O(1) synchronous classification using details.family
+                // Note: We'll fetch inputTokenLimit JIT later to fix the NaN clamping paradox.
+                const lowerName = m.name.toLowerCase();
+                const isEmbedding = family.includes('bert') || 
+                                   family.includes('nomic') || 
+                                   families.some(f => f.includes('bert') || f.includes('nomic')) ||
+                                   lowerName.includes('embed') || 
+                                   lowerName.includes('bge') ||
+                                   lowerName.includes('minilm');
+
+                return {
+                    description: `Local model: ${m.name}`,
+                    id: `ollama/${m.name}`,
+                    label: `${m.name} (Ollama)`,
+                    provider: 'ollama' as const,
+                    supportedMethods: isEmbedding ? ['embedContent'] : ['generateContent']
+                };
+            });
+
+            return { models, rawResponse: data, success: true };
+        } catch (e) {
+            logger.debug("Ollama models not available", e);
+            return { models: [], rawResponse: null, success: false };
         }
     }
 
@@ -263,7 +416,7 @@ export class ModelRegistry {
     public static getChatModels(): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
-            m.provider === 'gemini' &&
+            (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&
@@ -276,11 +429,11 @@ export class ModelRegistry {
      * @param provider - Filter by provider ('gemini' or 'local').
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' = 'gemini'): ModelDefinition[] {
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini'): ModelDefinition[] {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
-            m.provider === 'gemini' &&
+            m.provider === provider &&
             (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding'))
         );
     }
@@ -307,7 +460,7 @@ export class ModelRegistry {
      * @param provider - The provider.
      * @returns The default model ID string.
      */
-    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' = 'gemini'): string {
+    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' = 'gemini'): string {
         let models: ModelDefinition[] = [];
         if (type === 'chat') models = this.getChatModels();
         else if (type === 'grounding') models = this.getGroundingModels();
@@ -342,39 +495,98 @@ export class ModelRegistry {
     }
 
     /**
-     * Calculates a new budget proportional to the model's total capacity.
-     * Prevents context budgets from being nonsensical when switching between
-     * models with drastically different limits (e.g. 1M vs 32k).
-     * @param currentBudget - The current budget value.
-     * @param oldModelId - The ID of the previous model.
-     * @param newModelId - The ID of the new model.
-     * @returns The newly adjusted budget.
+     * Returns the raw API response from Ollama for debugging purposes.
+     * @returns The OllamaTagsResponse object or null.
      */
-    public static calculateAdjustedBudget(currentBudget: number, oldModelId: string, newModelId: string): number {
-        const oldModel = this.getModelById(oldModelId);
-        const newModel = this.getModelById(newModelId);
+    public static getRawOllamaResponse(): OllamaTagsResponse | null {
+        return this.rawOllamaResponse;
+    }
 
-        // If either is custom or unknown, we don't have hard data to scale with.
-        if (!oldModel?.inputTokenLimit || !newModel?.inputTokenLimit) {
-            return currentBudget;
+    /**
+     * Resolves the appropriate context budget for a given model.
+     * Prioritizes explicit user overrides, falls back to safe defaults for local models, 
+     * and uses the global baseline for cloud providers.
+     */
+    public static resolveContextBudget(
+        modelId: string,
+        customMapping: Record<string, number>,
+        defaultGlobalBudget: number
+    ): number {
+        // 1. Highest priority: User explicitly defined an override for this specific model
+        if (customMapping && typeof customMapping[modelId] === 'number') {
+            return customMapping[modelId];
         }
 
-        // Safety: ensure currentBudget is within sane bounds before ratio calculation
-        // to prevent extreme floating point precision issues.
-        const safeCurrent = Math.min(currentBudget, oldModel.inputTokenLimit);
+        // 2. Safe fallback: Local Ollama models (prevent cloud -> local explosion)
+        if (modelId.startsWith("ollama/") || modelId.startsWith("local/")) {
+            return SANITIZATION_CONSTANTS.DEFAULT_LOCAL_CONTEXT_TOKENS;
+        }
 
-        const ratio = safeCurrent / oldModel.inputTokenLimit;
-        const adjusted = Math.floor(ratio * newModel.inputTokenLimit);
+        // 3. Baseline: Legacy setting/cloud models
+        return defaultGlobalBudget;
+    }
 
-        // Safety: Cap at model max, but keep a reasonable floor
-        const result = Math.min(newModel.inputTokenLimit, Math.max(MODEL_REGISTRY_CONSTANTS.CONTEXT_ADJUSTMENT_FLOOR, adjusted));
+    /**
+     * Fetches details for a specific Ollama model JIT.
+     * Extracts context length for reasoning models and embedding dimensions for embedding models.
+     */
+    public static async fetchOllamaModelDetails(endpoint: string, modelId: string): Promise<ModelDefinition | undefined> {
+        const model = this.getModelById(modelId);
+        if (!model) return undefined;
 
-        // Final sanity check for JavaScript's MAX_SAFE_INTEGER
-        return Number.isSafeInteger(result) ? result : newModel.inputTokenLimit;
+        if (this.ollamaDetailsCache.has(modelId)) {
+            return model;
+        }
+
+        const cleanId = modelId.replace('ollama/', '');
+        try {
+            const response = await requestUrl({
+                body: JSON.stringify({ name: cleanId }),
+                method: 'POST',
+                url: `${endpoint}/api/show`
+            });
+
+            if (response.status !== 200) return undefined;
+
+            const details = response.json as OllamaShowResponse;
+
+            // Extract Context Length
+            const ctx = (details.model_info?.["llama.context_length"] as number) || 
+                        (details.model_info?.["phi3.context_length"] as number) || 
+                        (details.model_info?.["qwen2.context_length"] as number) || 
+                        (details.model_info?.["context_length"] as number) || 4096;
+            
+            model.inputTokenLimit = ctx;
+
+            // Extract Embedding Dimensions
+            const arch = details.details.family || (Object.keys(details.model_info || {})[0]?.split('.')[0]);
+            const dim = (details.model_info?.[`${arch}.embedding_length`] as number) || 
+                        (details.model_info?.["embedding_length"] as number);
+            
+            if (dim) model.dimensions = dim;
+
+            // Extract Native Tool Support
+            const template = details.template || "";
+            if (template.includes(".Tools") || template.includes(".tools")) {
+                if (model.supportedMethods && !model.supportedMethods.includes('nativeTools')) {
+                    model.supportedMethods.push('nativeTools');
+                } else if (!model.supportedMethods) {
+                    model.supportedMethods = ['nativeTools'];
+                }
+            }
+
+            this.ollamaDetailsCache.add(modelId);
+            return model;
+        } catch (e) {
+            logger.error(`Failed to fetch JIT details for ${modelId}`, e);
+            return undefined;
+        }
     }
 }
 
 function idLooksLikeChat(id: string): boolean {
     const lower = id.toLowerCase();
-    return lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
+    const isGeminiChat = lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
+    const isOllamaChat = lower.startsWith('ollama/') && !lower.includes('embed') && !lower.includes('bge'); 
+    return isGeminiChat || isOllamaChat;
 }

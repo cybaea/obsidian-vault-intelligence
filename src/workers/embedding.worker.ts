@@ -215,7 +215,14 @@ class PipelineSingleton {
                 }
             };
 
-            this.instance = this.createChunkedExtractor(model, quantized, progress_callback);
+            this.instance = (async () => {
+                try {
+                    return await this.createChunkedExtractor(model, quantized, progress_callback);
+                } catch (err) {
+                    PipelineSingleton.instance = null; // Reset on failure to allow retry
+                    throw err;
+                }
+            })();
         }
 
         return this.instance;

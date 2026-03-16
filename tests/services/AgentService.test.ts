@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { Mock, Mocked, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AgentService } from '../../src/services/AgentService';
+import { AgentService, ChatMessage } from '../../src/services/AgentService';
 import { GraphService } from '../../src/services/GraphService';
+import { ProviderRegistry } from '../../src/services/ProviderRegistry';
 import { VaultIntelligenceSettings } from '../../src/settings';
 import { IEmbeddingClient, IModelProvider, IReasoningClient, UnifiedMessage } from '../../src/types/providers';
 
@@ -13,6 +12,7 @@ vi.mock('../../src/tools/ToolRegistry', () => {
         ToolRegistry: class {
             execute = vi.fn();
             getTools = vi.fn().mockReturnValue([]);
+            updateProvider = vi.fn();
         }
     };
 });
@@ -24,6 +24,7 @@ describe('AgentService Integration', () => {
     let mockGraphService: GraphService;
     let mockEmbeddingClient: IEmbeddingClient;
     let mockSettings: VaultIntelligenceSettings;
+    let mockProviderRegistry: ProviderRegistry;
 
     beforeEach(() => {
         mockApp = {
@@ -43,11 +44,12 @@ describe('AgentService Integration', () => {
             generateMessageStream: vi.fn(),
             generateStructured: vi.fn(),
             initialize: vi.fn(),
+            supportsCodeExecution: false,
             supportsStructuredOutput: true,
             supportsTools: true,
             supportsWebGrounding: true,
             terminate: vi.fn()
-        } as any;
+        } as unknown as Mocked<IReasoningClient & IModelProvider>;
 
         mockGraphService = {
             getSemanticNeighbors: vi.fn().mockResolvedValue([])
@@ -65,10 +67,14 @@ describe('AgentService Integration', () => {
             systemInstruction: 'You are an agent.'
         } as unknown as VaultIntelligenceSettings;
 
+        mockProviderRegistry = {
+            getModelProvider: vi.fn().mockReturnValue(mockReasoningClient),
+            getReasoningClient: vi.fn().mockReturnValue(mockReasoningClient)
+        } as unknown as ProviderRegistry;
+
         agentService = new AgentService(
             mockApp,
-            mockReasoningClient,
-            mockReasoningClient,
+            mockProviderRegistry,
             mockGraphService,
             mockEmbeddingClient,
             mockSettings
@@ -154,7 +160,73 @@ describe('AgentService Integration', () => {
         expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(5);
         expect(result.text).toContain('reached the step limit');
     });
-});
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */
+    it('should drop files exceeding the context budget and inject a SYSTEM NOTE into the prompt', async () => {
+        const assemblerSpy = vi.spyOn((agentService as unknown as { contextAssembler: { assemble: Mock } }).contextAssembler, 'assemble').mockResolvedValue({
+            context: 'Test content',
+            usedFiles: ['file1.md'] // Only one survived
+        });
+
+        mockReasoningClient.generateMessageStream.mockImplementationOnce(() => {
+            return (async function* () {
+                await Promise.resolve();
+                yield { text: 'Done' };
+                yield { files: ['file1.md'], isDone: true }; // AgentService passes usedFiles here
+            })();
+        });
+
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
+        const mockFile1 = { path: 'file1.md', stat: { size: 100 } } as unknown as TFile;
+        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
+        const mockFile2 = { path: 'file2.md', stat: { size: 100 } } as unknown as TFile;
+
+        const result = await agentService.chat([], "Hello", [mockFile1, mockFile2], { modelId: 'local/test-local-model' });
+
+        expect(result.files).toEqual(['file1.md']); // Verifying DOM blowout fix prevents file2.md being added
+        expect(assemblerSpy).toHaveBeenCalled();
+
+        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
+        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
+        
+        const firstCall = gm.mock.calls[0] as unknown[];
+        const firstCallHistory = firstCall[0] as UnifiedMessage[];
+        const promptSentToModel = firstCallHistory[0]?.content || "";
+        
+        expect(promptSentToModel).toContain('[SYSTEM NOTE: 1 context files were skipped');
+    });
+
+    it('should de-duplicate user messages even if separated by UI-only system messages', async () => {
+        mockReasoningClient.generateMessageStream.mockImplementationOnce(() => {
+            return (async function* () {
+                await Promise.resolve();
+                yield { text: "Response" };
+                yield { isDone: true };
+            })();
+        });
+
+        const history: ChatMessage[] = [
+            { role: 'user', text: 'Persistent Message' },
+            { role: 'system', text: '' } // UI-only spotlight message
+        ];
+        const currentPrompt = 'Persistent Message';
+
+        const stream = agentService.chatStream(history, currentPrompt, [], {});
+        await stream.next();
+
+        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
+        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
+        
+        const firstCall = gm.mock.calls[0] as unknown[] | undefined;
+        const sentHistory = firstCall?.[0] as UnifiedMessage[] | undefined;
+
+        // UI-only system msg should be filtered out, and user msg de-duplicated
+        const validMessages = (sentHistory ?? []).filter(m => m.role === 'user' || (m.role === 'system' && m.content));
+        expect(validMessages.length).toBe(1); 
+        if (validMessages[0]) {
+            expect(validMessages[0].role).toBe('user');
+            expect(validMessages[0].content).toContain('Persistent Message');
+        }
+    });
+});

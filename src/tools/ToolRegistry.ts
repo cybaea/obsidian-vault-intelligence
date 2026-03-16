@@ -4,6 +4,7 @@ import { AGENT_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
+import { ModelRegistry } from "../services/ModelRegistry";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
 import { IModelProvider, IReasoningClient, IToolDefinition } from "../types/providers";
@@ -16,6 +17,7 @@ export interface ToolExecutionParams {
     createdFiles: Set<string>;
     enableAgentWriteAccess?: boolean;
     enableCodeExecution?: boolean;
+    modelId?: string;
     name: string;
     usedFiles: Set<string>;
 }
@@ -24,6 +26,7 @@ export class ToolRegistry {
     private app: App;
     private settings: VaultIntelligenceSettings;
     private reasoningClient: IReasoningClient; 
+    private provider: IModelProvider;
     private graphService: GraphService;
     private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
@@ -33,6 +36,7 @@ export class ToolRegistry {
         app: App,
         settings: VaultIntelligenceSettings,
         reasoningClient: IReasoningClient,
+        provider: IModelProvider,
         graphService: GraphService,
         searchOrchestrator: SearchOrchestrator,
         contextAssembler: ContextAssembler,
@@ -41,6 +45,7 @@ export class ToolRegistry {
         this.app = app;
         this.settings = settings;
         this.reasoningClient = reasoningClient;
+        this.provider = provider;
         this.graphService = graphService;
         this.searchOrchestrator = searchOrchestrator;
         this.contextAssembler = contextAssembler;
@@ -48,11 +53,20 @@ export class ToolRegistry {
     }
 
     /**
+     * Updates the reasoning client and provider used by the registry.
+     * Needed when switching between local and cloud providers dynamically.
+     */
+    public updateProvider(reasoningClient: IReasoningClient, provider: IModelProvider): void {
+        this.reasoningClient = reasoningClient;
+        this.provider = provider;
+        this.searchOrchestrator.updateReasoningClient(reasoningClient);
+    }
+
+    /**
      * Returns the list of available tools types abstracted from SDKs.
      */
     public getTools(enableCodeExecution?: boolean): IToolDefinition[] {
-        const capabilities = this.reasoningClient as unknown as IModelProvider;
-        if (!capabilities.supportsTools) {
+        if (!this.provider.supportsTools) {
              return [];
         }
 
@@ -86,7 +100,7 @@ export class ToolRegistry {
         });
 
         // 3. Google Search (Gated by provider capability)
-        if (capabilities.supportsWebGrounding) {
+        if (this.provider.supportsWebGrounding) {
             tools.push({
                 description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
                 name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
@@ -213,7 +227,7 @@ export class ToolRegistry {
      * Executes a tool by name.
      */
     public async execute(params: ToolExecutionParams): Promise<Record<string, unknown>> {
-        const { args, createdFiles, enableAgentWriteAccess, enableCodeExecution, name, usedFiles } = params;
+        const { args, createdFiles, enableAgentWriteAccess, enableCodeExecution, modelId, name, usedFiles } = params;
         const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
         const isWriteEnabled = enableAgentWriteAccess !== undefined ? enableAgentWriteAccess : this.settings.enableAgentWriteAccess;
 
@@ -225,7 +239,7 @@ export class ToolRegistry {
                     return await this.executeGoogleSearch(args);
 
                 case AGENT_CONSTANTS.TOOLS.VAULT_SEARCH:
-                    return await this.executeVaultSearch(args, usedFiles);
+                    return await this.executeVaultSearch(args, usedFiles, modelId);
 
                 case AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES:
                     return await this.executeGraphExplorer(args);
@@ -270,14 +284,14 @@ export class ToolRegistry {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery : JSON.stringify(rawQuery);
         logger.info(`Delegating search to sub-agent for: ${query}`);
-        if ((this.reasoningClient as unknown as IModelProvider).supportsWebGrounding) {
+        if (this.provider.supportsWebGrounding) {
             const result = await this.reasoningClient.searchWithGrounding(query);
             return { result: result.text };
         }
         return { error: "Google Search is not supported by the current provider." };
     }
 
-    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>) {
+    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>, modelId?: string) {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
 
@@ -294,7 +308,8 @@ export class ToolRegistry {
             return { result: "No relevant notes found." };
         }
 
-        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+        const activeModel = modelId || this.settings.chatModel;
+        const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
         const { context, usedFiles: resultFiles } = await this.contextAssembler.assemble(results, query, contextBudget);
@@ -337,7 +352,7 @@ export class ToolRegistry {
 
         const task = args.task as string;
         logger.info(`Delegating to Code Sub-Agent (${this.settings.codeModel}): ${task}`);
-        if ((this.reasoningClient as unknown as IModelProvider).supportsCodeExecution) {
+        if (this.provider.supportsCodeExecution) {
             const result = await this.reasoningClient.solveWithCode(task);
             return { result: result.text };
         }

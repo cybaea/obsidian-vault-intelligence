@@ -1,18 +1,18 @@
-import { ButtonComponent, DropdownComponent, Events, ItemView, MarkdownRenderer, Menu, Notice, TFile, TextAreaComponent, ToggleComponent, WorkspaceLeaf, normalizePath, setIcon } from "obsidian";
+import { ButtonComponent, Component, DropdownComponent, Events, ItemView, MarkdownRenderer, Menu, Notice, TFile, TextAreaComponent, ToggleComponent, WorkspaceLeaf, normalizePath, setIcon } from "obsidian";
 
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import VaultIntelligencePlugin from "../main";
 import { AgentService, ChatMessage } from "../services/AgentService";
 import { GraphService } from "../services/GraphService";
 import { ModelRegistry } from "../services/ModelRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, ToolCall, ToolResult } from "../types/providers";
+import { ProviderRegistry } from "../services/ProviderRegistry";
+import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
     plugin: VaultIntelligencePlugin;
-    reasoningClient: IReasoningClient;
-    provider: IModelProvider;
+    providerRegistry: ProviderRegistry;
     graphService: GraphService;
     embeddingService: IEmbeddingClient;
     agent: AgentService;
@@ -23,6 +23,7 @@ export class ResearchChatView extends ItemView {
     private temporaryWriteAccess: boolean | null = null;
     private lastRenderId = 0;
     private stopButton: ButtonComponent | null = null;
+    private messageComponents: Component[] = [];
 
     chatContainer: HTMLElement;
     inputComponent: TextAreaComponent;
@@ -33,19 +34,17 @@ export class ResearchChatView extends ItemView {
     constructor(
         leaf: WorkspaceLeaf,
         plugin: VaultIntelligencePlugin,
-        reasoningClient: IReasoningClient,
-        provider: IModelProvider,
+        providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient
     ) {
         super(leaf);
         this.plugin = plugin;
-        this.reasoningClient = reasoningClient;
-        this.provider = provider;
+        this.providerRegistry = providerRegistry;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, reasoningClient, provider, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings);
         this.icon = "message-circle";
     }
 
@@ -60,6 +59,8 @@ export class ResearchChatView extends ItemView {
     async onClose() {
         this.currentAbortController?.abort();
         this.currentAbortController = null;
+        this.messageComponents.forEach(c => c.unload());
+        this.messageComponents = [];
         await Promise.resolve();
     }
 
@@ -136,13 +137,23 @@ export class ResearchChatView extends ItemView {
                 this.currentAbortController?.abort();
                 this.messages = [];
                 this.isThinking = false;
-                this.temporaryModelId = null;
-                this.temporaryWriteAccess = null;
                 void this.renderMessages();
                 new Notice("Chat cleared");
             });
 
         this.chatContainer = container.createDiv({ cls: "chat-container" });
+
+        this.chatContainer.addEventListener("click", (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const linkElement = target.closest("a.internal-link");
+            if (linkElement) {
+                e.preventDefault();
+                const href = linkElement.getAttribute("data-href");
+                if (href) {
+                    void this.plugin.app.workspace.openLinkText(href, "", e.ctrlKey || e.metaKey);
+                }
+            }
+        });
 
         const inputContainer = container.createDiv({ cls: "input-container" });
         this.inputComponent = new TextAreaComponent(inputContainer);
@@ -204,6 +215,8 @@ export class ResearchChatView extends ItemView {
         this.isThinking = true;
         this.addMessage("user", text);
 
+        let streamingComponent: Component | null = null;
+
         try {
             const reflexResults = await this.agent.reflexSearch(text, 5);
             if (reflexResults.length > 0) {
@@ -214,7 +227,8 @@ export class ResearchChatView extends ItemView {
         }
 
         try {
-            const { cleanMessage, contextFiles, warnings } = await this.agent.prepareContext(text);
+            const activeModelId = this.temporaryModelId ?? this.plugin.settings.chatModel;
+            const { cleanMessage, contextFiles, warnings } = await this.agent.prepareContext(text, activeModelId);
 
             if (warnings && warnings.length > 0) {
                 warnings.forEach((w: string) => new Notice(w));
@@ -250,14 +264,76 @@ export class ResearchChatView extends ItemView {
                 
                 renderInProgress = true;
                 try {
+                    // 1. Unload previous streaming artifacts to prevent memory leaks
+                    if (streamingComponent) {
+                        streamingComponent.unload();
+                    }
+                    
+                    // 2. Create a fresh sandbox for this render step
+                    streamingComponent = new Component();
+                    streamingComponent.load();
+
                     const tempEl = document.createElement('div');
-                    await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", this);
+                    
+                    // 3. Render into the temporary component, NOT `this`
+                    await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
+                    
+                    let savedSelection: { startOffset: number; endOffset: number } | null = null;
+                    const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
+
+                    if (selection && selection.rangeCount > 0 && lastMessageNode && lastMessageNode.contains(selection.anchorNode)) {
+                        const getOffset = (node: Node | null, offset: number) => {
+                            if (!node) return 0;
+                            let totalOffset = offset;
+                            const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                            let currentNode: Node | null = walker.nextNode();
+                            while (currentNode && currentNode !== node) {
+                                totalOffset += currentNode.textContent?.length || 0;
+                                currentNode = walker.nextNode();
+                            }
+                            return totalOffset;
+                        };
+
+                        savedSelection = {
+                            endOffset: getOffset(selection.focusNode, selection.focusOffset),
+                            startOffset: getOffset(selection.anchorNode, selection.anchorOffset)
+                        };
+                    }
+
                     if (lastMessageNode) {
-                        lastMessageNode.empty();
-                        while (tempEl.firstChild) {
-                            lastMessageNode.appendChild(tempEl.firstChild);
+                        // 4. Optimization: Use replaceChildren instead of manual while loop
+                        lastMessageNode.replaceChildren(...Array.from(tempEl.childNodes));
+                        
+                        if (savedSelection && selection) {
+                            const findNodeAndOffset = (targetOffset: number) => {
+                                const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                                let currentNode: Node | null = walker.nextNode();
+                                let currentOffset = 0;
+                                let lastTextNode: Node | null = null;
+                                
+                                while (currentNode) {
+                                    lastTextNode = currentNode;
+                                    const nodeLength = currentNode.textContent?.length || 0;
+                                    if (currentOffset + nodeLength >= targetOffset) {
+                                        return { node: currentNode, offset: targetOffset - currentOffset };
+                                    }
+                                    currentOffset += nodeLength;
+                                    currentNode = walker.nextNode();
+                                }
+                                return { node: lastTextNode, offset: lastTextNode?.textContent?.length || 0 };
+                            };
+                            
+                            const anchor = findNodeAndOffset(savedSelection.startOffset);
+                            const focus = findNodeAndOffset(savedSelection.endOffset);
+                            
+                            if (anchor.node && focus.node) {
+                                selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+                            }
                         }
-                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+
+                        if (!selection || selection.isCollapsed) {
+                            this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                        }
                     }
                     lastRenderTime = Date.now();
                 } finally {
@@ -268,7 +344,10 @@ export class ResearchChatView extends ItemView {
             for await (const chunk of stream) {
                 if (this.currentAbortController?.signal.aborted) break;
 
-                if (chunk.text) {
+                if (chunk.replaceText !== undefined) {
+                    modelMsg.text = chunk.replaceText;
+                    void updateStreamingUI();
+                } else if (chunk.text) {
                     modelMsg.text += chunk.text;
                     void updateStreamingUI();
                 }
@@ -311,6 +390,12 @@ export class ResearchChatView extends ItemView {
                 }
             }
 
+            // 5. When the stream is entirely finished, clean up the sandbox
+            if (streamingComponent) {
+                (streamingComponent as Component).unload();
+                streamingComponent = null;
+            }
+
             modelMsg.thought = undefined;
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
@@ -320,7 +405,23 @@ export class ResearchChatView extends ItemView {
         } catch (error: unknown) {
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
+            
+            // Check for intentional abortion
+            if (this.currentAbortController?.signal.aborted) {
+                this.currentAbortController = null;
+                if (streamingComponent) {
+                    (streamingComponent as Component).unload();
+                    streamingComponent = null;
+                }
+                void this.renderMessages();
+                return;
+            }
+            
             this.currentAbortController = null;
+            if (streamingComponent) {
+                (streamingComponent as Component).unload();
+                streamingComponent = null;
+            }
             const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);
             this.addMessage("model", `Error: ${message}`);
@@ -348,9 +449,15 @@ export class ResearchChatView extends ItemView {
         if (!this.chatContainer) return;
 
         const renderId = ++this.lastRenderId;
+        this.messageComponents.forEach(c => c.unload());
+        this.messageComponents = [];
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
+            const msgComponent = new Component();
+            this.messageComponents.push(msgComponent);
+            msgComponent.load();
+
             const msgDiv = this.chatContainer.createDiv({
                 cls: `chat-message ${msg.role}`
             });
@@ -394,7 +501,7 @@ export class ResearchChatView extends ItemView {
             const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
-                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", this);
+                    await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", msgComponent);
                 }
                 if (renderId !== this.lastRenderId) return;
 
@@ -442,15 +549,54 @@ export class ResearchChatView extends ItemView {
     }
 
     private populateModelDropdown(modelDropdown: DropdownComponent) {
-        modelDropdown.selectEl.empty();
+        const selectEl = modelDropdown.selectEl;
+        selectEl.innerHTML = '';
+        
         const chatModels = ModelRegistry.getChatModels();
-        for (const m of chatModels) {
-            modelDropdown.addOption(m.id, m.label);
+        const hasApiKey = !!this.plugin.settings.googleApiKey;
+        const hasOllama = !!this.plugin.settings.ollamaEndpoint;
+        const canUseChat = hasApiKey || hasOllama;
+
+        if (!canUseChat) {
+            modelDropdown.addOption('none', 'Configure provider to enable selection...');
+            modelDropdown.setDisabled(true);
+            return;
         }
-        modelDropdown.addOption("custom", "Custom...");
+
+        const googleModels = chatModels.filter(m => m.provider === 'gemini');
+        const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
+
+        if (googleModels.length > 0) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+            for (const m of googleModels) {
+                group.createEl('option', { text: m.label, value: m.id });
+            }
+        }
+
+        if (ollamaModels.length > 0) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            for (const m of ollamaModels) {
+                group.createEl('option', { text: m.label, value: m.id });
+            }
+        } else if (this.plugin.settings.ollamaEndpoint) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            group.createEl('option', {
+                attr: { disabled: 'true' },
+                text: 'No models found',
+                value: 'none'
+            });
+        }
+
+        selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
 
         const currentModel = this.temporaryModelId ?? this.plugin.settings.chatModel;
         const isPreset = chatModels.some(m => m.id === currentModel);
         modelDropdown.setValue(isPreset ? currentModel : "custom");
+
+        for (let i = 0; i < selectEl.options.length; i++) {
+            const opt = selectEl.options.item(i);
+            if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+        }
     }
+
 }

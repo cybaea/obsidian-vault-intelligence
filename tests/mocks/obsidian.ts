@@ -19,6 +19,15 @@ export class AbstractInputSuggest<T> {
     constructor(_app: App, _inputEl: HTMLInputElement | HTMLTextAreaElement) { }
 }
 
+export class MarkdownRenderChild {
+    containerEl: HTMLElement;
+    constructor(containerEl: HTMLElement) {
+        this.containerEl = containerEl;
+    }
+    load() {}
+    unload() {}
+}
+
 export function normalizePath(path: string): string {
     const segments = path.replace(/\\/g, '/').split('/');
     const result: string[] = [];
@@ -116,4 +125,7 @@ if (g) {
     (g as any).document = {
         createElement: (tag: string) => ({})
     };
+    
+    (g as any).WebGL2RenderingContext = class {};
+    (g as any).WebGLRenderingContext = class {};
 }

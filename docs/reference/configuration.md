@@ -12,6 +12,7 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored in plain text in your plugin settings (`data.json`), but masked for display and logging using SHA-256 fingerprints. Required for all Gemini models and Gemini embeddings. |
+| Ollama endpoint | `http://localhost:11434` | Server URL for local model provider. Required for Ollama models. |
 | Refresh models | `None` | A manual trigger to force a fresh fetch of available models from the Gemini API. |
 
 ## Researcher
@@ -20,14 +21,15 @@ Consolidate settings for the Research Assistant agent.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Chat model | `gemini-3-flash-preview` | The main intelligence engine. <br>• _Flash:_ Best for speed and agentic loops. <br>• _Pro:_ Best for deep reasoning or creative writing. |
+| Chat model | `gemini-3-flash-preview` | The main intelligence engine. <br>• _Cloud (Gemini):_ High quality, zero hardware tax. <br>• _Local (Ollama):_ Private, free, runs on your hardware. |
 | Agent language | `English (US)` | The primary language for all agent interactions. Affects the default system prompt and response style. |
 | System instruction | `Default (Managed)` | The core personality, role, and rules for the Researcher. Leave as default to receive automatic improvements in future updates. |
-| Context window budget | `200,000` | Max tokens the AI can consider at once. Automatically scales proportionally when you switch models. |
+| Context window budget | `200,000` | Max tokens the AI can consider at once. Automatically scales proportionally when you switch models. <br><br>**Ollama Note:** For local models, this requires careful tuning based on your GPU VRAM, the size of your loaded models, and your quantization levels. High context windows on local hardware will cause out-of-memory errors. |
 | Max agent steps | `5` | Limits reasoning loops to prevent infinite "thinking" or high costs. |
-| Web search model | `gemini-2.5-flash-lite` | Model used specifically for web searches and fact-checking. |
+| Web search model | `gemini-2.5-flash-lite` | Model used specifically for web searches and fact-checking. Choose from Gemini or Ollama models. |
 | Enable computational solver | `On` | Allows the agent to write and execute Python code for math and data analysis. |
 | Code execution model | `gemini-3-flash-preview` | The specialised model used for generating Python code. |
+| Enable agent write access | `Off` | Allows the agent to create and update notes in your vault. Always requires manual confirmation. |
 | Vault reading limit | `25` | Max notes the Researcher can retrieve to answer a single question. |
 
 ## Explorer
@@ -36,12 +38,14 @@ Configure how connections and similar notes are discovered.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Embedding provider | `gemini` | Google Gemini: Cloud-based. Requires API key. <br>Local: Offline. Runs on your CPU. |
-| Embedding model | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX models. |
+| Embedding provider | `gemini` | Google Gemini: Cloud-based. Requires API key. <br>Ollama: Offline. Runs on your local Ollama server. <br>Transformers.js: Offline. Runs on your CPU. |
+| Embedding model | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX / Ollama models. |
+| Embedding dimension | `768` | Output vector size. For supported local models (eg `nomic-embed-text`), allows selecting smaller, compressed Matryoshka dimensions (eg 512, 256, 128, 64) to save disk space with minimal accuracy loss. |
 | Minimum similarity score | `0.5` | Relevance threshold (0.0 to 1.0). Matches below this are ignored. |
 | Semantic graph node limit | `250` | Maximum number of nodes to render in the Semantic Galaxy view. Controls the scale of the visualised universe. **How to set:** Keep at `250` for standard performance. Increase to `500+` on powerful desktops for massive overviews, or lower to `100` if the physics simulation stutters on older devices. |
 | Structural edge thickness | `1.0` | Visual weight of explicit wikilinks. Controls how thick the lines representing your actual markdown links are. **How to set:** The default `1.0` balances visibility. Increase to `2.0+` if you want your manual structure to clearly dominate the graph, or reduce to `0.5` to blend them evenly with AI suggestions. |
 | Semantic edge thickness | `0.5` | Visual weight of implied AI relationships. Controls how thick the lines representing vector similarity are. **How to set:** The default `0.5` keeps AI suggestions as a subtle background web. Increase to `1.0+` if you are actively using the galaxy to discover new connections and want them visually prioritised. |
+| Keyword match weight | `1.2` | Calibration for keyword vs vector search. Higher values make keyword matches more conservative. |
 | Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
 | Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |

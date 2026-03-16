@@ -25,7 +25,9 @@ We strictly adhere to a **Service-Oriented Architecture (SOA)** to ensure testab
 
 ### 2.2 Service Responsibilities
 
-*   **`GeminiProvider`**: Implementation of `IReasoningClient` & `IEmbeddingClient`. Manages LLM interactions. _New 2026 Req: Must use `SecretStorage` for API keys._
+*   **`ProviderRegistry`**: Central manager for AI model providers. Handles dynamic registration of models and APIs.
+*   **`GeminiProvider`**: Implementation of `IReasoningClient` & `IEmbeddingClient`. Manages Google AI / Gemini interactions. _New 2026 Req: Must use `SecretStorage` for API keys._
+*   **`OllamaProvider`**: Implementation of `IReasoningClient` & `IEmbeddingClient` for local hardware execution.
 *   **`GraphService`**: Manages the localized knowledge graph and vector store.
 *   **`SearchOrchestrator`**: Orchestrates Hybrid Search (combining keyword and semantic results).
 *   **`PersistenceManager`**: Handles all file I/O for plugin state (eg `.vault-intelligence/`).

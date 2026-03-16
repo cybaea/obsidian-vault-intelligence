@@ -1,6 +1,6 @@
 import { Setting, App, Plugin, TextComponent } from "obsidian";
 
-import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
+import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -24,6 +24,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const canUseChat = hasApiKey || hasOllama;
 
 
     // --- 1. Model & Limits ---
@@ -35,8 +37,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .setName('Gardener model')
         .setDesc('The model used for analysis and suggesting improvements.')
         .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
+            if (!canUseChat) {
+                dropdown.addOption('none', 'Configure provider to enable selection...');
                 dropdown.setDisabled(true);
                 return;
             }
@@ -45,23 +47,49 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 dropdown.addOption(m.id, m.label);
             }
 
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleModels = chatModels.filter(m => m.provider === 'gemini');
+            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
+
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
+
+            if (googleModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
             }
 
-            dropdown.addOption('custom', 'Custom model string...');
+            if (ollamaModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            } else if (plugin.settings.ollamaEndpoint) {
+                // Show placeholder if endpoint exists but no models found
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                group.createEl('option', {
+                    attr: { disabled: 'true' },
+                    text: 'No models found',
+                    value: 'none'
+                });
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            // Set value after rebuilding
             dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
+
+            // tooltips logic preserved if needed, though optgroup might change indexing
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+            }
 
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
-                        const oldModelId = plugin.settings.gardenerModel;
-                        plugin.settings.gardenerContextBudget = ModelRegistry.calculateAdjustedBudget(
-                            plugin.settings.gardenerContextBudget,
-                            oldModelId,
-                            val
-                        );
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }
@@ -70,7 +98,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             });
         });
 
-    if (hasApiKey && !isGardenerPreset) {
+    if (canUseChat && !isGardenerPreset) {
         new Setting(containerEl)
             .setName('Custom gardener model')
             .setDesc('Enter the specific Gemini model ID.')
@@ -85,26 +113,32 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 }));
     }
 
-    const gardenerModelLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
+    const currentModelId = plugin.settings.gardenerModel;
+    const gardenerModelLimit = ModelRegistry.getModelById(currentModelId)?.inputTokenLimit ?? 1048576;
+    const hasOverride = currentModelId in plugin.settings.modelContextOverrides;
+    const resolvedBudget = ModelRegistry.resolveContextBudget(currentModelId, plugin.settings.modelContextOverrides, plugin.settings.gardenerContextBudget);
+    
+    const displayValue = Math.min(resolvedBudget, gardenerModelLimit);
+
     new Setting(containerEl)
         .setName("Context budget (tokens)")
-        .setDesc(`Max tokens allowed for a single analysis. (Model limit: ${gardenerModelLimit.toLocaleString()})`)
+        .setDesc(hasOverride 
+            ? `Max tokens allowed for a single analysis. Currently overridden for **${currentModelId}**. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)` 
+            : `Max tokens allowed for a single analysis. Currently using provider default. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`
+        )
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
-            .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO * 100}% of model limit)`)
+            .setTooltip(`Reset to provider default`)
             .onClick(() => {
                 void (async () => {
-                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.gardenerModel)?.inputTokenLimit ?? 1048576;
-                    plugin.settings.gardenerContextBudget = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_GARDENER_CONTEXT_RATIO);
+                    delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
             }))
         .addText(text => {
             text.setPlaceholder('50000')
-                .setValue(String(plugin.settings.gardenerContextBudget))
+                .setValue(String(displayValue))
                 .onChange((value) => {
                     void (async () => {
                         let num = parseInt(value);
@@ -113,7 +147,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                                 num = gardenerModelLimit;
                                 text.setValue(String(num));
                             }
-                            plugin.settings.gardenerContextBudget = Math.floor(num);
+                            plugin.settings.modelContextOverrides[currentModelId] = Math.floor(num);
                             await plugin.saveSettings();
                         }
                     })();

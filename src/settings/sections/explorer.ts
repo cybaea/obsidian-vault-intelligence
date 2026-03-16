@@ -22,6 +22,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
 
 
     const providerDesc = document.createDocumentFragment();
@@ -39,6 +40,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const gemini = "Gemini";
             const transformers = "Transformers.js";
             dropdown.addOption('gemini', `${google} ${gemini} (cloud)`)
+                .addOption('ollama', 'Ollama (local server)')
                 .addOption('local', `${transformers} (local)`)
                 .setValue(plugin.settings.embeddingProvider)
                 .onChange((value) => {
@@ -78,16 +80,19 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .setName('Embedding model')
         .setDesc(`The specific model used to generate vector embeddings.`);
 
-    if (plugin.settings.embeddingProvider === 'gemini') {
-        const geminiEmbeddingModels = ModelRegistry.getEmbeddingModels('gemini');
-        if (hasApiKey) {
+    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama') {
+        const providerName = plugin.settings.embeddingProvider;
+        const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
+        const providerEnabled = providerName === 'gemini' ? hasApiKey : hasOllama;
+
+        if (providerEnabled) {
             embeddingSetting.addDropdown(dropdown => {
-                for (const m of geminiEmbeddingModels) {
+                for (const m of onlineEmbeddingModels) {
                     dropdown.addOption(m.id, m.label);
                 }
                 dropdown.addOption('custom', 'Custom model ID...');
                 const current = plugin.settings.embeddingModel;
-                const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+                const isPreset = onlineEmbeddingModels.some(m => m.id === current);
                 dropdown.setValue(isPreset ? current : 'custom');
 
                 dropdown.onChange((val) => {
@@ -98,7 +103,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             if (modelDef?.dimensions) {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
                             }
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }
                         containerEl.empty();
                         renderExplorerSettings(context);
@@ -107,22 +113,24 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             });
 
             const current = plugin.settings.embeddingModel;
-            const isPreset = geminiEmbeddingModels.some(m => m.id === current);
+            const isPreset = onlineEmbeddingModels.some(m => m.id === current);
             if (!isPreset) {
-                const gemini = "Gemini";
+                const labelName = providerName === 'gemini' ? "Gemini" : "Ollama";
                 new Setting(containerEl)
-                    .setName(`Custom ${gemini} model`)
-                    .setDesc('Enter the specific Gemini embedding model ID.')
+                    .setName(`Custom ${labelName} model`)
+                    .setDesc(`Enter the specific ${labelName} embedding model ID.`)
                     .addText(text => text
                         .setValue(current)
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }));
             }
         } else {
+            const labelName = providerName === 'gemini' ? 'API key' : 'Ollama endpoint';
             embeddingSetting.addText(text => text
-                .setPlaceholder('Enter API key to enable Gemini selection')
+                .setPlaceholder(`Configure ${labelName} to enable selection`)
                 .setDisabled(true));
         }
 
@@ -138,23 +146,39 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .setDesc(dimensionDesc)
             .addDropdown(dropdown => {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
-                const isModern = currentModel?.id === 'text-embedding-004' || currentModel?.id === 'gemini-embedding-001';
+                const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
 
-                dropdown.addOption('768', '768 (flash / standard)')
-                    .addOption('1536', '1536 (balanced)')
-                    .addOption('3072', '3072 (max / v4 default)')
-                    .setValue(String(plugin.settings.embeddingDimension))
+                if (providerName === 'ollama') {
+                    const nativeDim = currentModel?.dimensions || 768;
+                    dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
+
+                    if (plugin.settings.embeddingModel.includes('nomic')) {
+                        // Nomic models support Matryoshka compression
+                        const name = 'Matryoshka';
+                        if (nativeDim > 512) dropdown.addOption('512', `512 (${name})`);
+                        if (nativeDim > 256) dropdown.addOption('256', `256 (${name})`);
+                        if (nativeDim > 128) dropdown.addOption('128', `128 (${name})`);
+                        dropdown.addOption('64', `64 (${name})`);
+                    }
+                } else {
+                    dropdown.addOption('768', '768 (flash / standard)')
+                        .addOption('1536', '1536 (balanced)')
+                        .addOption('3072', '3072 (max / v4 default)');
+                }
+
+                dropdown.setValue(String(plugin.settings.embeddingDimension))
                     .onChange(async (value) => {
                         const num = parseInt(value);
                         if (num !== plugin.settings.embeddingDimension) {
                             plugin.settings.embeddingDimension = num;
 
                             // Proactive: If they select high dims but are on an old model, suggest the upgrade
-                            if (num > 768 && !isModern) {
-                                new Notice("This dimension works best with text-embedding-004. Please check your model selection.");
+                            if (num > 768 && !isModern && providerName === 'gemini') {
+                                new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
                             }
 
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                             containerEl.empty();
                             renderExplorerSettings(context);
                         }
@@ -203,7 +227,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     .onChange((value) => {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         })();
                     }))
                 .addButton(btn => btn
@@ -218,7 +243,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice(`Valid! Dims: ${result.recommendedDims}`);
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
-                                    await plugin.saveSettings(true);
+                                    plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
                                 }
@@ -239,7 +265,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         const num = parseInt(value);
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
-                            await plugin.saveSettings(true);
+                            plugin.requiresWorkerRestartOnExit = true;
+                            await plugin.saveSettings(false);
                         }
                     }));
         }

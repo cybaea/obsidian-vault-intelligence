@@ -9,10 +9,9 @@ import { PersistenceManager } from "../services/PersistenceManager";
 import { IEmbeddingClient } from "../types/providers";
 import { LogLevel } from "../utils/logger";
 
-export type EmbeddingProvider = 'gemini' | 'local';
+export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
 export interface VaultIntelligenceSettings {
-    // New: Language Support
     agentLanguage: string;
     allowLocalNetworkAccess: boolean;
     authorName: string;
@@ -27,7 +26,6 @@ export interface VaultIntelligenceSettings {
     embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
-    // New: Provider Selector
     embeddingProvider: EmbeddingProvider;
     embeddingSimd: boolean;
     embeddingThreads: number;
@@ -47,12 +45,14 @@ export interface VaultIntelligenceSettings {
     groundingModel: string;
     indexingDelayMs: number;
     indexVersion: number;
-    /** Calibration constant for BM25 score normalization. Higher = more aggressive normalization. */
     keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
     minSimilarityScore: number;
     modelCacheDurationDays: number;
+    modelContextOverrides: Record<string, number>;
+    ollamaEmbeddingArchitectures: string[] | null;
+    ollamaEndpoint: string;
     ontologyPath: string;
     plansRetentionDays: number;
     previousVersion: string;
@@ -82,6 +82,8 @@ Core Guidelines:
    - Use 'google_search' for live news, dates, and external fact-checking.
    - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
+   - **EXECUTION**: If a tool is needed, invoke it IMMEDIATELY and WITHOUT COMMENTARY. Your text response MUST BE EMPTY when you invoke a tool. Never explain what you are going to do.
+   - **ANSWERING**: You are in a direct conversation. When providing your final answer after using tools, address the user as 'you'. UNDER NO CIRCUMSTANCES should you speak in the third person (e.g., NEVER say "The user wants to know..." or "Based on the search results..."). Give the answer directly and conversationally.
 4. **Context & Syntax**:
    - The user may reference specific notes using the '@' symbol (e.g., "@Note Name").
    - If the user asks "what is this?", they are referring to the currently open notes.
@@ -143,7 +145,6 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     embeddingChunkSize: 512,
     embeddingDimension: 768,
     embeddingModel: 'gemini-embedding-001',
-    // Default to Gemini for now to preserve existing behavior
     embeddingProvider: 'gemini',
     embeddingSimd: !Platform.isMobile,
     embeddingThreads: Platform.isMobile ? 1 : 2,
@@ -168,6 +169,9 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     maxAgentSteps: 5,
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
+    modelContextOverrides: {},
+    ollamaEmbeddingArchitectures: null,
+    ollamaEndpoint: 'http://localhost:11434',
     ontologyPath: 'Ontology',
     plansRetentionDays: 7,
     previousVersion: '0.0.0',
@@ -191,6 +195,7 @@ export interface IVaultIntelligencePlugin {
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
     persistenceManager: PersistenceManager;
+    requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;
     settings: VaultIntelligenceSettings;
 }

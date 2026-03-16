@@ -6,10 +6,12 @@ import { GraphService } from "../services/GraphService";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../settings";
 import { FileTools } from "../tools/FileTools";
 import { ToolRegistry } from "../tools/ToolRegistry";
-import { IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, UnifiedMessage } from "../types/providers";
+import { IEmbeddingClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, UnifiedMessage, IReasoningClient, IModelProvider } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
+import { ModelRegistry } from "./ModelRegistry";
+import { ProviderRegistry } from "./ProviderRegistry";
 import { SearchOrchestrator } from "./SearchOrchestrator";
 
 export interface ChatMessage {
@@ -40,8 +42,7 @@ export class AgentService {
     private app: App;
     private embeddingService: IEmbeddingClient;
     private graphService: GraphService;
-    private reasoningClient: IReasoningClient;
-    private provider: IModelProvider;
+    private providerRegistry: ProviderRegistry;
     private settings: VaultIntelligenceSettings;
 
     private contextAssembler: ContextAssembler;
@@ -50,27 +51,30 @@ export class AgentService {
 
     constructor(
         app: App,
-        reasoningClient: IReasoningClient,
-        provider: IModelProvider,
+        providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient,
         settings: VaultIntelligenceSettings
     ) {
         this.app = app;
-        this.reasoningClient = reasoningClient;
-        this.provider = provider;
+        this.providerRegistry = providerRegistry;
         this.graphService = graphService;
         this.embeddingService = embeddingService;
         this.settings = settings;
 
-        this.searchOrchestrator = new SearchOrchestrator(app, graphService, this.reasoningClient, this.embeddingService, settings);
+        // Initialize with default providers from registry
+        const initialClient = this.providerRegistry.getReasoningClient();
+        const initialProvider = this.providerRegistry.getModelProvider();
+
+        this.searchOrchestrator = new SearchOrchestrator(app, graphService, initialClient, this.embeddingService, settings);
         this.contextAssembler = new ContextAssembler(app, graphService, settings);
 
         const fileTools = new FileTools(app);
         this.toolRegistry = new ToolRegistry(
             app,
             settings,
-            this.reasoningClient,
+            initialClient,
+            initialProvider,
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
@@ -98,7 +102,8 @@ export class AgentService {
         let finalCreatedFiles: string[] = [];
 
         for await (const chunk of stream) {
-            if (chunk.text) finalText += chunk.text;
+            if (chunk.replaceText !== undefined) finalText = chunk.replaceText;
+            else if (chunk.text) finalText += chunk.text;
             if (chunk.isDone) {
                 finalFiles = chunk.files || [];
                 finalCreatedFiles = chunk.createdFiles || [];
@@ -113,16 +118,12 @@ export class AgentService {
         contextFiles: TFile[] = [],
         options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
-        const history: UnifiedMessage[] = [
-            ...messages.map(h => ({
-                content: h.text,
-                rawContent: h.rawContent,
-                role: h.role as "user" | "model" | "tool",
-                toolCalls: h.toolCalls,
-                toolResults: h.toolResults
-            })),
-            { content: currentPrompt, role: 'user' }
-        ];
+
+        const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
+        const provider: IModelProvider = this.providerRegistry.getModelProvider(options.modelId);
+
+        // Update ToolRegistry for this turn if model changed
+        this.toolRegistry.updateProvider(reasoningClient, provider);
 
         if (contextFiles.length === 0) {
             const activeFile = this.app.workspace.getActiveFile();
@@ -152,15 +153,33 @@ export class AgentService {
 
         const usedFiles = new Set<string>();
         const createdFiles = new Set<string>();
-        contextFiles.forEach(f => usedFiles.add(normalizePath(f.path)));
+        const wereFilesExplicitlyMentioned = contextFiles.length > 0;
 
-        const formattedHistory: UnifiedMessage[] = history.map(h => ({
-            content: h.content,
-            rawContent: h.rawContent,
-            role: h.role,
-            toolCalls: h.toolCalls,
-            toolResults: h.toolResults
-        }));
+        // 1. Filter out UI-only messages (e.g., Spotlight results) and map to UnifiedMessage
+        const filteredMessages: UnifiedMessage[] = messages
+            .filter(msg => {
+                // Keep if it has text, tool calls, or tool results
+                if (msg.text?.trim() || msg.toolCalls?.length || msg.toolResults?.length) return true;
+                // Keep if it has raw content parts
+                if (msg.rawContent?.length) return true;
+                return false;
+            })
+            .map(h => ({
+                content: h.text,
+                rawContent: h.rawContent,
+                role: h.role,
+                toolCalls: h.toolCalls,
+                toolResults: h.toolResults
+            }));
+
+        // 2. De-duplicate if the UI already added this message to history
+        // We look for any 'user' role message that matches the current prompt exactly.
+        const duplicateIndex = filteredMessages.findIndex(m => m.role === 'user' && m.content === currentPrompt);
+        if (duplicateIndex !== -1) {
+            filteredMessages.splice(duplicateIndex, 1);
+        }
+
+        const formattedHistory: UnifiedMessage[] = filteredMessages;
 
         if (contextFiles.length > 0) {
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
@@ -169,13 +188,21 @@ export class AgentService {
                 score: 1.0
             }));
 
-            const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
+            const activeModel = options.modelId || this.settings.chatModel;
+            const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
             const contextBudget = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            const { context } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
+            const { context, usedFiles: assembledFiles } = await this.contextAssembler.assemble(fileResults, currentPrompt, contextBudget);
 
             if (context) {
+                if (wereFilesExplicitlyMentioned && assembledFiles.length < contextFiles.length) {
+                    const skipped = contextFiles.length - assembledFiles.length;
+                    currentPrompt = `[SYSTEM NOTE: ${skipped} context files were skipped because they exceeded the context window budget for the selected model.]\n\n` + currentPrompt;
+                }
                 currentPrompt = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${currentPrompt}`;
+
+                // ONLY track files that actually survived the budget
+                assembledFiles.forEach(f => usedFiles.add(normalizePath(f)));
             }
         }
 
@@ -185,7 +212,29 @@ export class AgentService {
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
         const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
+        
+        // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
+        if (!tools.find(t => t.name === "google_search")) {
+            // Strip google_search rule if unsupported to prevent hallucinations
+            const activeModelStr = options.modelId || this.settings.chatModel;
+            const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : "gemini";
+            const supportsWeb = provider.supportsWebGrounding;
+
+            if (!supportsWeb && typeof systemInstruction === 'string') {
+                // Replace the verification step to avoid mentioning google_search while preserving the numbered list
+                systemInstruction = systemInstruction.replace(/2\.\s\*\*Verification\*\*[\s\S]*?(?=\n3\.)/i, "2. **Verification**: Always double-check facts against the user's notes.");
+                // Remove the specific bullet point for the google_search tool
+                systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?google_search'?[\s\S]*?(?=\n)/gi, "");
+                logger.debug("[Agent] Dynamically stripped google_search instruction from system prompt", { provider: providerName });
+            }
+        }
+        
         formattedHistory.push({ content: currentPrompt, role: "user" });
+
+        logger.debug(`[Agent] Calling model: ${options.modelId || this.settings.chatModel}`);
+        logger.debug(`[Agent] History turns: ${formattedHistory.length}`);
+        const debugPrompt = currentPrompt.length > 500 ? currentPrompt.substring(0, 500) + "..." : currentPrompt;
+        logger.debug(`[Agent] Final Enriched Prompt Preview:\n${debugPrompt}`);
 
         try {
             let loops = 0;
@@ -196,7 +245,7 @@ export class AgentService {
 
                 let modelResponseRawContent: unknown[] | undefined;
 
-                const stream = this.reasoningClient.generateMessageStream(formattedHistory, {
+                const stream = reasoningClient.generateMessageStream(formattedHistory, {
                     modelId: options.modelId,
                     signal: options.signal,
                     systemInstruction: systemInstruction,
@@ -211,6 +260,10 @@ export class AgentService {
 
                     if (chunk.toolCalls) {
                         loopToolCalls.push(...chunk.toolCalls);
+                    }
+                    if (chunk.replaceText !== undefined) {
+                        loopText = chunk.replaceText;
+                        yield { replaceText: chunk.replaceText };
                     }
                     if (chunk.text !== undefined) {
                         loopText += chunk.text;
@@ -248,6 +301,7 @@ export class AgentService {
                             createdFiles: createdFiles,
                             enableAgentWriteAccess: options.enableAgentWriteAccess,
                             enableCodeExecution: options.enableCodeExecution,
+                            modelId: options.modelId,
                             name: call.name,
                             usedFiles: usedFiles
                         });
@@ -303,7 +357,7 @@ export class AgentService {
             const errorMessage = e instanceof Error ? e.message : String(e);
 
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
-                yield { text: `\n\nI encountered an error connecting to Gemini (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
+                yield { text: `\n\nI encountered an error connecting to the AI provider (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
             } else {
                 yield { text: `\n\nSorry, I encountered an error: ${errorMessage}` };
             }
@@ -315,10 +369,9 @@ export class AgentService {
     /**
      * Prepares the context for a chat message by resolving file references (`@Filename`).
      * This separates the view logic from the business logic.
-     * @param inputMessage - The raw message from the user.
      * @returns Object containing resolved context files, the clean message, and any warnings.
      */
-    public async prepareContext(inputMessage: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
+    public async prepareContext(inputMessage: string, modelId?: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }> {
         const resultFiles: TFile[] = [];
         const warnings: string[] = [];
         let message = inputMessage;
@@ -335,7 +388,7 @@ export class AgentService {
         // But we could optionally clean them. ResearchChatView didn't clean them, so we won't either.
 
         for (const match of matches) {
-            const pathOrName = match[1] || match[2];
+            const pathOrName = match[1] || match[2] || match[3];
             if (pathOrName) {
                 // First try direct path
                 let abstractFile = this.app.vault.getAbstractFileByPath(pathOrName);
@@ -351,7 +404,7 @@ export class AgentService {
                     }
                 } else if (abstractFile instanceof TFolder) {
                     // Expand folder into files recursively
-                    await this.processFolderContext(abstractFile, message, allPotentialFiles, warnings);
+                    await this.processFolderContext(abstractFile, message, allPotentialFiles, warnings, modelId);
                 }
             }
         }
@@ -361,7 +414,7 @@ export class AgentService {
         return { cleanMessage: message, contextFiles: resultFiles, warnings };
     }
 
-    private async processFolderContext(folder: TFolder, query: string, collector: TFile[], warnings: string[]) {
+    private async processFolderContext(folder: TFolder, query: string, collector: TFile[], warnings: string[], modelId?: string) {
         // TFolder is a type from 'obsidian', assuming it's imported at the top of the file.
 
         const folderPath = folder.path;
@@ -392,15 +445,35 @@ export class AgentService {
 
         // Calculate budget
         // We allocate 50% of the total context window for explicit folder mentions to leave room for history/responses
-        const totalTokens = this.settings.contextWindowTokens || DEFAULT_SETTINGS.contextWindowTokens;
-        const charBudget = (totalTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.5;
+        const activeModel = modelId || this.settings.chatModel;
+        const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
+        const budgetTokens = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN * 0.5); // 50% for folder context
+        const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+
+        // Starvation Protection
+        // If only one document, let it take the whole budget. If multiple, apply soft limit.
+        const effectiveLimitRatio = sortedFiles.length <= 1 ? 1.0 : SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO;
+        const singleDocSoftLimitTokens = Math.floor(budgetTokens * effectiveLimitRatio);
+        const singleDocSoftLimitChars = Math.floor(budgetChars * effectiveLimitRatio);
+
+        logger.debug(`[ContextAssembler] Folder "${folder.name}" Budget: ${budgetTokens} tokens. Soft Cap (${(effectiveLimitRatio * 100).toFixed(0)}%): ${singleDocSoftLimitTokens} tokens.`);
+
+        const maxFiles = this.settings.contextMaxFiles || SEARCH_CONSTANTS.DEFAULT_CONTEXT_MAX_FILES;
 
         let currentSize = 0;
         const filesToInclude: TFile[] = [];
 
         for (const file of sortedFiles) {
             const size = file.stat.size;
-            if (currentSize + size > charBudget) break;
+            // Apply soft limit for individual files if there are multiple files
+            if (sortedFiles.length > 1 && currentSize + size > singleDocSoftLimitChars && filesToInclude.length > 0) {
+                logger.debug(`[ContextAssembler] Skipping "${file.name}" due to single document soft limit. Current size: ${currentSize}, File size: ${size}, Soft limit: ${singleDocSoftLimitChars}`);
+                continue; // Skip this file but continue trying others
+            }
+            if (currentSize + size > budgetChars || filesToInclude.length >= maxFiles) {
+                logger.debug(`[ContextAssembler] Stopping file inclusion for folder "${folder.name}". Current size: ${currentSize}, File size: ${size}, Budget: ${budgetChars}, Files included: ${filesToInclude.length}, Max files: ${maxFiles}`);
+                break;
+            }
 
             filesToInclude.push(file);
             currentSize += size;
@@ -408,7 +481,8 @@ export class AgentService {
 
         if (filesToInclude.length < folderFiles.length) {
             const method = similarityResults.length > 0 ? "similarity-ranked" : "most recent";
-            warnings.push(`Context limit reached for folder "${folder.name}". Included ${filesToInclude.length} ${method} files.`);
+            const limitReason = filesToInclude.length >= maxFiles ? `Max file limit (${maxFiles})` : `Context limit (~${totalTokens.toLocaleString()} tokens)`;
+            warnings.push(`${limitReason} reached for folder "${folder.name}". Included ${filesToInclude.length} ${method} files.`);
         }
 
         filesToInclude.forEach(f => {

@@ -1,6 +1,6 @@
 import { Setting, App, Plugin } from "obsidian";
 
-import { UI_CONSTANTS, DOCUMENTATION_URLS } from "../../constants";
+import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -24,7 +24,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     });
 
     const hasApiKey = !!plugin.settings.googleApiKey;
-
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const canUseChat = hasApiKey || hasOllama;
 
     // --- 1. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
@@ -35,8 +36,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         .setName('Chat model')
         .setDesc('The main engine used for reasoning and answering questions.')
         .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
+            if (!canUseChat) {
+                dropdown.addOption('none', 'Configure provider to enable selection...');
                 dropdown.setDisabled(true);
                 return;
             }
@@ -44,27 +45,50 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             for (const m of chatModels) {
                 dropdown.addOption(m.id, m.label);
             }
+            
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleModels = chatModels.filter(m => m.provider === 'gemini');
+            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
 
-            // Add tooltips to each option
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
+
+            if (googleModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
             }
 
-            dropdown.addOption('custom', 'Custom model string...');
+            if (ollamaModels.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaModels) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            } else if (plugin.settings.ollamaEndpoint) {
+                // Show placeholder if endpoint exists but no models found
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                group.createEl('option', {
+                    attr: { disabled: 'true' },
+                    text: 'No models found',
+                    value: 'none'
+                });
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            // Set value after rebuilding
             dropdown.setValue(isChatPreset ? chatModelCurrent : 'custom');
+
+            // tooltips logic preserved if needed, though optgroup might change indexing
+            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
+                const opt = dropdown.selectEl.options.item(i);
+                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
+            }
 
             dropdown.onChange((val) => {
                 void (async () => {
                     if (val !== 'custom') {
-                        // Scale the budget proportionally to the new model's capacity
-                        const oldModelId = plugin.settings.chatModel;
-                        plugin.settings.contextWindowTokens = ModelRegistry.calculateAdjustedBudget(
-                            plugin.settings.contextWindowTokens,
-                            oldModelId,
-                            val
-                        );
-
                         plugin.settings.chatModel = val;
                         await plugin.saveSettings();
                     }
@@ -73,7 +97,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             });
         });
 
-    if (hasApiKey && !isChatPreset) {
+    if (canUseChat && !isChatPreset) {
         new Setting(containerEl)
             .setName('Custom chat model')
             .setDesc('Enter the specific Gemini model ID.')
@@ -182,24 +206,32 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         });
 
     // --- 4. Context & Reasoning Limits ---
-    const chatModelLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
+    const currentModelId = plugin.settings.chatModel;
+    const chatModelLimit = ModelRegistry.getModelById(currentModelId)?.inputTokenLimit ?? 1048576;
+    const hasOverride = currentModelId in plugin.settings.modelContextOverrides;
+    const resolvedBudget = ModelRegistry.resolveContextBudget(currentModelId, plugin.settings.modelContextOverrides, plugin.settings.contextWindowTokens);
+    
+    const displayValue = Math.min(resolvedBudget, chatModelLimit);
+
     new Setting(containerEl)
         .setName('Context window budget (tokens)')
-        .setDesc(`Max tokens the AI can consider. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`)
+        .setDesc(hasOverride 
+            ? `Max tokens the AI can consider. Currently overridden for **${currentModelId}**. (Model limit: ${chatModelLimit.toLocaleString()} tokens)` 
+            : `Max tokens the AI can consider. Currently using provider default. (Model limit: ${chatModelLimit.toLocaleString()} tokens)`
+        )
         .addExtraButton(btn => btn
             .setIcon('reset')
-            .setTooltip(`Reset to default ratio (${UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO * 100}% of model limit)`)
+            .setTooltip(`Reset to provider default`)
             .onClick(() => {
                 void (async () => {
-                    const refreshedLimit = ModelRegistry.getModelById(plugin.settings.chatModel)?.inputTokenLimit ?? 1048576;
-                    plugin.settings.contextWindowTokens = Math.floor(refreshedLimit * UI_CONSTANTS.DEFAULT_CHAT_CONTEXT_RATIO);
+                    delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
             }))
         .addText(text => {
             text.setPlaceholder(String(DEFAULT_SETTINGS.contextWindowTokens))
-                .setValue(String(plugin.settings.contextWindowTokens))
+                .setValue(String(displayValue))
                 .onChange((value) => {
                     void (async () => {
                         let num = parseInt(value);
@@ -208,7 +240,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                                 num = chatModelLimit;
                                 text.setValue(String(num));
                             }
-                            plugin.settings.contextWindowTokens = num;
+                            plugin.settings.modelContextOverrides[currentModelId] = num;
                             await plugin.saveSettings();
                         }
                     })();
@@ -283,13 +315,35 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 dropdown.addOption(m.id, m.label);
             }
 
+            // Inject optgroups for better grouping (Gemini vs Ollama)
+            const googleGrounding = groundingModels.filter(m => m.provider === 'gemini');
+            const ollamaGrounding = groundingModels.filter(m => m.provider === 'ollama');
+
+            const selectEl = dropdown.selectEl;
+            selectEl.innerHTML = '';
+
+            if (googleGrounding.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
+                for (const m of googleGrounding) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            }
+
+            if (ollamaGrounding.length > 0) {
+                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+                for (const m of ollamaGrounding) {
+                    group.createEl('option', { text: m.label, value: m.id });
+                }
+            }
+
+            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
+
+            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
+
             for (let i = 0; i < dropdown.selectEl.options.length; i++) {
                 const opt = dropdown.selectEl.options.item(i);
                 if (opt && opt.value !== 'custom') opt.title = opt.value;
             }
-
-            dropdown.addOption('custom', 'Custom model string...');
-            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
 
             dropdown.onChange((val) => {
                 void (async () => {
@@ -353,8 +407,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             .setName('Code execution model')
             .setDesc(`Specific model used for generating ${python} code.`)
             .addDropdown(dropdown => {
-                if (!hasApiKey) {
-                    dropdown.addOption('none', 'Enter API key to enable...');
+                if (!canUseChat) {
+                    dropdown.addOption('none', 'Configure provider to enable selection...');
                     dropdown.setDisabled(true);
                     return;
                 }
@@ -382,7 +436,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 });
             });
 
-        if (hasApiKey && !isCodePreset) {
+        if (canUseChat && !isCodePreset) {
             new Setting(containerEl)
                 .setName('Custom code model')
                 .setDesc('Enter the specific Gemini model ID.')

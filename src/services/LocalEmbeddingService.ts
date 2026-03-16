@@ -30,6 +30,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     private fallbackThreads: number | null = null;
     private fallbackSimd: boolean | null = null;
     private lastInitTime = 0;
+    private isTerminated = false;
 
     private messageId = 0;
     private pendingRequests = new Map<number, { resolve: (val: { vectors: number[][], tokenCount: number }) => void, reject: (err: unknown) => void }>();
@@ -39,6 +40,13 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     constructor(plugin: IVaultIntelligencePlugin, settings: VaultIntelligenceSettings) {
         this.plugin = plugin;
         this.settings = settings;
+    }
+
+    private hideNotice() {
+        if (this.lastNotice) {
+            this.lastNotice.hide();
+            this.lastNotice = null;
+        }
     }
 
     /**
@@ -86,6 +94,8 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
 
     public async initialize(): Promise<void> {
         if (this.worker) return;
+        this.isTerminated = false;
+        this.hideNotice();
 
         // Reset circuit breaker if it's been more than reset window since last crash
         if (this.isCircuitBroken && Date.now() - this.lastRestartTime > WORKER_CONSTANTS.CIRCUIT_BREAKER_RESET_MS) {
@@ -107,6 +117,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
 
             this.worker.onmessage = (e: MessageEvent) => this._onMessage(e);
             this.worker.onerror = async (e: ErrorEvent) => {
+                this.hideNotice();
                 let errorDetails = 'No error object';
                 if (e.error) {
                     if (e.error instanceof Error) {
@@ -261,6 +272,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             if (status === 'success' && output) {
                 promise.resolve(output);
             } else {
+                this.hideNotice();
                 const message = error || "Unknown worker error";
                 logger.error(`[LocalEmbedding] Worker task ${id} failed:`, message);
                 promise.reject(message);
@@ -303,7 +315,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
         logger.debug(`[LocalEmbedding] Posting to worker: id=${task.id}, model=${this.settings.embeddingModel}, textLength=${task.text.length}`);
         this.worker.postMessage({
             id: task.id,
-            model: this.settings.embeddingModel,
+            model: this.settings.embeddingModel.replace(/^local\//, ''),
             quantized: modelDef?.quantized !== false, // Default to true unless explicitly false in registry
             text: task.text,
             type: 'embed'
@@ -390,13 +402,21 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
                 headers['User-Agent'] = 'Mozilla/5.0 (Obsidian Plugin; Vault Intelligence)';
             }
 
-            const response = await requestUrl({
-                body: data.body,
-                headers: headers,
-                method: data.method || 'GET',
-                throw: false, // Don't throw on 401, let the worker handle the status
-                url: data.url,
-            });
+            // 2-minute safety timeout for metadata/weights fetching
+            const timeoutPromise = new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error(`Proxy request timed out after 120s: ${data.url}`)), 120000)
+            );
+
+            const response = await Promise.race([
+                requestUrl({
+                    body: data.body,
+                    headers: headers,
+                    method: data.method || 'GET',
+                    throw: false, 
+                    url: data.url,
+                }),
+                timeoutPromise
+            ]);
 
             if (response.status >= 400) {
                 logger.debug(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
@@ -420,6 +440,8 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     public async terminate(): Promise<void> {
+        this.isTerminated = true;
+        this.hideNotice();
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
