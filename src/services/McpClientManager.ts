@@ -183,7 +183,17 @@ export class McpClientManager implements IProvider {
                 transport.stderr.on('data', (chunk: { toString: () => string }) => {
                     const str = chunk.toString().trim();
                     if (str) {
-                        logger.error(`[MCP ${server.name} STDERR] ${str}`);
+                        const lower = str.toLowerCase();
+                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                            logger.error(`[MCP ${server.name} STDERR] ${str}`);
+                        } else if (lower.includes('warn')) {
+                            logger.warn(`[MCP ${server.name} STDERR] ${str}`);
+                        } else if (lower.includes('debug') || lower.includes('trace')) {
+                            logger.debug(`[MCP ${server.name} STDERR] ${str}`);
+                        } else {
+                            // Default to info for diagnostic output that isn't clearly an error
+                            logger.info(`[MCP ${server.name} STDERR] ${str}`);
+                        }
                     }
                 });
             }

@@ -33,3 +33,4 @@ data/
 .vitepress/cache
 worker.js
 .vault-intelligence/
+model-cache.json
