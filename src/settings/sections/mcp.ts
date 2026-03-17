@@ -50,6 +50,10 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     .onChange(async (v) => {
                         if (plugin.settings.mcpServers && plugin.settings.mcpServers[index]) plugin.settings.mcpServers[index].enabled = v;
                         await plugin.saveSettings(false);
+                        // Re-initialize connections dynamically
+                        const manager = plugin.mcpClientManager as { terminate(): Promise<void>; initialize(): Promise<void> };
+                        await manager.terminate();
+                        await manager.initialize();
                         renderList(); // re-render to reflect disabled state logic if needed
                     });
                 
@@ -187,6 +191,11 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     plugin.settings.mcpServers.push(currentConfig);
                 }
                 await plugin.saveSettings(false);
+                
+                // Re-initialize connections to reflect updated config without reloading plugin
+                const manager = plugin.mcpClientManager as { terminate(): Promise<void>; initialize(): Promise<void> };
+                await manager.terminate();
+                await manager.initialize();
                 renderMcpSettings({ app: plugin.app, containerEl, plugin }); // Go back
             });
     };
