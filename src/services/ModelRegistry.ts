@@ -406,6 +406,7 @@ export class ModelRegistry {
                 const id = m.id.toLowerCase();
                 if (id.match(/^gemini-.*-latest$/)) return 1;
                 if (id.match(/^gemini-embedding-/)) return 2;
+                if (id.match(/^gemini-[\d.]+/)) return 3;
                 if (id.match(/^gemini-/)) return 4;
                 if (id.match(/^gemma-/)) return 5;
                 return 6;
@@ -415,6 +416,25 @@ export class ModelRegistry {
             const rankB = getRank(b);
 
             if (rankA !== rankB) return rankA - rankB;
+
+            if (rankA === 3) {
+                const getVersion = (id: string) => {
+                    const match = id.match(/^gemini-([\d.]+)/);
+                    if (match && match[1]) {
+                        return match[1].split('.').map(Number);
+                    }
+                    return [];
+                };
+                const vA = getVersion(a.id.toLowerCase());
+                const vB = getVersion(b.id.toLowerCase());
+                
+                const len = Math.max(vA.length, vB.length);
+                for (let i = 0; i < len; i++) {
+                    const numA = i < vA.length ? (vA[i] || 0) : 0;
+                    const numB = i < vB.length ? (vB[i] || 0) : 0;
+                    if (numA !== numB) return numB - numA;
+                }
+            }
 
             return a.label.localeCompare(b.label);
         });
