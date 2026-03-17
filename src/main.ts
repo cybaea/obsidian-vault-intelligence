@@ -543,6 +543,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		await this.saveData(this.settings);
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
+		if (this.mcpClientManager) void this.mcpClientManager.updateSettings(this.settings);
 
 		if (this.graphSyncOrchestrator) {
 			if (requiresWorkerRestart) {

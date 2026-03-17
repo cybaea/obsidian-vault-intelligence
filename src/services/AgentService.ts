@@ -182,7 +182,7 @@ export class AgentService {
             filteredMessages.splice(duplicateIndex, 1);
         }
 
-        const formattedHistory: UnifiedMessage[] = filteredMessages;
+        let formattedHistory: UnifiedMessage[] = filteredMessages;
 
         if (contextFiles.length > 0) {
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
@@ -215,6 +215,21 @@ export class AgentService {
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
         const tools: IToolDefinition[] = await this.toolRegistry.getTools(options.enableCodeExecution);
+        const validToolNames = new Set(tools.map(t => t.name));
+
+        // Filter out "ghost tools" from history (e.g. disabled MCP servers) to prevent LLM hallucinations
+        formattedHistory = formattedHistory.map(msg => {
+            const newMsg = { ...msg };
+            if (newMsg.toolCalls) {
+                newMsg.toolCalls = newMsg.toolCalls.filter(tc => validToolNames.has(tc.name));
+                if (newMsg.toolCalls.length === 0) newMsg.toolCalls = undefined;
+            }
+            if (newMsg.toolResults) {
+                newMsg.toolResults = newMsg.toolResults.filter(tr => validToolNames.has(tr.name));
+                if (newMsg.toolResults.length === 0) newMsg.toolResults = undefined;
+            }
+            return newMsg;
+        }).filter(msg => msg.content?.trim() || msg.toolCalls?.length || msg.toolResults?.length || msg.rawContent?.length);
         
         // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
         if (!tools.find(t => t.name === "google_search")) {

@@ -63,7 +63,12 @@ export class McpClientManager implements IProvider {
                             if (g.process.platform === 'win32') {
                                 cp.execSync(`taskkill /pid ${connection.pid} /t /f`, { stdio: 'ignore' });
                             } else {
-                                g.process.kill(connection.pid); // Send standard SIGTERM to parent
+                                try {
+                                    // Attempt to kill child processes first to prevent zombies
+                                    cp.execSync(`pkill -P ${connection.pid}`, { stdio: 'ignore' });
+                                } catch { /* ignore if no children or pkill unavailable */ }
+                                // Terminate the main MCP server process
+                                g.process.kill(connection.pid);
                             }
                         } catch (e) {
                             logger.warn(`Failed to kill process tree for MCP server ${connection.config.name}:`, e);
@@ -78,10 +83,14 @@ export class McpClientManager implements IProvider {
         this.toolNameMap.clear();
     }
 
-    public updateSettings(settings: VaultIntelligenceSettings) {
+    public async updateSettings(settings: VaultIntelligenceSettings) {
         this.settings = settings;
-        // In a full implementation, we would compare the list and only restart changed servers.
-        // For Phase 4 MVP, we assume terminate() is called on unload.
+        
+        // Terminate all current connections to ensure clean state
+        await this.terminate();
+        
+        // Re-initialize based on the newly saved settings
+        void this.initialize();
     }
 
     private async generateTrustHash(config: MCPServerConfig): Promise<string> {
@@ -234,7 +243,8 @@ export class McpClientManager implements IProvider {
 
         } else if (server.type === 'sse') {
             if (!server.url) return;
-            if (!isExternalUrl(server.url, this.settings.allowLocalNetworkAccess)) {
+            const urlStr = server.url.trim();
+            if (!isExternalUrl(urlStr, this.settings.allowLocalNetworkAccess)) {
                 logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
                 this.connections.set(server.id, {
                     client: null as unknown as Client,
@@ -247,8 +257,18 @@ export class McpClientManager implements IProvider {
             }
 
             const sseImport = await import('@modelcontextprotocol/sdk/client/sse.js') as Record<string, unknown>;
-            const TransportClass = sseImport['SSEClientTransport'] as new (url: URL) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
-            const transport = new TransportClass(new URL(server.url));
+            const TransportClass = sseImport['SSEClientTransport'] as new (url: URL, options?: { requestInit?: { headers?: Record<string, string> } }) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
+            
+            let headers: Record<string, string> = {};
+            if (server.remoteHeaders) {
+                try { 
+                    headers = JSON.parse(server.remoteHeaders) as Record<string, string>;
+                } catch {
+                    logger.warn(`Failed to parse remote headers for ${server.name}`);
+                }
+            }
+
+            const transport = new TransportClass(new URL(urlStr), { requestInit: { headers } });
             const client = new Client({
                 name: "vault-intelligence",
                 version: "1.0.0"
@@ -277,7 +297,8 @@ export class McpClientManager implements IProvider {
             }
         } else if (server.type === 'streamable_http') {
             if (!server.url) return;
-            if (!isExternalUrl(server.url, this.settings.allowLocalNetworkAccess)) {
+            const urlStr = server.url.trim();
+            if (!isExternalUrl(urlStr, this.settings.allowLocalNetworkAccess)) {
                 logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
                 this.connections.set(server.id, {
                     client: null as unknown as Client,
@@ -300,7 +321,7 @@ export class McpClientManager implements IProvider {
 
             const httpImport = await import('@modelcontextprotocol/sdk/client/streamableHttp.js') as Record<string, unknown>;
             const TransportClass = httpImport['StreamableHTTPClientTransport'] as new (url: URL, options?: { headers?: Record<string, string> }) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
-            const transport = new TransportClass(new URL(server.url), { headers });
+            const transport = new TransportClass(new URL(urlStr), { headers });
             const client = new Client({
                 name: "vault-intelligence",
                 version: "1.0.0"

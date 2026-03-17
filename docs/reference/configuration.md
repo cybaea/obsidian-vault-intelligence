@@ -78,10 +78,11 @@ Configure connections to Model Context Protocol (MCP) servers to extend the Rese
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Server name | `None` | A human-readable name for the server. |
-| Server type | `stdio` | The transport mechanism. `stdio` runs a local command. `sse` connects to a remote Server-Sent Events URL. |
+| Server type | `stdio` | The transport mechanism. `stdio` runs a local command. `sse` connects to a legacy Server-Sent Events URL, while `streamable_http` connects to modern remote enterprise endpoints. |
 | Command | `None` | (stdio only) The executable to run, eg `node` or `npx`. |
 | Arguments | `[]` | (stdio only) A list of arguments passed to the command. |
 | Environment variables | `{}` | (stdio only) Optional JSON object containing environment variables. These are merged with the host environment without overriding critical paths. |
+| HTTP headers (JSON) | `None` | (sse and streamable_http only) Optional JSON object for authentication headers, eg `{"Authorization": "Bearer token"}`. |
 | Require explicit confirmation | `On` | When enabled, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Disable this only for read-only servers. |
 | Connection status | `Disconnected` | Displays the current connection state (eg Connected, Error, Untrusted). |
 
