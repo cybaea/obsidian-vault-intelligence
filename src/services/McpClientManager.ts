@@ -6,6 +6,7 @@ import { SEARCH_CONSTANTS } from "../constants";
 import { MCPServerConfig, VaultIntelligenceSettings } from "../settings/types";
 import { IProvider, IToolDefinition, ProviderError } from "../types/providers";
 import { logger } from "../utils/logger";
+import { isExternalUrl } from "../utils/url";
 
 interface IGlobalRequire {
     process: { env: Record<string, string>; kill(pid: number): void; platform: string };
@@ -233,9 +234,73 @@ export class McpClientManager implements IProvider {
 
         } else if (server.type === 'sse') {
             if (!server.url) return;
+            if (!isExternalUrl(server.url, this.settings.allowLocalNetworkAccess)) {
+                logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
+                this.connections.set(server.id, {
+                    client: null as unknown as Client,
+                    config: server,
+                    errorMessage: 'Connection blocked by Local Network Access security settings.',
+                    status: 'error',
+                    transport: null
+                });
+                return;
+            }
+
             const sseImport = await import('@modelcontextprotocol/sdk/client/sse.js') as Record<string, unknown>;
             const TransportClass = sseImport['SSEClientTransport'] as new (url: URL) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
             const transport = new TransportClass(new URL(server.url));
+            const client = new Client({
+                name: "vault-intelligence",
+                version: "1.0.0"
+            }, {
+                capabilities: {}
+            });
+
+            try {
+                await client.connect(transport);
+                this.connections.set(server.id, {
+                    client,
+                    config: server,
+                    status: 'connected',
+                    transport
+                });
+                logger.info(`MCP Server ${server.name} connected.`);
+            } catch (error) {
+                logger.error(`MCP Server ${server.name} connection failed.`, error);
+                this.connections.set(server.id, {
+                    client: null as unknown as Client,
+                    config: server,
+                    errorMessage: String(error),
+                    status: 'error',
+                    transport: null
+                });
+            }
+        } else if (server.type === 'streamable_http') {
+            if (!server.url) return;
+            if (!isExternalUrl(server.url, this.settings.allowLocalNetworkAccess)) {
+                logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
+                this.connections.set(server.id, {
+                    client: null as unknown as Client,
+                    config: server,
+                    errorMessage: 'Connection blocked by Local Network Access security settings.',
+                    status: 'error',
+                    transport: null
+                });
+                return;
+            }
+
+            let headers: Record<string, string> = {};
+            if (server.remoteHeaders) {
+                try { 
+                    headers = JSON.parse(server.remoteHeaders) as Record<string, string>; 
+                } catch (e) { 
+                    logger.warn(`Failed to parse MCP headers for ${server.name}`, e); 
+                }
+            }
+
+            const httpImport = await import('@modelcontextprotocol/sdk/client/streamableHttp.js') as Record<string, unknown>;
+            const TransportClass = httpImport['StreamableHTTPClientTransport'] as new (url: URL, options?: { headers?: Record<string, string> }) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
+            const transport = new TransportClass(new URL(server.url), { headers });
             const client = new Client({
                 name: "vault-intelligence",
                 version: "1.0.0"

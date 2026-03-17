@@ -58,7 +58,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     });
                 
                 const detailsRow = serverDiv.createDiv("mcp-server-details");
-                detailsRow.createEl("p", { cls: "setting-item-description", text: `Type: ${server.type === 'stdio' ? 'Stdio (Local Process)' : 'SSE (Remote URL)'}` });
+                detailsRow.createEl("p", { cls: "setting-item-description", text: `Type: ${server.type === 'stdio' ? 'Stdio (Local Process)' : server.type === 'streamable_http' ? 'Streamable HTTP (Remote)' : 'SSE (Remote)'}` });
                 
                 const errMessage = (connection as { errorMessage?: string })?.errorMessage;
                 if (status === 'error' && errMessage) {
@@ -109,12 +109,12 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
 
         new Setting(containerEl)
             .setName("Connection type")
-            .setDesc("Stdio runs a local binary. " + "SSE" + " connects to a remote " + "URL" + ".")
+            .setDesc("Stdio runs a local binary. Remote options connect to a " + "URL" + ".")
             .addDropdown(drop => drop
-                .addOptions({ "sse": "SSE URL (remote)", "stdio": "Stdio (desktop only)" })
+                .addOptions({ "sse": "SSE (remote)", "stdio": "Stdio (desktop only)", "streamable_http": "Streamable HTTP (remote)" })
                 .setValue(currentConfig.type)
                 .onChange(v => {
-                    currentConfig.type = v as "stdio" | "sse";
+                    currentConfig.type = v as "stdio" | "sse" | "streamable_http";
                     renderEditor(currentConfig, index); // re-render fields
                 })
             );
@@ -154,12 +154,22 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             envSetting.descEl.setCssProps({ "color": "var(--text-warning)" });
         } else {
             new Setting(containerEl)
-                .setName('SSE ' + 'URL')
-                .setDesc('The full HTTP(S) url of the ' + 'SSE' + ' endpoint.')
+                .setName("Server " + "URL")
+                .setDesc("The full HTTP(S) " + "URL" + ` of the ${currentConfig.type === 'streamable_http' ? 'streamable HTTP' : 'SSE'} endpoint.`)
                 .addText(text => text
                     .setValue(currentConfig.url || "")
                     .onChange(v => currentConfig.url = v)
                 );
+
+            new Setting(containerEl)
+                .setName("HTTP " + "headers (JSON)")
+                .setDesc("Optional. Provide custom headers for authentication (e.g., " + '{"Authorization": "Bearer my-token"}' + ").")
+                .addTextArea(text => {
+                    text.setValue(currentConfig.remoteHeaders || "");
+                    text.onChange(v => currentConfig.remoteHeaders = v);
+                    text.inputEl.rows = 3;
+                    return text;
+                });
         }
 
         new Setting(containerEl)

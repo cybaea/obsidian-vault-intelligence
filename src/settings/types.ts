@@ -18,8 +18,9 @@ export interface MCPServerConfig {
     env?: string;
     id: string;
     name: string;
+    remoteHeaders?: string;
     requireExplicitConfirmation: boolean;
-    type: "stdio" | "sse";
+    type: "stdio" | "sse" | "streamable_http";
     url?: string;
 }
 
