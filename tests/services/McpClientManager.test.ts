@@ -90,13 +90,16 @@ describe('McpClientManager', () => {
         };
 
         // Note: this casts to access the private method for unit testing purposes
-        const managerWithInternal = manager as unknown as { connectServer(config: MCPServerConfig): Promise<void>, connections: Map<string, any> };
+        const managerWithInternal = manager as unknown as { 
+            connectServer(config: MCPServerConfig): Promise<void>; 
+            connections: Map<string, { status: string; errorMessage?: string; }>;
+        };
         
         await managerWithInternal.connectServer(localServerConfig);
         
         const connection = managerWithInternal.connections.get(localServerConfig.id);
         expect(connection).toBeDefined();
-        expect(connection.status).toBe('error');
-        expect(connection.errorMessage).toContain('Connection blocked by Local Network Access security settings');
+        expect(connection?.status).toBe('error');
+        expect(connection?.errorMessage).toContain('Connection blocked by Local Network Access security settings');
     });
 });
