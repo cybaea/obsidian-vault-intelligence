@@ -24,11 +24,13 @@ C4Context
 
         System(gardener, "Gardener Agent", "Proactive Maintenance")
         System(ontology, "Ontology Service", "Knowledge Model")
+        System(mcp, "MCP Client Manager", "Dynamic Tool Delegation")
     }
 
     System_Ext(gemini, "AI Provider (Google Gemini)", "LLM Reasoning, Code Execution, Web Grounding")
     System_Ext(local_ai, "Local AI (Ollama)", "Local Reasoning and Embeddings")
     System_Ext(huggingface, "Hugging Face", "Model Downloads (CDN)")
+    System_Ext(mcp_servers, "MCP Servers", "External Tools (stdio / sse)")
     System_Ext(cdn, "jsDelivr", "WASM Runtime Assets")
 
     Rel(user, obsidian, "Writes notes in")
@@ -41,6 +43,7 @@ C4Context
     Rel(plugin, gemini, "Sends prompts/context to", "HTTPS/REST (via Provider Abstraction)")
     Rel(plugin, local_ai, "Sends prompts/context to", "HTTP/REST (via Provider Abstraction)")
     Rel(plugin, huggingface, "Downloads ONNX models from", "HTTPS")
+    Rel(mcp, mcp_servers, "Negotiates extensions via", "stdio / sse")
     Rel(worker, cdn, "Fetches WASM binaries from", "HTTPS")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
@@ -382,16 +385,19 @@ classDiagram
     class OllamaProvider {
         +Local Inference API
     }
-        +startChat()
-        +generateContent()
+    class McpClientManager {
+        +getAvailableTools()
+        +executeTool(name, args)
     }
 
     AgentService --> ToolRegistry : executes tools
     AgentService --> SearchOrchestrator : delegates search
     AgentService --> ContextAssembler : delegates RAG
     AgentService --> IReasoningClient : calls provider interface
+    AgentService --> McpClientManager : initializes tools
     ToolRegistry --> GraphService : uses for graph tools
     ToolRegistry --> SearchOrchestrator : uses for search tool
+    ToolRegistry --> McpClientManager : dynamically delegates tools
     TR_VAULT_SEARCH[Tool: vault_search] -.-> SearchOrchestrator : calls
     TR_READ_NOTE[Tool: read_note] -.-> FileTools : calls
     SearchOrchestrator --> GraphService : uses index

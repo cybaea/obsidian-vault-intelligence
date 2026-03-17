@@ -7,6 +7,7 @@ import { GardenerStateService } from "./services/GardenerStateService";
 import { GeminiProvider } from "./services/GeminiProvider";
 import { GraphService } from "./services/GraphService";
 import { GraphSyncOrchestrator } from "./services/GraphSyncOrchestrator";
+import { McpClientManager } from "./services/McpClientManager";
 import { MetadataManager } from "./services/MetadataManager";
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
@@ -124,6 +125,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	gardenerStateService: GardenerStateService;
 	workerManager: WorkerManager;
 	graphSyncOrchestrator: GraphSyncOrchestrator;
+	mcpClientManager: McpClientManager;
 	private needsReindex = false;
 
 	private initDebouncedHandlers() {
@@ -157,6 +159,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 1. Initialize Base Services
 		this.geminiService = new GeminiProvider(this.settings, this.app);
 		this.providerRegistry = new ProviderRegistry(this.settings, this.app, this.geminiService);
+		
+		this.mcpClientManager = new McpClientManager(this.app, this.settings);
+		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
@@ -395,6 +400,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 * Ensures clean shutdown of workers and saves final state.
 	 */
 	onunload() {
+		if (this.mcpClientManager) {
+			this.mcpClientManager.terminate().catch((e: unknown) => {
+				logger.error("Error terminating MCP Client Manager", e);
+			});
+		}
+
 		if (this.graphSyncOrchestrator) {
 			this.graphSyncOrchestrator.flushAndShutdown().catch((e: unknown) => {
 				logger.error("Error during graph shutdown", e);

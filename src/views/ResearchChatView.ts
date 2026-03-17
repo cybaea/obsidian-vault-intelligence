@@ -44,7 +44,7 @@ export class ResearchChatView extends ItemView {
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings, plugin.mcpClientManager);
         this.icon = "message-circle";
     }
 

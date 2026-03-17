@@ -10,6 +10,7 @@ import { IEmbeddingClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, U
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
+import { McpClientManager } from "./McpClientManager";
 import { ModelRegistry } from "./ModelRegistry";
 import { ProviderRegistry } from "./ProviderRegistry";
 import { SearchOrchestrator } from "./SearchOrchestrator";
@@ -54,7 +55,8 @@ export class AgentService {
         providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient,
-        settings: VaultIntelligenceSettings
+        settings: VaultIntelligenceSettings,
+        mcpClientManager: McpClientManager
     ) {
         this.app = app;
         this.providerRegistry = providerRegistry;
@@ -78,7 +80,8 @@ export class AgentService {
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
-            fileTools
+            fileTools,
+            mcpClientManager
         );
     }
 
@@ -211,7 +214,7 @@ export class AgentService {
         let systemInstruction = (rawSystemInstruction || "").replace("{{DATE}}", currentDate);
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
-        const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
+        const tools: IToolDefinition[] = await this.toolRegistry.getTools(options.enableCodeExecution);
         
         // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
         if (!tools.find(t => t.name === "google_search")) {

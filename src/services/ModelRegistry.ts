@@ -22,6 +22,7 @@ export interface ModelDefinition {
     provider: 'gemini' | 'local' | 'ollama';
     quantized?: boolean;
     supportedMethods?: string[];
+    supportsNativeSearch?: boolean;
 }
 
 export interface ModelCache {
@@ -83,14 +84,16 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
-        provider: 'gemini'
+        provider: 'gemini',
+        supportsNativeSearch: true
     },
     {
         description: 'Maximum intelligence for complex reasoning.',
         id: 'gemini-pro-latest',
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         label: 'Gemini 3 Pro',
-        provider: 'gemini'
+        provider: 'gemini',
+        supportsNativeSearch: true
     }
 ];
 
@@ -100,7 +103,8 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
         label: 'Latest release of Gemini Flash-Lite (Default)',
-        provider: 'gemini'
+        provider: 'gemini',
+        supportsNativeSearch: true
     }
 ];
 
@@ -322,15 +326,34 @@ export class ModelRegistry {
         }
 
         const data = response.json as GeminiApiResponse;
-        const models = data.models.map((m: GeminiModel) => ({
-            description: m.description,
-            id: m.name.replace('models/', ''),
-            inputTokenLimit: m.inputTokenLimit,
-            label: m.displayName,
-            outputTokenLimit: m.outputTokenLimit,
-            provider: 'gemini' as const,
-            supportedMethods: m.supportedGenerationMethods || []
-        }));
+        const models = data.models.map((m: GeminiModel) => {
+            const id = m.name.replace('models/', '');
+            let supportsNativeSearch = false;
+            
+            if (/latest$/.test(id)) {
+                supportsNativeSearch = true;
+            } else {
+                const match = id.match(/^gemini-([\d.]+)/);
+                if (match && match[1]) {
+                    const matchStr = match[1];
+                    const parts = matchStr.split('.').map(Number);
+                    if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
+                        supportsNativeSearch = true;
+                    }
+                }
+            }
+            
+            return {
+                description: m.description,
+                id,
+                inputTokenLimit: m.inputTokenLimit,
+                label: m.displayName,
+                outputTokenLimit: m.outputTokenLimit,
+                provider: 'gemini' as const,
+                supportedMethods: m.supportedGenerationMethods || [],
+                supportsNativeSearch
+            };
+        });
 
         return { models, rawResponse: data };
     }

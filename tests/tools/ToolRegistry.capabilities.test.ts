@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi, Mocked } from 'vitest';
 import { AGENT_CONSTANTS } from '../../src/constants';
 import { ContextAssembler } from '../../src/services/ContextAssembler';
 import { GraphService } from '../../src/services/GraphService';
+import { McpClientManager } from '../../src/services/McpClientManager';
 import { SearchOrchestrator } from '../../src/services/SearchOrchestrator';
 import { VaultIntelligenceSettings } from '../../src/settings';
 import { FileTools } from '../../src/tools/FileTools';
@@ -24,6 +25,7 @@ describe('ToolRegistry Capabilities', () => {
     let mockSearchOrchestrator: SearchOrchestrator;
     let mockContextAssembler: ContextAssembler;
     let mockFileTools: FileTools;
+    let mockMcpClientManager: McpClientManager;
 
     beforeEach(() => {
         mockApp = {} as unknown as App;
@@ -43,6 +45,9 @@ describe('ToolRegistry Capabilities', () => {
         mockSearchOrchestrator = {} as unknown as SearchOrchestrator;
         mockContextAssembler = {} as unknown as ContextAssembler;
         mockFileTools = {} as unknown as FileTools;
+        mockMcpClientManager = {
+            getAvailableTools: vi.fn().mockResolvedValue([])
+        } as unknown as McpClientManager;
     });
 
     function createRegistry(provider: IModelProvider) {
@@ -54,33 +59,34 @@ describe('ToolRegistry Capabilities', () => {
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,
-            mockFileTools
+            mockFileTools,
+            mockMcpClientManager
         );
     }
 
-    it('should return empty tools array if provider does not support tools', () => {
+    it('should return empty tools array if provider does not support tools', async () => {
         mockProvider.supportsTools = false;
         const registry = createRegistry(mockProvider);
-        const tools = registry.getTools();
+        const tools = await registry.getTools();
         
         expect(tools.length).toBe(0);
     });
 
-    it('should include Google Search if supportsWebGrounding is true', () => {
+    it('should include Google Search if supportsWebGrounding is true', async () => {
         mockProvider.supportsTools = true;
         mockProvider.supportsWebGrounding = true;
         const registry = createRegistry(mockProvider);
-        const tools = registry.getTools();
+        const tools = await registry.getTools();
         
         const googleSearchTool = tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH);
         expect(googleSearchTool).toBeDefined();
     });
 
-    it('should NOT include Google Search if supportsWebGrounding is false', () => {
+    it('should NOT include Google Search if supportsWebGrounding is false', async () => {
         mockProvider.supportsTools = true;
         mockProvider.supportsWebGrounding = false;
         const registry = createRegistry(mockProvider);
-        const tools = registry.getTools();
+        const tools = await registry.getTools();
         
         const googleSearchTool = tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH);
         expect(googleSearchTool).toBeUndefined();

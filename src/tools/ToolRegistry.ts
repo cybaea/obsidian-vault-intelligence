@@ -4,6 +4,7 @@ import { AGENT_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
+import { McpClientManager } from "../services/McpClientManager";
 import { ModelRegistry } from "../services/ModelRegistry";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
@@ -31,6 +32,7 @@ export class ToolRegistry {
     private searchOrchestrator: SearchOrchestrator;
     private contextAssembler: ContextAssembler;
     private fileTools: FileTools;
+    private mcpClientManager: McpClientManager;
 
     constructor(
         app: App,
@@ -40,7 +42,8 @@ export class ToolRegistry {
         graphService: GraphService,
         searchOrchestrator: SearchOrchestrator,
         contextAssembler: ContextAssembler,
-        fileTools: FileTools
+        fileTools: FileTools,
+        mcpClientManager: McpClientManager
     ) {
         this.app = app;
         this.settings = settings;
@@ -50,6 +53,7 @@ export class ToolRegistry {
         this.searchOrchestrator = searchOrchestrator;
         this.contextAssembler = contextAssembler;
         this.fileTools = fileTools;
+        this.mcpClientManager = mcpClientManager;
     }
 
     /**
@@ -63,9 +67,9 @@ export class ToolRegistry {
     }
 
     /**
-     * Returns the list of available tools types abstracted from SDKs.
+     * Returns the list of available tools types abstracted from SDKs, including dynamically fetched MCP tools.
      */
-    public getTools(enableCodeExecution?: boolean): IToolDefinition[] {
+    public async getTools(enableCodeExecution?: boolean): Promise<IToolDefinition[]> {
         if (!this.provider.supportsTools) {
              return [];
         }
@@ -220,6 +224,10 @@ export class ToolRegistry {
             }
         });
 
+        // 8. Fetch and merge active MCP tools
+        const mcpTools = await this.mcpClientManager.getAvailableTools();
+        tools.push(...mcpTools);
+
         return tools;
     }
 
@@ -234,6 +242,28 @@ export class ToolRegistry {
         logger.info(`Executing tool ${name} with args:`, args);
 
         try {
+            if (name.startsWith("mcp__")) {
+                const parts = name.split('__');
+                const serverId = parts[1];
+                const serverConfig = this.settings.mcpServers.find(s => s.id === serverId);
+
+                // Enforce required confirmation if configured
+                if (!serverConfig || serverConfig.requireExplicitConfirmation) {
+                    const confirmedDetails = await ToolConfirmationModal.open(this.app, {
+                        action: "mcp",
+                        content: JSON.stringify(args, null, 2),
+                        path: serverConfig?.name || "Unknown Server",
+                        tool: name
+                    });
+
+                    if (!confirmedDetails) {
+                        return { error: "User cancelled MCP tool execution." };
+                    }
+                }
+                
+                return await this.mcpClientManager.executeTool(name, args);
+            }
+
             switch (name) {
                 case AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH:
                     return await this.executeGoogleSearch(args);

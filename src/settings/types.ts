@@ -11,6 +11,18 @@ import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
+export interface MCPServerConfig {
+    args?: string[];
+    command?: string;
+    enabled: boolean;
+    env?: string;
+    id: string;
+    name: string;
+    requireExplicitConfirmation: boolean;
+    type: "stdio" | "sse";
+    url?: string;
+}
+
 export interface VaultIntelligenceSettings {
     agentLanguage: string;
     allowLocalNetworkAccess: boolean;
@@ -48,6 +60,7 @@ export interface VaultIntelligenceSettings {
     keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
+    mcpServers: MCPServerConfig[];
     minSimilarityScore: number;
     modelCacheDurationDays: number;
     modelContextOverrides: Record<string, number>;
@@ -167,6 +180,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
+    mcpServers: [],
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
     modelContextOverrides: {},
@@ -194,6 +208,7 @@ export interface IVaultIntelligencePlugin {
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
+    mcpClientManager: unknown; // Using unknown here to avoid circular dep, we'll cast it in implementation
     persistenceManager: PersistenceManager;
     requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;

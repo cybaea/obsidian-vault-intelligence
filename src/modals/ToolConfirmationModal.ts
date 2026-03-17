@@ -3,7 +3,7 @@ import { App, Modal, ButtonComponent, TextComponent } from "obsidian";
 import { FolderSuggest } from "../views/FolderSuggest";
 
 export interface ToolConfirmationDetails {
-    action: "create" | "update" | "rename" | "delete" | "folder";
+    action: "create" | "update" | "rename" | "delete" | "folder" | "mcp";
     content?: string;
     mode?: string;
     newPath?: string;

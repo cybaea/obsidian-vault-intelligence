@@ -54,7 +54,8 @@ describe('AgentService Streaming', () => {
             mockProviderRegistry as never,
             mockGraphService as never,
             mockEmbeddingClient as never,
-            mockSettings as never
+            mockSettings as never,
+            {} as never
         );
     });
 
