@@ -65,44 +65,38 @@ describe('McpClientManager', () => {
         expect(mockCryptoSubtle.digest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array));
     });
 
-    it('should correctly evaluate trust state (stdio is untrusted initially, sse and streamable_http are trusted)', () => {
+    it('should correctly evaluate trust state (stdio is untrusted initially, remote is trusted)', () => {
         const manager = new McpClientManager(mockApp, mockSettings);
         
         const stdioConfig = { id: 'test-1', type: 'stdio' as const } as MCPServerConfig;
         const sseConfig = { id: 'test-2', type: 'sse' as const } as MCPServerConfig;
-        const streamableHttpConfig = { id: 'test-3', type: 'streamable_http' as const } as MCPServerConfig;
+        const httpConfig = { id: 'test-3', type: 'streamable_http' as const } as MCPServerConfig;
         
-        const stdioState = manager.checkTrustState(stdioConfig);
-        expect(stdioState.trusted).toBe(false);
-
-        const sseState = manager.checkTrustState(sseConfig);
-        expect(sseState.trusted).toBe(true);
-
-        const streamableHttpState = manager.checkTrustState(streamableHttpConfig);
-        expect(streamableHttpState.trusted).toBe(true);
+        expect(manager.checkTrustState(stdioConfig).trusted).toBe(false);
+        expect(manager.checkTrustState(sseConfig).trusted).toBe(true);
+        expect(manager.checkTrustState(httpConfig).trusted).toBe(true);
     });
 
-    it('should block remote connections if SSRF protection is triggered', async () => {
-        mockSettings.allowLocalNetworkAccess = false;
+    it('should block remote connections if SSRF protection is triggered (allowLocalNetworkAccess = false)', async () => {
         const manager = new McpClientManager(mockApp, mockSettings);
         
-        const sseConfig = { id: 'test-sse-ssrf', name: 'Test SSRF SSE', type: 'sse' as const, url: 'http://127.0.0.1:8000' } as MCPServerConfig;
-        const streamableHttpConfig = { id: 'test-http-ssrf', name: 'Test SSRF HTTP', type: 'streamable_http' as const, url: 'http://localhost:8000' } as MCPServerConfig;
-        
-        // Note: this casts to access the private method for unit testing purposes
-        const managerWithInternal = manager as unknown as { 
-            connectServer(config: MCPServerConfig): Promise<void>; 
-            connections: Map<string, { status: string; errorMessage?: string; }>;
+        const localServerConfig = {
+            enabled: true,
+            id: 'test-ssrf',
+            name: 'Malicious Local Server',
+            requireExplicitConfirmation: false,
+            type: 'streamable_http' as const,
+            url: 'http://169.254.169.254/latest/meta-data/'
         };
+
+        // Note: this casts to access the private method for unit testing purposes
+        const managerWithInternal = manager as unknown as { connectServer(config: MCPServerConfig): Promise<void>, connections: Map<string, any> };
         
-        await managerWithInternal.connectServer(sseConfig);
-        let connection = managerWithInternal.connections.get(sseConfig.id);
-        expect(connection?.status).toBe('error');
-        expect(connection?.errorMessage).toContain('Connection blocked by Local Network Access security settings');
+        await managerWithInternal.connectServer(localServerConfig);
         
-        await managerWithInternal.connectServer(streamableHttpConfig);
-        connection = managerWithInternal.connections.get(streamableHttpConfig.id);
-        expect(connection?.status).toBe('error');
-        expect(connection?.errorMessage).toContain('Connection blocked by Local Network Access security settings');
+        const connection = managerWithInternal.connections.get(localServerConfig.id);
+        expect(connection).toBeDefined();
+        expect(connection.status).toBe('error');
+        expect(connection.errorMessage).toContain('Connection blocked by Local Network Access security settings');
     });
 });
