@@ -128,7 +128,8 @@ export class McpClientManager implements IProvider {
             }
 
             const g = globalThis as unknown as IGlobalRequire;
-            const mcpSdk = g.require('@modelcontextprotocol/sdk/client/stdio.js') as { StdioClientTransport: new (config: unknown) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport };
+            // Use dynamic import so esbuild bundles it, but execution is deferred (mobile safe)
+            const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
             const StdioClientTransport = mcpSdk.StdioClientTransport;
             
             // Merge Environments
