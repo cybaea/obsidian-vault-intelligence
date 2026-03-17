@@ -84,16 +84,14 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
-        provider: 'gemini',
-        supportsNativeSearch: true
+        provider: 'gemini'
     },
     {
         description: 'Maximum intelligence for complex reasoning.',
         id: 'gemini-pro-latest',
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         label: 'Gemini 3 Pro',
-        provider: 'gemini',
-        supportsNativeSearch: true
+        provider: 'gemini'
     }
 ];
 
@@ -103,8 +101,7 @@ export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
         inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
         isDefault: true,
         label: 'Latest release of Gemini Flash-Lite (Default)',
-        provider: 'gemini',
-        supportsNativeSearch: true
+        provider: 'gemini'
     }
 ];
 
