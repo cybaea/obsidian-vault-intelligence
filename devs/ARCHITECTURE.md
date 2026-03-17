@@ -30,7 +30,7 @@ C4Context
     System_Ext(gemini, "AI Provider (Google Gemini)", "LLM Reasoning, Code Execution, Web Grounding")
     System_Ext(local_ai, "Local AI (Ollama)", "Local Reasoning and Embeddings")
     System_Ext(huggingface, "Hugging Face", "Model Downloads (CDN)")
-    System_Ext(mcp_servers, "MCP Servers", "External Tools (stdio / sse)")
+    System_Ext(mcp_servers, "MCP Servers", "External Tools (stdio / sse / streamable_http)")
     System_Ext(cdn, "jsDelivr", "WASM Runtime Assets")
 
     Rel(user, obsidian, "Writes notes in")
@@ -43,7 +43,7 @@ C4Context
     Rel(plugin, gemini, "Sends prompts/context to", "HTTPS/REST (via Provider Abstraction)")
     Rel(plugin, local_ai, "Sends prompts/context to", "HTTP/REST (via Provider Abstraction)")
     Rel(plugin, huggingface, "Downloads ONNX models from", "HTTPS")
-    Rel(mcp, mcp_servers, "Negotiates extensions via", "stdio / sse")
+    Rel(mcp, mcp_servers, "Negotiates extensions via", "stdio / sse / streamable_http")
     Rel(worker, cdn, "Fetches WASM binaries from", "HTTPS")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
