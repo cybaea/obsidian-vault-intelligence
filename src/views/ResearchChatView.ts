@@ -454,6 +454,8 @@ export class ResearchChatView extends ItemView {
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
+            if (msg.role === "tool") continue; // Hide non-user facing tool results
+            
             const msgComponent = new Component();
             this.messageComponents.push(msgComponent);
             msgComponent.load();

@@ -950,4 +950,4 @@ a.similar-notes-link:hover {
 .tool-confirmation-modal .modal-button-container button.mod-warning {
     background-color: var(--text-error);
     color: white;
-}
+}.chat-content:empty { display: none; }
