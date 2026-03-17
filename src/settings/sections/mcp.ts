@@ -193,7 +193,14 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 await plugin.saveSettings(false);
                 
                 // Re-initialize connections to reflect updated config without reloading plugin
-                const manager = plugin.mcpClientManager as { terminate(): Promise<void>; initialize(): Promise<void> };
+                const manager = plugin.mcpClientManager as { 
+                    generateTrustHash(c: unknown): Promise<string>;
+                    terminate(): Promise<void>; 
+                    initialize(): Promise<void> 
+                };
+                const hash = await manager.generateTrustHash(currentConfig);
+                window.localStorage.setItem(`vi-mcp-trust-${currentConfig.id}`, hash);
+                
                 await manager.terminate();
                 await manager.initialize();
                 renderMcpSettings({ app: plugin.app, containerEl, plugin }); // Go back
