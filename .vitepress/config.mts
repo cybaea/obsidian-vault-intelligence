@@ -110,6 +110,7 @@ export default withMermaid(defineConfig({
                     text: 'Reference',
                     items: [
                         { text: 'Plugin settings', link: '/docs/reference/configuration' },
+                        { text: 'Using MCP Servers', link: '/docs/reference/Using MCP Servers' },
                         { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
                     ]
                 },
