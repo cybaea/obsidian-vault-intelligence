@@ -156,7 +156,6 @@ export class ResearchChatView extends ItemView {
         });
 
         const inputContainer = container.createDiv({ cls: "input-container" });
-        this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
         this.inputComponent.setPlaceholder("Ask your vault... (use @ to link notes)");
 
@@ -554,7 +553,7 @@ export class ResearchChatView extends ItemView {
         const selectEl = modelDropdown.selectEl;
         selectEl.innerHTML = '';
         
-        const chatModels = ModelRegistry.getChatModels();
+        const chatModels = ModelRegistry.getChatModels(this.plugin.settings.hiddenModels);
         const hasApiKey = !!this.plugin.settings.googleApiKey;
         const hasOllama = !!this.plugin.settings.ollamaEndpoint;
         const canUseChat = hasApiKey || hasOllama;

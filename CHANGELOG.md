@@ -19,12 +19,11 @@ New features are added in the "Unreleased" section.
 -   **Streaming chat responses**: Responses in the Research Chat are now streamed token-by-token with live Markdown formatting (bold, lists, headers) and a flicker-free rendering strategy.
 -   **Real-time tool status**: The chat interface now displays live status updates (eg "Thinking...", "Searching...") when the agent is performing background tasks.
 -   **Stop button**: Added a "Stop" button to cancel long-running agent responses or recursive tool loops instantly.
--   **Model selection improvements**: Model selection dropdowns now group models by provider, display tooltips with internal model IDs, and disable unconfigured providers.
+-   **Model selection improvements**: Model selection dropdowns now group models by provider, display tooltips with internal model IDs, and disable unconfigured providers. You can also hide specific models from all dropdown menus via the new **Model Filtering** section in Advanced settings.
 -   **Context management refinements**: Context window budgets are now configured per model rather than globally. The context assembler has been improved to prevent single documents from dominating the context window.
 -   **Enhanced embedding configuration**: For local Ollama embedding models (eg `nomic-embed-text`), you can now dynamically select the desired embedding dimension (Matryoshka representation) with improved visual labels.
 
-### Fixes
-
+-   **Gemini 3.1 & Latest Alias Support**: Fixed a critical bug where `*-latest` model identities were incorrectly flagged as supporting native functions, causing `INVALID_ARGUMENT` crashes when using tools. Native grounding is now perfectly restricted to version 3.1+ capabilities.
 -   **Ollama tool parsing**: Fixed an issue where the local Ollama provider would fail to execute tools if the model wrapped the JSON in markdown blocks or asterisks by implementing a more resilient JSON extraction method.
 -   **Dynamic system prompts**: The default system instructions are now dynamically trimmed to remove references to `google_search` when the active model provider does not support web grounding, preventing unfulfillable tool hallucinations.
 -   **Researcher UI stability**: Fixed a critical bug where the UI would freeze or layout would thrash during streaming.
@@ -35,6 +34,7 @@ New features are added in the "Unreleased" section.
 ### Developer features
 
 -   **McpClientManager**: Engineered a robust service to negotiate the Model Context Protocol, featuring `child_process` tree killing to prevent zombie processes, trust hash generation, and environmental variable merging.
+-   **Intelligent Logging Heuristic**: Automatically parses and routes raw `stderr` streams from external MCP servers, correctly classifying logs into INFO, WARN, DEBUG, or ERROR categories for the Obsidian console.
 -   **Tool namespace collision resistance**: Designed a secure `mcp__serverId__toolName` namespacing strategy that automatically hashes excessively long tool names to comply with the 64-character Gemini SDK restriction limit.
 -   **Ollama embedding batching**: Improved local indexing performance by natively batching document chunks to the Ollama embedding endpoint.
 -   **Ollama memory management**: Added explicit `keep_alive` logic for active chat models to avoid memory locks and cold start penalties.

@@ -55,6 +55,7 @@ export interface VaultIntelligenceSettings {
     geminiRetries: number;
     googleApiKey: string;
     groundingModel: string;
+    hiddenModels: string[];
     indexingDelayMs: number;
     indexVersion: number;
     keywordWeight: number;
@@ -176,6 +177,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     geminiRetries: 10,
     googleApiKey: '',
     groundingModel: 'gemini-2.5-flash-lite',
+    hiddenModels: [],
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
     indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
     keywordWeight: 1.2,

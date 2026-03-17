@@ -107,7 +107,17 @@ Technical tuning for power users.
 | Local SIMD acceleration | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |
 | Gemini API retries | `10` | Number of retries for spotty connections. |
 | Model cache duration | `7 days` | Duration to cache Gemini model list locally. |
+| Model filtering | `None` | Hide specific models from dropdown menus to reduce clutter. |
 | Log level | `Warn` | Developer console verbosity (`Debug` for full CoT). |
+
+## Security
+
+Manage agent network access and execution risks.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Allow local network access | `Off` | **Advanced/Risky**: Allows the agent to access `localhost` and private network IPs (e.g., `192.168.x.x`). **Warning**: This makes you vulnerable to Server-Side Request Forgery (SSRF) attacks if the agent reads malicious notes or prompt injections. Use with extreme caution. |
+| Require explicit confirmation (MCP) | `On` | When configured per MCP server, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Required to prevent Zero-Click Remote Code Execution (RCE). |
 
 ---
 

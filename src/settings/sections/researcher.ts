@@ -29,7 +29,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
 
     // --- 1. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
-    const chatModels = ModelRegistry.getChatModels();
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
     const isChatPreset = chatModels.some(m => m.id === chatModelCurrent);
 
     new Setting(containerEl)
@@ -298,7 +298,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
 
     // Grounding Model
     const groundingModelCurrent = plugin.settings.groundingModel;
-    const groundingModels = ModelRegistry.getGroundingModels();
+    const groundingModels = ModelRegistry.getGroundingModels(plugin.settings.hiddenModels);
     const isGroundingPreset = groundingModels.some(m => m.id === groundingModelCurrent);
 
     new Setting(containerEl)

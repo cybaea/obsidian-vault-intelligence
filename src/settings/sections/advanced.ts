@@ -151,6 +151,49 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             }));
 
 
+    // --- 3. Model filtering ---
+    new Setting(containerEl)
+        .setName('Model filtering')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
+    });
+
+    const allModels = ModelRegistry.getAllKnownModels();
+    if (allModels.length > 0) {
+        allModels.forEach((model) => {
+            const isHidden = plugin.settings.hiddenModels.includes(model.id);
+            new Setting(containerEl)
+                .setName(model.label)
+                .setDesc(model.id)
+                .addToggle(toggle => toggle
+                    .setValue(!isHidden)
+                    .setTooltip(isHidden ? "Currently hidden" : "Currently visible")
+                    .onChange(async (value) => {
+                        if (value) {
+                            // Show: Remove from hidden
+                            plugin.settings.hiddenModels = plugin.settings.hiddenModels.filter(id => id !== model.id);
+                        } else {
+                            // Hide: Add to hidden
+                            if (!plugin.settings.hiddenModels.includes(model.id)) {
+                                plugin.settings.hiddenModels.push(model.id);
+                            }
+                        }
+                        await plugin.saveSettings();
+                        
+                        // Force a refresh of the models event so other UI components update
+                        plugin.app.workspace.trigger('vault-intelligence:models-updated');
+                    }));
+        });
+    } else {
+        new Setting(containerEl)
+            .setName('No models available')
+            .setDesc('Configure a provider and fetch models to filter them.')
+            .setDisabled(true);
+    }
+
+
     // --- 4. Search and Context Tuning ---
     new Setting(containerEl)
         .setName('Search and context tuning')

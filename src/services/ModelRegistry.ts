@@ -330,16 +330,12 @@ export class ModelRegistry {
             const id = m.name.replace('models/', '');
             let supportsNativeSearch = false;
             
-            if (/latest$/.test(id)) {
-                supportsNativeSearch = true;
-            } else {
-                const match = id.match(/^gemini-([\d.]+)/);
-                if (match && match[1]) {
-                    const matchStr = match[1];
-                    const parts = matchStr.split('.').map(Number);
-                    if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
-                        supportsNativeSearch = true;
-                    }
+            const match = id.match(/^gemini-([\d.]+)/);
+            if (match && match[1]) {
+                const matchStr = match[1];
+                const parts = matchStr.split('.').map(Number);
+                if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
+                    supportsNativeSearch = true;
                 }
             }
             
@@ -433,39 +429,62 @@ export class ModelRegistry {
     }
 
     /**
+     * Returns a list of all known models (dynamic + static), primarily for setting filters.
+     * @returns Array of all known model definitions.
+     */
+    public static getAllKnownModels(): ModelDefinition[] {
+        const models = this.dynamicModels.length > 0 ? this.dynamicModels : [
+            ...GEMINI_CHAT_MODELS,
+            ...GEMINI_GROUNDING_MODELS,
+            ...LOCAL_EMBEDDING_MODELS,
+            ...GEMINI_EMBEDDING_MODELS
+        ];
+        
+        // Return a deduplicated list
+        const unique = new Map<string, ModelDefinition>();
+        models.forEach(m => unique.set(m.id, m));
+        return Array.from(unique.values());
+    }
+
+    /**
      * Returns a list of models suitable for general chat.
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of chat-capable model definitions.
      */
-    public static getChatModels(): ModelDefinition[] {
+    public static getChatModels(hiddenModels: string[] = []): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
             (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&
-            !m.id.toLowerCase().includes('experimental')
+            !m.id.toLowerCase().includes('experimental') &&
+            !hiddenModels.includes(m.id)
         );
     }
 
     /**
      * Returns a list of models suitable for embedding.
      * @param provider - Filter by provider ('gemini' or 'local').
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini'): ModelDefinition[] {
-        if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
+        if (provider === 'local') return LOCAL_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
             m.provider === provider &&
-            (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding'))
+            (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding')) &&
+            !hiddenModels.includes(m.id)
         );
     }
 
     /**
      * Returns a list of models suitable for grounding (search).
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of grounding-capable model definitions.
      */
-    public static getGroundingModels(): ModelDefinition[] {
+    public static getGroundingModels(hiddenModels: string[] = []): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_GROUNDING_MODELS;
         // Grounding models are strictly restricted to flash/lite models.
         // These are optimized for tool-use and search grounding where speed/cost is primary.
@@ -473,7 +492,8 @@ export class ModelRegistry {
             m.provider === 'gemini' &&
             (m.id.includes('flash') || m.id.includes('lite')) &&
             !m.id.toLowerCase().includes('experimental') &&
-            !m.id.toLowerCase().includes('nano')
+            !m.id.toLowerCase().includes('nano') &&
+            !hiddenModels.includes(m.id)
         );
     }
 

@@ -30,7 +30,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
 
     // --- 1. Model & Limits ---
     const gardenerModelCurrent = plugin.settings.gardenerModel;
-    const chatModels = ModelRegistry.getChatModels();
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
     const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
 
     new Setting(containerEl)
