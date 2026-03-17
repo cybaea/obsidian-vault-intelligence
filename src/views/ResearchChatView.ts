@@ -156,6 +156,7 @@ export class ResearchChatView extends ItemView {
         });
 
         const inputContainer = container.createDiv({ cls: "input-container" });
+        this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
         this.inputComponent.setPlaceholder("Ask your vault... (use @ to link notes)");
 
