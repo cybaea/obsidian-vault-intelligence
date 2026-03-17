@@ -394,34 +394,29 @@ export class ModelRegistry {
     }
 
     private static sortModels(models: ModelDefinition[]): ModelDefinition[] {
-        return [...models].sort((a, b) => {
-            const getScore = (m: ModelDefinition) => {
+        const filtered = models.filter(m => {
+            if (m.provider === 'gemini') {
+                if (m.id.match(/^gemini-2\./)) return false;
+            }
+            return true;
+        });
+
+        return filtered.sort((a, b) => {
+            const getRank = (m: ModelDefinition) => {
                 const id = m.id.toLowerCase();
-                let score = 0;
-                if (id.includes('gemini-3')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_3;
-                else if (id.includes('gemini-2.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2_5;
-                else if (id.includes('gemini-2')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2;
-                else if (id.includes('gemini-1.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_5;
-                else if (id.includes('gemini-1.0')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_0;
-
-                if (id.includes('pro')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PRO_BOOST;
-                else if (id.includes('flash')) score += MODEL_REGISTRY_CONSTANTS.SCORES.FLASH_BOOST;
-                else if (id.includes('lite')) score += MODEL_REGISTRY_CONSTANTS.SCORES.LITE_BOOST;
-
-                if (id.includes('preview')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PREVIEW_PENALTY;
-                if (id.includes('experimental')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EXPERIMENTAL_PENALTY;
-
-                if (!id.includes('preview') && !id.includes('experimental')) {
-                    score += MODEL_REGISTRY_CONSTANTS.PRODUCTION_BOOST;
-                }
-
-                // Prioritize embedding if it's an embedding request? No, this is general sort.
-                if (id.includes('embedding')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EMBEDDING_BOOST;
-
-                return score;
+                if (id.match(/^gemini-.*-latest$/)) return 1;
+                if (id.match(/^gemini-embedding-/)) return 2;
+                if (id.match(/^gemini-/)) return 4;
+                if (id.match(/^gemma-/)) return 5;
+                return 6;
             };
 
-            return getScore(b) - getScore(a);
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) return rankA - rankB;
+
+            return a.label.localeCompare(b.label);
         });
     }
 
