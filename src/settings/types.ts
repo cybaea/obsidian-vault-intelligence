@@ -177,7 +177,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerSystemInstruction: null, // Use default by reference
     geminiRetries: 10,
     googleApiKey: '',
-    groundingModel: 'gemini-2.5-flash-lite',
+    groundingModel: 'gemini-flash-lite-latest',
     hiddenModels: [],
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
     indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
