@@ -1,4 +1,4 @@
-import { Setting, ButtonComponent, ToggleComponent, TextComponent } from "obsidian";
+import { SettingGroup, Setting, ButtonComponent, ToggleComponent, TextComponent } from "obsidian";
 
 import { SettingsTabContext } from "../SettingsTabContext";
 import { MCPServerConfig } from "../types";
@@ -6,10 +6,12 @@ import { MCPServerConfig } from "../types";
 export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): void {
     containerEl.empty();
     
-    containerEl.createEl("h3", { text: 'External ' + 'MCP' + ' servers' });
-    containerEl.createEl("p", { 
-        text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools." 
+    const mcpHeading = document.createDocumentFragment();
+    mcpHeading.appendText('External ' + 'MCP' + ' servers');
+    mcpHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools." });
     });
+    new SettingGroup(containerEl).setHeading(mcpHeading);
 
     const renderKeyValueEditor = (
         container: HTMLElement, 
@@ -206,7 +208,10 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
 
     const renderEditor = (server: MCPServerConfig | null, index: number = -1) => {
         containerEl.empty();
-        containerEl.createEl("h3", { text: server ? 'Edit ' + 'MCP' + ' server' : 'Add ' + 'MCP' + ' server' });
+        
+        const editorHeading = document.createDocumentFragment();
+        editorHeading.appendText(server ? 'Edit ' + 'MCP' + ' server' : 'Add ' + 'MCP' + ' server');
+        const editorGroup = new SettingGroup(containerEl).setHeading(editorHeading);
         
         let currentConfig: MCPServerConfig = server ? JSON.parse(JSON.stringify(server)) as MCPServerConfig : {
             enabled: true,
@@ -216,16 +221,17 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             type: "stdio",
         };
 
-        new Setting(containerEl)
-            .setName("Server name")
+        editorGroup.addSetting(setting => {
+            setting.setName("Server name")
             .setDesc('A friendly name for this server (e.g., ' + '"GitHub" + " info)")')
             .addText(text => text
                 .setValue(currentConfig.name)
                 .onChange(v => currentConfig.name = v)
             );
+        });
 
-        new Setting(containerEl)
-            .setName("Connection type")
+        editorGroup.addSetting(setting => {
+            setting.setName("Connection type")
             .setDesc("Stdio runs a local binary. Remote options connect to a " + "URL" + ".")
             .addDropdown(drop => drop
                 .addOptions({ "sse": "SSE (remote)", "stdio": "Stdio (desktop only)", "streamable_http": "Streamable HTTP (remote)" })
@@ -235,20 +241,25 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     renderEditor(currentConfig, index); // re-render fields
                 })
             );
+        });
 
         if (currentConfig.type === "stdio") {
-            const cmdSetting = new Setting(containerEl)
-                .setName("Command")
-                .setDesc("Absolute path to the executable (e.g. /usr/local/bin/python or /opt/homebrew/bin/node). Avoid wrappers like 'npx' or relative paths.")
+            const cmdDesc = document.createDocumentFragment();
+            cmdDesc.appendText("Absolute path to the executable (e.g. /usr/local/bin/python or /opt/homebrew/bin/node). Avoid wrappers like 'npx' or relative paths.");
+            
+            editorGroup.addSetting(setting => {
+                setting.setName("Command")
+                .setDesc(cmdDesc)
                 .addText(text => text
                     .setValue(currentConfig.command || "")
                     .onChange(v => currentConfig.command = v)
                 );
-            // Highlight warning
-            cmdSetting.descEl.setCssProps({ "color": "var(--text-warning)" });
+                // Highlight warning
+                setting.descEl.setCssProps({ "color": "var(--text-warning)" });
+            });
 
-            new Setting(containerEl)
-                .setName("Arguments")
+            editorGroup.addSetting(setting => {
+                setting.setName("Arguments")
                 .setDesc("Enter arguments line by line (one argument per line). Avoids command-line string escaping issues.")
                 .addTextArea(text => {
                     text.setValue((currentConfig.args || []).join('\n'));
@@ -258,6 +269,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     text.inputEl.rows = 3;
                     return text;
                 });
+            });
 
             renderKeyValueEditor(
                 containerEl,
@@ -269,13 +281,14 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 "env"
             );
         } else {
-            new Setting(containerEl)
-                .setName("Server " + "URL")
+            editorGroup.addSetting(setting => {
+                setting.setName("Server " + "URL")
                 .setDesc("The full HTTP(S) " + "URL" + ` of the ${currentConfig.type === 'streamable_http' ? 'streamable HTTP' : 'SSE'} endpoint.`)
                 .addText(text => text
                     .setValue(currentConfig.url || "")
                     .onChange(v => currentConfig.url = v)
                 );
+            });
 
             renderKeyValueEditor(
                 containerEl,
@@ -288,13 +301,14 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             );
         }
 
-        new Setting(containerEl)
-            .setName("Require explicit confirmation")
+        editorGroup.addSetting(setting => {
+            setting.setName("Require explicit confirmation")
             .setDesc("If on, you will be prompted to confirm every execution of this server's tools. Turn off only for explicitly safe, read-only tools.")
             .addToggle(toggle => toggle
                 .setValue(currentConfig.requireExplicitConfirmation)
                 .onChange(v => currentConfig.requireExplicitConfirmation = v)
             );
+        });
 
         const btnRow = containerEl.createDiv();
         btnRow.setCssProps({ "display": "flex", "gap": "1em", "margin-top": "2em" });
