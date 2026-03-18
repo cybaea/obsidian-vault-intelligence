@@ -264,7 +264,7 @@ export class ToolRegistry {
                     }
                 }
                 
-                return await this.mcpClientManager.executeTool(name, args);
+                return await this.mcpClientManager.executeTool(name, args, params.signal);
             }
 
             switch (name) {

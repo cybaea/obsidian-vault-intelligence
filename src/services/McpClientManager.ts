@@ -524,7 +524,7 @@ export class McpClientManager implements IProvider {
         return this.toolNameMap.get(namespaceName)?.originalName;
     }
 
-    public async executeTool(namespaceName: string, args: Record<string, unknown>): Promise<{ text: string }> {
+    public async executeTool(namespaceName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<{ text: string }> {
         const mapping = this.toolNameMap.get(namespaceName);
         if (!mapping) throw new ProviderError(`Unrecognized MCP tool namespace or server disconnected: ${namespaceName}`, "mcp");
 
@@ -545,12 +545,22 @@ export class McpClientManager implements IProvider {
         try {
             // Include strict timeout
             const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS));
+            
+            const abortPromises: Promise<never>[] = [];
+            if (signal) {
+                if (signal.aborted) return { text: "[Tool execution was cancelled by the user]" };
+                abortPromises.push(new Promise<never>((_, reject) => {
+                    const onAbort = () => reject(new Error("AbortError"));
+                    signal.addEventListener('abort', onAbort, { once: true });
+                }));
+            }
+
             const execPromise = connection.client.callTool({
                 arguments: args,
                 name: mapping.originalName
             });
 
-            const result = await Promise.race([execPromise, timeoutPromise]) as CallToolResult;
+            const result = await Promise.race([execPromise, timeoutPromise, ...abortPromises]) as CallToolResult;
             
             let outputText = "";
             if (result.content && result.content.length > 0) {
@@ -583,6 +593,9 @@ export class McpClientManager implements IProvider {
             return { text: outputText || "[Tool executed successfully with no output]" };
 
         } catch (error) {
+            if (error instanceof Error && error.message === "AbortError") {
+                return { text: "[Tool execution was cancelled by the user]" };
+            }
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
         }
     }

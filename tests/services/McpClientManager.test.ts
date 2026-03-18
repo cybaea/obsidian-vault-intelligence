@@ -225,4 +225,54 @@ describe('McpClientManager', () => {
         expect(connection?.status).toBe('error');
         expect(connection?.errorMessage).toContain('Missing secret for header Authorization');
     });
+
+    it('should abort MCP tool execution if AbortSignal is used', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        const managerWithInternal = manager as unknown as { 
+            connections: Map<string, unknown>; 
+            toolNameMap: Map<string, unknown>;
+        };
+
+        managerWithInternal.connections.set('test-server', {
+            client: {
+                callTool: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 1000)))
+            },
+            config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
+            status: 'connected'
+        } as unknown);
+
+        managerWithInternal.toolNameMap.set('mcp__test-server__long-tool', {
+            originalName: 'long-tool',
+            serverId: 'test-server'
+        });
+
+        const controller = new AbortController();
+        const promise = manager.executeTool('mcp__test-server__long-tool', {}, controller.signal);
+        
+        controller.abort();
+        const result = await promise;
+        
+        expect(result.text).toBe("[Tool execution was cancelled by the user]");
+    });
+
+    it('should list available MCP resources', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        const managerWithInternal = manager as unknown as { 
+            connections: Map<string, unknown>; 
+        };
+
+        managerWithInternal.connections.set('test-server', {
+            client: {
+                listResources: vi.fn().mockResolvedValue({ 
+                    resources: [{ name: 'Database Schema', uri: 'file:///schema.sql' }] 
+                })
+            },
+            config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
+            status: 'connected'
+        } as unknown);
+
+        const resources = await manager.getAvailableResources();
+        expect(resources).toHaveLength(1);
+        expect(resources[0]?.id).toBe('mcp__test-server__file:///schema.sql');
+    });
 });

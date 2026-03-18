@@ -48,6 +48,38 @@ export class ContextAssembler {
         const resultPaths = sortedResults.map(r => r.path);
         const metadataMap = this.graphService ? await this.graphService.getBatchMetadata(resultPaths) : {};
 
+        // INJECT MCP RESOURCES
+        if (this.mcpClientManager) {
+            try {
+                const resources = await this.mcpClientManager.getAvailableResources();
+                for (const res of resources) {
+                    if (currentUsageTokens >= budgetTokens) break;
+                    try {
+                        const content = await this.mcpClientManager.readResource(res.serverId as string, res.uri as string);
+                        if (content && content.contents && Array.isArray(content.contents)) {
+                            for (const c of content.contents as { text?: string }[]) {
+                                if (c.text) {
+                                    const header = `\n--- External MCP Resource: ${String(res.name || res.uri)} ---\n`;
+                                    const estimatedTokens = Math.ceil((header.length + c.text.length) / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                                    
+                                    // Inject if it fits (e.g. up to 1/3 of total budget per resource)
+                                    if (estimatedTokens < budgetTokens * 0.33 && currentUsageTokens + estimatedTokens < budgetTokens) {
+                                        constructedContext += header + c.text + "\n";
+                                        currentUsageTokens += estimatedTokens;
+                                        logger.debug(`[ContextAssembler] Injected MCP Resource: ${String(res.uri)} (${estimatedTokens} tokens)`);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                         logger.debug(`[ContextAssembler] Failed to read MCP resource ${String(res.uri)}:`, e);
+                    }
+                }
+            } catch (e) {
+                logger.debug("[ContextAssembler] Failed to get MCP resources:", e);
+            }
+        }
+
         // Settings / Thresholds
         const primaryThreshold = this.settings?.contextPrimaryThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_PRIMARY_THRESHOLD;
         const supportingThreshold = this.settings?.contextSupportingThreshold || SEARCH_CONSTANTS.DEFAULT_CONTEXT_SUPPORTING_THRESHOLD;
