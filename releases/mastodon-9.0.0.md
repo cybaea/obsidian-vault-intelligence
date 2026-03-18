@@ -1,7 +1,7 @@
-Vault Intelligence brings AI to #Obsidian as a dedicated research assistant. This update brings true autonomy to your vault: full local AI support to keep your data on your machine, combined with the ability to safely query your external databases and APIs.
+Vault Intelligence brings AI to #Obsidian as a dedicated research assistant. This update brings autonomy to your vault: full local AI support to keep your data on your machine, combined with the ability to safely query your external APIs.
 
 https://github.com/cybaea/obsidian-vault-intelligence
-@obsidian@mas.to #PKM #Obsidian
+@obsidian@mas.to #PKM #Obsidian #OSS MIT Licence
 
 ---
 
