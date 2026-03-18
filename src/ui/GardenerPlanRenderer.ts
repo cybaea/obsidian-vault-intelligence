@@ -108,13 +108,13 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                 const values = Array.isArray(change.newValue) ? change.newValue : [change.newValue];
 
                 for (const val of values) {
-                    const valueStr = String(val);
+                    const valueStr = String(val).replace(/^["']+|["']+$/g, "").trim();
                     const isLink = valueStr.match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
 
                     const valueWrapper = valuesContainer.createDiv({ cls: "change-value-wrapper" });
 
                     if (isLink && isLink[1] && isLink[2]) {
-                        const linkName = isLink[1].replace(/[[\]]/g, "").trim();
+                        const linkName = isLink[1].replace(/[[\]]/g, "").replace(/^["']+|["']+$/g, "").trim();
                         const linkPath = decodeURIComponent(isLink[2]);
 
                         const valueSpan = valueWrapper.createEl("a", { cls: "change-value interactive-link", text: linkName });
@@ -230,7 +230,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         if (change.field === "topics" && Array.isArray(change.newValue)) {
                             const value = change.newValue;
                             const excluded = this.excludedValues.get(index);
-                            const topicsToApply = excluded ? value.filter(v => !excluded.has(String(v))) : value;
+                            const topicsToApply = excluded ? value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim())) : value;
 
                             for (const topicLink of topicsToApply) {
                                 const match = String(topicLink).match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
@@ -268,10 +268,10 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                             if (Array.isArray(value)) {
                                 const excluded = this.excludedValues.get(index);
                                 if (excluded) {
-                                    value = value.filter(v => !excluded.has(String(v)));
+                                    value = value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim()));
                                 }
                             } else {
-                                if (this.excludedValues.get(index)?.has(String(value))) {
+                                if (this.excludedValues.get(index)?.has(String(value).replace(/^["']+|["']+$/g, "").trim())) {
                                     continue; // Skip single value if excluded
                                 }
                             }
