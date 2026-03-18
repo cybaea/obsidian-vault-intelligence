@@ -126,6 +126,12 @@ interface OllamaVersionResponse {
     version: string;
 }
 
+interface NdjsonStreamState {
+    fullMessageText: string;
+    inToolCall: boolean;
+    tempToolCallBuffer: string;
+}
+
 /**
  * Provider for local models via Ollama.
  * Uses Obsidian's requestUrl to bypass CORS and implement SSRF protection.
@@ -256,6 +262,83 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     get supportsTools(): boolean { return true; } 
     get supportsWebGrounding(): boolean { return false; }
 
+    private *processNdjsonChunk(chunk: OllamaChatChunk, state: NdjsonStreamState): IterableIterator<StreamChunk> {
+        if (chunk.message) {
+            let newText = chunk.message.content;
+            state.fullMessageText += newText;
+
+            if (!state.inToolCall && newText.includes("<tool_call>")) {
+                const split = newText.split("<tool_call>");
+                if (split[0]) yield { text: split[0] };
+                state.inToolCall = true;
+                state.tempToolCallBuffer = split.slice(1).join("<tool_call>");
+                newText = "";
+            } else if (state.inToolCall) {
+                state.tempToolCallBuffer += newText;
+                if (state.tempToolCallBuffer.includes("</tool_call>")) {
+                    state.inToolCall = false;
+                    const split = state.tempToolCallBuffer.split("</tool_call>");
+                    state.tempToolCallBuffer = "";
+                    if (split.length > 1 && split[1]) {
+                        newText = split[1];
+                    } else {
+                        newText = "";
+                    }
+                } else {
+                    newText = "";
+                }
+            }
+
+            if (newText || (chunk.message.tool_calls && chunk.message.tool_calls.length > 0)) {
+                yield {
+                    text: newText,
+                    toolCalls: chunk.message.tool_calls?.map(tc => ({
+                        args: tc.function.arguments,
+                        id: tc.id || crypto.randomUUID(),
+                        name: tc.function.name
+                    }))
+                };
+            }
+        }
+
+        if (chunk.done) {
+            const extractedToolCalls: ToolCall[] = [];
+            let scrubbedText = state.fullMessageText;
+            
+            const regex = /<tool_call>([\s\S]*?)<\/tool_call>/g;
+            let match;
+            while ((match = regex.exec(state.fullMessageText)) !== null) {
+                if (!match[1]) continue;
+                try {
+                    const parsed = JSON.parse(match[1]) as unknown;
+                    if (parsed && typeof parsed === 'object') {
+                        extractedToolCalls.push(parsed as ToolCall);
+                    }
+                    scrubbedText = scrubbedText.replace(match[0], "").trim();
+                } catch (parseErr) {
+                    logger.warn("[Ollama] Failed to parse ReAct JSON", parseErr, match[1]);
+                }
+            }
+
+            if (extractedToolCalls.length === 0) {
+                const extraction = this.extractFallbackToolCalls(state.fullMessageText);
+                if (extraction.toolCalls.length > 0) {
+                    extractedToolCalls.push(...extraction.toolCalls);
+                    scrubbedText = extraction.scrubbedText;
+                }
+            }
+
+            const tokens = (chunk.prompt_eval_count || 0) + (chunk.eval_count || 0);
+
+            yield { 
+                isDone: true,
+                replaceText: scrubbedText,
+                tokens: tokens > 0 ? tokens : undefined,
+                toolCalls: extractedToolCalls.length > 0 ? extractedToolCalls : undefined
+            };
+        }
+    }
+
     /**
      * Non-streaming chat generation.
      */
@@ -325,9 +408,11 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
             const decoder = new TextDecoder();
             let buffer = "";
-            let fullMessageText = "";
-            let inToolCall = false;
-            let tempToolCallBuffer = "";
+            const state: NdjsonStreamState = {
+                fullMessageText: "",
+                inToolCall: false,
+                tempToolCallBuffer: ""
+            };
 
             try {
                 while (true) {
@@ -352,74 +437,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         if (!line.trim()) continue;
                         try {
                             const chunk = JSON.parse(line) as OllamaChatChunk;
-                            
-                            if (chunk.message) {
-                                let newText = chunk.message.content;
-                                fullMessageText += newText;
-                                
-                                // Buffer and strip <tool_call> block from UI output
-                                if (!inToolCall && newText.includes("<tool_call>")) {
-                                    const split = newText.split("<tool_call>");
-                                    if (split[0]) {
-                                        yield { text: split[0] };
-                                    }
-                                    inToolCall = true;
-                                    tempToolCallBuffer = split.slice(1).join("<tool_call>");
-                                    newText = "";
-                                } else if (inToolCall) {
-                                    tempToolCallBuffer += newText;
-                                    if (tempToolCallBuffer.includes("</tool_call>")) {
-                                        inToolCall = false;
-                                        const split = tempToolCallBuffer.split("</tool_call>");
-                                        tempToolCallBuffer = "";
-                                        // Yield whatever comes after the closing tag
-                                        if (split.length > 1 && split[1]) {
-                                            newText = split[1];
-                                        } else {
-                                            newText = "";
-                                        }
-                                    } else {
-                                        newText = "";
-                                    }
-                                }
-
-                                if (newText || (chunk.message.tool_calls && chunk.message.tool_calls.length > 0)) {
-                                    yield {
-                                        text: newText,
-                                        toolCalls: chunk.message.tool_calls?.map(tc => ({
-                                            args: tc.function.arguments,
-                                            id: tc.id || crypto.randomUUID(),
-                                            name: tc.function.name
-                                        }))
-                                    };
-                                }
-                            }
-
-                            if (chunk.done) {
-                                let extractedToolCalls;
-                                let scrubbedText;
-                                const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
-                                if (toolMatch && toolMatch[1]) {
-                                    try {
-                                        extractedToolCalls = [JSON.parse(toolMatch[1])];
-                                        scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
-                                    } catch (parseErr) {
-                                        logger.warn("[Ollama] Failed to parse ReAct JSON", parseErr, toolMatch[1]);
-                                    }
-                                } else {
-                                    const extraction = this.extractFallbackToolCalls(fullMessageText);
-                                    if (extraction.toolCalls.length > 0) {
-                                        extractedToolCalls = extraction.toolCalls;
-                                        scrubbedText = extraction.scrubbedText;
-                                    }
-                                }
-
-                                yield { 
-                                    isDone: true,
-                                    replaceText: scrubbedText,
-                                    toolCalls: extractedToolCalls
-                                };
-                            }
+                            yield* this.processNdjsonChunk(chunk, state);
                         } catch (parseError) {
                             logger.error("[Ollama] Failed to parse NDJSON line", parseError, line);
                         }
@@ -523,9 +541,11 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const res = await promise;
         const decoder = new TextDecoder();
         let buffer = "";
-        let fullMessageText = "";
-        let inToolCall = false;
-        let tempToolCallBuffer = "";
+        const state: NdjsonStreamState = {
+            fullMessageText: "",
+            inToolCall: false,
+            tempToolCallBuffer: ""
+        };
 
         try {
             for await (const chunk of res) {
@@ -541,76 +561,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     if (!line.trim()) continue;
                     try {
                         const data = JSON.parse(line) as OllamaChatChunk;
-                        
-                        if (data.message) {
-                            let newText = data.message.content;
-                            fullMessageText += newText;
-
-                            if (!inToolCall && newText.includes("<tool_call>")) {
-                                const split = newText.split("<tool_call>");
-                                if (split[0]) {
-                                    yield { text: split[0] };
-                                }
-                                inToolCall = true;
-                                tempToolCallBuffer = split.slice(1).join("<tool_call>");
-                                newText = "";
-                            } else if (inToolCall) {
-                                tempToolCallBuffer += newText;
-                                if (tempToolCallBuffer.includes("</tool_call>")) {
-                                    inToolCall = false;
-                                    const split = tempToolCallBuffer.split("</tool_call>");
-                                    tempToolCallBuffer = "";
-                                    if (split.length > 1 && split[1]) {
-                                        newText = split[1];
-                                    } else {
-                                        newText = "";
-                                    }
-                                } else {
-                                    newText = "";
-                                }
-                            }
-
-                            if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
-                                yield {
-                                    text: newText,
-                                    toolCalls: data.message.tool_calls?.map(tc => ({
-                                        args: tc.function.arguments,
-                                        id: tc.id || crypto.randomUUID(),
-                                        name: tc.function.name
-                                    }))
-                                };
-                            }
-                        }
-
-                        if (data.done) {
-                            let extractedToolCalls;
-                            let scrubbedText;
-                            const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
-                            if (toolMatch && toolMatch[1]) {
-                                try {
-                                    extractedToolCalls = [JSON.parse(toolMatch[1])];
-                                    scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
-                                } catch (parseErr) {
-                                    logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
-                                }
-                            } else {
-                                const extraction = this.extractFallbackToolCalls(fullMessageText);
-                                if (extraction.toolCalls.length > 0) {
-                                    extractedToolCalls = extraction.toolCalls;
-                                    scrubbedText = extraction.scrubbedText;
-                                }
-                            }
-
-                            // Do not erase scrubbedText aggressively here to avoid wiping out valid pre-tool-call text
-
-                            // Pass exact token telemetry back to service
-                            yield { 
-                                isDone: true,
-                                replaceText: scrubbedText,
-                                tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
-                                toolCalls: extractedToolCalls
-                            };
-                        }
+                        yield* this.processNdjsonChunk(data, state);
                     } catch (parseError) {
                         logger.error("[Ollama] Failed to parse NDJSON line in node stream", parseError, line);
                     }
@@ -620,69 +571,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             if (buffer.trim()) {
                 try {
                     const data = JSON.parse(buffer) as OllamaChatChunk;
-                    
-                    if (data.message) {
-                        let newText = data.message.content;
-                        fullMessageText += newText;
-
-                        if (!inToolCall && newText.includes("<tool_call>")) {
-                            const split = newText.split("<tool_call>");
-                            if (split[0]) yield { text: split[0] };
-                            inToolCall = true;
-                            tempToolCallBuffer = split.slice(1).join("<tool_call>");
-                            newText = "";
-                        } else if (inToolCall) {
-                            tempToolCallBuffer += newText;
-                            if (tempToolCallBuffer.includes("</tool_call>")) {
-                                inToolCall = false;
-                                const split = tempToolCallBuffer.split("</tool_call>");
-                                tempToolCallBuffer = "";
-                                newText = split.length > 1 && split[1] ? split[1] : "";
-                            } else {
-                                newText = "";
-                            }
-                        }
-
-                        if (newText || (data.message.tool_calls && data.message.tool_calls.length > 0)) {
-                            yield {
-                                text: newText,
-                                toolCalls: data.message.tool_calls?.map(tc => ({
-                                    args: tc.function.arguments,
-                                    id: tc.id || crypto.randomUUID(),
-                                    name: tc.function.name
-                                }))
-                            };
-                        }
-                    }
-
-                    if (data.done) {
-                        let extractedToolCalls;
-                        let scrubbedText;
-                        const toolMatch = fullMessageText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
-                        if (toolMatch && toolMatch[1]) {
-                            try {
-                                extractedToolCalls = [JSON.parse(toolMatch[1])];
-                                scrubbedText = fullMessageText.replace(toolMatch[0], "").trim();
-                            } catch (parseErr) {
-                                logger.warn("[Ollama] Failed to parse ReAct JSON in node stream", parseErr, toolMatch[1]);
-                            }
-                        } else {
-                            const extraction = this.extractFallbackToolCalls(fullMessageText);
-                            if (extraction.toolCalls.length > 0) {
-                                extractedToolCalls = extraction.toolCalls;
-                                scrubbedText = extraction.scrubbedText;
-                            }
-                        }
-
-                        // Do not erase scrubbedText aggressively here to avoid wiping out valid pre-tool-call text
-
-                        yield { 
-                            isDone: true,
-                            replaceText: scrubbedText,
-                            tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
-                            toolCalls: extractedToolCalls
-                        };
-                    }
+                    yield* this.processNdjsonChunk(data, state);
                 } catch (parseError) {
                     logger.error("[Ollama] Failed to parse remaining NDJSON buffer in node stream", parseError, buffer);
                 }

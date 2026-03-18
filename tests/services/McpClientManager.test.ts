@@ -4,6 +4,19 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { McpClientManager } from "../../src/services/McpClientManager";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, MCPServerConfig } from "../../src/settings/types";
 
+// Mock StdioClientTransport
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
+    StdioClientTransport: vi.fn().mockImplementation(() => ({
+        close: vi.fn(),
+        start: vi.fn()
+    }))
+}));
+
+vi.mock('obsidian', () => ({
+    Notice: vi.fn(),
+    Platform: { isDesktopApp: true, isMobile: false }
+}));
+
 // Mock global crypto for testing environment
 const mockCryptoSubtle = {
     digest: vi.fn().mockImplementation(() => {
@@ -88,6 +101,50 @@ describe('McpClientManager', () => {
         expect(manager.checkTrustState(stdioConfig).trusted).toBe(false);
         expect(manager.checkTrustState(sseConfig).trusted).toBe(false);
         expect(manager.checkTrustState(httpConfig).trusted).toBe(false);
+    });
+
+    it('should strip SENSITIVE_KEY from environment passed to StdioClientTransport', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        
+        const serverConfig = {
+            args: [],
+            command: '/path/to/binary',
+            enabled: true,
+            id: 'test-server',
+            name: 'Test Env Scrub',
+            requireExplicitConfirmation: false,
+            type: 'stdio' as const
+        };
+
+        // Inject trust so it connects
+        mockLocalStorageValue[`vi-mcp-trust-${serverConfig.id}`] = '0102030405';
+
+        const managerWithInternal = manager as unknown as { connectServer(config: MCPServerConfig): Promise<void> };
+        
+        // This will attempt import of @modelcontextprotocol/sdk/client/stdio.js which is mocked
+        // However, there is a client creation in the manager which will fail because `Client` isn't mocked.
+        // Let's mock Client
+        try {
+            await managerWithInternal.connectServer(serverConfig as MCPServerConfig);
+        } catch {
+            // Error intentionally swallowed for test purposes if it fails down the line
+        }
+
+        const mcpSdkMock = await import('@modelcontextprotocol/sdk/client/stdio.js');
+        const mk = mcpSdkMock.StdioClientTransport as unknown as ReturnType<typeof vi.fn>;
+        
+        expect(mk).toHaveBeenCalled();
+        const firstCall = mk.mock.calls[0];
+        if (!firstCall) throw new Error("Expected call arguments");
+        const transportConfig = firstCall[0] as { env?: Record<string, string> };
+        
+        // SENSITIVE_KEY is in global process.env from line 34, but should not be in transportConfig.env
+        expect(transportConfig.env).toBeDefined();
+        if (transportConfig.env) {
+            expect(transportConfig.env['SENSITIVE_KEY']).toBeUndefined();
+            expect(transportConfig.env['PATH']).toContain('/bin');
+            expect(transportConfig.env['OBSIDIAN_VAULT_INTELLIGENCE']).toBe('true');
+        }
     });
 
     it('should block remote connections if trust hash is invalid (Trust Hash Bypass fix)', async () => {

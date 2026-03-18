@@ -118,6 +118,9 @@ export const EMBEDDING_CONSTANTS = {
 };
 
 export const WORKER_CONSTANTS = {
+    /** Timeout for standard API requests (30 seconds) */
+    API_REQUEST_TIMEOUT_MS: 30000,
+
     /** Stability: Threshold for "early crash" immediately after boot (10s) */
     BOOT_CRASH_THRESHOLD_MS: 10000,
 
@@ -126,6 +129,9 @@ export const WORKER_CONSTANTS = {
 
     /** Circuit Breaker: Window to detect crash loops (1 min) */
     CRASH_LOOP_WINDOW_MS: 60000,
+
+    /** Timeout for fetching heavy assets like model weights (15 minutes) */
+    HEAVY_ASSET_TIMEOUT_MS: 900000,
 
     /** Size of character blocks to process to avoid WASM heap exhaustion */
     MAX_CHARS_PER_TOKENIZATION_BLOCK: 10000,
@@ -141,6 +147,11 @@ export const WORKER_CONSTANTS = {
 
     /** Standard version for Xenova Transformers CDN */
     WASM_VERSION: '2.17.2'
+};
+
+export const MCP_CONSTANTS = {
+    /** Timeout for executing an MCP tool (ms) */
+    TOOL_EXECUTION_TIMEOUT_MS: 60000
 };
 
 export const WORKER_INDEXER_CONSTANTS = {
@@ -334,6 +345,9 @@ export const SANITIZATION_CONSTANTS = {
     DEFAULT_EMBEDDING_DIMENSION: 768,
     /** Safe fallback context tokens for local LLMs */
     DEFAULT_LOCAL_CONTEXT_TOKENS: 8192,
+
+    /** Limit for string length before truncation in logs */
+    MAX_LOG_STRING_LENGTH: 500,
 
     /** Absolute maximum token limit used for sanity checks */
     MAX_TOKEN_LIMIT_SANITY: 1048576,

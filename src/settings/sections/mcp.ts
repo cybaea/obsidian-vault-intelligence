@@ -1,4 +1,4 @@
-import { Setting, ButtonComponent, ToggleComponent } from "obsidian";
+import { Setting, ButtonComponent, ToggleComponent, TextComponent } from "obsidian";
 
 import { SettingsTabContext } from "../SettingsTabContext";
 import { MCPServerConfig } from "../types";
@@ -73,11 +73,18 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 const row = wrapper.createDiv("vi-kv-row");
                 row.setCssProps({ alignItems: "center", display: "flex", gap: "0.5em", marginBottom: "0.5em" });
                 
-                const keyInput = row.createEl("input", { placeholder: "Key", type: "text", value: pair.key });
-                keyInput.onchange = (e) => { pair.key = (e.target as HTMLInputElement).value; void savePairs(); };
+                new TextComponent(row)
+                    .setPlaceholder("Key")
+                    .setValue(pair.key)
+                    .onChange(v => { pair.key = v; void savePairs(); });
 
-                const valInput = row.createEl("input", { placeholder: "Value", type: pair.isSecret ? "password" : "text", value: pair.value });
-                valInput.onchange = (e) => { pair.value = (e.target as HTMLInputElement).value; void savePairs(); };
+                const valComp = new TextComponent(row)
+                    .setPlaceholder("Value")
+                    .setValue(pair.value)
+                    .onChange(v => { pair.value = v; void savePairs(); });
+                if (pair.isSecret) {
+                    valComp.setPassword();
+                }
 
                 const secretToggleLabel = row.createEl("label");
                 secretToggleLabel.setCssProps({ alignItems: "center", color: "var(--text-muted)", display: "flex", fontSize: "0.8em", gap: "0.2em" });

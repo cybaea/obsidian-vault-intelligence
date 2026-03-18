@@ -81,7 +81,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
         description: 'Fast, efficient, and great for most tasks.',
         id: 'gemini-flash-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
         provider: 'gemini'
@@ -89,7 +89,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
         description: 'Maximum intelligence for complex reasoning.',
         id: 'gemini-pro-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         label: 'Gemini 3 Pro',
         provider: 'gemini'
     }
@@ -98,7 +98,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
 export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
     {
         id: 'gemini-flash-lite-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         isDefault: true,
         label: 'Latest release of Gemini Flash-Lite (Default)',
         provider: 'gemini'

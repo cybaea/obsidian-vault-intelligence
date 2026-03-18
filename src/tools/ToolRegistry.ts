@@ -1,6 +1,6 @@
 import { App, normalizePath, TFile, requestUrl } from "obsidian";
 
-import { AGENT_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { AGENT_CONSTANTS, SEARCH_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
@@ -9,6 +9,7 @@ import { ModelRegistry } from "../services/ModelRegistry";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
 import { IModelProvider, IReasoningClient, IToolDefinition } from "../types/providers";
+import { truncateJsonStrings, JsonValue } from "../utils/json";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
 import { FileTools } from "./FileTools";
@@ -239,7 +240,7 @@ export class ToolRegistry {
         const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
         const isWriteEnabled = enableAgentWriteAccess !== undefined ? enableAgentWriteAccess : this.settings.enableAgentWriteAccess;
 
-        logger.info(`Executing tool ${name} with args:`, args);
+        logger.info(`Executing tool ${name} with args:`, truncateJsonStrings(args as JsonValue, SANITIZATION_CONSTANTS.MAX_LOG_STRING_LENGTH));
 
         try {
             if (name.startsWith("mcp__")) {
