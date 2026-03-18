@@ -34,10 +34,13 @@ New features are added in the "Unreleased" section.
 -   **Chat deduplication**: Resolved an issue that could cause user messages to be duplicated in the chat history.
 -   **MCP Resource integration**: The Context Assembler can now automatically query connected MCP servers for live resources, injecting relevant database schemas, wikis, or external documentation directly into the Researcher's memory context.
 -   **High-performance UI streaming**: Completely refactored the chat rendering engine. The Researcher chat now streams characters directly onto the screen with zero frame drops or layout thrashing, reserving heavy Markdown formatting exclusively for the final completed response.
+-   **Granular web search control**: Added an "Enable web search" toggle giving you the ability to completely disable Google search integration, creating a cleaner offline experience.
+-   **Ollama stability**: Fixed a critical bug where the Computational Solver tool was incorrectly exposed to Ollama and other local models that do not natively support code execution, preventing tool hallucination loops.
 -   **Instant tool abortion**: Clicking "Stop" during a complex background task now instantly propagates a cancellation signal down to the active tools (and MCP servers), forcefully halting background scripts to save resources and API loops.
 
 ### Developer features
 
+-   **Strict tool gating**: Refactored `ToolRegistry` and API providers to strictly gate native tool injection (Search, Calculator) based on the intersection of user `ChatOptions` toggles and provider `IReasoningCapabilities`.
 -   **Secure MCP Execution**: Hardened `McpClientManager` to scrub sensitive host environment variables from child processes, explicitly exposing only a whitelist of safe variables (`PATH`, `DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, etc.), and enforcing mandatory Trust Hash verification across all transport types to prevent zero-click RCE vulnerabilities.
 -   **MCP Secret Storage**: Refactored the MCP Settings UI and data model to migrate plaintext environment variables and connection headers into Obsidian's native OS-encrypted `SecretStorage`.
 -   **McpClientManager**: Engineered a robust service to negotiate the Model Context Protocol, featuring `child_process` tree killing to prevent zombie processes, trust hash generation, and environmental variable merging.
