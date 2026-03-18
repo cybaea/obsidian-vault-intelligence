@@ -32,7 +32,7 @@ New features are added in the "Unreleased" section.
 -   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
 -   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.
 -   **Chat deduplication**: Resolved an issue that could cause user messages to be duplicated in the chat history.
--   **MCP Resource integration**: The Context Assembler can now automatically query connected MCP servers for live resources, injecting relevant database schemas, wikis, or external documentation directly into the Researcher's memory context.
+-   **MCP Resource integration**: The Researcher agent can now dynamically query connected MCP servers for live resources on-demand via explicit tools, injecting relevant database schemas, wikis, or external documentation into its memory context without stalling your vault searches.
 -   **High-performance UI streaming**: Completely refactored the chat rendering engine. The Researcher chat now streams characters directly onto the screen with zero frame drops or layout thrashing, reserving heavy Markdown formatting exclusively for the final completed response.
 -   **Granular web search control**: Added an "Enable web search" toggle giving you the ability to completely disable Google search integration, creating a cleaner offline experience.
 -   **Ollama stability**: Fixed a critical bug where the Computational Solver tool was incorrectly exposed to Ollama and other local models that do not natively support code execution, preventing tool hallucination loops.
