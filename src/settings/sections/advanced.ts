@@ -1,4 +1,4 @@
-import { Setting, SettingGroup, setIcon } from "obsidian";
+import { SettingGroup, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
@@ -158,47 +158,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    // --- 3. Model filtering ---
-    const filterHeading = document.createDocumentFragment();
-    filterHeading.appendText('Model filtering');
-    filterHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
-        div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
-    });
-    const filterGroup = new SettingGroup(containerEl).setHeading(filterHeading);
-
-    const allModels = ModelRegistry.getAllKnownModels();
-    if (allModels.length > 0) {
-        allModels.forEach((model) => {
-            const isHidden = plugin.settings.hiddenModels.includes(model.id);
-            filterGroup.addSetting(setting => {
-                setting.setName(model.label)
-                .setDesc(model.id)
-                .addToggle(toggle => toggle
-                    .setValue(!isHidden)
-                    .setTooltip(isHidden ? "Currently hidden" : "Currently visible")
-                    .onChange(async (value) => {
-                        if (value) {
-                            plugin.settings.hiddenModels = plugin.settings.hiddenModels.filter(id => id !== model.id);
-                        } else {
-                            if (!plugin.settings.hiddenModels.includes(model.id)) {
-                                plugin.settings.hiddenModels.push(model.id);
-                            }
-                        }
-                        await plugin.saveSettings();
-                        plugin.app.workspace.trigger('vault-intelligence:models-updated');
-                    })
-                );
-            });
-        });
-    } else {
-        filterGroup.addSetting(setting => {
-            setting.setName('No models available')
-            .setDesc('Configure a provider and fetch models to filter them.')
-            .setDisabled(true);
-        });
-    }
-
-    // --- 4. Search and Context Tuning ---
+    // --- 3. Search and Context Tuning ---
     const tuningHeading = document.createDocumentFragment();
     tuningHeading.appendText('Search and context tuning');
     tuningHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
@@ -327,7 +287,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    // --- 5. Developer and Debugging ---
+    // --- 4. Developer and Debugging ---
     const devHeading = document.createDocumentFragment();
     devHeading.appendText('Developer');
     devHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
@@ -378,7 +338,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    // --- 6. Security (Proactive SSRF Protection) ---
+    // --- 5. Security (Proactive SSRF Protection) ---
     const secHeading = document.createDocumentFragment();
     secHeading.appendText('Security');
     secHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
@@ -401,4 +361,44 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             })
         );
     });
+
+    // --- 6. Model filtering ---
+    const filterHeading = document.createDocumentFragment();
+    filterHeading.appendText('Model filtering');
+    filterHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
+    });
+    const filterGroup = new SettingGroup(containerEl).setHeading(filterHeading);
+
+    const allModels = ModelRegistry.getAllKnownModels();
+    if (allModels.length > 0) {
+        allModels.forEach((model) => {
+            const isHidden = plugin.settings.hiddenModels.includes(model.id);
+            filterGroup.addSetting(setting => {
+                setting.setName(model.label)
+                .setDesc(model.id)
+                .addToggle(toggle => toggle
+                    .setValue(!isHidden)
+                    .setTooltip(isHidden ? "Currently hidden" : "Currently visible")
+                    .onChange(async (value) => {
+                        if (value) {
+                            plugin.settings.hiddenModels = plugin.settings.hiddenModels.filter(id => id !== model.id);
+                        } else {
+                            if (!plugin.settings.hiddenModels.includes(model.id)) {
+                                plugin.settings.hiddenModels.push(model.id);
+                            }
+                        }
+                        await plugin.saveSettings();
+                        plugin.app.workspace.trigger('vault-intelligence:models-updated');
+                    })
+                );
+            });
+        });
+    } else {
+        filterGroup.addSetting(setting => {
+            setting.setName('No models available')
+            .setDesc('Configure a provider and fetch models to filter them.')
+            .setDisabled(true);
+        });
+    }
 }

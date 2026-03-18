@@ -1,4 +1,4 @@
-import { SettingGroup, Setting, ButtonComponent, ToggleComponent, TextComponent } from "obsidian";
+import { SettingGroup, ButtonComponent, ToggleComponent, TextComponent } from "obsidian";
 
 import { SettingsTabContext } from "../SettingsTabContext";
 import { MCPServerConfig } from "../types";
