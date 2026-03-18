@@ -5,16 +5,19 @@ import { VaultIntelligenceSettings } from "../settings/types";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { GraphService } from "./GraphService";
+import { McpClientManager } from "./McpClientManager";
 
 export class ContextAssembler {
     private app: App;
     private graphService?: GraphService;
     private settings?: VaultIntelligenceSettings;
+    private mcpClientManager?: McpClientManager;
 
-    constructor(app: App, graphService?: GraphService, settings?: VaultIntelligenceSettings) {
+    constructor(app: App, graphService?: GraphService, settings?: VaultIntelligenceSettings, mcpClientManager?: McpClientManager) {
         this.app = app;
         this.graphService = graphService;
         this.settings = settings;
+        this.mcpClientManager = mcpClientManager;
     }
 
     /**

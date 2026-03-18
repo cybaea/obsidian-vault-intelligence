@@ -3,17 +3,22 @@
  * Safe for use in both Node.js and Web Worker environments.
  */
 
+export const HASH_BASE = 31;
+export const HASH_MOD = 1000000009;
+
 /**
- * Fast 32-bit hash (DJB2) for use as a content anchor.
+ * Fast modulo-based polynomial string hash for use as a content anchor.
+ * Designed to be safely "rolled" (Rabin-Karp) in O(1) time.
  * @param text - The text to hash (only first 4,096 characters used for performance).
- * @returns A 32-bit unsigned integer.
+ * @returns A 32-bit integer modulo HASH_MOD.
  */
 export function fastHash(text: string): number {
-    let hash = 5381;
-    for (let i = 0; i < Math.min(text.length, 4096); i++) {
-        hash = (hash * 33) ^ text.charCodeAt(i);
+    let hash = 0;
+    const len = Math.min(text.length, 4096);
+    for (let i = 0; i < len; i++) {
+        hash = (hash * HASH_BASE + text.charCodeAt(i)) % HASH_MOD;
     }
-    return hash >>> 0;
+    return hash;
 }
 
 

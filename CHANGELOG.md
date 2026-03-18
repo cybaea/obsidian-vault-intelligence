@@ -32,6 +32,9 @@ New features are added in the "Unreleased" section.
 -   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
 -   **Thought signature persistence**: Restored historical thought signatures required for Gemini functional calls.
 -   **Chat deduplication**: Resolved an issue that could cause user messages to be duplicated in the chat history.
+-   **MCP Resource integration**: The Context Assembler can now automatically query connected MCP servers for live resources, injecting relevant database schemas, wikis, or external documentation directly into the Researcher's memory context.
+-   **High-performance UI streaming**: Completely refactored the chat rendering engine. The Researcher chat now streams characters directly onto the screen with zero frame drops or layout thrashing, reserving heavy Markdown formatting exclusively for the final completed response.
+-   **Instant tool abortion**: Clicking "Stop" during a complex background task now instantly propagates a cancellation signal down to the active tools (and MCP servers), forcefully halting background scripts to save resources and API loops.
 
 ### Developer features
 
@@ -62,6 +65,10 @@ New features are added in the "Unreleased" section.
 -   **Interface hardening**: Introduced a dedicated `tool` role and `toolResults` property to `UnifiedMessage`, ensuring provider-agnostic tool response handling.
 -   **UI decoupling**: Refactored `ResearchChatView` to use constructor injection for reasoning and embedding clients, removing its dependency on the concrete `GeminiProvider`.
 -   **Interface segregation**: Split `IModelProvider` into reasoning and embedding capability interfaces, adhering to SOLID principles and reducing redundant flags in service implementations.
+-   **Rabin-Karp algorithmic upgrade**: Resolved algorithmic tech debt in `ResultHydrator` and `link-parsing`. Replaced the naive sliding-window djb2 hash with a Modulo-Polynomial (Rabin-Karp) true rolling hash, reducing drift correction complexity to $O(N)$ and preventing main-thread blocking.
+-   **Robust JSON Lexer parsing**: Eradicated the fragile regex brace-counter in `OllamaProvider` by implementing a lightweight, state-machine JSON lexer. The provider now flawlessly extracts partial structured data even when nested brackets or escape characters `\"` are present in strings.
+-   **Template variable injection**: Hardened `AgentService` system prompts by replacing destructive regex replacement methods with formal `{{VERIFICATION_RULES}}` template variables, preventing layout breakage when tools are dynamically added or stripped.
+-   **Asynchronous process destruction**: Upgraded `McpClientManager` process termination to use `cp.exec('pkill')` asynchronously with graceful fallbacks. This entirely eliminates the main-thread freezes previously caused by `cp.execSync`.
 
 ## [8.0.1] - 2026-02-24
 

@@ -2,7 +2,7 @@ import { App, TFile } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult } from "../types/graph";
-import { fastHash, splitFrontmatter } from "../utils/link-parsing";
+import { fastHash, HASH_BASE, HASH_MOD, splitFrontmatter } from "../utils/link-parsing";
 import { logger } from "../utils/logger";
 import { VaultManager } from "./VaultManager";
 
@@ -146,13 +146,41 @@ export class ResultHydrator {
         const searchStart = Math.max(0, start - searchRange);
         const searchEnd = Math.min(content.length, end + searchRange);
         const window = content.substring(searchStart, searchEnd);
-        const chunkLength = end - start;
+        
+        const fullChunkLength = end - start;
+        const hashLength = Math.min(fullChunkLength, 4096); // fastHash caps at 4096
 
-        // Slide a window of the exact chunk length across the search range
-        for (let i = 0; i <= window.length - chunkLength; i++) {
-            const candidate = window.substring(i, i + chunkLength);
-            if (fastHash(candidate) === expectedHash) {
-                return candidate.trim();
+        if (window.length < hashLength) return null;
+
+        let currentHash = 0;
+        let basePower = 1;
+
+        // Calculate initial hash and base power for the hashLength
+        for (let i = 0; i < hashLength; i++) {
+            currentHash = (currentHash * HASH_BASE + window.charCodeAt(i)) % HASH_MOD;
+            if (i > 0) {
+                basePower = (basePower * HASH_BASE) % HASH_MOD;
+            }
+        }
+
+        if (currentHash === expectedHash) {
+            return window.substring(0, fullChunkLength).trim();
+        }
+
+        // Slide the window using Rabin-Karp (O(1) rolling hash)
+        for (let i = 1; i <= window.length - hashLength; i++) {
+            const oldChar = window.charCodeAt(i - 1);
+            const newChar = window.charCodeAt(i + hashLength - 1);
+
+            // Remove old char: hash = (hash - oldChar * basePower) % MOD
+            currentHash = (currentHash - (oldChar * basePower) % HASH_MOD + HASH_MOD) % HASH_MOD;
+            
+            // Add new char: hash = (hash * base + newChar) % MOD
+            currentHash = (currentHash * HASH_BASE + newChar) % HASH_MOD;
+
+            if (currentHash === expectedHash) {
+                const resultStr = window.substring(i, i + fullChunkLength);
+                return resultStr.trim();
             }
         }
 

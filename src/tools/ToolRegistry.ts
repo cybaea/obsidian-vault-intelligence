@@ -21,6 +21,7 @@ export interface ToolExecutionParams {
     enableCodeExecution?: boolean;
     modelId?: string;
     name: string;
+    signal?: AbortSignal;
     usedFiles: Set<string>;
 }
 

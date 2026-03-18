@@ -666,28 +666,48 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     private extractFallbackToolCalls(text: string): { scrubbedText: string; toolCalls: ToolCall[] } {
         const toolCalls: ToolCall[] = [];
         let scrubbedText = "";
-        let currentIndex = 0;
-
-        while (currentIndex < text.length) {
-            const startIdx = text.indexOf('{', currentIndex);
+        
+        let i = 0;
+        let lastEndIndex = 0;
+        
+        while (i < text.length) {
+            const startIdx = text.indexOf('{', i);
             if (startIdx === -1) {
-                scrubbedText += text.substring(currentIndex);
                 break;
             }
-
-            let braceCount = 0;
+            
+            // Try to parse an object starting at startIdx
+            let depth = 0;
+            let inString = false;
+            let isEscaped = false;
             let endIdx = -1;
-            for (let i = startIdx; i < text.length; i++) {
-                if (text[i] === '{') braceCount++;
-                else if (text[i] === '}') {
-                    braceCount--;
-                    if (braceCount === 0) {
-                        endIdx = i;
-                        break;
+            
+            for (let j = startIdx; j < text.length; j++) {
+                const char = text[j];
+                
+                if (inString) {
+                    if (isEscaped) {
+                        isEscaped = false;
+                    } else if (char === '\\') {
+                        isEscaped = true;
+                    } else if (char === '"') {
+                        inString = false;
+                    }
+                } else {
+                    if (char === '"') {
+                        inString = true;
+                    } else if (char === '{') {
+                        depth++;
+                    } else if (char === '}') {
+                        depth--;
+                        if (depth === 0) {
+                            endIdx = j;
+                            break;
+                        }
                     }
                 }
             }
-
+            
             if (endIdx !== -1) {
                 const potentialJson = text.substring(startIdx, endIdx + 1);
                 // Check simple heuristics FIRST before trying to parse
@@ -701,9 +721,9 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                                 name: parsed.name
                             });
                             // Append text before JSON
-                            scrubbedText += text.substring(currentIndex, startIdx);
-                            // Skip the JSON string
-                            currentIndex = endIdx + 1;
+                            scrubbedText += text.substring(lastEndIndex, startIdx);
+                            lastEndIndex = endIdx + 1;
+                            i = endIdx + 1;
                             continue;
                         }
                     } catch {
@@ -712,10 +732,11 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 }
             }
             
-            // If we reach here, either it wasn't balanced or wasn't a valid tool call
-            scrubbedText += text.substring(currentIndex, startIdx + 1);
-            currentIndex = startIdx + 1;
+            // Proceed to the next character after startIdx if parsing failed or was incomplete
+            i = startIdx + 1;
         }
+        
+        scrubbedText += text.substring(lastEndIndex);
 
         // Clean up empty markdown json fences that might be left behind: ```json\n\n``` or ```\n\n```
         scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n*\s*```/g, '').trim();

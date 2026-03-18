@@ -66,16 +66,21 @@ export class McpClientManager implements IProvider {
                     if (Platform.isDesktopApp) {
                         try {
                             const g = globalThis as unknown as IGlobalRequire;
-                            const cp = g.require('child_process') as { execSync(cmd: string, opts: { stdio: 'ignore' }): void };
+                            const cp = g.require('child_process') as { exec: (cmd: string, callback?: () => void) => void };
+                            const pid = connection.pid;
                             if (g.process.platform === 'win32') {
-                                cp.execSync(`taskkill /pid ${connection.pid} /t /f`, { stdio: 'ignore' });
+                                cp.exec(`taskkill /pid ${pid} /t /f`);
                             } else {
                                 try {
-                                    // Attempt to kill child processes first to prevent zombies
-                                    cp.execSync(`pkill -P ${connection.pid}`, { stdio: 'ignore' });
-                                } catch { /* ignore if no children or pkill unavailable */ }
-                                // Terminate the main MCP server process
-                                g.process.kill(connection.pid);
+                                    // Attempt to kill child processes asynchronously first (prevents blocking)
+                                    cp.exec(`pkill -P ${pid}`, () => {
+                                        try { g.process.kill(pid); } catch { /* ignore */ }
+                                    });
+                                    // Timeout fallback to guarantee parent death if pkill hangs
+                                    setTimeout(() => { try { g.process.kill(pid); } catch { /* ignore */ } }, 1000);
+                                } catch { 
+                                    try { g.process.kill(pid); } catch { /* ignore */ }
+                                }
                             }
                         } catch (e) {
                             logger.warn(`Failed to kill process tree for MCP server ${connection.config.name}:`, e);
@@ -580,5 +585,57 @@ export class McpClientManager implements IProvider {
         } catch (error) {
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
         }
+    }
+
+    public async getAvailableResources(): Promise<Record<string, unknown>[]> {
+        const resources: Record<string, unknown>[] = [];
+        for (const [serverId, connection] of this.connections.entries()) {
+            if (connection.status !== 'connected' || !connection.client) continue;
+            try {
+                const response = await connection.client.listResources();
+                for (const res of response.resources || []) {
+                    resources.push({
+                        ...res,
+                        id: `mcp__${serverId}__${res.uri}`,
+                        serverId
+                    });
+                }
+            } catch (error) {
+                logger.error(`Failed to list resources for MCP server ${connection.config.name}`, error);
+            }
+        }
+        return resources;
+    }
+
+    public async readResource(serverId: string, uri: string): Promise<Record<string, unknown>> {
+        const connection = this.connections.get(serverId);
+        if (!connection || connection.status !== 'connected') {
+            throw new ProviderError(`MCP server ${serverId} is not connected.`, "mcp");
+        }
+        try {
+            return await connection.client.readResource({ uri });
+        } catch (error) {
+            throw new ProviderError(`Failed to read MCP resource ${uri}: ${String(error)}`, "mcp");
+        }
+    }
+
+    public async getAvailablePrompts(): Promise<Record<string, unknown>[]> {
+        const prompts: Record<string, unknown>[] = [];
+        for (const [serverId, connection] of this.connections.entries()) {
+            if (connection.status !== 'connected' || !connection.client) continue;
+            try {
+                const response = await connection.client.listPrompts();
+                for (const prompt of response.prompts || []) {
+                    prompts.push({
+                        ...prompt,
+                        id: `mcp__${serverId}__${prompt.name}`,
+                        serverId
+                    });
+                }
+            } catch (error) {
+                logger.error(`Failed to list prompts for MCP server ${connection.config.name}`, error);
+            }
+        }
+        return prompts;
     }
 }
