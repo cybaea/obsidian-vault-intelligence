@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { beforeEach, describe, expect, it, vi, Mocked } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi, Mocked } from 'vitest';
 
 import { AGENT_CONSTANTS } from '../../src/constants';
 import { ContextAssembler } from '../../src/services/ContextAssembler';
@@ -154,5 +154,94 @@ describe('ToolRegistry Capabilities', () => {
         });
 
         expect(resolveSpy).toHaveBeenCalledWith('local/test-agent', mockSettings.modelContextOverrides, mockSettings.contextWindowTokens);
+    });
+
+    describe('MCP Resource Capabilities', () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+            vi.restoreAllMocks();
+        });
+
+        it('should truncate list_mcp_resources to 100 items and append a warning', async () => {
+            const registry = createRegistry(mockProvider);
+            
+            const mockResources = Array.from({ length: 110 }, (_, i) => ({
+                name: `Resource ${i}`,
+                serverId: 'test-server',
+                uri: `file:///${i}.txt`
+            }));
+            
+            mockMcpClientManager.getAvailableResources = vi.fn().mockResolvedValue(mockResources);
+
+            const resultPromise = registry.execute({
+                args: {},
+                createdFiles: new Set(),
+                name: AGENT_CONSTANTS.TOOLS.LIST_MCP_RESOURCES,
+                usedFiles: new Set()
+            });
+            
+            await vi.runAllTimersAsync();
+            const response = await resultPromise;
+            
+            expect(response.result as string).toContain('Available MCP Resources:');
+            expect(response.result as string).toContain('Resource 99');
+            expect(response.result as string).not.toContain('Resource 105');
+            expect(response.result as string).toContain('and 10 more resources. Be specific in your queries');
+        });
+
+        it('should intelligently truncate read_mcp_resource JSON output', async () => {
+            const registry = createRegistry(mockProvider);
+            
+            const massiveString = 'A'.repeat(10000);
+            const massiveJson = JSON.stringify({ payload: massiveString, validJson: true });
+
+            mockMcpClientManager.readResource = vi.fn().mockResolvedValue({
+                contents: [{ text: massiveJson }]
+            });
+
+            const resultPromise = registry.execute({
+                args: { serverId: 'test-server', uri: 'file:///data.json' },
+                createdFiles: new Set(),
+                name: AGENT_CONSTANTS.TOOLS.READ_MCP_RESOURCE,
+                usedFiles: new Set()
+            });
+
+            await vi.runAllTimersAsync();
+            const response = await resultPromise;
+            
+            expect(response.result).toBeDefined();
+            let parsed: unknown;
+            try {
+                parsed = JSON.parse(response.result as string);
+                expect(parsed).toBeDefined();
+            } catch (e: unknown) {
+                const message = e instanceof Error ? e.message : String(e);
+                throw new Error(`JSON truncation resulted in invalid JSON schema: ${message}`);
+            }
+        });
+
+        it('should timeout and return an error if read_mcp_resource hangs', async () => {
+            const registry = createRegistry(mockProvider);
+            
+            mockMcpClientManager.readResource = vi.fn().mockImplementation(() => {
+                return new Promise(resolve => setTimeout(resolve, 100000));
+            });
+
+            const resultPromise = registry.execute({
+                args: { serverId: 'test-server', uri: 'file:///hang.txt' },
+                createdFiles: new Set(),
+                name: AGENT_CONSTANTS.TOOLS.READ_MCP_RESOURCE,
+                usedFiles: new Set()
+            });
+
+            await vi.runAllTimersAsync();
+            const response = await resultPromise;
+            
+            expect(response.error).toContain('Timeout while reading MCP resource: file:///hang.txt');
+        });
     });
 });

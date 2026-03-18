@@ -1,6 +1,6 @@
 import { App, normalizePath, TFile, requestUrl } from "obsidian";
 
-import { AGENT_CONSTANTS, SEARCH_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
+import { AGENT_CONSTANTS, SEARCH_CONSTANTS, SANITIZATION_CONSTANTS, MCP_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
@@ -231,6 +231,29 @@ export class ToolRegistry {
         const mcpTools = await this.mcpClientManager.getAvailableTools();
         tools.push(...mcpTools);
 
+        // 9. MCP Resource Management
+        tools.push({
+            description: "List all available external resources provided by connected MCP servers (e.g., files, database schemas, etc.). Use this to discover what resources you can read.",
+            name: AGENT_CONSTANTS.TOOLS.LIST_MCP_RESOURCES,
+            parameters: {
+                properties: {},
+                type: "object"
+            }
+        });
+
+        tools.push({
+            description: "Read the content of a specific MCP resource. You must provide the serverId and uri obtained from the list_mcp_resources tool.",
+            name: AGENT_CONSTANTS.TOOLS.READ_MCP_RESOURCE,
+            parameters: {
+                properties: {
+                    serverId: { description: "The ID of the MCP server providing the resource.", type: "string" },
+                    uri: { description: "The URI of the resource to read.", type: "string" }
+                },
+                required: ["serverId", "uri"],
+                type: "object"
+            }
+        });
+
         return tools;
     }
 
@@ -269,6 +292,12 @@ export class ToolRegistry {
             }
 
             switch (name) {
+                case AGENT_CONSTANTS.TOOLS.LIST_MCP_RESOURCES:
+                    return await this.executeListMcpResources();
+
+                case AGENT_CONSTANTS.TOOLS.READ_MCP_RESOURCE:
+                    return await this.executeReadMcpResource(args);
+
                 case AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH:
                     return await this.executeGoogleSearch(args);
 
@@ -483,5 +512,80 @@ export class ToolRegistry {
             const normalizedFolder = folder.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
             return targetPath.startsWith(normalizedFolder + "/") || targetPath === normalizedFolder;
         });
+    }
+
+    private async executeListMcpResources() {
+        if (!this.mcpClientManager) return { error: "MCP Client Manager is not available." };
+        
+        const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout while fetching MCP resources.")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
+        );
+
+        try {
+            const fetchPromise = this.mcpClientManager.getAvailableResources();
+            const resources = await Promise.race([fetchPromise, timeoutPromise]);
+            
+            if (!resources || resources.length === 0) {
+                return { result: "No MCP resources available." };
+            }
+            
+            const TRUNCATE_LIMIT = 100;
+            const limitedResources = resources.slice(0, TRUNCATE_LIMIT);
+            let listString = limitedResources.map((res: unknown) => {
+                const r = res as { name?: string, serverId: string, uri: string };
+                return `- Server: ${String(r.serverId)} | Name: ${String(r.name || r.uri)} | URI: ${String(r.uri)}`;
+            }).join('\n');
+            
+            if (resources.length > TRUNCATE_LIMIT) {
+                listString += `\n\n...and ${resources.length - TRUNCATE_LIMIT} more resources. Be specific in your queries if searching for something.`;
+            }
+
+            return { result: `Available MCP Resources:\n${listString}` };
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            logger.error(`Failed to list MCP resources`, e);
+            return { error: `Failed to list MCP resources: ${message}` };
+        }
+    }
+
+    private async executeReadMcpResource(args: Record<string, unknown>) {
+        if (!this.mcpClientManager) return { error: "MCP Client Manager is not available." };
+        const serverId = args.serverId as string;
+        const uri = args.uri as string;
+        if (!serverId || !uri) return { error: "serverId and uri arguments are required." };
+
+        const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout while reading MCP resource: ${uri}`)), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
+        );
+
+        try {
+            const fetchPromise = this.mcpClientManager.readResource(serverId, uri);
+            const content = await Promise.race([fetchPromise, timeoutPromise]) as { contents?: Array<{ text?: string }> };
+
+            if (content && content.contents && Array.isArray(content.contents)) {
+                const texts = content.contents.map(c => c.text).filter((t): t is string => typeof t === 'string');
+                if (texts.length > 0) {
+                    const resultText = texts.join('\n\n');
+                    
+                    let finalResult: string;
+                    try {
+                        const parsed = JSON.parse(resultText) as JsonValue;
+                        const smartTruncated = truncateJsonStrings(parsed, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT);
+                        finalResult = JSON.stringify(smartTruncated);
+                    } catch {
+                        finalResult = resultText.length > SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT
+                            ? resultText.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) + '... [Truncated]'
+                            : resultText;
+                    }
+                    
+                    return { result: finalResult };
+                }
+            }
+            return { result: "Resource is empty or not text-based." };
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            logger.error(`Failed to read MCP resource`, e);
+            return { error: `Failed to read MCP resource: ${message}` };
+        }
     }
 }

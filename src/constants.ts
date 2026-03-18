@@ -295,6 +295,8 @@ export const AGENT_CONSTANTS = {
         GET_CONNECTED_NOTES: "get_connected_notes",
         GOOGLE_SEARCH: "google_search",
         LIST_FOLDER: "list_folder",
+        LIST_MCP_RESOURCES: "list_mcp_resources",
+        READ_MCP_RESOURCE: "read_mcp_resource",
         READ_NOTE: "read_note",
         RENAME_NOTE: "rename_note",
         UPDATE_NOTE: "update_note",
