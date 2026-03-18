@@ -220,5 +220,32 @@ describe('OllamaProvider', () => {
             expect(callArgs?.auth).toBe("user:pass");
         });
     });
-});
 
+    describe('Streaming NDJSON Parsing', () => {
+        it('should correctly parse interleaved text and tool calls in a single chunk', () => {
+            const mockStreamState = { fullMessageText: "", inToolCall: false, tempToolCallBuffer: "" };
+            const mockChunk = {
+                created_at: "now",
+                done: false,
+                message: { 
+                    content: "Text A <tool_call>{\"name\":\"tool1\"}</tool_call> Text B <tool_call>{\"name\":\"tool2\"}</tool_call>",
+                    role: "assistant"
+                },
+                model: "llama3"
+            };
+            
+            // Access private method to test state machine directly
+            const mockService = service as unknown as { processNdjsonChunk: (chunk: unknown, state: unknown) => IterableIterator<{text?: string}> };
+            const iterator = mockService.processNdjsonChunk(mockChunk, mockStreamState);
+            
+            const results = [];
+            for (const item of iterator) {
+                results.push(item);
+            }
+            
+            expect(results).toHaveLength(2);
+            expect(results[0]?.text).toBe("Text A ");
+            expect(results[1]?.text).toBe(" Text B ");
+        });
+    });
+});

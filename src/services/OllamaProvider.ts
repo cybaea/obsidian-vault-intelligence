@@ -267,32 +267,39 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             let newText = chunk.message.content;
             state.fullMessageText += newText;
 
-            if (!state.inToolCall && newText.includes("<tool_call>")) {
-                const split = newText.split("<tool_call>");
-                if (split[0]) yield { text: split[0] };
-                state.inToolCall = true;
-                state.tempToolCallBuffer = split.slice(1).join("<tool_call>");
-                newText = "";
-            } else if (state.inToolCall) {
-                state.tempToolCallBuffer += newText;
-                if (state.tempToolCallBuffer.includes("</tool_call>")) {
-                    state.inToolCall = false;
-                    const split = state.tempToolCallBuffer.split("</tool_call>");
-                    state.tempToolCallBuffer = "";
-                    if (split.length > 1 && split[1]) {
-                        newText = split[1];
+            while (newText.length > 0) {
+                if (!state.inToolCall) {
+                    const toolCallIdx = newText.indexOf("<tool_call>");
+                    if (toolCallIdx !== -1) {
+                        if (toolCallIdx > 0) {
+                            yield { text: newText.substring(0, toolCallIdx) };
+                        }
+                        state.inToolCall = true;
+                        state.tempToolCallBuffer = "";
+                        newText = newText.substring(toolCallIdx + 11); // length of <tool_call>
                     } else {
+                        yield { text: newText };
                         newText = "";
                     }
                 } else {
-                    newText = "";
+                    const endIdx = newText.indexOf("</tool_call>");
+                    if (endIdx !== -1) {
+                        state.tempToolCallBuffer += newText.substring(0, endIdx);
+                        state.inToolCall = false;
+                        // body is consumed, continue scanning remainder
+                        state.tempToolCallBuffer = "";
+                        newText = newText.substring(endIdx + 12); // length of </tool_call>
+                    } else {
+                        state.tempToolCallBuffer += newText;
+                        newText = "";
+                    }
                 }
             }
 
-            if (newText || (chunk.message.tool_calls && chunk.message.tool_calls.length > 0)) {
+            if (chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
                 yield {
-                    text: newText,
-                    toolCalls: chunk.message.tool_calls?.map(tc => ({
+                    text: "",
+                    toolCalls: chunk.message.tool_calls.map(tc => ({
                         args: tc.function.arguments,
                         id: tc.id || crypto.randomUUID(),
                         name: tc.function.name

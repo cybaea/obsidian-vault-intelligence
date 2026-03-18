@@ -25,7 +25,8 @@ New features are added in the "Unreleased" section.
 -   **Model selection improvements**: Model selection dropdowns now group models by provider, display tooltips with internal model IDs, and disable unconfigured providers. You can also hide specific models from all dropdown menus via the new **Model Filtering** section in Advanced settings.
 -   **Context management refinements**: Context window budgets are now configured per model rather than globally. The context assembler has been improved to prevent single documents from dominating the context window.
 -   **Enhanced embedding configuration**: For local Ollama embedding models (eg `nomic-embed-text`), you can now dynamically select the desired embedding dimension (Matryoshka representation) with improved visual labels.
--   **Ollama tool parsing**: Fixed an issue where the local Ollama provider would fail to execute tools if the model wrapped the JSON in markdown blocks or asterisks by implementing a more resilient JSON extraction method.
+    -   **Ollama tool parsing**: Fixed an issue where the local Ollama provider would fail to execute tools if the model wrapped the JSON in markdown blocks or asterisks by implementing a more resilient JSON extraction method.
+-   **Ollama chat polish**: Fixed a rare visual glitch where rapid "tool call" signals from local models could momentarily leak into the chat interface.
 -   **Dynamic system prompts**: The default system instructions are now dynamically trimmed to remove references to `google_search` when the active model provider does not support web grounding, preventing unfulfillable tool hallucinations.
 -   **Researcher UI stability**: Fixed a critical bug where the UI would freeze or layout would thrash during streaming.
 -   **Tool call aggregation**: Fixed a regression where tool call fragments caused Gemini 400 errors.
@@ -40,6 +41,7 @@ New features are added in the "Unreleased" section.
 -   **Ghost tool prevention**: Hardened `AgentService` to automatically sanitize chat payloads and strip tools belonging to disabled MCP servers, preventing LLM hallucinations and 400 Bad Request errors from the Gemini API.
 -   **Resilient stdio process termination**: Improved the MCP `terminate()` lifecycle on Unix systems (macOS/Linux) by explicitly sending `pkill -P` commands to reap all child worker processes, preventing resource-draining "zombie" process leaks when stopping complex MCP servers.
 -   **Intelligent Logging Heuristic**: Automatically parses and routes raw `stderr` streams from external MCP servers, correctly classifying logs into INFO, WARN, DEBUG, or ERROR categories for the Obsidian console.
+-   **MCP reliability**: Enhanced tool-output JSON truncation to intelligently preserve structure while protecting context limits, and centralized execution timeouts.
 -   **Tool namespace collision resistance**: Designed a secure `mcp__serverId__toolName` namespacing strategy that automatically hashes excessively long tool names to comply with the 64-character Gemini SDK restriction limit.
 -   **Ollama embedding batching**: Improved local indexing performance by natively batching document chunks to the Ollama embedding endpoint.
 -   **Ollama memory management**: Added explicit `keep_alive` logic for active chat models to avoid memory locks and cold start penalties.

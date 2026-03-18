@@ -2,9 +2,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { App, Platform } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
+import { MCP_CONSTANTS, SANITIZATION_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { MCPServerConfig, VaultIntelligenceSettings } from "../settings/types";
 import { IProvider, IToolDefinition, ProviderError } from "../types/providers";
+import { JsonValue, truncateJsonStrings } from "../utils/json";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
 
@@ -538,7 +539,7 @@ export class McpClientManager implements IProvider {
 
         try {
             // Include strict timeout
-            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), 60000));
+            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS));
             const execPromise = connection.client.callTool({
                 arguments: args,
                 name: mapping.originalName
@@ -549,7 +550,18 @@ export class McpClientManager implements IProvider {
             let outputText = "";
             if (result.content && result.content.length > 0) {
                 outputText = result.content.map(c => {
-                    if (c.type === 'text') return c.text;
+                    if (c.type === 'text') {
+                        try {
+                            const parsed = JSON.parse(c.text) as unknown;
+                            if (parsed && typeof parsed === 'object') {
+                                const truncated = truncateJsonStrings(parsed as JsonValue, SANITIZATION_CONSTANTS.MAX_LOG_STRING_LENGTH);
+                                return JSON.stringify(truncated);
+                            }
+                        } catch {
+                            // Valid logic fallback for non-JSON text
+                        }
+                        return c.text;
+                    }
                     return `[${c.type} content]`;
                 }).join('\n');
             }
@@ -558,7 +570,7 @@ export class McpClientManager implements IProvider {
                 return { text: `[Error from MCP Tool] \n${outputText}` };
             }
 
-            // Payload Truncation
+            // Payload Context Safety Fallback
             if (outputText.length > SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) {
                 outputText = outputText.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) + "\n...[TRUNCATED BY VAULT INTELLIGENCE]...";
             }
