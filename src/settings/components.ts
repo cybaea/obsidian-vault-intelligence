@@ -64,10 +64,10 @@ export function renderModelDropdown(
 
     const sortGoogleModels = (models: ModelDefinition[]) => {
         const getPriority = (id: string) => {
-            if (/^models\/gemini-.*-latest$/.test(id)) return 1;
-            if (/^models\/gemini-embedding-/.test(id)) return 2;
-            if (/^models\/gemini-/.test(id) && !/^models\/gemini-2\./.test(id)) return 3;
-            if (/^models\/gemma-/.test(id)) return 4;
+            if (/^gemini-.*-latest$/.test(id)) return 1;
+            if (/^gemini-embedding-/.test(id)) return 2;
+            if (/^gemini-/.test(id) && !/^gemini-2\./.test(id)) return 3;
+            if (/^gemma-/.test(id)) return 4;
             return 5;
         };
 
@@ -75,7 +75,7 @@ export function renderModelDropdown(
             const pA = getPriority(a.id);
             const pB = getPriority(b.id);
             if (pA !== pB) return pA - pB;
-            return a.id.localeCompare(b.id);
+            return a.label.localeCompare(b.label);
         });
     };
 
