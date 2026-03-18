@@ -543,12 +543,12 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     public async embedQuery(text: string): Promise<{ tokenCount: number; vector: number[] }> {
-        const { tokenCount, values } = await this.embedText(text);
+        const { tokenCount, values } = await this.embedText(text, { taskType: 'RETRIEVAL_QUERY' });
         return { tokenCount, vector: values };
     }
 
     public async embedDocument(text: string, title?: string): Promise<{ tokenCount: number; vectors: number[][] }> {
-        const { tokenCount, values } = await this.embedText(text, { title });
+        const { tokenCount, values } = await this.embedText(text, { taskType: 'RETRIEVAL_DOCUMENT', title });
         return { tokenCount, vectors: [values] };
     }
 
