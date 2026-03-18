@@ -13,6 +13,12 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+## [9.0.4] - 2026-03-18
+
+### User features
+
+### Developer features
+
 ## [9.0.3] - 2026-03-18
 
 ### User features
