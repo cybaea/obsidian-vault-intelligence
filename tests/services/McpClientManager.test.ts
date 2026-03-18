@@ -275,4 +275,61 @@ describe('McpClientManager', () => {
         expect(resources).toHaveLength(1);
         expect(resources[0]?.id).toBe('mcp__test-server__file:///schema.sql');
     });
+
+    it('should use async cp.exec to kill zombie processes on terminate', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        const managerWithInternal = manager as unknown as { 
+            connections: Map<string, unknown>; 
+        };
+
+        const mockExec = vi.fn();
+        const mockKill = vi.fn();
+        
+        const originalProcessKill = (globalThis.process as unknown as { kill: typeof mockKill }).kill;
+        (globalThis.process as unknown as { kill: typeof mockKill }).kill = mockKill;
+        
+        const originalPlatform = globalThis.process.platform;
+        Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: 'linux' });
+
+        const originalRequire = Reflect.get(globalThis, 'require');
+
+        Reflect.set(globalThis, 'require', vi.fn((moduleName: string) => {
+            if (moduleName === 'child_process') {
+                return { exec: mockExec };
+            }
+            return originalRequire ? (originalRequire as (m: string) => unknown)(moduleName) : {};
+        }));
+
+        managerWithInternal.connections.set('test-server', {
+            client: {
+                close: vi.fn().mockResolvedValue(undefined)
+            },
+            config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
+            pid: 12345,
+            status: 'connected'
+        });
+
+        try {
+            await manager.terminate();
+            
+            expect(mockExec).toHaveBeenCalledWith('pkill -P 12345', expect.any(Function));
+            
+            // Invoke the callback to test if g.process.kill is called
+            const callback = mockExec.mock.calls[0]?.[1] as (() => void) | undefined;
+            if (callback) {
+                callback();
+                expect(mockKill).toHaveBeenCalledWith(12345);
+            }
+        } finally {
+            Reflect.set(globalThis, 'require', originalRequire);
+            Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: originalPlatform });
+            
+            if (originalProcessKill !== undefined) {
+                (globalThis.process as unknown as { kill: typeof mockKill }).kill = originalProcessKill;
+            } else {
+                delete (globalThis.process as unknown as { kill?: typeof mockKill }).kill;
+            }
+        }
+    });
+
 });
