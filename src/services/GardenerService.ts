@@ -179,7 +179,8 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
             // Replace placeholders
             systemInstruction = systemInstruction.replace("{{ONTOLOGY_FOLDERS}}", ontologyFolders);
-            systemInstruction = systemInstruction.replace("{{NOTE_COUNT}}", String(notes.length));
+            // Legacy support: Replace {{NOTE_COUNT}} with a static string to ensure prefix caching is not defeated
+            systemInstruction = systemInstruction.replace("{{NOTE_COUNT}}", "the");
             systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
             // Merge with Instructions.md if exists
