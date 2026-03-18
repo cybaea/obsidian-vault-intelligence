@@ -8,8 +8,99 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
     
     containerEl.createEl("h3", { text: 'External ' + 'MCP' + ' servers' });
     containerEl.createEl("p", { 
-        text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools. Caution: Avoid storing plaintext secrets in the environment variables; future versions will support Secure Storage interpolation." 
+        text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools." 
     });
+
+    const renderKeyValueEditor = (
+        container: HTMLElement, 
+        title: string, 
+        description: string, 
+        currentJson: string | undefined, 
+        onChange: (newJson: string) => void,
+        serverId: string,
+        prefix: string
+    ) => {
+        const wrapper = container.createDiv();
+        wrapper.setCssProps({ borderTop: "1px solid var(--background-modifier-border)", padding: "1em 0" });
+        wrapper.createEl("div", { cls: "setting-item-name", text: title });
+        wrapper.createEl("div", { cls: "setting-item-description", text: description }).setCssProps({ marginBottom: "1em" });
+        
+        let pairs: { key: string; value: string; isSecret: boolean }[] = [];
+        try {
+            const parsed = JSON.parse(currentJson || "{}") as Record<string, string>;
+            for (const [k, v] of Object.entries(parsed)) {
+                pairs.push({
+                    isSecret: v.startsWith('vi-secret:'),
+                    key: k,
+                    value: v.startsWith('vi-secret:') ? '********' : v
+                });
+            }
+        } catch {
+            pairs = [];
+        }
+
+        const savePairs = () => {
+            const result: Record<string, string> = {};
+            const storage = plugin.app.secretStorage as unknown as { setSecret?: (k:string, v:string)=>void };
+            for (const p of pairs) {
+                if (!p.key) continue;
+                if (p.isSecret) {
+                    const secretKey = `mcp-${serverId}-${prefix}-${p.key}`;
+                    if (p.value !== '********') {
+                        if (storage && storage.setSecret) {
+                            storage.setSecret(secretKey, p.value);
+                        } else {
+                            // Can't save secret on this device
+                        }
+                    }
+                    result[p.key] = `vi-secret:${secretKey}`;
+                    p.value = '********'; // Mask in memory
+                } else {
+                    result[p.key] = p.value;
+                }
+            }
+            onChange(JSON.stringify(result));
+            renderTable();
+        };
+
+        const renderTable = () => {
+            // Re-render just the rows
+            Array.from(wrapper.children).forEach(c => {
+                if (c.hasClass('vi-kv-row') || c.hasClass('vi-kv-add')) c.remove();
+            });
+
+            pairs.forEach((pair, idx) => {
+                const row = wrapper.createDiv("vi-kv-row");
+                row.setCssProps({ alignItems: "center", display: "flex", gap: "0.5em", marginBottom: "0.5em" });
+                
+                const keyInput = row.createEl("input", { placeholder: "Key", type: "text", value: pair.key });
+                keyInput.onchange = (e) => { pair.key = (e.target as HTMLInputElement).value; void savePairs(); };
+
+                const valInput = row.createEl("input", { placeholder: "Value", type: pair.isSecret ? "password" : "text", value: pair.value });
+                valInput.onchange = (e) => { pair.value = (e.target as HTMLInputElement).value; void savePairs(); };
+
+                const secretToggleLabel = row.createEl("label");
+                secretToggleLabel.setCssProps({ alignItems: "center", color: "var(--text-muted)", display: "flex", fontSize: "0.8em", gap: "0.2em" });
+                const secretToggle = secretToggleLabel.createEl("input", { type: "checkbox" });
+                secretToggle.checked = pair.isSecret;
+                secretToggle.onchange = (e) => { 
+                    pair.isSecret = (e.target as HTMLInputElement).checked; 
+                    if (!pair.isSecret) pair.value = ""; // Clear password if un-secreting
+                    void savePairs(); 
+                };
+                secretToggleLabel.appendText("Secret");
+
+                const delBtn = row.createEl("button", { text: "X" });
+                delBtn.onclick = () => { pairs.splice(idx, 1); void savePairs(); };
+            });
+
+            const addBtn = wrapper.createEl("button", { cls: "vi-kv-add", text: "Add row" });
+            addBtn.setCssProps({ marginTop: "0.5em" });
+            addBtn.onclick = () => { pairs.push({ isSecret: false, key: "", value: "" }); renderTable(); };
+        };
+
+        renderTable();
+    };
 
     const listContainer = containerEl.createDiv("mcp-server-list");
     listContainer.setCssProps({ "margin-bottom": "2em" });
@@ -67,8 +158,27 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 }
                 
                 const btnRow = serverDiv.createDiv("mcp-server-actions");
-                btnRow.setCssProps({ "margin-top": "1em" });
+                btnRow.setCssProps({ "display": "flex", "gap": "0.5em", "margin-top": "1em" });
                 
+                if (status === 'untrusted') {
+                    new ButtonComponent(btnRow)
+                        .setButtonText("Review & trust")
+                        .setCta()
+                        .onClick(async () => {
+                            const manager = plugin.mcpClientManager as { 
+                                generateTrustHash(c: unknown): Promise<string>;
+                                terminate(): Promise<void>; 
+                                initialize(): Promise<void> 
+                            };
+                            const hash = await manager.generateTrustHash(server);
+                            window.localStorage.setItem(`vi-mcp-trust-${server.id}`, hash);
+                            
+                            await manager.terminate();
+                            await manager.initialize();
+                            renderList();
+                        });
+                }
+
                 new ButtonComponent(btnRow)
                     .setButtonText("Edit")
                     .onClick(() => {
@@ -142,16 +252,15 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     return text;
                 });
 
-            const envSetting = new Setting(containerEl)
-                .setName("Environment variables")
-                .setDesc("Provide as valid JSON: {\"TOKEN\": \"value\"}. WARNING: Do NOT put plaintext secrets here if you sync your vault across untrusted devices. They will be merged with your system environment.")
-                .addTextArea(text => {
-                    text.setValue(currentConfig.env || "");
-                    text.onChange(v => currentConfig.env = v);
-                    text.inputEl.rows = 4;
-                    return text;
-                });
-            envSetting.descEl.setCssProps({ "color": "var(--text-warning)" });
+            renderKeyValueEditor(
+                containerEl,
+                "Environment variables",
+                "Define environment variables. Use 'Secret' to securely store API keys in the device keychain.",
+                currentConfig.env,
+                (v) => currentConfig.env = v,
+                currentConfig.id,
+                "env"
+            );
         } else {
             new Setting(containerEl)
                 .setName("Server " + "URL")
@@ -161,15 +270,15 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     .onChange(v => currentConfig.url = v)
                 );
 
-            new Setting(containerEl)
-                .setName("HTTP " + "headers (JSON)")
-                .setDesc("Optional. Provide custom headers for authentication (e.g., " + '{"Authorization": "Bearer my-token"}' + ").")
-                .addTextArea(text => {
-                    text.setValue(currentConfig.remoteHeaders || "");
-                    text.onChange(v => currentConfig.remoteHeaders = v);
-                    text.inputEl.rows = 3;
-                    return text;
-                });
+            renderKeyValueEditor(
+                containerEl,
+                "HTTP headers",
+                "Optional HTTP headers for authentication. Use 'Secret' to securely store tokens in the device keychain.",
+                currentConfig.remoteHeaders,
+                (v) => currentConfig.remoteHeaders = v,
+                currentConfig.id,
+                "headers"
+            );
         }
 
         new Setting(containerEl)

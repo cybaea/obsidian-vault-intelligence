@@ -16,13 +16,22 @@ Object.defineProperty(globalThis, 'crypto', {
 });
 
 // Mock localStorage
+const mockLocalStorageValue: Record<string, string> = {};
 const mockLocalStorage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
+    getItem: vi.fn((k: string) => mockLocalStorageValue[k] || null),
+    setItem: vi.fn((k: string, v: string) => { mockLocalStorageValue[k] = v; }),
 };
 
 Object.defineProperty(globalThis, 'localStorage', {
     value: mockLocalStorage,
+});
+Object.defineProperty(globalThis, 'window', {
+    value: { localStorage: mockLocalStorage }
+});
+
+// Mock environment
+Object.defineProperty(globalThis, 'process', {
+    value: { env: { HOME: '/home/user', PATH: '/bin', SENSITIVE_KEY: 'secret123' }, platform: 'linux' }
 });
 
 describe('McpClientManager', () => {
@@ -33,13 +42,18 @@ describe('McpClientManager', () => {
         vi.clearAllMocks();
         
         mockApp = {
-            // Mock necessary app properties
+            secretStorage: {
+                getSecret: vi.fn((k: string) => k === 'valid-secret' ? 'real-secret-value' : null)
+            }
         } as unknown as App;
 
         mockSettings = {
             ...DEFAULT_SETTINGS,
+            allowLocalNetworkAccess: false,
             mcpServers: []
         };
+        
+        Object.keys(mockLocalStorageValue).forEach(k => delete mockLocalStorageValue[k]);
     });
 
     it('should calculate trust hash correctly for stdio servers', async () => {
@@ -65,16 +79,39 @@ describe('McpClientManager', () => {
         expect(mockCryptoSubtle.digest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array));
     });
 
-    it('should correctly evaluate trust state (stdio is untrusted initially, remote is trusted)', () => {
+    it('checkTrustState should correctly evaluate legacy trust state (always untrusted)', () => {
         const manager = new McpClientManager(mockApp, mockSettings);
-        
         const stdioConfig = { id: 'test-1', type: 'stdio' as const } as MCPServerConfig;
         const sseConfig = { id: 'test-2', type: 'sse' as const } as MCPServerConfig;
         const httpConfig = { id: 'test-3', type: 'streamable_http' as const } as MCPServerConfig;
         
         expect(manager.checkTrustState(stdioConfig).trusted).toBe(false);
-        expect(manager.checkTrustState(sseConfig).trusted).toBe(true);
-        expect(manager.checkTrustState(httpConfig).trusted).toBe(true);
+        expect(manager.checkTrustState(sseConfig).trusted).toBe(false);
+        expect(manager.checkTrustState(httpConfig).trusted).toBe(false);
+    });
+
+    it('should block remote connections if trust hash is invalid (Trust Hash Bypass fix)', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        
+        const remoteServerConfig = {
+            id: 'test-remote',
+            name: 'Remote Server',
+            type: 'streamable_http' as const,
+            url: 'http://example.com/mcp'
+        } as MCPServerConfig;
+
+        const managerWithInternal = manager as unknown as { 
+            connectServer(config: MCPServerConfig): Promise<void>; 
+            connections: Map<string, { status: string; errorMessage?: string; }>;
+        };
+        
+        // No hash stored yet
+        await managerWithInternal.connectServer(remoteServerConfig);
+        
+        const connection = managerWithInternal.connections.get(remoteServerConfig.id);
+        expect(connection).toBeDefined();
+        expect(connection?.status).toBe('untrusted');
+        expect(connection?.errorMessage).toContain('Untrusted configuration');
     });
 
     it('should block remote connections if SSRF protection is triggered (allowLocalNetworkAccess = false)', async () => {
@@ -95,11 +132,40 @@ describe('McpClientManager', () => {
             connections: Map<string, { status: string; errorMessage?: string; }>;
         };
         
-        await managerWithInternal.connectServer(localServerConfig);
+        mockLocalStorageValue[`vi-mcp-trust-${localServerConfig.id}`] = '0102030405';
+        await managerWithInternal.connectServer(localServerConfig as MCPServerConfig);
         
         const connection = managerWithInternal.connections.get(localServerConfig.id);
         expect(connection).toBeDefined();
         expect(connection?.status).toBe('error');
         expect(connection?.errorMessage).toContain('Connection blocked by Local Network Access security settings');
+    });
+
+    it('should enforce gentle fallback for missing secrets', async () => {
+        const manager = new McpClientManager(mockApp, mockSettings);
+        
+        const sseConfig = {
+            id: 'test-sse-secrets',
+            name: 'Remote Server Secrets',
+            remoteHeaders: JSON.stringify({
+                "Authorization": "vi-secret:invalid-secret"
+            }),
+            type: 'sse' as const,
+            url: 'https://example.com/sse'
+        };
+
+        mockLocalStorageValue[`vi-mcp-trust-${sseConfig.id}`] = '0102030405';
+
+        const managerWithInternal = manager as unknown as { 
+            connectServer(config: MCPServerConfig): Promise<void>; 
+            connections: Map<string, { status: string; errorMessage?: string; }>;
+        };
+        
+        await managerWithInternal.connectServer(sseConfig as MCPServerConfig);
+        const connection = managerWithInternal.connections.get(sseConfig.id);
+        
+        expect(connection).toBeDefined();
+        expect(connection?.status).toBe('error');
+        expect(connection?.errorMessage).toContain('Missing secret for header Authorization');
     });
 });

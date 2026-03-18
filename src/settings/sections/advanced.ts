@@ -371,7 +371,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     securityDesc.appendText('Allows the agent to access localhost and private network IPs. ');
     securityDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
-        div.createSpan({ text: ' Warning: This makes you vulnerable to SSRF attacks if the agent reads malicious notes or prompt injections. Use with caution.' });
+        div.createSpan({ text: ' Warning: This makes you vulnerable to SSRF (Server-Side Request Forgery) and DNS Rebinding attacks. Malicious external websites could resolve to local IP addresses and bypass standard URL checks if the agent reads malicious notes or prompt injections. Use with caution.' });
     });
 
     new Setting(containerEl)

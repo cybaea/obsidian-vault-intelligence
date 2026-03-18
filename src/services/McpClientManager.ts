@@ -13,6 +13,12 @@ interface IGlobalRequire {
     require(id: string): unknown;
 }
 
+interface InternalSecretStorage {
+    clearSecret?(key: string): void;
+    getSecret(key: string): string | null;
+    setSecret?(key: string, value: string): void;
+}
+
 interface McpConnection {
     client: Client;
     config: MCPServerConfig;
@@ -97,7 +103,10 @@ export class McpClientManager implements IProvider {
         const payload = JSON.stringify({
             args: config.args,
             command: config.command,
-            env: config.env
+            env: config.env,
+            remoteHeaders: config.remoteHeaders,
+            requireExplicitConfirmation: config.requireExplicitConfirmation,
+            url: config.url
         });
         const encoder = new TextEncoder();
         const data = encoder.encode(payload);
@@ -108,32 +117,44 @@ export class McpClientManager implements IProvider {
     }
 
     public checkTrustState(config: MCPServerConfig): { trusted: boolean; hash: string } {
-        // Assume everything else trusted except stdio (which runs local processes)
-        if (config.type !== 'stdio') return { hash: '', trusted: true };
-        return { hash: '', trusted: false }; // Will map implementation later in connectServer
+        // Obsolete synchronous check, actual check moved to connectServer.
+        // Returning untrusted to be safe if a legacy caller uses it.
+        return { hash: '', trusted: false };
+    }
+
+    private getSecretValue(key: string): string | null {
+        try {
+            const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+            if (storage && storage.getSecret) {
+                return storage.getSecret(key);
+            }
+        } catch (e) {
+            logger.error(`Failed to read secret ${key}`, e);
+        }
+        return null;
     }
 
     private async connectServer(server: MCPServerConfig): Promise<void> {
         logger.info(`Connecting to MCP server ${server.name}...`);
         
+        // Trust Hash Security (Applied to ALL server types to prevent remote manipulation via sync)
+        const currentHash = await this.generateTrustHash(server);
+        const storedHash = window.localStorage.getItem(`vi-mcp-trust-${server.id}`);
+        if (currentHash !== storedHash) {
+            logger.warn(`MCP server ${server.name} untrusted. Blocking execution.`);
+            this.connections.set(server.id, {
+                client: null as unknown as Client,
+                config: server,
+                errorMessage: 'Untrusted configuration. Please approve in settings.',
+                status: 'untrusted',
+                transport: null
+            });
+            return;
+        }
+
         if (server.type === 'stdio') {
             if (!Platform.isDesktopApp) {
                 logger.warn(`Skipping stdio MCP server ${server.name} on Mobile.`);
-                return;
-            }
-
-            // Trust Hash Security
-            const currentHash = await this.generateTrustHash(server);
-            const storedHash = window.localStorage.getItem(`vi-mcp-trust-${server.id}`);
-            if (currentHash !== storedHash) {
-                logger.warn(`MCP server ${server.name} untrusted. Blocking execution.`);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: 'Untrusted configuration. Please approve in settings.',
-                    status: 'untrusted',
-                    transport: null
-                });
                 return;
             }
 
@@ -142,8 +163,24 @@ export class McpClientManager implements IProvider {
             const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
             const StdioClientTransport = mcpSdk.StdioClientTransport;
             
-            // Merge Environments
-            let mergedEnv: Record<string, string> = { ...g.process.env };
+            // Construct minimal safe environment (Fix for Host Environment Leakage)
+            const safeKeys = [
+                'PATH', 'USER', 'HOME', 'USERPROFILE', 'APPDATA', 'TMPDIR', 'TEMP',
+                'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
+                'LANG', 'LC_ALL', 'PWD', 'LOGNAME', 'SHELL',
+                // Linux Desktop/DBus Requirements
+                'DISPLAY', 'WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_RUNTIME_DIR', 'XAUTHORITY', 'XDG_SESSION_TYPE'
+            ];
+            let mergedEnv: Record<string, string> = {
+                // Let servers know they are being run by Vault Intelligence
+                'OBSIDIAN_VAULT_INTELLIGENCE': 'true'
+            };
+            
+            for (const key of safeKeys) {
+                if (g.process.env[key] !== undefined) {
+                    mergedEnv[key] = g.process.env[key]!;
+                }
+            }
 
             // Fix PATH for GUI-launched apps (Obsidian often lacks user bin paths)
             const isWin = g.process.platform === 'win32';
@@ -162,22 +199,31 @@ export class McpClientManager implements IProvider {
                 mergedEnv.PATH = `${extraPaths.join(pathSeparator)}${pathSeparator}${mergedEnv.PATH || ''}`;
             }
 
-            // Sanitize Electron/AppImage environment pollution
-            // We remove PYTHONHOME because AppImages set it and break system Python.
-            // We DO NOT remove PYTHONPATH, PYTHONUSERBASE, or VIRTUAL_ENV as they are needed for venvs.
-            const keysToRemove = [
-                'PYTHONHOME', 'LD_LIBRARY_PATH', 'LD_PRELOAD', 'APPDIR', 'APPIMAGE'
-            ];
-            for (const key of keysToRemove) {
-                delete mergedEnv[key];
-            }
-
             if (server.env) {
                 try {
                     const customEnv = JSON.parse(server.env) as Record<string, string>;
-                    mergedEnv = { ...mergedEnv, ...customEnv };
-                } catch {
-                    logger.warn(`Failed to parse custom environment for MCP server ${server.name}`);
+                    for (const [k, v] of Object.entries(customEnv)) {
+                        if (v.startsWith('vi-secret:')) {
+                            const secretKey = v.substring(10);
+                            const secretVal = this.getSecretValue(secretKey);
+                            if (secretVal === null) {
+                                throw new Error(`Missing secret for ${k}. Please re-enter it in settings.`);
+                            }
+                            mergedEnv[k] = secretVal;
+                        } else {
+                            mergedEnv[k] = v;
+                        }
+                    }
+                } catch (e) {
+                    logger.warn(`Failed to process custom environment for MCP server ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
+                    this.connections.set(server.id, {
+                        client: null as unknown as Client,
+                        config: server,
+                        errorMessage: `Configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
+                        status: 'error',
+                        transport: null
+                    });
+                    return;
                 }
             }
 
@@ -262,9 +308,29 @@ export class McpClientManager implements IProvider {
             let headers: Record<string, string> = {};
             if (server.remoteHeaders) {
                 try { 
-                    headers = JSON.parse(server.remoteHeaders) as Record<string, string>;
-                } catch {
-                    logger.warn(`Failed to parse remote headers for ${server.name}`);
+                    const rawHeaders = JSON.parse(server.remoteHeaders) as Record<string, string>;
+                    for (const [k, v] of Object.entries(rawHeaders)) {
+                        if (v.startsWith('vi-secret:')) {
+                            const secretKey = v.substring(10);
+                            const secretVal = this.getSecretValue(secretKey);
+                            if (secretVal === null) {
+                                throw new Error(`Missing secret for header ${k}. Please re-enter it in settings.`);
+                            }
+                            headers[k] = secretVal;
+                        } else {
+                            headers[k] = v;
+                        }
+                    }
+                } catch (e) {
+                    logger.warn(`Failed to process remote headers for ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
+                    this.connections.set(server.id, {
+                        client: null as unknown as Client,
+                        config: server,
+                        errorMessage: `Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
+                        status: 'error',
+                        transport: null
+                    });
+                    return;
                 }
             }
 
@@ -313,9 +379,29 @@ export class McpClientManager implements IProvider {
             let headers: Record<string, string> = {};
             if (server.remoteHeaders) {
                 try { 
-                    headers = JSON.parse(server.remoteHeaders) as Record<string, string>; 
-                } catch (e) { 
-                    logger.warn(`Failed to parse MCP headers for ${server.name}`, e); 
+                    const rawHeaders = JSON.parse(server.remoteHeaders) as Record<string, string>;
+                    for (const [k, v] of Object.entries(rawHeaders)) {
+                        if (v.startsWith('vi-secret:')) {
+                            const secretKey = v.substring(10);
+                            const secretVal = this.getSecretValue(secretKey);
+                            if (secretVal === null) {
+                                throw new Error(`Missing secret for header ${k}. Please re-enter it in settings.`);
+                            }
+                            headers[k] = secretVal;
+                        } else {
+                            headers[k] = v;
+                        }
+                    }
+                } catch (e) {
+                    logger.warn(`Failed to process MCP headers for ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
+                    this.connections.set(server.id, {
+                        client: null as unknown as Client,
+                        config: server,
+                        errorMessage: `Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
+                        status: 'error',
+                        transport: null
+                    });
+                    return;
                 }
             }
 
