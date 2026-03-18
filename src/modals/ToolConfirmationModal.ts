@@ -43,34 +43,42 @@ export class ToolConfirmationModal extends Modal {
         const addRow = (label: string, value: string, isWarning = false) => {
             const row = table.createEl("tr");
             row.createEl("td", { cls: "label", text: label });
-            const valTd = row.createEl("td", { cls: "value" });
+            const valTd = row.createEl("td", { cls: "value", text: value });
             if (isWarning) valTd.addClass("warning-text");
             return valTd;
         };
 
-        addRow("Tool", this.details.tool);
+        const displayToolName = this.details.tool.startsWith("mcp__")
+            ? this.details.tool.split("__").slice(2).join("__")
+            : this.details.tool;
+
+        addRow("Tool", displayToolName);
         addRow("Action", this.details.action.toUpperCase());
 
-        const pathTd = addRow("Path", "");
-        const pathInput = new TextComponent(pathTd)
-            .setValue(this.details.path)
-            .setPlaceholder("Enter path...")
-            .onChange((val) => {
-                this.details.path = val;
-            });
-        pathInput.inputEl.addClass("confirmation-input");
-        new FolderSuggest(this.app, pathInput.inputEl);
-
-        if (this.details.newPath) {
-            const newPathTd = addRow("New path", "");
-            const newPathInput = new TextComponent(newPathTd)
-                .setValue(this.details.newPath)
-                .setPlaceholder("Enter new path...")
+        if (this.details.action === "mcp") {
+            addRow("Server", this.details.path || "Unknown Server");
+        } else {
+            const pathTd = addRow("Path", "");
+            const pathInput = new TextComponent(pathTd)
+                .setValue(this.details.path)
+                .setPlaceholder("Enter path...")
                 .onChange((val) => {
-                    this.details.newPath = val;
+                    this.details.path = val;
                 });
-            newPathInput.inputEl.addClass("confirmation-input");
-            new FolderSuggest(this.app, newPathInput.inputEl);
+            pathInput.inputEl.addClass("confirmation-input");
+            new FolderSuggest(this.app, pathInput.inputEl);
+
+            if (this.details.newPath) {
+                const newPathTd = addRow("New path", "");
+                const newPathInput = new TextComponent(newPathTd)
+                    .setValue(this.details.newPath)
+                    .setPlaceholder("Enter new path...")
+                    .onChange((val) => {
+                        this.details.newPath = val;
+                    });
+                newPathInput.inputEl.addClass("confirmation-input");
+                new FolderSuggest(this.app, newPathInput.inputEl);
+            }
         }
 
         if (this.details.mode) {
