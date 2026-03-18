@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [9.0.0] - 2026-03-18
+
+### User features
+
 -   **Local model support (Ollama)**: Full production-ready support for local models via Ollama, including token-by-token streaming and high-reliability JSON mode.
 -   **Model Context Protocol (MCP)**: Extend the Researcher agent with custom tools using MCP. Connect to any standard MCP server via local execution (`stdio`) or remote URLs (using the modern `streamable_http` transport), unlocking capabilities like local filesystem access, database querying, or API interactions.
 -   **Secure MCP authentication**: You can now provide custom HTTP headers (eg `Authorization: Bearer token`) for remote MCP servers, enabling secure connections to private infrastructure.
