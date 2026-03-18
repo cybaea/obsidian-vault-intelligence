@@ -193,7 +193,7 @@ VALID TOPICS:
 (Note: Multiple names may point to the same file path; these are aliases for the same concept.)
 ${validTopicsList}
 
-Analyze the following notes and suggest improvements.
+Analyze the following ${notes.length} notes and suggest improvements.
 
 NOTES:
 ${JSON.stringify(context, null, 2)}
