@@ -108,7 +108,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const tools = this.formatTools(options.tools);
 
             const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
-            const isCodeExecutionEnabled = options.enableCodeExecution !== undefined ? options.enableCodeExecution : this.settings.enableCodeExecution;
 
             const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
             const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
@@ -137,9 +136,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
             if (useNativeSearch) {
                 toolObjects.push({ googleSearch: {} });
-            }
-            if (isCodeExecutionEnabled) {
-                toolObjects.push({ codeExecution: {} });
             }
 
             if (toolObjects.length > 0) {
@@ -185,7 +181,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         const tools = this.formatTools(options.tools);
 
         const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
-        const isCodeExecutionEnabled = options.enableCodeExecution !== undefined ? options.enableCodeExecution : this.settings.enableCodeExecution;
 
         const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
         const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
@@ -210,9 +205,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         }
         if (useNativeSearch) {
             toolObjects.push({ googleSearch: {} });
-        }
-        if (isCodeExecutionEnabled) {
-            toolObjects.push({ codeExecution: {} });
         }
 
         if (toolObjects.length > 0) {

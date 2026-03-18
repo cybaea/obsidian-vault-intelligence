@@ -6,6 +6,7 @@ import { App, Notice } from 'obsidian';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { GeminiProvider } from '../../src/services/GeminiProvider';
+import { ModelRegistry } from '../../src/services/ModelRegistry';
 import { VaultIntelligenceSettings } from '../../src/settings';
 
 vi.mock('obsidian', () => {
@@ -122,6 +123,77 @@ describe('GeminiProvider', () => {
             await service.generateMessage([{ content: 'test', role: 'user' }], {}).catch(() => { });
 
             expect(Notice).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('SDK Payload Injection (generateMessage)', () => {
+        let mockGenerateContent: Mock;
+
+        beforeEach(() => {
+            mockGenerateContent = vi.fn().mockResolvedValue({ 
+                candidates: [{ content: { parts: [{ text: 'mock response' }] } }],
+                text: 'mock response' 
+            });
+            const mockClient = { models: { generateContent: mockGenerateContent } };
+            vi.spyOn(service as any, 'getClient').mockResolvedValue(mockClient);
+            // We need a dummy model in the registry that supports native search to test this
+            vi.spyOn(ModelRegistry, 'getModelById').mockImplementation((id: string) => {
+                if (id === 'gemini-native-search') return { supportsNativeSearch: true } as unknown as ReturnType<typeof ModelRegistry.getModelById>;
+                if (id === 'gemini-no-search') return { supportsNativeSearch: false } as unknown as ReturnType<typeof ModelRegistry.getModelById>;
+                return undefined;
+            });
+            // We also need parseResponse to not fail, which it shouldn't for simple texts
+        });
+
+        it('should inject googleSearch when enabled explicitly in ChatOptions', async () => {
+            await service.generateMessage([{ content: 'test', role: 'user' }], {
+                enableWebSearch: true,
+                modelId: 'gemini-native-search',
+            });
+
+            expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            
+            // Check tools array for both injected objects
+            expect(requestParams.tools).toBeDefined();
+            expect(requestParams.tools).toContainEqual({ googleSearch: {} });
+        });
+
+        it('should NOT inject googleSearch if the model does not support it, even if enabled', async () => {
+            await service.generateMessage([{ content: 'test', role: 'user' }], {
+                enableWebSearch: true,
+                modelId: 'gemini-no-search',
+            });
+
+            expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            
+            expect(requestParams.tools ?? []).not.toContainEqual({ googleSearch: {} });
+        });
+
+        it('should NOT inject googleSearch if disabled in ChatOptions', async () => {
+            await service.generateMessage([{ content: 'test', role: 'user' }], {
+                enableWebSearch: false,
+                modelId: 'gemini-native-search',
+            });
+
+            expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            
+            expect(requestParams.tools).toBeUndefined();
+        });
+
+        it('should fallback to settings if options are undefined', async () => {
+            mockSettings.enableWebSearch = true;
+            
+            await service.generateMessage([{ content: 'test', role: 'user' }], {
+                modelId: 'gemini-native-search',
+            });
+
+            expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            
+            expect(requestParams.tools).toContainEqual({ googleSearch: {} });
         });
     });
 
