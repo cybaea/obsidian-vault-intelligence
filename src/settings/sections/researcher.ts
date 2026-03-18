@@ -253,33 +253,48 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     const isGroundingPreset = groundingModels.some(m => m.id === groundingModelCurrent);
 
     new Setting(containerEl)
-        .setName('Web search model')
-        .setDesc(`Model used for verifying facts and searching the web.`)
-        .addDropdown(dropdown => {
-            renderModelDropdown(dropdown, groundingModels, groundingModelCurrent, hasApiKey, hasOllama, (val) => {
+        .setName('Enable web search')
+        .setDesc('Allows the agent to search the internet for live information, facts, and news.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableWebSearch)
+            .onChange((value) => {
                 void (async () => {
-                    if (val !== 'custom') {
-                        plugin.settings.groundingModel = val;
-                        await plugin.saveSettings();
-                    }
+                    plugin.settings.enableWebSearch = value;
+                    await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
-            });
-        });
+            }));
 
-    if (hasApiKey && !isGroundingPreset) {
+    if (plugin.settings.enableWebSearch) {
         new Setting(containerEl)
-            .setName('Custom web search model')
-            .setDesc('Enter the specific Gemini model ID.')
-            .addText(text => text
-                .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
-                .setValue(groundingModelCurrent)
-                .onChange((value) => {
+            .setName('Web search model')
+            .setDesc(`Model used for verifying facts and searching the web.`)
+            .addDropdown(dropdown => {
+                renderModelDropdown(dropdown, groundingModels, groundingModelCurrent, hasApiKey, hasOllama, (val) => {
                     void (async () => {
-                        plugin.settings.groundingModel = value;
-                        await plugin.saveSettings();
+                        if (val !== 'custom') {
+                            plugin.settings.groundingModel = val;
+                            await plugin.saveSettings();
+                        }
+                        refreshSettings(plugin);
                     })();
-                }));
+                });
+            });
+
+        if (hasApiKey && !isGroundingPreset) {
+            new Setting(containerEl)
+                .setName('Custom web search model')
+                .setDesc('Enter the specific Gemini model ID.')
+                .addText(text => text
+                    .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
+                    .setValue(groundingModelCurrent)
+                    .onChange((value) => {
+                        void (async () => {
+                            plugin.settings.groundingModel = value;
+                            await plugin.saveSettings();
+                        })();
+                    }));
+        }
     }
 
     // Code Execution

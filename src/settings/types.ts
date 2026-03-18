@@ -45,6 +45,7 @@ export interface VaultIntelligenceSettings {
     enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
     enableDualLoop: boolean;
+    enableWebSearch: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
     gardenerModel: string;
@@ -167,6 +168,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableAgentWriteAccess: false,
     enableCodeExecution: true,
     enableDualLoop: true,
+    enableWebSearch: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',

@@ -71,12 +71,13 @@ export class ToolRegistry {
     /**
      * Returns the list of available tools types abstracted from SDKs, including dynamically fetched MCP tools.
      */
-    public async getTools(enableCodeExecution?: boolean): Promise<IToolDefinition[]> {
+    public async getTools(options: { enableCodeExecution?: boolean, enableWebSearch?: boolean } = {}): Promise<IToolDefinition[]> {
         if (!this.provider.supportsTools) {
              return [];
         }
 
-        const isCodeEnabled = enableCodeExecution !== undefined ? enableCodeExecution : this.settings.enableCodeExecution;
+        const isCodeEnabled = options.enableCodeExecution !== undefined ? options.enableCodeExecution : this.settings.enableCodeExecution;
+        const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
         const tools: IToolDefinition[] = [];
 
         // 1. Vault Search
@@ -106,7 +107,7 @@ export class ToolRegistry {
         });
 
         // 3. Google Search (Gated by provider capability)
-        if (this.provider.supportsWebGrounding) {
+        if (isWebSearchEnabled && this.provider.supportsWebGrounding) {
             tools.push({
                 description: "Perform a Google search to find the latest real-world information, facts, dates, or news.",
                 name: AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH,
@@ -132,7 +133,7 @@ export class ToolRegistry {
         });
 
         // 5. Computational Solver (Gated by Code settings but may eventually be provider capability)
-        if (isCodeEnabled && this.settings.codeModel.trim().length > 0) {
+        if (isCodeEnabled && this.provider.supportsCodeExecution && this.settings.codeModel.trim().length > 0) {
             tools.push({
                 description: "Use this tool to solve math problems, perform complex logic, or analyze data using code execution.",
                 name: AGENT_CONSTANTS.TOOLS.CALCULATOR,

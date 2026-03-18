@@ -30,8 +30,12 @@ describe('ToolRegistry Capabilities', () => {
     beforeEach(() => {
         mockApp = {} as unknown as App;
         mockSettings = {
-            codeModel: '',
-            enableCodeExecution: false,
+            codeModel: 'test-model',
+            contextWindowTokens: 100000,
+            enableCodeExecution: true,
+            enableWebSearch: true,
+            mcpServers: [],
+            modelContextOverrides: {}
         } as unknown as VaultIntelligenceSettings;
 
         mockProvider = {
@@ -72,24 +76,62 @@ describe('ToolRegistry Capabilities', () => {
         expect(tools.length).toBe(0);
     });
 
-    it('should include Google Search if supportsWebGrounding is true', async () => {
-        mockProvider.supportsTools = true;
-        mockProvider.supportsWebGrounding = true;
-        const registry = createRegistry(mockProvider);
-        const tools = await registry.getTools();
-        
-        const googleSearchTool = tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH);
-        expect(googleSearchTool).toBeDefined();
+    describe('Web Search Capabilities', () => {
+        it('should include Google Search when enabled in settings AND supported by provider', async () => {
+            mockSettings.enableWebSearch = true;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsWebGrounding = true;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH)).toBeDefined();
+        });
+
+        it('should NOT include Google Search when disabled in settings despite provider support', async () => {
+            mockSettings.enableWebSearch = false;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsWebGrounding = true;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH)).toBeUndefined();
+        });
+
+        it('should NOT include Google Search when enabled in settings BUT NOT supported by provider', async () => {
+            mockSettings.enableWebSearch = true;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsWebGrounding = false;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH)).toBeUndefined();
+        });
     });
 
-    it('should NOT include Google Search if supportsWebGrounding is false', async () => {
-        mockProvider.supportsTools = true;
-        mockProvider.supportsWebGrounding = false;
-        const registry = createRegistry(mockProvider);
-        const tools = await registry.getTools();
-        
-        const googleSearchTool = tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.GOOGLE_SEARCH);
-        expect(googleSearchTool).toBeUndefined();
+    describe('Code Execution Capabilities', () => {
+        it('should include Calculator when enabled in settings AND supported by provider', async () => {
+            mockSettings.enableCodeExecution = true;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsCodeExecution = true;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.CALCULATOR)).toBeDefined();
+        });
+
+        it('should NOT include Calculator when disabled in settings despite provider support', async () => {
+            mockSettings.enableCodeExecution = false;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsCodeExecution = true;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.CALCULATOR)).toBeUndefined();
+        });
+
+        it('should NOT include Calculator when enabled in settings BUT NOT supported by provider', async () => {
+            mockSettings.enableCodeExecution = true;
+            mockProvider.supportsTools = true;
+            mockProvider.supportsCodeExecution = false;
+            const registry = createRegistry(mockProvider);
+            const tools = await registry.getTools();
+            expect(tools.find(t => t.name === AGENT_CONSTANTS.TOOLS.CALCULATOR)).toBeUndefined();
+        });
     });
 
     it('should use the provided modelId to resolve context budget during vault_search', async () => {

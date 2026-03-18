@@ -48,6 +48,8 @@ export interface StreamChunk {
 
 export interface ChatOptions {
     contextWindowTokens?: number;
+    enableCodeExecution?: boolean;
+    enableWebSearch?: boolean;
     /** Explicit JSON Schema for structured output fallback (Phase 1) */
     jsonSchema?: Record<string, unknown>;
     modelId?: string;
