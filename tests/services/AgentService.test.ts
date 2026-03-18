@@ -77,7 +77,8 @@ describe('AgentService Integration', () => {
             mockProviderRegistry,
             mockGraphService,
             mockEmbeddingClient,
-            mockSettings
+            mockSettings,
+            {} as never
         );
     });
 

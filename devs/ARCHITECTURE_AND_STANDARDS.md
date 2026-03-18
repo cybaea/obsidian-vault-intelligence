@@ -20,6 +20,7 @@ We strictly adhere to a **Service-Oriented Architecture (SOA)** to ensure testab
 1.  **Services are Singletons**: All core logic resides in `src/services/`. Services must be instantiated once in `main.ts` and passed via dependency injection or accessed via the plugin instance.
 2.  **Views are Dumb**: UI components (`src/views/`) **MUST NOT** contain business logic.
     *   **Anti-pattern (Avoid)**: `view.app.vault.read()`
+    *   **Exception**: Pragmatic read-only vault access for UI events (e.g., resolving a `TFile` to open it in a workspace leaf via `getAbstractFileByPath`) is permitted, but complex vault queries must be delegated to a service.
     *   **Recommended pattern**: `plugin.graphService.getNoteContent()`
 3.  **No Global State**: Avoid `window.app`. Always use `this.app` passed through the plugin instance.
 
@@ -38,8 +39,8 @@ All code must adhere to the latest Obsidian API standards.
 
 ### 3.1 API and security
 
-*   **Secret Management**: Use `SecretStorage` (API v1.9+, Jan 2026) for storing API keys (Gemini API Key). **Do not** store secrets in `data.json` or plain styling settings.
-*   **Settings UI**: Use `SettingGroup` (API v1.9+) to organize settings instead of manual headings.
+*   **Secret Management**: Use `SecretStorage` (API v1.11.4+, Jan 2026) for storing API keys (Gemini API Key). **Do not** store secrets in `data.json` or plain styling settings.
+*   **Settings UI**: Use `SettingGroup` (API v1.11.0+) to organize settings instead of manual headings.
 *   **File Access**:
 
     *   Use `app.vault.getAbstractFileByPath()` for file resolution (user content).
@@ -65,11 +66,11 @@ All code must adhere to the latest Obsidian API standards.
 ### 4.1 AI Agent Rules
 
 1.  **Verification**: Always run `npm run lint`, `npm run build`, `npm run test` and `npm run docs:build` before marking a coding task as complete.
-2.  **Linting**: Use descriptive ESLint suppressions for Orama internal types. Do not use any other `eslint-disable` comments: resolve the issue, don't hide the symptom.
+2.  **Linting**: Do not use `eslint-disable` comments: resolve the issue, don't hide the symptom. _Exception: `eslint-disable` is permitted in `tests/**` directories where deep mocking requires bypassing strict type checks._
 
 ### 4.2 Release Readiness
 
-*   **Manifest**: `minAppVersion` should be updated if using new APIs (e.g. `1.9.0` for `SecretStorage`).
+*   **Manifest**: `minAppVersion` should be updated if using new APIs (e.g. `1.11.4` for `SecretStorage`).
 *   **Performance**: `onload` must complete in <100ms. Defer heavy initialization (graph loading) to `onLayoutReady`.
 
 ## 5. References

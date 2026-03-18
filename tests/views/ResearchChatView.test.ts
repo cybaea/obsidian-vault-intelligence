@@ -148,6 +148,7 @@ vi.mock('obsidian', async (importOriginal) => {
                 return Promise.resolve();
             })
         },
+        TextComponent: class { inputEl = new MockElement(); setPassword() { return this; } },
         TextAreaComponent: class {
             inputEl = new MockElement();
             getValue() { return 'test prompt'; }

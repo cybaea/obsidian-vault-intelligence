@@ -23,6 +23,13 @@ describe('OllamaProvider', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        
+        // Mock crypto.randomUUID for internal tool extraction logic
+        Object.defineProperty(globalThis, 'crypto', {
+            value: { randomUUID: () => "test-uuid-1234", subtle: {} },
+            writable: true
+        });
+        
         mockSettings = {
             chatModel: 'ollama/llama3',
             contextWindowTokens: 4096,
@@ -220,5 +227,49 @@ describe('OllamaProvider', () => {
             expect(callArgs?.auth).toBe("user:pass");
         });
     });
-});
 
+    describe('Streaming NDJSON Parsing', () => {
+        it('should correctly parse interleaved text and tool calls in a single chunk', () => {
+            const mockStreamState = { fullMessageText: "", inToolCall: false, tempToolCallBuffer: "" };
+            const mockChunk = {
+                created_at: "now",
+                done: false,
+                message: { 
+                    content: "Text A <tool_call>{\"name\":\"tool1\"}</tool_call> Text B <tool_call>{\"name\":\"tool2\"}</tool_call>",
+                    role: "assistant"
+                },
+                model: "llama3"
+            };
+            
+            // Access private method to test state machine directly
+            const mockService = service as unknown as { processNdjsonChunk: (chunk: unknown, state: unknown) => IterableIterator<{text?: string}> };
+            const iterator = mockService.processNdjsonChunk(mockChunk, mockStreamState);
+            
+            const results = [];
+            for (const item of iterator) {
+                results.push(item);
+            }
+            
+            expect(results).toHaveLength(2);
+            expect(results[0]?.text).toBe("Text A ");
+            expect(results[1]?.text).toBe(" Text B ");
+        });
+    });
+
+    describe('Robust JSON Parsing', () => {
+        it('should successfully extract Tool Calls from text containing nested brackets and markdown boundaries', () => {
+            const mockService = service as unknown as { extractFallbackToolCalls: (text: string) => { toolCalls: Array<{ name: string; args: Record<string, string>; internal_state: unknown[] }> } };
+            const input = `Here is the requested tool call spanning multiple lines:
+\`\`\`json
+{"name":"query", "arguments":{"sql": "SELECT * FROM users WHERE metadata = 'key'"}, "internal_state": [1, [2, 3]]}
+\`\`\`
+And here is some random trailing text that should be ignored.`;
+            
+            const results = mockService.extractFallbackToolCalls(input);
+            expect(results.toolCalls).toHaveLength(1);
+            expect(results.toolCalls[0]?.name).toBe("query");
+            expect(results.toolCalls[0]?.args?.sql).toContain('key');
+            expect(results.toolCalls[0]?.internal_state).toBeUndefined(); // It is intentionally dropped as it's not a generic parameter
+        });
+    });
+});

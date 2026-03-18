@@ -7,6 +7,7 @@ import { GardenerStateService } from "./services/GardenerStateService";
 import { GeminiProvider } from "./services/GeminiProvider";
 import { GraphService } from "./services/GraphService";
 import { GraphSyncOrchestrator } from "./services/GraphSyncOrchestrator";
+import { McpClientManager } from "./services/McpClientManager";
 import { MetadataManager } from "./services/MetadataManager";
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "./services/ModelRegistry";
 import { OntologyService } from "./services/OntologyService";
@@ -124,6 +125,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	gardenerStateService: GardenerStateService;
 	workerManager: WorkerManager;
 	graphSyncOrchestrator: GraphSyncOrchestrator;
+	mcpClientManager: McpClientManager;
 	private needsReindex = false;
 
 	private initDebouncedHandlers() {
@@ -157,6 +159,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// 1. Initialize Base Services
 		this.geminiService = new GeminiProvider(this.settings, this.app);
 		this.providerRegistry = new ProviderRegistry(this.settings, this.app, this.geminiService);
+		
+		this.mcpClientManager = new McpClientManager(this.app, this.settings);
+		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
 		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
@@ -395,6 +400,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 	 * Ensures clean shutdown of workers and saves final state.
 	 */
 	onunload() {
+		if (this.mcpClientManager) {
+			this.mcpClientManager.terminate().catch((e: unknown) => {
+				logger.error("Error terminating MCP Client Manager", e);
+			});
+		}
+
 		if (this.graphSyncOrchestrator) {
 			this.graphSyncOrchestrator.flushAndShutdown().catch((e: unknown) => {
 				logger.error("Error during graph shutdown", e);
@@ -489,6 +500,66 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			}
 		}
 
+		// --- MCP Plaintext Secrets Migration (v8.x.x) ---
+		let mcpSecretsMigrated = false;
+		if (this.settings.mcpServers) {
+			const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+			if (storage && storage.setSecret && !this.settings.secretStorageFailure) {
+				for (const server of this.settings.mcpServers) {
+					// Migrate Environment Variables
+					if (server.env && server.env.trim()) {
+						try {
+							const parsed = JSON.parse(server.env) as Record<string, string>;
+							let modified = false;
+							for (const [k, v] of Object.entries(parsed)) {
+								// Basic heuristic: if it looks like a token/key and not already a secret pointer
+								if (!v.startsWith('vi-secret:') && (k.toLowerCase().includes('key') || k.toLowerCase().includes('token') || k.toLowerCase().includes('secret') || k.toLowerCase().includes('password'))) {
+									const secretKey = `mcp-${server.id}-env-${k}`;
+									storage.setSecret(secretKey, v);
+									parsed[k] = `vi-secret:${secretKey}`;
+									modified = true;
+								}
+							}
+							if (modified) {
+								server.env = JSON.stringify(parsed);
+								mcpSecretsMigrated = true;
+							}
+						} catch (e) {
+							logger.warn(`Migration: Failed to parse env for MCP server ${server.name}`, e);
+						}
+					}
+
+					// Migrate HTTP Headers
+					if (server.remoteHeaders && server.remoteHeaders.trim()) {
+						try {
+							const parsed = JSON.parse(server.remoteHeaders) as Record<string, string>;
+							let modified = false;
+							for (const [k, v] of Object.entries(parsed)) {
+								if (!v.startsWith('vi-secret:') && (k.toLowerCase().includes('authorization') || k.toLowerCase().includes('token') || k.toLowerCase().includes('key') || k.toLowerCase().includes('api'))) {
+									const secretKey = `mcp-${server.id}-headers-${k}`;
+									storage.setSecret(secretKey, v);
+									parsed[k] = `vi-secret:${secretKey}`;
+									modified = true;
+								}
+							}
+							if (modified) {
+								server.remoteHeaders = JSON.stringify(parsed);
+								mcpSecretsMigrated = true;
+							}
+						} catch (e) {
+							logger.warn(`Migration: Failed to parse remoteHeaders for MCP server ${server.name}`, e);
+						}
+					}
+				}
+			}
+		}
+
+		if (mcpSecretsMigrated) {
+			logger.info("[SecretStorage] Migrated plaintext MCP secrets to secure storage.");
+			// We save it immediately
+			await this.saveData(this.settings);
+		}
+
 		await this.sanitizeBudgets();
 
 		// --- Model ID Prefix Migration (v8.1.0) ---
@@ -532,6 +603,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		await this.saveData(this.settings);
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
+		if (this.mcpClientManager) void this.mcpClientManager.updateSettings(this.settings);
 
 		if (this.graphSyncOrchestrator) {
 			if (requiresWorkerRestart) {

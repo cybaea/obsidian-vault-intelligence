@@ -71,6 +71,21 @@ Configure the Gardener agent for ontology maintenance and vault hygiene.
 | Skip retention | `7.0 days` | How long to remember skipped files. Supports decimal values. |
 | Context budget | `100,000` | Max token usage for a single gardener analysis. |
 
+## MCP Servers
+
+Configure connections to Model Context Protocol (MCP) servers to extend the Research Assistant's capabilities.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Server name | `None` | A human-readable name for the server. |
+| Server type | `stdio` | The transport mechanism. `stdio` runs a local command. `sse` connects to a legacy Server-Sent Events URL, while `streamable_http` connects to modern remote enterprise endpoints. |
+| Command | `None` | (stdio only) The executable to run, eg `node` or `npx`. |
+| Arguments | `[]` | (stdio only) A list of arguments passed to the command. |
+| Environment variables | `{}` | (stdio only) Optional JSON object containing environment variables. These are merged with the host environment without overriding critical paths. |
+| HTTP headers (JSON) | `None` | (sse and streamable_http only) Optional JSON object for authentication headers, eg `{"Authorization": "Bearer token"}`. |
+| Require explicit confirmation | `On` | When enabled, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Disable this only for read-only servers. |
+| Connection status | `Disconnected` | Displays the current connection state (eg Connected, Error, Untrusted). |
+
 ## Storage (Mobile-Ready)
 
 Manage local vector databases and sharded storage to maintain vault performance and sync reliability.
@@ -93,7 +108,17 @@ Technical tuning for power users.
 | Local SIMD acceleration | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |
 | Gemini API retries | `10` | Number of retries for spotty connections. |
 | Model cache duration | `7 days` | Duration to cache Gemini model list locally. |
+| Model filtering | `None` | Hide specific models from dropdown menus to reduce clutter. |
 | Log level | `Warn` | Developer console verbosity (`Debug` for full CoT). |
+
+## Security
+
+Manage agent network access and execution risks.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Allow local network access | `Off` | **Advanced/Risky**: Allows the agent to access `localhost` and private network IPs (e.g., `192.168.x.x`). **Warning**: This makes you vulnerable to Server-Side Request Forgery (SSRF) attacks if the agent reads malicious notes or prompt injections. Use with extreme caution. |
+| Require explicit confirmation (MCP) | `On` | When configured per MCP server, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Required to prevent Zero-Click Remote Code Execution (RCE). |
 
 ---
 

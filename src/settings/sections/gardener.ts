@@ -3,6 +3,7 @@ import { Setting, App, Plugin, TextComponent } from "obsidian";
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { FolderSuggest } from "../../views/FolderSuggest";
+import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
 
@@ -30,64 +31,14 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
 
     // --- 1. Model & Limits ---
     const gardenerModelCurrent = plugin.settings.gardenerModel;
-    const chatModels = ModelRegistry.getChatModels();
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
     const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
 
     new Setting(containerEl)
         .setName('Gardener model')
         .setDesc('The model used for analysis and suggesting improvements.')
         .addDropdown(dropdown => {
-            if (!canUseChat) {
-                dropdown.addOption('none', 'Configure provider to enable selection...');
-                dropdown.setDisabled(true);
-                return;
-            }
-
-            for (const m of chatModels) {
-                dropdown.addOption(m.id, m.label);
-            }
-
-            // Inject optgroups for better grouping (Gemini vs Ollama)
-            const googleModels = chatModels.filter(m => m.provider === 'gemini');
-            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
-
-            const selectEl = dropdown.selectEl;
-            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
-
-            if (googleModels.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
-                for (const m of googleModels) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            }
-
-            if (ollamaModels.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
-                for (const m of ollamaModels) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            } else if (plugin.settings.ollamaEndpoint) {
-                // Show placeholder if endpoint exists but no models found
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
-                group.createEl('option', {
-                    attr: { disabled: 'true' },
-                    text: 'No models found',
-                    value: 'none'
-                });
-            }
-
-            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
-
-            // Set value after rebuilding
-            dropdown.setValue(isGardenerPreset ? gardenerModelCurrent : 'custom');
-
-            // tooltips logic preserved if needed, though optgroup might change indexing
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
-            }
-
-            dropdown.onChange((val) => {
+            renderModelDropdown(dropdown, chatModels, gardenerModelCurrent, canUseChat, hasOllama, (val) => {
                 void (async () => {
                     if (val !== 'custom') {
                         plugin.settings.gardenerModel = val;

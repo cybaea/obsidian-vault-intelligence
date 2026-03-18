@@ -22,6 +22,7 @@ export interface ModelDefinition {
     provider: 'gemini' | 'local' | 'ollama';
     quantized?: boolean;
     supportedMethods?: string[];
+    supportsNativeSearch?: boolean;
 }
 
 export interface ModelCache {
@@ -80,7 +81,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
         description: 'Fast, efficient, and great for most tasks.',
         id: 'gemini-flash-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
         provider: 'gemini'
@@ -88,7 +89,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
     {
         description: 'Maximum intelligence for complex reasoning.',
         id: 'gemini-pro-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         label: 'Gemini 3 Pro',
         provider: 'gemini'
     }
@@ -97,7 +98,7 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
 export const GEMINI_GROUNDING_MODELS: ModelDefinition[] = [
     {
         id: 'gemini-flash-lite-latest',
-        inputTokenLimit: MODEL_REGISTRY_CONSTANTS.DEFAULT_TOKEN_LIMIT,
+        inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         isDefault: true,
         label: 'Latest release of Gemini Flash-Lite (Default)',
         provider: 'gemini'
@@ -322,15 +323,30 @@ export class ModelRegistry {
         }
 
         const data = response.json as GeminiApiResponse;
-        const models = data.models.map((m: GeminiModel) => ({
-            description: m.description,
-            id: m.name.replace('models/', ''),
-            inputTokenLimit: m.inputTokenLimit,
-            label: m.displayName,
-            outputTokenLimit: m.outputTokenLimit,
-            provider: 'gemini' as const,
-            supportedMethods: m.supportedGenerationMethods || []
-        }));
+        const models = data.models.map((m: GeminiModel) => {
+            const id = m.name.replace('models/', '');
+            let supportsNativeSearch = false;
+            
+            const match = id.match(/^gemini-([\d.]+)/);
+            if (match && match[1]) {
+                const matchStr = match[1];
+                const parts = matchStr.split('.').map(Number);
+                if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
+                    supportsNativeSearch = true;
+                }
+            }
+            
+            return {
+                description: m.description,
+                id,
+                inputTokenLimit: m.inputTokenLimit,
+                label: m.displayName,
+                outputTokenLimit: m.outputTokenLimit,
+                provider: 'gemini' as const,
+                supportedMethods: m.supportedGenerationMethods || [],
+                supportsNativeSearch
+            };
+        });
 
         return { models, rawResponse: data };
     }
@@ -378,71 +394,109 @@ export class ModelRegistry {
     }
 
     private static sortModels(models: ModelDefinition[]): ModelDefinition[] {
-        return [...models].sort((a, b) => {
-            const getScore = (m: ModelDefinition) => {
+        const filtered = models.filter(m => {
+            if (m.provider === 'gemini') {
+                if (m.id.match(/^gemini-2\./)) return false;
+            }
+            return true;
+        });
+
+        return filtered.sort((a, b) => {
+            const getRank = (m: ModelDefinition) => {
                 const id = m.id.toLowerCase();
-                let score = 0;
-                if (id.includes('gemini-3')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_3;
-                else if (id.includes('gemini-2.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2_5;
-                else if (id.includes('gemini-2')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_2;
-                else if (id.includes('gemini-1.5')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_5;
-                else if (id.includes('gemini-1.0')) score += MODEL_REGISTRY_CONSTANTS.SCORES.GEMINI_1_0;
-
-                if (id.includes('pro')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PRO_BOOST;
-                else if (id.includes('flash')) score += MODEL_REGISTRY_CONSTANTS.SCORES.FLASH_BOOST;
-                else if (id.includes('lite')) score += MODEL_REGISTRY_CONSTANTS.SCORES.LITE_BOOST;
-
-                if (id.includes('preview')) score += MODEL_REGISTRY_CONSTANTS.SCORES.PREVIEW_PENALTY;
-                if (id.includes('experimental')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EXPERIMENTAL_PENALTY;
-
-                if (!id.includes('preview') && !id.includes('experimental')) {
-                    score += MODEL_REGISTRY_CONSTANTS.PRODUCTION_BOOST;
-                }
-
-                // Prioritize embedding if it's an embedding request? No, this is general sort.
-                if (id.includes('embedding')) score += MODEL_REGISTRY_CONSTANTS.SCORES.EMBEDDING_BOOST;
-
-                return score;
+                if (id.match(/^gemini-.*-latest$/)) return 1;
+                if (id.match(/^gemini-embedding-/)) return 2;
+                if (id.match(/^gemini-[\d.]+/)) return 3;
+                if (id.match(/^gemini-/)) return 4;
+                if (id.match(/^gemma-/)) return 5;
+                return 6;
             };
 
-            return getScore(b) - getScore(a);
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) return rankA - rankB;
+
+            if (rankA === 3) {
+                const getVersion = (id: string) => {
+                    const match = id.match(/^gemini-([\d.]+)/);
+                    if (match && match[1]) {
+                        return match[1].split('.').map(Number);
+                    }
+                    return [];
+                };
+                const vA = getVersion(a.id.toLowerCase());
+                const vB = getVersion(b.id.toLowerCase());
+                
+                const len = Math.max(vA.length, vB.length);
+                for (let i = 0; i < len; i++) {
+                    const numA = i < vA.length ? (vA[i] || 0) : 0;
+                    const numB = i < vB.length ? (vB[i] || 0) : 0;
+                    if (numA !== numB) return numB - numA;
+                }
+            }
+
+            return a.label.localeCompare(b.label);
         });
     }
 
     /**
+     * Returns a list of all known models (dynamic + static), primarily for setting filters.
+     * @returns Array of all known model definitions.
+     */
+    public static getAllKnownModels(): ModelDefinition[] {
+        const models = this.dynamicModels.length > 0 ? this.dynamicModels : [
+            ...GEMINI_CHAT_MODELS,
+            ...GEMINI_GROUNDING_MODELS,
+            ...LOCAL_EMBEDDING_MODELS,
+            ...GEMINI_EMBEDDING_MODELS
+        ];
+        
+        // Return a deduplicated list
+        const unique = new Map<string, ModelDefinition>();
+        models.forEach(m => unique.set(m.id, m));
+        return Array.from(unique.values());
+    }
+
+    /**
      * Returns a list of models suitable for general chat.
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of chat-capable model definitions.
      */
-    public static getChatModels(): ModelDefinition[] {
+    public static getChatModels(hiddenModels: string[] = []): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
             (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&
-            !m.id.toLowerCase().includes('experimental')
+            !m.id.toLowerCase().includes('experimental') &&
+            !hiddenModels.includes(m.id)
         );
     }
 
     /**
      * Returns a list of models suitable for embedding.
      * @param provider - Filter by provider ('gemini' or 'local').
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini'): ModelDefinition[] {
-        if (provider === 'local') return LOCAL_EMBEDDING_MODELS;
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
+        if (provider === 'local') return LOCAL_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
             m.provider === provider &&
-            (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding'))
+            (m.supportedMethods?.includes('embedContent') || m.id.includes('embedding')) &&
+            !hiddenModels.includes(m.id)
         );
     }
 
     /**
      * Returns a list of models suitable for grounding (search).
+     * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of grounding-capable model definitions.
      */
-    public static getGroundingModels(): ModelDefinition[] {
+    public static getGroundingModels(hiddenModels: string[] = []): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_GROUNDING_MODELS;
         // Grounding models are strictly restricted to flash/lite models.
         // These are optimized for tool-use and search grounding where speed/cost is primary.
@@ -450,7 +504,8 @@ export class ModelRegistry {
             m.provider === 'gemini' &&
             (m.id.includes('flash') || m.id.includes('lite')) &&
             !m.id.toLowerCase().includes('experimental') &&
-            !m.id.toLowerCase().includes('nano')
+            !m.id.toLowerCase().includes('nano') &&
+            !hiddenModels.includes(m.id)
         );
     }
 

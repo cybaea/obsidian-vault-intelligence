@@ -6,6 +6,7 @@ import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
+import { ModelRegistry } from "./ModelRegistry";
 
 interface InternalSecretStorage {
     getSecret(key: string): string | null;
@@ -106,6 +107,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const contents = this.formatHistory(messages);
             const tools = this.formatTools(options.tools);
 
+            const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
+
+            const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
+            const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
+
             let systemInstruction = options.systemInstruction;
             
             // System instructions fallback
@@ -124,10 +130,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 model: options.modelId || this.settings.chatModel
             };
 
+            const toolObjects = [] as import('@google/genai').Tool[];
             if (tools && tools.length > 0) {
-                const toolsConfig = [{ functionDeclarations: tools }];
-                requestParams.tools = toolsConfig;
-                requestParams.config!.tools = toolsConfig;
+                toolObjects.push({ functionDeclarations: tools });
+            }
+            if (useNativeSearch) {
+                toolObjects.push({ googleSearch: {} });
+            }
+
+            if (toolObjects.length > 0) {
+                requestParams.tools = toolObjects;
+                requestParams.config!.tools = toolObjects;
             }
 
             if (systemInstruction) {
@@ -139,8 +152,26 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             logger.debug("[Agent] Final Request Params", requestParams);
 
             const response = await client.models.generateContent(requestParams);
+            const parsed = this.parseResponse(response);
 
-            return this.parseResponse(response);
+            const candidate = response.candidates?.[0];
+            interface ICandidateWithGrounding {
+                groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] };
+            }
+            const groundingChunks = (candidate as unknown as ICandidateWithGrounding)?.groundingMetadata?.groundingChunks || [];
+            const citations: string[] = [];
+            for (const gc of groundingChunks) {
+                if (gc.web?.uri && gc.web?.title) {
+                    const citation = `[${gc.web.title}](${gc.web.uri})`;
+                    if (!citations.includes(citation)) citations.push(citation);
+                }
+            }
+            if (citations.length > 0 && parsed.content) {
+                 const formattedCitations = "\n\n---\n**Sources:**\n" + citations.map((c, i) => `[${i + 1}] ${c}`).join("\n");
+                 parsed.content = parsed.content.trimEnd() + formattedCitations;
+            }
+
+            return parsed;
         });
     }
 
@@ -148,6 +179,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         const client = await this.getClient();
         const contents = this.formatHistory(messages);
         const tools = this.formatTools(options.tools);
+
+        const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
+
+        const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
+        const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
 
         let systemInstruction = options.systemInstruction;
         if (!systemInstruction) {
@@ -163,11 +199,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             contents: contents,
             model: options.modelId || this.settings.chatModel
         };
-
+        const toolObjects = [] as import('@google/genai').Tool[];
         if (tools && tools.length > 0) {
-            const toolsConfig = [{ functionDeclarations: tools }];
-            requestParams.tools = toolsConfig;
-            requestParams.config!.tools = toolsConfig;
+            toolObjects.push({ functionDeclarations: tools });
+        }
+        if (useNativeSearch) {
+            toolObjects.push({ googleSearch: {} });
+        }
+
+        if (toolObjects.length > 0) {
+            requestParams.tools = toolObjects;
+            requestParams.config!.tools = toolObjects;
         }
 
         if (systemInstruction) {
@@ -182,6 +224,8 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
         const accumulatedParts: Part[] = [];
         let activeThoughtSignature: string | undefined;
+        const citations: string[] = [];
+        let fullText = "";
 
         try {
             for await (const chunk of streamResponse) {
@@ -190,6 +234,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 }
 
                 const candidate = chunk.candidates?.[0];
+                interface ICandidateWithGrounding {
+                    groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] };
+                }
+                const groundingChunks = (candidate as unknown as ICandidateWithGrounding)?.groundingMetadata?.groundingChunks || [];
+                for (const gc of groundingChunks) {
+                    if (gc.web?.uri && gc.web?.title) {
+                        const citation = `[${gc.web.title}](${gc.web.uri})`;
+                        if (!citations.includes(citation)) citations.push(citation);
+                    }
+                }
+
                 if (candidate?.content?.parts) {
                     accumulatedParts.push(...candidate.content.parts);
                     
@@ -204,11 +259,18 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
                 const parsed = this.parseResponse(chunk);
                 if (parsed.content) {
+                    fullText += parsed.content;
                     yield { text: parsed.content };
                 }
             }
 
-            if (!options.signal?.aborted && accumulatedParts.length > 0) {
+            if (!options.signal?.aborted) {
+                if (citations.length > 0) {
+                    const formattedCitations = "\n\n---\n**Sources:**\n" + citations.map((c, i) => `[${i + 1}] ${c}`).join("\n");
+                    yield { replaceText: fullText.trimEnd() + formattedCitations };
+                }
+
+                if (accumulatedParts.length > 0) {
                 // Yield the fully aggregated tool calls once at the end.
                 // Re-parsing all parts ensures complete functionCall arguments.
                 const finalParsed = this.parseResponse({
@@ -230,6 +292,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                     rawContent: accumulatedParts,
                     toolCalls: finalParsed.toolCalls
                 };
+            }
             }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);

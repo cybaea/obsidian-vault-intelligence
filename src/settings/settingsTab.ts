@@ -4,12 +4,13 @@ import { renderAdvancedSettings } from "./sections/advanced";
 import { renderConnectionSettings } from "./sections/connections";
 import { renderExplorerSettings } from "./sections/explorer";
 import { renderGardenerSettings } from "./sections/gardener";
+import { renderMcpSettings } from "./sections/mcp";
 import { renderResearcherSettings } from "./sections/researcher";
 import { renderStorageSettings } from "./sections/storage";
 import { SettingsTabContext } from "./SettingsTabContext";
 import { IVaultIntelligencePlugin } from "./types";
 
-type TabId = "connections" | "researcher" | "explorer" | "gardener" | "storage" | "advanced";
+type TabId = "connections" | "researcher" | "explorer" | "gardener" | "storage" | "mcp" | "advanced";
 
 interface TabDefinition {
     id: TabId;
@@ -41,6 +42,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             { id: "explorer", label: "Explorer", render: renderExplorerSettings },
             { id: "gardener", label: "Gardener", render: renderGardenerSettings },
             { id: "storage", label: "Storage", render: renderStorageSettings as (context: SettingsTabContext) => void },
+            { id: "mcp", label: "MCP Tools", render: renderMcpSettings },
             { id: "advanced", label: "Advanced", render: renderAdvancedSettings },
         ];
 

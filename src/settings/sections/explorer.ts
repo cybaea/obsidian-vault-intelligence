@@ -5,6 +5,7 @@ import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { isComplexLanguage } from "../../utils/language-utils";
+import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 
@@ -87,15 +88,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
         if (providerEnabled) {
             embeddingSetting.addDropdown(dropdown => {
-                for (const m of onlineEmbeddingModels) {
-                    dropdown.addOption(m.id, m.label);
-                }
-                dropdown.addOption('custom', 'Custom model ID...');
-                const current = plugin.settings.embeddingModel;
-                const isPreset = onlineEmbeddingModels.some(m => m.id === current);
-                dropdown.setValue(isPreset ? current : 'custom');
-
-                dropdown.onChange((val) => {
+                renderModelDropdown(dropdown, onlineEmbeddingModels, plugin.settings.embeddingModel, providerEnabled, hasOllama, (val) => {
                     void (async () => {
                         if (val !== 'custom') {
                             const modelDef = ModelRegistry.getModelById(val);
@@ -187,16 +180,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     } else {
         // Local Provider Models
         embeddingSetting.addDropdown(dropdown => {
-            for (const m of LOCAL_EMBEDDING_MODELS) {
-                dropdown.addOption(m.id, m.label);
-            }
-            dropdown.addOption('custom', 'Custom (HuggingFace ID)...');
-
-            const current = plugin.settings.embeddingModel;
-            const isPreset = LOCAL_EMBEDDING_MODELS.some(m => m.id === current);
-            dropdown.setValue(isPreset ? current : 'custom');
-
-            dropdown.onChange((val) => {
+            renderModelDropdown(dropdown, LOCAL_EMBEDDING_MODELS, plugin.settings.embeddingModel, true, false, (val) => {
                 void (async () => {
                     if (val !== 'custom') {
                         const modelDef = LOCAL_EMBEDDING_MODELS.find(m => m.id === val);

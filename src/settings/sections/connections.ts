@@ -1,8 +1,9 @@
-import { Setting, TextComponent, App, setIcon, Notice, SecretComponent, requestUrl } from "obsidian";
+import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { SettingsTabContext } from "../SettingsTabContext";
+import "../components"; // Ensure prototype extensions load
 import { BANNER_BASE64 } from "./banner-data";
 
 interface InternalApp extends App {
@@ -73,31 +74,16 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
     if (plugin.settings.secretStorageFailure) {
         // Fallback: Linux with no keyring
-        let apiTextInput: TextComponent;
         apiSetting
-            .addExtraButton(btn => {
-                btn.setIcon('eye')
-                    .setTooltip('Show API key')
-                    .onClick(() => {
-                        if (apiTextInput.inputEl.type === 'password') {
-                            apiTextInput.inputEl.type = 'text';
-                            btn.setIcon('eye-off');
-                        } else {
-                            apiTextInput.inputEl.type = 'password';
-                            btn.setIcon('eye');
-                        }
-                    });
-            })
             .addText(text => {
-                apiTextInput = text;
                 text
                     .setPlaceholder('API key')
                     .setValue(plugin.settings.googleApiKey || '')
+                    .setPassword()
                     .onChange(async (value) => {
                         plugin.settings.googleApiKey = value;
                         await plugin.saveSettings();
                     });
-                text.inputEl.type = 'password';
             });
     } else {
         // Modern: SecretStorage (v1.11.4+)

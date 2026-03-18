@@ -29,7 +29,8 @@ const mainExternalModules = [
 	"@lezer/lr",
 	"sharp",
 	"onnxruntime-node",
-	...builtinModules
+	...builtinModules,
+	...builtinModules.map(m => `node:${m}`)
 ];
 
 // 2. Worker Process Externals (Browser)

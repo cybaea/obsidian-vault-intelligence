@@ -11,6 +11,19 @@ import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
+export interface MCPServerConfig {
+    args?: string[];
+    command?: string;
+    enabled: boolean;
+    env?: string;
+    id: string;
+    name: string;
+    remoteHeaders?: string;
+    requireExplicitConfirmation: boolean;
+    type: "stdio" | "sse" | "streamable_http";
+    url?: string;
+}
+
 export interface VaultIntelligenceSettings {
     agentLanguage: string;
     allowLocalNetworkAccess: boolean;
@@ -32,6 +45,7 @@ export interface VaultIntelligenceSettings {
     enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
     enableDualLoop: boolean;
+    enableWebSearch: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
     gardenerModel: string;
@@ -43,11 +57,13 @@ export interface VaultIntelligenceSettings {
     geminiRetries: number;
     googleApiKey: string;
     groundingModel: string;
+    hiddenModels: string[];
     indexingDelayMs: number;
     indexVersion: number;
     keywordWeight: number;
     logLevel: LogLevel;
     maxAgentSteps: number;
+    mcpServers: MCPServerConfig[];
     minSimilarityScore: number;
     modelCacheDurationDays: number;
     modelContextOverrides: Record<string, number>;
@@ -76,12 +92,13 @@ Language: Respond in {{LANGUAGE}}.
 
 Core Guidelines:
 1. **Grounding**: You have access to the user's personal notes. Prioritize their content for questions of the type "What do I know about...".
-2. **Verification**: When users ask for facts, ALWAYS verify them against real-world data using 'google_search' unless explicitly told to rely only on notes.
+    {{VERIFICATION_RULES}}
 3. **Tool Usage**:
    - Use 'vault_search' to find notes, concepts, and connections. If 'vault_search' returns no results, state this clearly. Do not invent facts about the user's notes.
    - Use 'google_search' for live news, dates, and external fact-checking.
    - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
+   - **External Integrations (MCP)**: You may be provided with dynamically injected tools from external servers. If a user's request aligns with the specific capabilities of these tools (such as interacting with external APIs, system information, or external files), prioritize executing them over searching the local vault, as the vault will likely not have live external state.
    - **EXECUTION**: If a tool is needed, invoke it IMMEDIATELY and WITHOUT COMMENTARY. Your text response MUST BE EMPTY when you invoke a tool. Never explain what you are going to do.
    - **ANSWERING**: You are in a direct conversation. When providing your final answer after using tools, address the user as 'you'. UNDER NO CIRCUMSTANCES should you speak in the third person (e.g., NEVER say "The user wants to know..." or "Based on the search results..."). Give the answer directly and conversationally.
 4. **Context & Syntax**:
@@ -151,6 +168,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableAgentWriteAccess: false,
     enableCodeExecution: true,
     enableDualLoop: true,
+    enableWebSearch: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
@@ -161,12 +179,14 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerSystemInstruction: null, // Use default by reference
     geminiRetries: 10,
     googleApiKey: '',
-    groundingModel: 'gemini-2.5-flash-lite',
+    groundingModel: 'gemini-flash-lite-latest',
+    hiddenModels: [],
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
     indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
+    mcpServers: [],
     minSimilarityScore: 0.5,
     modelCacheDurationDays: 7,
     modelContextOverrides: {},
@@ -194,6 +214,7 @@ export interface IVaultIntelligencePlugin {
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
     manifest: { id: string };
+    mcpClientManager: unknown; // Using unknown here to avoid circular dep, we'll cast it in implementation
     persistenceManager: PersistenceManager;
     requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;

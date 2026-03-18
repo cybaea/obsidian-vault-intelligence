@@ -1,5 +1,6 @@
 import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
 
+import { WORKER_CONSTANTS } from '../constants';
 import {
     TransformersEnv,
     ConfigureMessage,
@@ -51,9 +52,9 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
 
         // --- Smart Timeout Implementation ---
         // 1. Determine timeout based on context (Model weights vs API/Metadata)
-        // Allow 15 minutes for model assets (.onnx, .bin, .wasm, etc.) to support slow connections
+        // Allow longer timeout for model assets (.onnx, .bin, .wasm, etc.) to support slow connections
         const IS_HEAVY_ASSET = url.toLowerCase().match(/\.(onnx|bin|wasm|msgpack)$/) || url.includes('huggingface.co');
-        const TIMEOUT_MS = IS_HEAVY_ASSET ? 900000 : 30000;
+        const TIMEOUT_MS = IS_HEAVY_ASSET ? WORKER_CONSTANTS.HEAVY_ASSET_TIMEOUT_MS : WORKER_CONSTANTS.API_REQUEST_TIMEOUT_MS;
 
         const timeoutId = setTimeout(() => {
             if (pendingFetches.has(requestId)) {

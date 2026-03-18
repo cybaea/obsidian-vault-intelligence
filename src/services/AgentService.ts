@@ -10,6 +10,7 @@ import { IEmbeddingClient, IToolDefinition, StreamChunk, ToolCall, ToolResult, U
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
 import { ContextAssembler } from "./ContextAssembler";
+import { McpClientManager } from "./McpClientManager";
 import { ModelRegistry } from "./ModelRegistry";
 import { ProviderRegistry } from "./ProviderRegistry";
 import { SearchOrchestrator } from "./SearchOrchestrator";
@@ -54,7 +55,8 @@ export class AgentService {
         providerRegistry: ProviderRegistry,
         graphService: GraphService,
         embeddingService: IEmbeddingClient,
-        settings: VaultIntelligenceSettings
+        settings: VaultIntelligenceSettings,
+        mcpClientManager: McpClientManager
     ) {
         this.app = app;
         this.providerRegistry = providerRegistry;
@@ -67,7 +69,7 @@ export class AgentService {
         const initialProvider = this.providerRegistry.getModelProvider();
 
         this.searchOrchestrator = new SearchOrchestrator(app, graphService, initialClient, this.embeddingService, settings);
-        this.contextAssembler = new ContextAssembler(app, graphService, settings);
+        this.contextAssembler = new ContextAssembler(app, graphService, settings, mcpClientManager);
 
         const fileTools = new FileTools(app);
         this.toolRegistry = new ToolRegistry(
@@ -78,7 +80,8 @@ export class AgentService {
             graphService,
             this.searchOrchestrator,
             this.contextAssembler,
-            fileTools
+            fileTools,
+            mcpClientManager
         );
     }
 
@@ -94,7 +97,7 @@ export class AgentService {
         messages: ChatMessage[],
         currentPrompt: string,
         contextFiles: TFile[] = [],
-        options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
+        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
         const stream = this.chatStream(messages, currentPrompt, contextFiles, options);
         let finalText = "";
@@ -116,7 +119,7 @@ export class AgentService {
         messages: ChatMessage[],
         currentPrompt: string,
         contextFiles: TFile[] = [],
-        options: { modelId?: string; enableCodeExecution?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
+        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
 
         const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
@@ -179,7 +182,7 @@ export class AgentService {
             filteredMessages.splice(duplicateIndex, 1);
         }
 
-        const formattedHistory: UnifiedMessage[] = filteredMessages;
+        let formattedHistory: UnifiedMessage[] = filteredMessages;
 
         if (contextFiles.length > 0) {
             const fileResults: VaultSearchResult[] = contextFiles.map(f => ({
@@ -211,27 +214,40 @@ export class AgentService {
         let systemInstruction = (rawSystemInstruction || "").replace("{{DATE}}", currentDate);
         systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
 
-        const tools: IToolDefinition[] = this.toolRegistry.getTools(options.enableCodeExecution);
-        
-        // Strip Web Grounding from the System Prompt if the active model provider doesn't support the tool
-        if (!tools.find(t => t.name === "google_search")) {
-            // Strip google_search rule if unsupported to prevent hallucinations
-            const activeModelStr = options.modelId || this.settings.chatModel;
-            const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : "gemini";
-            const supportsWeb = provider.supportsWebGrounding;
+        const tools: IToolDefinition[] = await this.toolRegistry.getTools({
+            enableCodeExecution: options.enableCodeExecution,
+            enableWebSearch: options.enableWebSearch
+        });
+        const validToolNames = new Set(tools.map(t => t.name));
 
-            if (!supportsWeb && typeof systemInstruction === 'string') {
-                // Replace the verification step to avoid mentioning google_search while preserving the numbered list
-                systemInstruction = systemInstruction.replace(/2\.\s\*\*Verification\*\*[\s\S]*?(?=\n3\.)/i, "2. **Verification**: Always double-check facts against the user's notes.");
-                // Remove the specific bullet point for the google_search tool
-                systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?google_search'?[\s\S]*?(?=\n)/gi, "");
-                logger.debug("[Agent] Dynamically stripped google_search instruction from system prompt", { provider: providerName });
-            }
+        const activeModelStr = options.modelId || this.settings.chatModel;
+        const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : "gemini";
+        const supportsWeb = provider.supportsWebGrounding;
+
+        // Dynamic System Prompt Variables safely injected via templates rather than fragile regex
+        if (supportsWeb && tools.find(t => t.name === "google_search")) {
+            systemInstruction = systemInstruction.replace("{{VERIFICATION_RULES}}", "2. **Verification**: When users ask for facts, ALWAYS verify them against real-world data using 'google_search' unless explicitly told to rely only on notes.");
+        } else {
+            systemInstruction = systemInstruction.replace("{{VERIFICATION_RULES}}", "2. **Verification**: Always double-check facts against the user's notes.");
+            systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?google_search'?[\s\S]*?(?=\n)/gi, "");
+            logger.debug("[Agent] Dynamically stripped google_search instruction from system prompt", { provider: providerName });
         }
-        
-        formattedHistory.push({ content: currentPrompt, role: "user" });
 
-        logger.debug(`[Agent] Calling model: ${options.modelId || this.settings.chatModel}`);
+        // Filter out "ghost tools" from history (e.g. disabled MCP servers) to prevent LLM hallucinations
+        formattedHistory = formattedHistory.map(msg => {
+            const newMsg = { ...msg };
+            if (newMsg.toolCalls) {
+                newMsg.toolCalls = newMsg.toolCalls.filter(tc => validToolNames.has(tc.name));
+                if (newMsg.toolCalls.length === 0) newMsg.toolCalls = undefined;
+            }
+            if (newMsg.toolResults) {
+                newMsg.toolResults = newMsg.toolResults.filter(tr => validToolNames.has(tr.name));
+                if (newMsg.toolResults.length === 0) newMsg.toolResults = undefined;
+            }
+            return newMsg;
+        }).filter(msg => msg.content?.trim() || msg.toolCalls?.length || msg.toolResults?.length || msg.rawContent?.length);
+
+        formattedHistory.push({ content: currentPrompt, role: "user" });
         logger.debug(`[Agent] History turns: ${formattedHistory.length}`);
         const debugPrompt = currentPrompt.length > 500 ? currentPrompt.substring(0, 500) + "..." : currentPrompt;
         logger.debug(`[Agent] Final Enriched Prompt Preview:\n${debugPrompt}`);
@@ -246,6 +262,8 @@ export class AgentService {
                 let modelResponseRawContent: unknown[] | undefined;
 
                 const stream = reasoningClient.generateMessageStream(formattedHistory, {
+                    enableCodeExecution: options.enableCodeExecution,
+                    enableWebSearch: options.enableWebSearch,
                     modelId: options.modelId,
                     signal: options.signal,
                     systemInstruction: systemInstruction,
@@ -303,6 +321,7 @@ export class AgentService {
                             enableCodeExecution: options.enableCodeExecution,
                             modelId: options.modelId,
                             name: call.name,
+                            signal: options.signal,
                             usedFiles: usedFiles
                         });
 

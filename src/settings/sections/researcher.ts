@@ -3,6 +3,7 @@ import { Setting, App, Plugin } from "obsidian";
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
+import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
@@ -29,64 +30,14 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
 
     // --- 1. Chat Model ---
     const chatModelCurrent = plugin.settings.chatModel;
-    const chatModels = ModelRegistry.getChatModels();
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
     const isChatPreset = chatModels.some(m => m.id === chatModelCurrent);
 
     new Setting(containerEl)
         .setName('Chat model')
         .setDesc('The main engine used for reasoning and answering questions.')
         .addDropdown(dropdown => {
-            if (!canUseChat) {
-                dropdown.addOption('none', 'Configure provider to enable selection...');
-                dropdown.setDisabled(true);
-                return;
-            }
-
-            for (const m of chatModels) {
-                dropdown.addOption(m.id, m.label);
-            }
-            
-            // Inject optgroups for better grouping (Gemini vs Ollama)
-            const googleModels = chatModels.filter(m => m.provider === 'gemini');
-            const ollamaModels = chatModels.filter(m => m.provider === 'ollama');
-
-            const selectEl = dropdown.selectEl;
-            selectEl.innerHTML = ''; // Clear defaults to rebuild with optgroups
-
-            if (googleModels.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
-                for (const m of googleModels) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            }
-
-            if (ollamaModels.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
-                for (const m of ollamaModels) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            } else if (plugin.settings.ollamaEndpoint) {
-                // Show placeholder if endpoint exists but no models found
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
-                group.createEl('option', {
-                    attr: { disabled: 'true' },
-                    text: 'No models found',
-                    value: 'none'
-                });
-            }
-
-            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
-
-            // Set value after rebuilding
-            dropdown.setValue(isChatPreset ? chatModelCurrent : 'custom');
-
-            // tooltips logic preserved if needed, though optgroup might change indexing
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom' && opt.value !== 'none') opt.title = opt.value;
-            }
-
-            dropdown.onChange((val) => {
+            renderModelDropdown(dropdown, chatModels, chatModelCurrent, canUseChat, hasOllama, (val) => {
                 void (async () => {
                     if (val !== 'custom') {
                         plugin.settings.chatModel = val;
@@ -298,77 +249,52 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
 
     // Grounding Model
     const groundingModelCurrent = plugin.settings.groundingModel;
-    const groundingModels = ModelRegistry.getGroundingModels();
+    const groundingModels = ModelRegistry.getGroundingModels(plugin.settings.hiddenModels);
     const isGroundingPreset = groundingModels.some(m => m.id === groundingModelCurrent);
 
     new Setting(containerEl)
-        .setName('Web search model')
-        .setDesc(`Model used for verifying facts and searching the web.`)
-        .addDropdown(dropdown => {
-            if (!hasApiKey) {
-                dropdown.addOption('none', 'Enter API key to enable...');
-                dropdown.setDisabled(true);
-                return;
-            }
-
-            for (const m of groundingModels) {
-                dropdown.addOption(m.id, m.label);
-            }
-
-            // Inject optgroups for better grouping (Gemini vs Ollama)
-            const googleGrounding = groundingModels.filter(m => m.provider === 'gemini');
-            const ollamaGrounding = groundingModels.filter(m => m.provider === 'ollama');
-
-            const selectEl = dropdown.selectEl;
-            selectEl.innerHTML = '';
-
-            if (googleGrounding.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
-                for (const m of googleGrounding) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            }
-
-            if (ollamaGrounding.length > 0) {
-                const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
-                for (const m of ollamaGrounding) {
-                    group.createEl('option', { text: m.label, value: m.id });
-                }
-            }
-
-            selectEl.createEl('option', { text: 'Custom model string...', value: 'custom' });
-
-            dropdown.setValue(isGroundingPreset ? groundingModelCurrent : 'custom');
-
-            for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                const opt = dropdown.selectEl.options.item(i);
-                if (opt && opt.value !== 'custom') opt.title = opt.value;
-            }
-
-            dropdown.onChange((val) => {
+        .setName('Enable web search')
+        .setDesc('Allows the agent to search the internet for live information, facts, and news.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableWebSearch)
+            .onChange((value) => {
                 void (async () => {
-                    if (val !== 'custom') {
-                        plugin.settings.groundingModel = val;
-                        await plugin.saveSettings();
-                    }
+                    plugin.settings.enableWebSearch = value;
+                    await plugin.saveSettings();
                     refreshSettings(plugin);
                 })();
-            });
-        });
+            }));
 
-    if (hasApiKey && !isGroundingPreset) {
+    if (plugin.settings.enableWebSearch) {
         new Setting(containerEl)
-            .setName('Custom web search model')
-            .setDesc('Enter the specific Gemini model ID.')
-            .addText(text => text
-                .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
-                .setValue(groundingModelCurrent)
-                .onChange((value) => {
+            .setName('Web search model')
+            .setDesc(`Model used for verifying facts and searching the web.`)
+            .addDropdown(dropdown => {
+                renderModelDropdown(dropdown, groundingModels, groundingModelCurrent, hasApiKey, hasOllama, (val) => {
                     void (async () => {
-                        plugin.settings.groundingModel = value;
-                        await plugin.saveSettings();
+                        if (val !== 'custom') {
+                            plugin.settings.groundingModel = val;
+                            await plugin.saveSettings();
+                        }
+                        refreshSettings(plugin);
                     })();
-                }));
+                });
+            });
+
+        if (hasApiKey && !isGroundingPreset) {
+            new Setting(containerEl)
+                .setName('Custom web search model')
+                .setDesc('Enter the specific Gemini model ID.')
+                .addText(text => text
+                    .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
+                    .setValue(groundingModelCurrent)
+                    .onChange((value) => {
+                        void (async () => {
+                            plugin.settings.groundingModel = value;
+                            await plugin.saveSettings();
+                        })();
+                    }));
+        }
     }
 
     // Code Execution
@@ -407,25 +333,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             .setName('Code execution model')
             .setDesc(`Specific model used for generating ${python} code.`)
             .addDropdown(dropdown => {
-                if (!canUseChat) {
-                    dropdown.addOption('none', 'Configure provider to enable selection...');
-                    dropdown.setDisabled(true);
-                    return;
-                }
-
-                for (const m of chatModels) {
-                    dropdown.addOption(m.id, m.label);
-                }
-
-                for (let i = 0; i < dropdown.selectEl.options.length; i++) {
-                    const opt = dropdown.selectEl.options.item(i);
-                    if (opt && opt.value !== 'custom') opt.title = opt.value;
-                }
-
-                dropdown.addOption('custom', 'Custom model string...');
-                dropdown.setValue(isCodePreset ? codeModelCurrent : 'custom');
-
-                dropdown.onChange((val) => {
+                renderModelDropdown(dropdown, chatModels, codeModelCurrent, canUseChat, hasOllama, (val) => {
                     void (async () => {
                         if (val !== 'custom') {
                             plugin.settings.codeModel = val;

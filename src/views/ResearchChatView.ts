@@ -44,7 +44,7 @@ export class ResearchChatView extends ItemView {
         this.graphService = graphService;
         this.embeddingService = embeddingService;
 
-        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings);
+        this.agent = new AgentService(plugin.app, providerRegistry, graphService, embeddingService, plugin.settings, plugin.mcpClientManager);
         this.icon = "message-circle";
     }
 
@@ -258,12 +258,23 @@ export class ResearchChatView extends ItemView {
             let lastRenderTime = 0;
             let renderInProgress = false;
 
-            const updateStreamingUI = async (force = false) => {
+            const updateStreamingUI = async (isFinal = false) => {
                 const now = Date.now();
-                if (!force && (renderInProgress || now - lastRenderTime < 100)) return;
+                if (!isFinal && (renderInProgress || now - lastRenderTime < 100)) return;
                 
                 renderInProgress = true;
                 try {
+                    if (!isFinal) {
+                        // High-performance, XSS-safe streaming UI updates
+                        if (lastMessageNode) {
+                            lastMessageNode.textContent = modelMsg.text;
+                            this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                        }
+                        lastRenderTime = Date.now();
+                        return; // Bypass heavy MarkdownRenderer until stream is complete
+                    }
+
+                    // FINAL RENDER - Use Obsidian's engine for true markdown
                     // 1. Unload previous streaming artifacts to prevent memory leaks
                     if (streamingComponent) {
                         streamingComponent.unload();
@@ -370,6 +381,7 @@ export class ResearchChatView extends ItemView {
                     if (chunk.files && chunk.files.length > 0) {
                         this.graphService.trigger("vault-intelligence:context-highlight", chunk.files);
                     }
+                    void updateStreamingUI(true); // Trigger final markdown render
                 }
                 if (chunk.toolCalls) {
                     modelMsg.toolCalls = chunk.toolCalls;
@@ -454,6 +466,8 @@ export class ResearchChatView extends ItemView {
         this.chatContainer.empty();
 
         for (const msg of this.messages) {
+            if (msg.role === "tool") continue; // Hide non-user facing tool results
+            
             const msgComponent = new Component();
             this.messageComponents.push(msgComponent);
             msgComponent.load();
@@ -552,7 +566,7 @@ export class ResearchChatView extends ItemView {
         const selectEl = modelDropdown.selectEl;
         selectEl.innerHTML = '';
         
-        const chatModels = ModelRegistry.getChatModels();
+        const chatModels = ModelRegistry.getChatModels(this.plugin.settings.hiddenModels);
         const hasApiKey = !!this.plugin.settings.googleApiKey;
         const hasOllama = !!this.plugin.settings.ollamaEndpoint;
         const canUseChat = hasApiKey || hasOllama;
