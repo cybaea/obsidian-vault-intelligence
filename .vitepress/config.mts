@@ -127,6 +127,7 @@ export default withMermaid(defineConfig({
                 {
                     text: 'Release History',
                     items: [
+                        { text: '9.0.0 — The Local AI & Extensibility Update', link: '/releases/release-9.0.0' },
                         { text: '8.0.0 — The Interactive & Secure Update', link: '/releases/release-8.0.0' },
                         { text: '7.0.0 — The Foundation Update', link: '/releases/release-7.0.0' },
                         { text: '6.0.0 — The Scale Update', link: '/releases/release-6.0.0' },
