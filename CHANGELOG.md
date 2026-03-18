@@ -34,6 +34,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Secure MCP Execution**: Hardened `McpClientManager` to scrub sensitive host environment variables from child processes, explicitly exposing only a whitelist of safe variables (`PATH`, `DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, etc.), and enforcing mandatory Trust Hash verification across all transport types to prevent zero-click RCE vulnerabilities.
+-   **MCP Secret Storage**: Refactored the MCP Settings UI and data model to migrate plaintext environment variables and connection headers into Obsidian's native OS-encrypted `SecretStorage`.
 -   **McpClientManager**: Engineered a robust service to negotiate the Model Context Protocol, featuring `child_process` tree killing to prevent zombie processes, trust hash generation, and environmental variable merging.
 -   **Ghost tool prevention**: Hardened `AgentService` to automatically sanitize chat payloads and strip tools belonging to disabled MCP servers, preventing LLM hallucinations and 400 Bad Request errors from the Gemini API.
 -   **Resilient stdio process termination**: Improved the MCP `terminate()` lifecycle on Unix systems (macOS/Linux) by explicitly sending `pkill -P` commands to reap all child worker processes, preventing resource-draining "zombie" process leaks when stopping complex MCP servers.
