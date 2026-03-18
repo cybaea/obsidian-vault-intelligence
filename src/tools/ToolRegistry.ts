@@ -249,11 +249,12 @@ export class ToolRegistry {
 
                 // Enforce required confirmation if configured
                 if (!serverConfig || serverConfig.requireExplicitConfirmation) {
+                    const originalName = this.mcpClientManager.getOriginalToolName(name) || name;
                     const confirmedDetails = await ToolConfirmationModal.open(this.app, {
                         action: "mcp",
                         content: JSON.stringify(args, null, 2),
                         path: serverConfig?.name || "Unknown Server",
-                        tool: name
+                        tool: originalName
                     });
 
                     if (!confirmedDetails) {

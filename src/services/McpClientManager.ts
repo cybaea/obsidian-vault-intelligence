@@ -428,6 +428,10 @@ export class McpClientManager implements IProvider {
         return tools;
     }
 
+    public getOriginalToolName(namespaceName: string): string | undefined {
+        return this.toolNameMap.get(namespaceName)?.originalName;
+    }
+
     public async executeTool(namespaceName: string, args: Record<string, unknown>): Promise<{ text: string }> {
         const mapping = this.toolNameMap.get(namespaceName);
         if (!mapping) throw new ProviderError(`Unrecognized MCP tool namespace or server disconnected: ${namespaceName}`, "mcp");
