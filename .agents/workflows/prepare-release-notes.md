@@ -1,5 +1,4 @@
 ---
-name: prepare-release-notes
 description: Prepare the release notes and announcements
 ---
 
@@ -9,7 +8,7 @@ description: Prepare the release notes and announcements
 
 We are releasing a new version of Vault Intelligence.
 
-__Important_(_: The `npm run release:prep` command has run, so `package.json` and `CHANGELOG.md` are up to date.
+__Important_: The `npm run release:prep` command has run, so `package.json` and `CHANGELOG.md` are up to date.
 
 **Your Mission**:
  
