@@ -31,4 +31,4 @@ instructions: |
   - Unnecessary abstractions.
   
   **Phase 3: Validation**
-  Run `npm run lint` and `npm run build`. Note any warnings or errors.
+  Run `npm run lint`, `npm run build`, and `npm run test`. Fix any warnings or errors.

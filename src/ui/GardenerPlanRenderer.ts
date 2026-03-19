@@ -1,4 +1,4 @@
-import { MarkdownRenderChild, ButtonComponent, setIcon, TFile, TFolder, Notice, App } from "obsidian";
+import { MarkdownRenderChild, ButtonComponent, setIcon, TFile, Notice, App } from "obsidian";
 
 import { GardenerPlan } from "../services/GardenerService";
 import { GardenerStateService } from "../services/GardenerStateService";
@@ -240,20 +240,11 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                                         // Topic doesn't exist, create it!
                                         const definition = this.plan.newTopicDefinitions?.find(d => d.topicLink === String(topicLink))?.definition || "No definition provided.";
 
-                                        // Ensure folders exist (recursive-ish)
+                                        // Ensure folders exist (recursive-ish) via MetadataManager
                                         const folderPath = path.substring(0, path.lastIndexOf('/'));
-                                        if (folderPath && !(this.app.vault.getAbstractFileByPath(folderPath) instanceof TFolder)) {
-                                            const folders = folderPath.split('/');
-                                            let currentPath = "";
-                                            for (const folder of folders) {
-                                                currentPath = currentPath ? `${currentPath}/${folder}` : folder;
-                                                if (!(this.app.vault.getAbstractFileByPath(currentPath) instanceof TFolder)) {
-                                                    await this.app.vault.createFolder(currentPath);
-                                                }
-                                            }
-                                        }
+                                        await this.metadataManager.createFolderIfMissing(folderPath);
 
-                                        await this.app.vault.create(path, `# ${match[1]}\n\n${definition}`);
+                                        await this.metadataManager.createFileIfMissing(path, `# ${match[1]}\n\n${definition}`);
                                         logger.info(`Automatically created topic: ${path}`);
                                     }
                                 }

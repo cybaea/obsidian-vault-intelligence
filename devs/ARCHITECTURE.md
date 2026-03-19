@@ -596,6 +596,60 @@ export class SearchOrchestrator {
 }
 ```
 
+#### `AgentService`
+
+Orchestrates the AI agent activities, manages tool execution, chat history, and context assembly.
+
+```typescript
+export class AgentService {
+    public chat(messages: ChatMessage[], currentPrompt: string, contextFiles?: TFile[], options?: any): Promise<{ createdFiles: string[]; files: string[]; text: string }>;
+    public chatStream(messages: ChatMessage[], currentPrompt: string, contextFiles?: TFile[], options?: any): AsyncIterableIterator<StreamChunk>;
+    public prepareContext(inputMessage: string, modelId?: string): Promise<{ contextFiles: TFile[], cleanMessage: string, warnings: string[] }>;
+    public reflexSearch(query: string, limit: number): Promise<VaultSearchResult[]>;
+}
+```
+
+#### `McpClientManager`
+
+Manages connections to standalone Model Context Protocol (MCP) servers, executing tools and retrieving resources.
+
+```typescript
+export class McpClientManager implements IProvider {
+    public initialize(): Promise<void>;
+    public terminate(): Promise<void>;
+    public getAvailableTools(): Promise<IToolDefinition[]>;
+    public executeTool(namespaceName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<{ text: string }>;
+    public getAvailableResources(): Promise<Record<string, unknown>[]>;
+    public readResource(serverId: string, uri: string): Promise<Record<string, unknown>>;
+}
+```
+
+#### `MetadataManager`
+
+Centralizes and safely manages vault modifications and frontmatter updates to prevent race conditions.
+
+```typescript
+export class MetadataManager {
+    public updateFrontmatter(file: TFile, updates: (frontmatter: Record<string, unknown>) => void): Promise<void>;
+    public hasKey(file: TFile, key: string): boolean;
+    public getKeyValue(file: TFile, key: string): unknown;
+    public createFolderIfMissing(path: string): Promise<void>;
+    public createFileIfMissing(path: string, content: string): Promise<void>;
+}
+```
+
+#### `ProviderRegistry`
+
+Central registry for instantiating and retrieving reasoning and embedding clients dynamically.
+
+```typescript
+export class ProviderRegistry {
+    public getReasoningClient(modelId?: string): IReasoningClient;
+    public getEmbeddingClient(provider?: 'gemini' | 'local' | 'ollama'): IEmbeddingClient;
+    public getModelProvider(modelId?: string): IModelProvider;
+}
+```
+
 ---
 
 ## 5. Magic and configuration

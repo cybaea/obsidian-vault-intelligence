@@ -18,4 +18,4 @@ instructions: |
   6. Check adherence to markdown formatting rules in `.agents/rules/Markdown.md`.
   
   **Validation:**
-  Run `npm run lint` and `npm run docs:build`. Note any issues.
+  Run `npm run lint` and `npm run docs:build`. Fix any issues.
