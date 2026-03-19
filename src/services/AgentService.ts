@@ -1,4 +1,3 @@
-
 import { App, MarkdownView, TFile, TFolder, WorkspaceLeaf, normalizePath } from "obsidian";
 
 import { SEARCH_CONSTANTS, REGEX_CONSTANTS } from "../constants";
@@ -313,24 +312,34 @@ export class AgentService {
                     yield { status: toolStatus };
 
                     const toolPromises = loopToolCalls.map(async (call) => {
-                        const args = call.args || {};
-                        const functionResponse = await this.toolRegistry.execute({
-                            args: args,
-                            createdFiles: createdFiles,
-                            enableAgentWriteAccess: options.enableAgentWriteAccess,
-                            enableCodeExecution: options.enableCodeExecution,
-                            modelId: options.modelId,
-                            name: call.name,
-                            signal: options.signal,
-                            usedFiles: usedFiles
-                        });
-
-                        return {
-                            id: call.id,
-                            name: call.name,
-                            result: functionResponse,
-                            thought_signature: call.thought_signature
-                        };
+                        try {
+                            const args = call.args || {};
+                            const functionResponse = await this.toolRegistry.execute({
+                                args: args,
+                                createdFiles: createdFiles,
+                                enableAgentWriteAccess: options.enableAgentWriteAccess,
+                                enableCodeExecution: options.enableCodeExecution,
+                                modelId: options.modelId,
+                                name: call.name,
+                                signal: options.signal,
+                                usedFiles: usedFiles
+                            });
+    
+                            return {
+                                id: call.id,
+                                name: call.name,
+                                result: functionResponse,
+                                thought_signature: call.thought_signature
+                            };
+                        } catch (error) {
+                            logger.error(`[Agent] Tool execution failed for ${call.name}`, error);
+                            return {
+                                id: call.id,
+                                name: call.name,
+                                result: { error: String(error) },
+                                thought_signature: call.thought_signature
+                            };
+                        }
                     });
 
                     const completedParts = await Promise.all(toolPromises);

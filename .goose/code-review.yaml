@@ -1,0 +1,34 @@
+version: "1.0.0"
+title: "Code and Architecture Review"
+description: "Evaluates Node.js, Electron, and Obsidian plugin codebase for best practices."
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+instructions: |
+  Adopt roles as systems architect and senior developer. Review the Vault Intelligence codebase.
+  
+  **Phase 1: Research & Planning**
+  - Research good architectural code practices for Node.js, Electron, and Obsidian plugins.
+  - Create a custom checklist based on your research.
+  - Evaluate the codebase against this checklist.
+  
+  **Phase 2: Specific Anti-Pattern Evaluations**
+  Scan and flag the following:
+  - Over-complication of logic.
+  - Insufficient test coverage (especially edge cases).
+  - Disabled lint checks.
+  - DRY principle violations.
+  - Magic numbers/strings (migrate to `src/constants.ts` or `src/settings/`).
+  - Fragile regular expressions (suggest robust parsers).
+  - TypeScript `any` abuse (enforce interfaces or `unknown`).
+  - Bang (!) operator overuse (suggest `?.` or `??`).
+  - The God Object (violating Single Responsibility).
+  - Primitive obsession (suggest Branded Types).
+  - Arrow Code / Nested Ifs (suggest Guard Clauses).
+  - Promise Hell (enforce `async/await`).
+  - Unnecessary abstractions.
+  
+  **Phase 3: Validation**
+  Run `npm run lint` and `npm run build`. Note any warnings or errors.
