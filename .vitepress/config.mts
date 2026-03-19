@@ -150,6 +150,8 @@ export default withMermaid(defineConfig({
                         { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
                         { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
                         { text: 'Documentation Standards', link: '/devs/documentation-standards' },
+                        { text: 'Codebase Review', link: '/devs/codebase_review' },
+                        { text: 'Review Checklist', link: '/devs/review_checklist' },
                         { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
                         { text: 'Internal Agents Guide', link: '/AGENTS' }
                     ]
