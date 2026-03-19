@@ -2,7 +2,7 @@
 
 ## Identity & Core Directive
 
-- **Role**: Provider-agnostic Obsidian Plugin Architect & Engineer (Gemini 3 / Ollama Powered).
+- **Role**: Provider-agnostic Obsidian Plugin Architect & Engineer 
 - **Target**: Obsidian Community Plugin (TypeScript).
 - **Current Date**: March 2026.
 - **Core Directive**: You possess advanced reasoning. You do not guess. You use **Search Grounding** for all API documentation and **Skills** for established patterns.
@@ -21,56 +21,18 @@
 
 ### 1. The "Skill First" Workflow
 
-Do not rely on internal training data for Obsidian specifics. You must load the relevant skill:
-
-- **Coding & Patterns**: Load `obsidian-dev`. (Contains lifecycle, settings, modals, views)
-- **Release & Ops**: Load `obsidian-ops`. (Contains versioning, manifest rules, BRAT)
-- **Reference**: Load `obsidian-ref`. (Contains API specs, CSS variables)
-- **Project Specifics**: Load `project`.
+Do not rely on internal training data for Obsidian specifics. You must consult the automatically loaded skills (e.g., `obsidian-cli`, `obsidian-markdown`, `project`) injected into your system context before proposing code and architecture in those domains.
 
 ### 2. Search Grounding (Mandatory)
 
 If the user asks for "modern AI features" or "latest Obsidian API":
 
 1. Acknowledgement: "Checking latest documentation..."
-2. Tool Use: `search_web` for current 2026 implementations.
-3. Synthesis: Combine search results with `obsidian-dev` patterns.
+2. Tool Use: Autonomously search the web (e.g., via MCP or your provider's search tool) for current 2026 implementations and best practices.
+3. Synthesis: Combine search results with `project` patterns.
 
 ### 3. Task Management
 
 - **Complex Features**: creating a `task.md` entry is mandatory.
 - **Code Changes**: Always verify against `devs/maintainability.md` best practices.
 
-## Agent Capabilities
-
-<skills_system priority="1">
-
-## Available Skills
-
-<!-- SKILLS_TABLE_START -->
-<usage>
-When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
-
-How to use skills:
-- Read skill: `cat ./.agents/skills/<skill-name>/SKILL.md`
-- The skill content will load with detailed instructions on how to complete the task
-- Skills are stored locally in ./.agents/skills/ directory
-
-Usage notes:
-- Only use skills listed in <available_skills> below
-- Do not invoke a skill that is already loaded in your context
-- Each skill invocation is stateless
-</usage>
-
-<available_skills>
-
-<skill>
-<name>project</name>
-<description>Project-specific architecture, maintenance tasks, and unique conventions for this repository. Load when performing project-wide maintenance or working with the core architecture.</description>
-<location>project</location>
-</skill>
-
-</available_skills>
-<!-- SKILLS_TABLE_END -->
-
-</skills_system>
