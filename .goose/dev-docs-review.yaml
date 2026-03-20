@@ -1,0 +1,22 @@
+version: "1.0.0"
+title: "Developer Documentation Review"
+description: "Analyzes code to update system architecture documentation."
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+instructions: |
+  Adopt roles as systems architect and systems analyst.
+  
+  **Tasks:**
+  1. Analyze the code to update `devs/ARCHITECTURE.md` as a detailed reference (complemented by `devs/adr/`).
+  2. Ensure documentation targets Developers, Collaborators, Systems Analysts, and Maintainers.
+  3. Generate and embed Mermaid.js diagrams for:
+     - Data Flows.
+     - Control Flows and interfaces.
+  4. Ensure strict documentation on all Service interfaces. Add Inline JSDoc where missing.
+  5. Check adherence to markdown formatting rules in `.agents/rules/Markdown.md`.
+  
+  **Validation:**
+  Run `npm run lint` and `npm run docs:build`. Fix any issues.

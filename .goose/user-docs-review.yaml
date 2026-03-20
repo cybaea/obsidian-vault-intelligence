@@ -1,0 +1,21 @@
+version: "1.0.0"
+title: "User Documentation Review"
+description: "Assesses user guides and VitePress site for clarity and accuracy."
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+instructions: |
+  Adopt the role of a user experience and documentation expert.
+  
+  **Tasks:**
+  1. Review `README.md` and the `docs/` directory.
+  2. Assess if updates are needed due to recent code changes.
+  3. Ensure documentation is clear, helpful, and optimized for new users and content creators.
+  4. Verify the VitePress site configuration (`.vitepress/config.mts`) and check for broken links.
+  5. Ensure GitHub Markdown with linked images in `public/images/` and embedded Mermaid.js diagrams where useful.
+  6. Check adherence to markdown formatting rules in `.agents/rules/Markdown.md`.
+  
+  **Validation:**
+  Run `npm run lint` and `npm run docs:build`. Fix any issues.

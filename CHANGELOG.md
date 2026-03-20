@@ -11,7 +11,15 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Graceful streaming cancellation**: Clicking the stop button during a complex agent response now cleanly unlocks the chat input and displays an "Agent explicitly stopped" message, instead of leaving the UI in a frozen or error state.
+-   **Inline error reporting**: Tool execution errors or model failures are now rendered as beautifully styled, persistent inline warnings directly within the chat history, allowing you to easily review and adjust your prompt without background crashing.
+
 ### Developer features
+
+-   **Agent execution refactoring**: Dramatically reduced the cyclomatic complexity of `AgentService.chatStream` by isolating the recursive tool-calling loop into a dedicated `processToolLoop` generator yielding cleanly.
+-   **Explicit pipeline abortion**: `AgentService` now leverages `AbortSignal` gracefully, returning a structured `{ isCancelled: true }` metadata frame when an execution loop is interrupted, guaranteeing robust UI unlocking.
+-   **Indexer optimisation**: Extracted 10 heavy pure algorithmic functions (like `semanticSplit` and `parseYaml`) out of the `IndexerWorker` into a globally accessible `src/utils/indexer-utils.ts` module, completely eliminating duplicated parsing logic across the main thread.
+-   **Pragmatic linting paths**: Downgraded `@typescript-eslint/no-non-null-assertion` to a global warning to manage technical debt pragmatically, ensuring legacy code doesn't falsely trip the deployment pipelines.
 
 ## [9.0.5] - 2026-03-18
 

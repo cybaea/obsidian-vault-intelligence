@@ -141,9 +141,14 @@ describe('AgentService Streaming', () => {
             chunks.push(chunk);
         }
 
-        if (chunks.length !== 1) {
-            throw new Error(`Expected 1 chunk but got ${chunks.length}. Received: ${JSON.stringify(chunks)}`);
+        if (chunks.length !== 2) {
+            throw new Error(`Expected 2 chunks but got ${chunks.length}. Received: ${JSON.stringify(chunks)}`);
         }
         expect((chunks[0] as { text: string }).text).toBe('Part 1');
+        
+        const finalChunk = chunks[1] as { isCancelled: boolean, error: string, isDone: boolean };
+        expect(finalChunk.isCancelled).toBe(true);
+        expect(finalChunk.isDone).toBe(true);
+        expect(finalChunk.error).toBe('Agent explicitly stopped.');
     });
 });

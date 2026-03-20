@@ -1,0 +1,26 @@
+version: "1.0.0"
+title: "Vault Intelligence Comprehensive Review"
+description: "Orchestrates code, architecture, and documentation reviews for the Vault Intelligence plugin."
+sub_recipes:
+  - name: "code_architecture_review"
+    path: "code-review.yaml"
+  - name: "dev_docs_review"
+    path: "dev-docs-review.yaml"
+  - name: "user_docs_review"
+    path: "user-docs-review.yaml"
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+instructions: |
+  You are an expert systems architect and senior developer. Your task is to execute a comprehensive review of the Vault Intelligence plugin.
+  
+  **Project Constraints:**
+  - Architecture: Service-Oriented Architecture (AgentService, ProviderRegistry, GraphService).
+  - Rule: No direct vault access in UI Views.
+  - Required skills: `obsidian-cli`, `obsidian-markdown`, `project`.
+prompt: |
+  Execute the `code_architecture_review`, `dev_docs_review`, and `user_docs_review` sub-recipes **in parallel**.
+  
+  After all parallel tasks successfully complete, present a unified summary of the findings, including the results of the automated CI/CD checks (`npm run lint`, `npm run build`, `npm run docs:build`).

@@ -63,7 +63,7 @@ export default withMermaid(defineConfig({
         'releases/about.md',
         'README.md',
         'README_DOC.md',
-        'docs/My ontology system.md'
+        'docs/my-ontology-system.md'
     ],
     vite: {
         build: {
@@ -99,9 +99,9 @@ export default withMermaid(defineConfig({
                     text: 'How-To Guides',
                     items: [
                         { text: 'Researcher: Workflows', link: '/docs/how-to/researcher-workflows' },
-                        { text: 'Solver: Data Analysis', link: '/docs/how-to/data-analysis' },
+                        { text: 'Solver: Data Analysis', link: '/docs/how-to/solver-analysis' },
                         { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
-                        { text: 'Explorer: Connections', link: '/docs/how-to/explore-connections' },
+                        { text: 'Explorer: Connections', link: '/docs/how-to/explorer-connections' },
                         { text: 'Ollama Models & Tuning', link: '/docs/guides/ollama' },
                         { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
                     ]
@@ -110,7 +110,7 @@ export default withMermaid(defineConfig({
                     text: 'Reference',
                     items: [
                         { text: 'Plugin settings', link: '/docs/reference/configuration' },
-                        { text: 'Using MCP Servers', link: '/docs/reference/Using MCP Servers' },
+                        { text: 'Using MCP Servers', link: '/docs/reference/using-mcp-servers' },
                         { text: 'Troubleshooting', link: '/docs/reference/troubleshooting' }
                     ]
                 },
@@ -150,6 +150,8 @@ export default withMermaid(defineConfig({
                         { text: 'Obsidian API Guide', link: '/devs/obsidian-api-thematic' },
                         { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
                         { text: 'Documentation Standards', link: '/devs/documentation-standards' },
+                        { text: 'Codebase Review', link: '/devs/codebase_review' },
+                        { text: 'Review Checklist', link: '/devs/review_checklist' },
                         { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
                         { text: 'Internal Agents Guide', link: '/AGENTS' }
                     ]

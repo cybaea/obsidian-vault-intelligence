@@ -951,3 +951,25 @@ a.similar-notes-link:hover {
     background-color: var(--text-error);
     color: white;
 }.chat-content:empty { display: none; }
+
+.chat-error-block {
+    color: var(--text-error);
+    padding: 10px;
+    border-left: 3px solid var(--text-error);
+    background-color: var(--background-modifier-error);
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.chat-cancelled-block {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 10px;
+    border-left: 3px solid var(--text-muted);
+    background-color: var(--background-modifier-hover);
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+}

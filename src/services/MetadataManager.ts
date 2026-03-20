@@ -1,4 +1,4 @@
-import { TFile, App } from "obsidian";
+import { TFile, TFolder, App } from "obsidian";
 
 import { logger } from "../utils/logger";
 
@@ -51,5 +51,32 @@ export class MetadataManager {
     public getKeyValue(file: TFile, key: string): unknown {
         const cache = this.app.metadataCache.getFileCache(file);
         return cache?.frontmatter?.[key];
+    }
+
+    /**
+     * Safely creates a folder if it doesn't already exist.
+     * @param path - The path to the folder.
+     */
+    public async createFolderIfMissing(path: string): Promise<void> {
+        if (!path) return;
+        const folders = path.split('/');
+        let currentPath = "";
+        for (const folder of folders) {
+            currentPath = currentPath ? `${currentPath}/${folder}` : folder;
+            if (!(this.app.vault.getAbstractFileByPath(currentPath) instanceof TFolder)) {
+                await this.app.vault.createFolder(currentPath);
+            }
+        }
+    }
+
+    /**
+     * Safely creates a file with initial content if it doesn't already exist.
+     * @param path - The path to the file.
+     * @param content - The initial content of the file.
+     */
+    public async createFileIfMissing(path: string, content: string): Promise<void> {
+        if (!(this.app.vault.getAbstractFileByPath(path) instanceof TFile)) {
+            await this.app.vault.create(path, content);
+        }
     }
 }

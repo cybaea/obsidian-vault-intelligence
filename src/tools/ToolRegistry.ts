@@ -302,7 +302,7 @@ export class ToolRegistry {
                     return await this.executeGoogleSearch(args);
 
                 case AGENT_CONSTANTS.TOOLS.VAULT_SEARCH:
-                    return await this.executeVaultSearch(args, usedFiles, modelId);
+                    return await this.executeVaultSearch(args, usedFiles, modelId, params.signal);
 
                 case AGENT_CONSTANTS.TOOLS.GET_CONNECTED_NOTES:
                     return await this.executeGraphExplorer(args);
@@ -354,7 +354,7 @@ export class ToolRegistry {
         return { error: "Google Search is not supported by the current provider." };
     }
 
-    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>, modelId?: string) {
+    private async executeVaultSearch(args: Record<string, unknown>, usedFiles: Set<string>, modelId?: string, signal?: AbortSignal) {
         const rawQuery = args.query;
         const query = typeof rawQuery === 'string' ? rawQuery.toLowerCase() : '';
 
@@ -365,7 +365,9 @@ export class ToolRegistry {
         const rawLimit = this.settings?.vaultSearchResultsLimit ?? DEFAULT_SETTINGS.vaultSearchResultsLimit;
         const limit = Math.max(0, Math.trunc(rawLimit));
 
-        const results = await this.searchOrchestrator.search(query, limit, { deep: false });
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        const results = await this.searchOrchestrator.search(query, limit, { deep: false, signal });
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
         if (results.length === 0) {
             return { result: "No relevant notes found." };

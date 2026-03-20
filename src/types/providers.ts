@@ -31,7 +31,9 @@ export interface UnifiedMessage {
 
 export interface StreamChunk {
     createdFiles?: string[];
+    error?: string;
     files?: string[];
+    isCancelled?: boolean;
     isDone?: boolean;
     /**
      * Optional raw content parts for perfect history preservation.
