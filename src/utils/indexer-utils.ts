@@ -48,16 +48,19 @@ export function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXE
         return chunks;
     }
 
-    if (headerIndices[0]! > 0) {
-        pushChunk(text.substring(0, headerIndices[0]), 0, headerIndices[0]!);
+    const firstHeader = headerIndices[0];
+    if (firstHeader !== undefined && firstHeader > 0) {
+        pushChunk(text.substring(0, firstHeader), 0, firstHeader);
     }
 
     let currentChunkText = "";
     let currentChunkStart = -1;
 
     for (let i = 0; i < headerIndices.length; i++) {
-        const startIdx = headerIndices[i]!;
-        const endIdx = (i + 1 < headerIndices.length) ? headerIndices[i + 1]! : text.length;
+        const startIdx = headerIndices[i];
+        if (startIdx === undefined) continue;
+        const nextIdx = headerIndices[i + 1];
+        const endIdx = nextIdx !== undefined ? nextIdx : text.length;
         const sectionText = text.substring(startIdx, endIdx);
 
         if (currentChunkStart === -1) currentChunkStart = startIdx;

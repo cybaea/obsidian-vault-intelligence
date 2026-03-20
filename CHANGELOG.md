@@ -19,7 +19,6 @@ New features are added in the "Unreleased" section.
 -   **Agent execution refactoring**: Dramatically reduced the cyclomatic complexity of `AgentService.chatStream` by isolating the recursive tool-calling loop into a dedicated `processToolLoop` generator yielding cleanly.
 -   **Explicit pipeline abortion**: `AgentService` now leverages `AbortSignal` gracefully, returning a structured `{ isCancelled: true }` metadata frame when an execution loop is interrupted, guaranteeing robust UI unlocking.
 -   **Indexer optimisation**: Extracted 10 heavy pure algorithmic functions (like `semanticSplit` and `parseYaml`) out of the `IndexerWorker` into a globally accessible `src/utils/indexer-utils.ts` module, completely eliminating duplicated parsing logic across the main thread.
--   **Pragmatic linting paths**: Downgraded `@typescript-eslint/no-non-null-assertion` to a global warning to manage technical debt pragmatically, ensuring legacy code doesn't falsely trip the deployment pipelines.
 
 ## [9.0.5] - 2026-03-18
 

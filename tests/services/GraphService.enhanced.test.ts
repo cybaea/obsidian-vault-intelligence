@@ -79,11 +79,11 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
         expect(results).toHaveLength(1);
-        expect(results[0]!.path).toBe('hybrid.md');
+        expect(results[0]?.path).toBe('hybrid.md');
 
         // Expected Score: 0.8 * 1.15 = 0.92
-        expect(results[0]!.score).toBeCloseTo(0.92);
-        expect(results[0]!.description).toBe("(Enhanced semantic connection)");
+        expect(results[0]?.score).toBeCloseTo(0.92);
+        expect(results[0]?.description).toBe("(Enhanced semantic connection)");
     });
 
     it('should cap boosted scores at 1.0', async () => {
@@ -103,7 +103,7 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
         // Expected: min(1.0, 0.95 * 1.15) = 1.0
-        expect(results[0]!.score).toBe(1.0);
+        expect(results[0]?.score).toBe(1.0);
     });
 
     it('should append pure neighbors as anchors at the bottom with hydration', async () => {
@@ -136,12 +136,12 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         expect(anchor).toBeDefined();
 
         // Expected Score: minScore - 0.01 = 0.49
-        expect(anchor!.score).toBe(minScore - 0.01);
-        expect(anchor!.description).toBe("(Structural neighbor)");
+        expect(anchor?.score).toBe(minScore - 0.01);
+        expect(anchor?.description).toBe("(Structural neighbor)");
 
         // Verify hydrator was called for the anchor
         expect(hydrateSpy).toHaveBeenCalled();
-        const callArgs = hydrateSpy.mock.calls[0]![0] as GraphSearchResult[];
+        const callArgs = hydrateSpy.mock.calls[0]?.[0] as GraphSearchResult[];
         expect(callArgs.some(r => r.path === 'pure-neighbor.md')).toBe(true);
     });
 
@@ -200,7 +200,7 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
 
-        expect(results[0]!.path).toBe('hybrid.md');
-        expect(results[1]!.path).toBe('pure-vector.md');
+        expect(results[0]?.path).toBe('hybrid.md');
+        expect(results[1]?.path).toBe('pure-vector.md');
     });
 });

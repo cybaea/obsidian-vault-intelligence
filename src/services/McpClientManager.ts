@@ -183,8 +183,9 @@ export class McpClientManager implements IProvider {
             };
             
             for (const key of safeKeys) {
-                if (g.process.env[key] !== undefined) {
-                    mergedEnv[key] = g.process.env[key]!;
+                const val = g.process.env[key];
+                if (val !== undefined) {
+                    mergedEnv[key] = val;
                 }
             }
 
@@ -233,9 +234,21 @@ export class McpClientManager implements IProvider {
                 }
             }
 
+            if (!server.command) {
+                logger.warn(`MCP server ${server.name} is missing a command.`);
+                this.connections.set(server.id, {
+                    client: null as unknown as Client,
+                    config: server,
+                    errorMessage: `Configuration error: missing command`,
+                    status: 'error',
+                    transport: null
+                });
+                return;
+            }
+
             const transportConfig = {
                 args: server.args || [],
-                command: server.command!,
+                command: server.command,
                 env: mergedEnv,
                 stderr: 'pipe' as 'pipe' | 'ignore' | 'inherit' | 'overlapped'
             };
