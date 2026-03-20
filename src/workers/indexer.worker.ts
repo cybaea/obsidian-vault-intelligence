@@ -7,6 +7,7 @@ import forceAtlas2 from 'graphology-layout-forceatlas2';
 import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
 import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig, type FileUpdateData } from '../types/graph';
+import { calculateInheritedScore, ensureArray, estimateTokens, extractHeaders, parseYaml, sanitizeExcalidrawContent, sanitizeProperty, semanticSplit, stripStopWords } from '../utils/indexer-utils';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
 import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
@@ -72,14 +73,6 @@ async function loadStopWords(language: string): Promise<string[]> {
     }
 }
 
-function stripStopWords(query: string): string {
-    if (currentStopWords.length === 0) return query;
-    const tokens = query.toLowerCase().split(/\s+/);
-    const filtered = tokens.filter(t => !currentStopWords.includes(t));
-    const result = filtered.length > 0 ? filtered.join(' ') : query;
-    workerLogger.debug(`[stripStopWords] Query: "${query}" -> "${result}" (Removed: ${tokens.length - filtered.length})`);
-    return result;
-}
 
 interface OramaDocument {
     anchorHash: number;
@@ -122,87 +115,6 @@ const workerLogger = {
 };
 
 // 2. Semantic Splitter (Header-Based with Fallback)
-function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): Array<{ text: string, start: number, end: number }> {
-    const chunks: Array<{ text: string, start: number, end: number }> = [];
-
-    const pushChunk = (t: string, s: number, e: number) => {
-        if (!t.trim()) return;
-        if (t.length > maxChunkSize) {
-            const overlap = Math.floor(maxChunkSize * 0.1);
-            const subChunks = recursiveCharacterSplitter(t, maxChunkSize, overlap);
-
-            let subOffset = 0;
-            for (const sub of subChunks) {
-                // Step back by the overlap (plus a tiny safety buffer) so indexOf catches it
-                const searchStart = Math.max(0, subOffset - overlap - 10);
-                let actualInSub = t.indexOf(sub, searchStart);
-
-                // Fallback in case of identical repetitive text strings 
-                if (actualInSub === -1) actualInSub = subOffset;
-
-                chunks.push({
-                    end: s + actualInSub + sub.length,
-                    start: s + actualInSub,
-                    text: sub,
-                });
-                subOffset = actualInSub + sub.length;
-            }
-        } else {
-            chunks.push({ end: e, start: s, text: t });
-        }
-    };
-
-    // Find all header start positions lightning-fast
-    // Matches start of string or newline, followed by 1-6 hashes and a space
-    const headerRegex = /(?:^|\n)(#{1,6}\s)/g;
-    const headerIndices: number[] = [];
-    let match: RegExpExecArray | null;
-
-    while ((match = headerRegex.exec(text)) !== null) {
-        // If the match starts with \n, the actual header text starts at index + 1
-        const actualIndex = match.index + (match[0].startsWith('\n') ? 1 : 0);
-        headerIndices.push(actualIndex);
-    }
-
-    if (headerIndices.length === 0) {
-        // No headers found, treat the whole text as one chunk
-        pushChunk(text, 0, text.length);
-        return chunks;
-    }
-
-    // If there's text before the first header, push it as an intro chunk
-    if (headerIndices[0]! > 0) {
-        pushChunk(text.substring(0, headerIndices[0]), 0, headerIndices[0]!);
-    }
-
-    // Iterate through headers and slice the text between them
-    let currentChunkText = "";
-    let currentChunkStart = -1;
-
-    for (let i = 0; i < headerIndices.length; i++) {
-        const startIdx = headerIndices[i]!;
-        const endIdx = (i + 1 < headerIndices.length) ? headerIndices[i + 1]! : text.length;
-        const sectionText = text.substring(startIdx, endIdx);
-
-        if (currentChunkStart === -1) currentChunkStart = startIdx;
-
-        // If combining this section with the current chunk exceeds max size, push the current chunk
-        if (currentChunkText.length > 0 && (currentChunkText.length + sectionText.length) > maxChunkSize) {
-            pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
-            currentChunkText = sectionText;
-            currentChunkStart = startIdx;
-        } else {
-            currentChunkText += sectionText;
-        }
-    }
-
-    // Push the final chunk
-    if (currentChunkText.length > 0) {
-        pushChunk(currentChunkText, currentChunkStart, currentChunkStart + currentChunkText.length);
-    }
-
-    return chunks;
-}
 
 const IndexerWorker: WorkerAPI = {
     async buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]> {
@@ -227,7 +139,7 @@ const IndexerWorker: WorkerAPI = {
             limit: 50,
             properties: ['content', 'title', 'context'],
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
-            term: stripStopWords(query),
+            term: stripStopWords(query, currentStopWords),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
 
@@ -735,7 +647,7 @@ const IndexerWorker: WorkerAPI = {
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
             properties: ['title', 'content', 'context'],
-            term: stripStopWords(query),
+            term: stripStopWords(query, currentStopWords),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
@@ -876,7 +788,7 @@ const IndexerWorker: WorkerAPI = {
         const keywordPromise = search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_KEYWORD,
             properties: ['title', 'content', 'context'],
-            term: stripStopWords(query),
+            term: stripStopWords(query, currentStopWords),
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE
         });
 
@@ -1037,14 +949,7 @@ const IndexerWorker: WorkerAPI = {
 
 // --- Helper Functions ---
 
-function calculateInheritedScore(parentScore: number, linkCount: number): number {
-    const dilution = Math.max(1, Math.log2(linkCount + 1));
-    return parentScore * (0.8 / dilution);
-}
 
-function estimateTokens(text: string): number {
-    return text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
-}
 
 function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): GraphSearchResult[] {
     const uniqueHits = new Map<string, GraphSearchResult>();
@@ -1077,43 +982,6 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
         .slice(0, limit);
 }
 
-function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: number): string[] {
-    if (text.length <= chunkSize) return [text];
-    let finalChunks: string[] = [];
-    let currentChunk = "";
-    let parts = text.split('\n\n');
-    let sep = '\n\n';
-
-    if (parts.some(p => p.length > chunkSize)) {
-        parts = text.split('\n');
-        sep = '\n';
-    }
-
-    for (const part of parts) {
-        if ((currentChunk.length + part.length + sep.length) > chunkSize) {
-            if (currentChunk.length > 0) {
-                finalChunks.push(currentChunk);
-                currentChunk = currentChunk.slice(-overlap);
-            }
-            
-            // Now handle the incoming part. If it's still too large even on its own, forcefully split it
-            if (currentChunk.length + part.length + sep.length > chunkSize) {
-                let textToSplit = currentChunk + (currentChunk.length > 0 ? sep : "") + part;
-                for (let k = 0; k < textToSplit.length; k += chunkSize) {
-                    finalChunks.push(textToSplit.slice(k, k + chunkSize));
-                }
-                currentChunk = "";
-            } else {
-                currentChunk += (currentChunk.length > 0 ? sep : "") + part;
-            }
-
-        } else {
-            currentChunk += (currentChunk.length > 0 ? sep : "") + part;
-        }
-    }
-    if (currentChunk.length > 0) finalChunks.push(currentChunk);
-    return finalChunks;
-}
 
 function generateContextString(title: string, fm: Record<string, unknown>, conf: WorkerConfig): string {
     const parts: string[] = [];
@@ -1129,20 +997,8 @@ function generateContextString(title: string, fm: Record<string, unknown>, conf:
     return parts.join(' ').substring(0, 1000);
 }
 
-function sanitizeProperty(value: unknown): string {
-    if (Array.isArray(value)) return value.map(v => sanitizeProperty(v)).join(', ');
-    if (typeof value !== 'string') return String(value);
-    return value.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1').replace(/^["'](.+)["']$/, '$1').trim();
-}
 
-function ensureArray(val: unknown): unknown[] {
-    if (!val) return [];
-    return Array.isArray(val) ? val : [val];
-}
 
-function sanitizeExcalidrawContent(content: string): string {
-    return content.replace(/```compressed-json[\s\S]*?```/g, '');
-}
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);
@@ -1239,9 +1095,6 @@ async function computeHash(text: string): Promise<string> {
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function extractHeaders(text: string): string[] {
-    return text.split('\n').filter(l => l.match(/^(#{1,3})\s+(.*)$/)).map(l => l.trim());
-}
 
 async function generateEmbedding(text: string | string[], title: string): Promise<{ vector: number[]; vectors?: number[][]; tokenCount: number }> {
     if (!embedderProxy) throw new Error("Embedding proxy not initialized.");
@@ -1253,40 +1106,6 @@ async function generateEmbedding(text: string | string[], title: string): Promis
     };
 }
 
-function parseYaml(text: string): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    const lines = text.split('\n');
-    let currentKey: string | null = null;
-
-    for (const line of lines) {
-        if (line.trim() === '---' || !line.trim()) continue;
-        const listMatch = line.match(/^\s*-\s+(.*)$/);
-        if (listMatch?.[1] && currentKey) {
-            const val = listMatch[1].trim();
-            const existing = result[currentKey];
-            if (Array.isArray(existing)) {
-                existing.push(val);
-            } else {
-                result[currentKey] = [val];
-            }
-            continue;
-        }
-        const keyMatch = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-        if (keyMatch?.[1] && keyMatch[2] !== undefined) {
-            const key = keyMatch[1];
-            let value = keyMatch[2].trim();
-            currentKey = key;
-            if (value.startsWith('[') && value.endsWith(']')) {
-                result[key] = value.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
-            } else if (value) {
-                result[key] = value.replace(/^['"]|['"]$/g, '');
-            } else {
-                result[key] = [];
-            }
-        }
-    }
-    return result;
-}
 
 if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined') {
     Comlink.expose(IndexerWorker);

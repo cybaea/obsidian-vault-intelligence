@@ -196,7 +196,7 @@ describe('ResearchChatView Rendering', () => {
         );
         // Manually setup container
         view.chatContainer = mockChatContainer as any;
-        (view as any).inputComponent = { getValue: () => 'test prompt', setValue: vi.fn() };
+        (view as any).inputComponent = { getValue: () => 'test prompt', setDisabled: vi.fn(), setValue: vi.fn() };
     });
 
     it('should call MarkdownRenderer during streaming for live formatting', async () => {

@@ -38,6 +38,7 @@ export default tseslint.config(
 		},
 		rules: {
 			"@typescript-eslint/require-await": "error",
+			"@typescript-eslint/no-non-null-assertion": "warn",
 			"@typescript-eslint/no-explicit-any": "error",
 			"obsidianmd/ui/sentence-case": ["error", {
 				brands: ["Google", "Gemini", "Google Cloud Console", "Transformers.js"],

@@ -17,6 +17,8 @@ import { SearchOrchestrator } from "./SearchOrchestrator";
 export interface ChatMessage {
     contextFiles?: string[];
     createdFiles?: string[];
+    error?: string;
+    isCancelled?: boolean;
     rawContent?: unknown[];
     role: "user" | "model" | "system" | "tool";
     spotlightResults?: VaultSearchResult[];
@@ -252,145 +254,167 @@ export class AgentService {
         logger.debug(`[Agent] Final Enriched Prompt Preview:\n${debugPrompt}`);
 
         try {
-            let loops = 0;
             const maxLoops = this.settings?.maxAgentSteps ?? DEFAULT_SETTINGS.maxAgentSteps;
+            yield* this.processToolLoop(
+                formattedHistory,
+                systemInstruction,
+                tools,
+                createdFiles,
+                usedFiles,
+                options,
+                maxLoops
+            );
 
-            while (loops < maxLoops) {
-                if (options.signal?.aborted) break;
-
-                let modelResponseRawContent: unknown[] | undefined;
-
-                const stream = reasoningClient.generateMessageStream(formattedHistory, {
-                    enableCodeExecution: options.enableCodeExecution,
-                    enableWebSearch: options.enableWebSearch,
-                    modelId: options.modelId,
-                    signal: options.signal,
-                    systemInstruction: systemInstruction,
-                    tools: tools.length > 0 ? tools : undefined
-                });
-
-                let loopText = "";
-                const loopToolCalls: ToolCall[] = [];
-
-                for await (const chunk of stream) {
-                    if (options.signal?.aborted) break;
-
-                    if (chunk.toolCalls) {
-                        loopToolCalls.push(...chunk.toolCalls);
-                    }
-                    if (chunk.replaceText !== undefined) {
-                        loopText = chunk.replaceText;
-                        yield { replaceText: chunk.replaceText };
-                    }
-                    if (chunk.text !== undefined) {
-                        loopText += chunk.text;
-                        yield { text: chunk.text };
-                    }
-                    if (chunk.rawContent) {
-                        modelResponseRawContent = chunk.rawContent;
-                    }
-                }
-
-                if (options.signal?.aborted) break;
-
-                const modelResponse: UnifiedMessage = {
-                    content: loopText,
-                    rawContent: modelResponseRawContent,
-                    role: "model",
-                    toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
-                };
-                formattedHistory.push(modelResponse);
-
-                // Yield the final model message metadata so UI can store it for follow-up turns
-                yield { 
-                    rawContent: modelResponseRawContent,
-                    toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
-                };
-
-                if (loopToolCalls.length > 0) {
-                    const toolStatus = `Thinking: Using tools (${loopToolCalls.map(c => c.name).join(", ")})...`;
-                    yield { status: toolStatus };
-
-                    const toolPromises = loopToolCalls.map(async (call) => {
-                        try {
-                            const args = call.args || {};
-                            const functionResponse = await this.toolRegistry.execute({
-                                args: args,
-                                createdFiles: createdFiles,
-                                enableAgentWriteAccess: options.enableAgentWriteAccess,
-                                enableCodeExecution: options.enableCodeExecution,
-                                modelId: options.modelId,
-                                name: call.name,
-                                signal: options.signal,
-                                usedFiles: usedFiles
-                            });
-    
-                            return {
-                                id: call.id,
-                                name: call.name,
-                                result: functionResponse,
-                                thought_signature: call.thought_signature
-                            };
-                        } catch (error) {
-                            logger.error(`[Agent] Tool execution failed for ${call.name}`, error);
-                            return {
-                                id: call.id,
-                                name: call.name,
-                                result: { error: String(error) },
-                                thought_signature: call.thought_signature
-                            };
-                        }
-                    });
-
-                    const completedParts = await Promise.all(toolPromises);
-
-                    if (completedParts.length > 0) {
-                        const toolMsg: UnifiedMessage = {
-                            content: "",
-                            role: "tool",
-                            toolResults: completedParts.map(p => ({
-                                id: p.id,
-                                name: p.name,
-                                result: p.result,
-                                thought_signature: p.thought_signature
-                            }))
-                        };
-                        formattedHistory.push(toolMsg);
-                        
-                        // Yield tool results to UI for history preservation
-                        yield { toolResults: toolMsg.toolResults };
-                    } else {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-                loops++;
-            }
-
-            if (loops >= maxLoops) {
-                yield { text: "\n\nI'm sorry, I reached the step limit before finding a definitive answer. Please try rephrasing or check your settings." };
-            }
-
-            if (!options.signal?.aborted) {
+            if (options.signal?.aborted) {
+                yield { error: "Agent explicitly stopped.", isCancelled: true, isDone: true };
+            } else {
                 yield {
                     createdFiles: Array.from(createdFiles),
                     files: Array.from(usedFiles),
                     isDone: true
                 };
             }
-
         } catch (e: unknown) {
             logger.error("Error in AgentService chatStream", e);
             const errorMessage = e instanceof Error ? e.message : String(e);
 
             if (errorMessage.includes("400") || errorMessage.includes("API key")) {
-                yield { text: `\n\nI encountered an error connecting to the AI provider (Status 400). Please check your API key.\n\nDetails: ${errorMessage}` };
+                yield { error: `I encountered an error connecting to the AI provider (Status 400). Please check your API key. Details: ${errorMessage}`, isDone: true };
+            } else if ((e instanceof DOMException && e.name === "AbortError") || errorMessage.includes("AbortError") || errorMessage.includes("aborted")) {
+                yield { error: "Agent explicitly stopped.", isCancelled: true, isDone: true };
             } else {
-                yield { text: `\n\nSorry, I encountered an error: ${errorMessage}` };
+                yield { error: errorMessage, isDone: true };
             }
-            
-            yield { createdFiles: [], files: [], isDone: true };
+        }
+    }
+
+    private async *processToolLoop(
+        formattedHistory: UnifiedMessage[],
+        systemInstruction: string,
+        tools: IToolDefinition[],
+        createdFiles: Set<string>,
+        usedFiles: Set<string>,
+        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal },
+        maxLoops: number
+    ): AsyncIterableIterator<StreamChunk> {
+        const reasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
+        let loops = 0;
+
+        while (loops < maxLoops) {
+            if (options.signal?.aborted) break;
+
+            let modelResponseRawContent: unknown[] | undefined;
+
+            const stream = reasoningClient.generateMessageStream(formattedHistory, {
+                enableCodeExecution: options.enableCodeExecution,
+                enableWebSearch: options.enableWebSearch,
+                modelId: options.modelId,
+                signal: options.signal,
+                systemInstruction: systemInstruction,
+                tools: tools.length > 0 ? tools : undefined
+            });
+
+            let loopText = "";
+            const loopToolCalls: ToolCall[] = [];
+
+            for await (const chunk of stream) {
+                if (options.signal?.aborted) break;
+
+                if (chunk.toolCalls) {
+                    loopToolCalls.push(...chunk.toolCalls);
+                }
+                if (chunk.replaceText !== undefined) {
+                    loopText = chunk.replaceText;
+                    yield { replaceText: chunk.replaceText };
+                }
+                if (chunk.text !== undefined) {
+                    loopText += chunk.text;
+                    yield { text: chunk.text };
+                }
+                if (chunk.rawContent) {
+                    modelResponseRawContent = chunk.rawContent;
+                }
+            }
+
+            if (options.signal?.aborted) break;
+
+            const modelResponse: UnifiedMessage = {
+                content: loopText,
+                rawContent: modelResponseRawContent,
+                role: "model",
+                toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
+            };
+            formattedHistory.push(modelResponse);
+
+            // Yield the final model message metadata so UI can store it for follow-up turns
+            yield { 
+                rawContent: modelResponseRawContent,
+                toolCalls: loopToolCalls.length > 0 ? loopToolCalls : undefined
+            };
+
+            if (loopToolCalls.length > 0) {
+                const toolStatus = `Thinking: Using tools (${loopToolCalls.map(c => c.name).join(", ")})...`;
+                yield { status: toolStatus };
+
+                const toolPromises = loopToolCalls.map(async (call) => {
+                    try {
+                        const args = call.args || {};
+                        const functionResponse = await this.toolRegistry.execute({
+                            args: args,
+                            createdFiles: createdFiles,
+                            enableAgentWriteAccess: options.enableAgentWriteAccess,
+                            enableCodeExecution: options.enableCodeExecution,
+                            modelId: options.modelId,
+                            name: call.name,
+                            signal: options.signal,
+                            usedFiles: usedFiles
+                        });
+
+                        return {
+                            id: call.id,
+                            name: call.name,
+                            result: functionResponse,
+                            thought_signature: call.thought_signature
+                        };
+                    } catch (error) {
+                        logger.error(`[Agent] Tool execution failed for ${call.name}`, error);
+                        return {
+                            id: call.id,
+                            name: call.name,
+                            result: { error: String(error) },
+                            thought_signature: call.thought_signature
+                        };
+                    }
+                });
+
+                const completedParts = await Promise.all(toolPromises);
+
+                if (completedParts.length > 0) {
+                    const toolMsg: UnifiedMessage = {
+                        content: "",
+                        role: "tool",
+                        toolResults: completedParts.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            result: p.result,
+                            thought_signature: p.thought_signature
+                        }))
+                    };
+                    formattedHistory.push(toolMsg);
+                    
+                    // Yield tool results to UI for history preservation
+                    yield { toolResults: toolMsg.toolResults };
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+            loops++;
+        }
+
+        if (loops >= maxLoops) {
+            yield { text: "\n\nI'm sorry, I reached the step limit before finding a definitive answer. Please try rephrasing or check your settings." };
         }
     }
 

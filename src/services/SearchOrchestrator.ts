@@ -50,7 +50,8 @@ export class SearchOrchestrator {
      * @param options - Search options (e.g. deep: false to skip AI reranking).
      * @returns A promise resolving to a ranked list of search results.
      */
-    public async search(query: string, limit: number, options: { deep?: boolean } = {}): Promise<VaultSearchResult[]> {
+    public async search(query: string, limit: number, options: { deep?: boolean; signal?: AbortSignal } = {}): Promise<VaultSearchResult[]> {
+        if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
         // DUAL-LOOP LOGIC:
         // If Deep search is requested (or default is enabled), we try the Analyst (Loop 2) first.
         // It provides deeper, graph-expanded, and AI-ranked results.
@@ -58,7 +59,7 @@ export class SearchOrchestrator {
 
         if (deep) {
             try {
-                const analystResults = await this.searchAnalyst(query);
+                const analystResults = await this.searchAnalyst(query, options.signal);
                 if (analystResults.length > 0) {
                     return analystResults.slice(0, limit);
                 }
@@ -69,14 +70,15 @@ export class SearchOrchestrator {
         }
 
         // Fallback or Default: Reflex Loop (Loop 1)
-        return this.searchReflex(query, limit);
+        return this.searchReflex(query, limit, options.signal);
     }
 
     /**
      * DUAL-LOOP: Loop 1 (Reflex)
      * Fast, local, parameter-free search.
      */
-    public async searchReflex(query: string, limit: number): Promise<VaultSearchResult[]> {
+    public async searchReflex(query: string, limit: number, signal?: AbortSignal): Promise<VaultSearchResult[]> {
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         if (!query || query.trim().length === 0) {
             return [];
         }
@@ -85,7 +87,10 @@ export class SearchOrchestrator {
 
         const workerLimit = Math.max(limit * 2, 50);
         const vectorResults = await this.graphService.search(query, workerLimit);
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        
         const keywordResults = await this.graphService.keywordSearch(query, workerLimit);
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
         const vResults: VaultSearchResult[] = vectorResults.map(r => ({
             excerpt: r.excerpt,
@@ -113,12 +118,14 @@ export class SearchOrchestrator {
      * DUAL-LOOP: Loop 2 (Analyst)
      * Deep, AI-driven re-ranking.
      */
-    public async searchAnalyst(query: string): Promise<VaultSearchResult[]> {
+    public async searchAnalyst(query: string, signal?: AbortSignal): Promise<VaultSearchResult[]> {
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
         logger.info(`[SearchOrchestrator] Analyst Search: "${query}"`);
 
         if (this.settings.enableDualLoop) {
             // Dual-Loop: Reflex (Loop 1) is handled by UI. This is Analyst (Loop 2).
             const { vector: queryVector } = await this.embeddingService.embedQuery(query);
+            if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
             // 1. Build Payload (Graph + Vector + Keyword)
             const payload = await this.graphService.buildPriorityPayload(queryVector, query);
@@ -153,9 +160,12 @@ export class SearchOrchestrator {
                         type: "array"
                     },
                     modelId: this.settings.reRankingModel,
+                    signal: signal,
                     systemInstruction: instruction
                 }
             );
+
+            if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
             // 3. Map to VaultSearchResult
             return reranked.map(r => ({

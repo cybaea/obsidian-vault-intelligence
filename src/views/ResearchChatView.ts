@@ -212,6 +212,7 @@ export class ResearchChatView extends ItemView {
         this.currentDraft = "";
 
         this.inputComponent.setValue("");
+        this.inputComponent.setDisabled(true);
         this.isThinking = true;
         this.addMessage("user", text);
 
@@ -355,6 +356,9 @@ export class ResearchChatView extends ItemView {
             for await (const chunk of stream) {
                 if (this.currentAbortController?.signal.aborted) break;
 
+                if (chunk.error) modelMsg.error = chunk.error;
+                if (chunk.isCancelled) modelMsg.isCancelled = chunk.isCancelled;
+
                 if (chunk.replaceText !== undefined) {
                     modelMsg.text = chunk.replaceText;
                     void updateStreamingUI();
@@ -376,6 +380,7 @@ export class ResearchChatView extends ItemView {
                     }
                 }
                 if (chunk.isDone) {
+                    this.inputComponent.setDisabled(false);
                     modelMsg.contextFiles = chunk.files;
                     modelMsg.createdFiles = chunk.createdFiles;
                     if (chunk.files && chunk.files.length > 0) {
@@ -417,6 +422,7 @@ export class ResearchChatView extends ItemView {
         } catch (error: unknown) {
             this.isThinking = false;
             this.stopButton?.buttonEl.hide();
+            this.inputComponent.setDisabled(false);
             
             // Check for intentional abortion
             if (this.currentAbortController?.signal.aborted) {
@@ -436,7 +442,9 @@ export class ResearchChatView extends ItemView {
             }
             const message = error instanceof Error ? error.message : String(error);
             new Notice(`Error: ${message}`);
-            this.addMessage("model", `Error: ${message}`);
+            const errorMsg = this.addMessage("model", "");
+            errorMsg.error = message;
+            void this.renderMessages();
         }
     }
 
@@ -513,6 +521,13 @@ export class ResearchChatView extends ItemView {
             }
 
             const contentDiv = msgDiv.createDiv({ cls: "chat-content" });
+
+            if (msg.error) {
+                contentDiv.createDiv({ cls: "chat-error-block", text: msg.error });
+            } else if (msg.isCancelled) {
+                contentDiv.createDiv({ cls: "chat-cancelled-block", text: "Agent explicitly stopped." });
+            }
+
             if (msg.role === "model" || msg.role === "system") {
                 if (msg.text) {
                     await MarkdownRenderer.render(this.plugin.app, msg.text, contentDiv, "", msgComponent);
