@@ -71,14 +71,14 @@ describe('SearchOrchestrator', () => {
             // doc3: only keyword (0.75)
             
             expect(results).toHaveLength(3);
-            expect(results[0]!.path).toBe('doc1.md');
-            expect(results[0]!.score).toBeCloseTo(0.8);
+            expect(results[0]?.path).toBe('doc1.md');
+            expect(results[0]?.score).toBeCloseTo(0.8);
             
-            expect(results[1]!.path).toBe('doc3.md');
-            expect(results[1]!.score).toBeCloseTo(0.75);
+            expect(results[1]?.path).toBe('doc3.md');
+            expect(results[1]?.score).toBeCloseTo(0.75);
             
-            expect(results[2]!.path).toBe('doc2.md');
-            expect(results[2]!.score).toBeCloseTo(0.6);
+            expect(results[2]?.path).toBe('doc2.md');
+            expect(results[2]?.score).toBeCloseTo(0.6);
         });
 
         it('should filter results below minSimilarityScore', async () => {
@@ -90,7 +90,7 @@ describe('SearchOrchestrator', () => {
 
             const results = await orchestrator.searchReflex('test', 10);
             expect(results).toHaveLength(1);
-            expect(results[0]!.path).toBe('good.md');
+            expect(results[0]?.path).toBe('good.md');
         });
     });
 
@@ -112,8 +112,8 @@ describe('SearchOrchestrator', () => {
             const results = await orchestrator.searchAnalyst('advanced query');
             
             expect(results).toHaveLength(1);
-            expect(results[0]!.path).toBe('analyst1.md');
-            expect(results[0]!.score).toBe(0.95);
+            expect(results[0]?.path).toBe('analyst1.md');
+            expect(results[0]?.score).toBe(0.95);
             expect(reasoningClient.generateStructured).toHaveBeenCalled();
         });
     });
@@ -126,7 +126,7 @@ describe('SearchOrchestrator', () => {
 
              const results = await orchestrator.search('query', 5, { deep: true });
              
-             expect(results[0]!.path).toBe('deep.md');
+             expect(results[0]?.path).toBe('deep.md');
              expect(orchestrator.searchReflex).not.toHaveBeenCalled();
         });
 
@@ -136,7 +136,7 @@ describe('SearchOrchestrator', () => {
 
             const results = await orchestrator.search('query', 5, { deep: true });
             
-            expect(results[0]!.path).toBe('reflex.md');
+            expect(results[0]?.path).toBe('reflex.md');
             expect(orchestrator.searchReflex).toHaveBeenCalled();
         });
     });

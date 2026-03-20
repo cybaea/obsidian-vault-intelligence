@@ -525,7 +525,9 @@ const IndexerWorker: WorkerAPI = {
 
         if (graph.hasNode(normalizedCenter)) {
             while (queue.length > 0 && subgraph.order < structuralLimit) {
-                const [node, depth] = queue.shift()!;
+                const shifted = queue.shift();
+                if (!shifted) break;
+                const [node, depth] = shifted;
                 if (depth >= 2) continue;
 
                 graph.forEachNeighbor(node, (neighbor) => {

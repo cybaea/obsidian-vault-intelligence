@@ -152,7 +152,7 @@ describe('GeminiProvider', () => {
             });
 
             expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            const requestParams = mockGenerateContent.mock.calls[0]?.[0];
             
             // Check tools array for both injected objects
             expect(requestParams.tools).toBeDefined();
@@ -166,7 +166,7 @@ describe('GeminiProvider', () => {
             });
 
             expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            const requestParams = mockGenerateContent.mock.calls[0]?.[0];
             
             expect(requestParams.tools ?? []).not.toContainEqual({ googleSearch: {} });
         });
@@ -178,7 +178,7 @@ describe('GeminiProvider', () => {
             });
 
             expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            const requestParams = mockGenerateContent.mock.calls[0]?.[0];
             
             expect(requestParams.tools).toBeUndefined();
         });
@@ -191,7 +191,7 @@ describe('GeminiProvider', () => {
             });
 
             expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-            const requestParams = mockGenerateContent.mock.calls[0]![0];
+            const requestParams = mockGenerateContent.mock.calls[0]?.[0];
             
             expect(requestParams.tools).toContainEqual({ googleSearch: {} });
         });

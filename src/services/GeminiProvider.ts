@@ -140,13 +140,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
             if (toolObjects.length > 0) {
                 requestParams.tools = toolObjects;
-                requestParams.config!.tools = toolObjects;
+                if (requestParams.config) {
+                    requestParams.config.tools = toolObjects;
+                }
             }
 
             if (systemInstruction) {
                 requestParams.systemInstruction = systemInstruction;
                 requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
-                requestParams.config!.systemInstruction = systemInstruction;
+                if (requestParams.config) {
+                    requestParams.config.systemInstruction = systemInstruction;
+                }
             }
 
             logger.debug("[Agent] Final Request Params", requestParams);
@@ -209,13 +213,17 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
         if (toolObjects.length > 0) {
             requestParams.tools = toolObjects;
-            requestParams.config!.tools = toolObjects;
+            if (requestParams.config) {
+                requestParams.config.tools = toolObjects;
+            }
         }
 
         if (systemInstruction) {
             requestParams.systemInstruction = systemInstruction;
             requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
-            requestParams.config!.systemInstruction = systemInstruction;
+            if (requestParams.config) {
+                requestParams.config.systemInstruction = systemInstruction;
+            }
         }
 
         logger.debug("[Agent] Final Request Params", requestParams);
@@ -328,7 +336,9 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             if (options.systemInstruction) {
                 requestParams.systemInstruction = options.systemInstruction;
                 requestParams.system_instruction = options.systemInstruction; // SDK 2.0 fallback
-                requestParams.config!.systemInstruction = options.systemInstruction;
+                if (requestParams.config) {
+                    requestParams.config.systemInstruction = options.systemInstruction;
+                }
             }
 
             logger.debug("[Agent] Final Request Params (Structured)", requestParams);
