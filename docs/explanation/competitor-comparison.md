@@ -27,16 +27,16 @@ A comparison of **Vault Intelligence** against key players in the Obsidian AI ec
 
 ### 2. Smart Connections (The "linker")
 
--   **Core Value**: Discovery of related notes via an interactive graph view.
--   **Key Advantage**: "Smart Chat" allows chatting with specific notes. Good visualization of connections.
--   **Gap**: Search ranking is purely vector-based, often leading to "noisy" results compared to Hybrid/GARS.
+-   **Core Value**: Discovery of related notes via AI embeddings and an interactive graph view.
+-   **Key Advantage**: "Smart Chat" allows chatting with specific notes. Supports both local embeddings and cloud models, with a Pro version offering advanced controls.
+-   **Gap**: Search ranking is primarily vector-based, often leading to "noisy" results compared to Hybrid/GARS. It lacks a proactive maintenance agent.
 -   **Vault Intelligence Differentiator**: **GARS** (Graph-Augmented Relevance Score) provides significantly better search ranking by weighing _centrality_ and _keywords_, not just vector closeness. Our **Gardener** actively creates connections rather than just visualizing them.
 
 ### 3. Obsidian Copilot (The "Assistant")
 
 -   **Core Value**: General-purpose AI assistant in the sidebar.
--   **Key Advantage**: "Project Mode" and "Composer" for writing assistance. Polished UI.
--   **Gap**: Vault Q&A is often a secondary feature rather than the core Deep Search engine. Less focus on knowledge graph structure.
+-   **Key Advantage**: "Composer V2" for smart file editing, drag-and-drop wikilinks, and broad multi-model support (OpenAI, Anthropic, Gemini, Ollama). Polished UI.
+-   **Gap**: Vault Q&A is often a secondary feature rather than the core Deep Search engine. It connects to external models but lacks deep focus on your knowledge graph's structure.
 -   **Vault Intelligence Differentiator**: We are **Agent-First**. The Researcher is not just a chat bot; it utilizes a **Computational Solver** (Python) and **Deep Recall** to answer complex queries that reasoning models alone cannot solve. We treat the vault as a _Database_, not just text.
 
 ## Multilingual Capabilities

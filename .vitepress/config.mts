@@ -121,7 +121,8 @@ export default withMermaid(defineConfig({
                         { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
                         { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
                         { text: 'Key Features', link: '/docs/explanation/key-features' },
-                        { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' }
+                        { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' },
+                        { text: 'Strategic Positioning', link: '/docs/explanation/strategic-positioning' }
                     ]
                 },
                 {
