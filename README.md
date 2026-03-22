@@ -4,6 +4,8 @@
 
 **Don't just query your vault. Maintain it.**
 
+Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault from a static archive into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing active agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
+
 Obsidian vaults naturally degrade. As facts change, your notes become outdated. As the vault grows, connections are forgotten and tagging becomes inconsistent. Standard AI plugins function as search engines for this static data.
 
 Vault Intelligence functions as a maintenance system. It identifies gaps in your notes by cross-referencing your writing with live web searches. It retrieves information based on the explicit structural links you built, rather than just matching text. It audits your tags to connect notes to existing topics, proposing new ones when needed. It connects to external tools—like local scripts or databases—under strict cryptographic security. It is designed to keep your knowledge current, connected, and secure.
@@ -13,11 +15,11 @@ Vault Intelligence functions as a maintenance system. It identifies gaps in your
 Standard AI plugins retrieve text. Vault Intelligence is designed to actively maintain and update your knowledge base.
 
 -   **Refresh outdated knowledge:** Notes become obsolete as facts change. Ask the agent to read your existing files on a topic, run a live web search to find recent developments, and draft an update to bridge the gap between your archived notes and current reality.
--   **Retrieve context, not just text:** Using Graph Retrieval-Augmented Generation (Graph RAG), the plugin reads the explicit wikilinks connecting your files and topics. It retrieves information based on how you structured your ideas, finding relevant concepts even if they use different terminology.
+-   **Retrieve context, not just text:** Using Graph Retrieval-Augmented Generation (Graph RAG), the plugin reads the explicit links connecting your files and topics. It retrieves information based on how you structured your ideas, finding relevant concepts even if they use different terminology.
 -   **Automate vault organisation:** Maintaining consistent tags and links across thousands of files is unmanageable. The Gardener agent audits your notes against your topics, suggests new ones only when needed, and provides an actionable checklist of missing links to keep your taxonomy intact.
 -   **Execute external tools securely:** Connect local databases or scripts using the Model Context Protocol (MCP). To prevent unauthorised code execution, the plugin operates within strict cryptographic and environmental boundaries, requiring explicit approval before modifying any file.
 
-See also [Strategic Positioning](docs/explanation/strategic-positioning.md).
+See also [Strategic Positioning](docs/explanation/strategic-positioning.md) and [Competitor Comparison](docs/explanation/competitor-comparison.md).
 
 ## How It Works for you
 
