@@ -1,42 +1,43 @@
 # Competitive Landscape Analysis
 
-A comparison of **Vault Intelligence** against key players in the Obsidian AI ecosystem: **Sonar**, **Smart Connections**, and **Obsidian Copilot**.
+A comparison of **Vault Intelligence** against key players in the Obsidian AI ecosystem: **SystemSculpt**, **Smart Connections**, and **Obsidian Copilot**.
 
 ## Feature Comparison Matrix
 
-| Feature | Vault Intelligence | Sonar | Smart Connections | Obsidian Copilot |
+| Feature | Vault Intelligence | SystemSculpt | Smart Connections | Obsidian Copilot |
 | :--- | :--- | :--- | :--- | :--- |
-| **Search Architecture** | **Dual-Loop** (Reflex + Analyst) | Hybrid (Vector + BM25 + Rerank) | Vector + Keyword | Vector (Vault Q&A) |
-| **Re-Ranking** | **Yes** (Cloud/Gemini Agent) | **Yes** (Local Cross-Encoder) | No | No |
+| **Search Architecture** | **Dual-Loop** (Reflex + Analyst) | Semantic Search | Vector + Keyword | Vector (Vault Q&A) |
+| **Re-Ranking** | **Yes** (Agent-driven) | No | No | No |
 | **Visual Notes** | **Zero-Noise Excalidraw** | Standard Indexing | Standard Indexing | Standard Indexing |
-| **Vault Hygiene** | **Gardener Agent** (Active) | None | None | None |
-| **Graph Algorithm** | **GARS** (Vector + Keyword + Graph) | Vector + BM25 | Interactive Graph | Vector Only |
-| **Local Support** | **Embeddings Only** | **Full Stack** (llama.cpp) | Embeddings (transformers.js) | LocalAI Support |
-| **Code Execution** | **Yes** (Python Solver) | No | No | No |
-| **Privacy** | Hybrid (Local Index, Cloud Reasoning) | **100% Local** | Hybrid or Local | Hybrid or Local |
-| **Multilingual** | **Native** (30+ Local / 140+ Agent) | Limited (Model Dependent) | AI Dependent | AI Dependent |
+| **Vault Hygiene** | **Gardener Agent** (Active) | Manual Workflows | None | None |
+| **Graph Algorithm** | **GARS** (Vector + Keyword + Graph) | None | Interactive Graph | Vector Only |
+| **Local Support** | **Full Stack** (Ollama) | **Yes** | Embeddings (transformers.js) | LocalAI Support |
+| **Extensibility** | **Secure MCP Servers** | Agent Workflows | No | No |
+| **Code Execution** | **Yes** (Python Solver) | Agent Mode (Write) | No | No |
+| **Privacy** | **Hybrid or 100% Local** | Hybrid or Local | Hybrid or Local | Hybrid or Local |
+| **Multilingual** | **Native** (30+ Local / 140+ Agent) | AI Dependent | AI Dependent | AI Dependent |
 
 ## Detailed Competitor Breakdown
 
-### 1. Sonar (The "Sovereign" Specialist)
+### 1. SystemSculpt (The "All-in-One Suite")
 
--   **Core Value**: Complete offline privacy using `llama.cpp`.
--   **Key Advantage**: Uses a "Cross-Encoder" for re-ranking, which is highly accurate but computationally expensive. Can transcribe audio.
--   **Gap**: High setup complexity (requires external runtime). "Passive" interaction—it searches, but doesn't "garden" or maintain the vault.
--   **Vault Intelligence Differentiator**: We offer the **Gardener** for active maintenance and **Excalidraw** support for visual thinkers. Our **Dual-Loop** offers the speed of local search with the reasoning power of frontier cloud models (Gemini 2.0/3.0), avoiding the hardware tax of local LLMs.
+-   **Core Value**: A massive, active suite featuring "Agent Mode", semantic search, and workflow automation.
+-   **Key Advantage**: Allows the AI to read and write to the vault (with approval). Excellent for users who want to automate text transformations and workflows.
+-   **Gap**: While it has powerful automations, its search relies on standard semantic vectors without Graph or Centrality awareness. It is a general productivity tool rather than a specialized Knowledge Retrieval engine.
+-   **Vault Intelligence Differentiator**: We specialize in **Deep Retrieval and Specialized Agents**. SystemSculpt's "Agent Mode" handles general text tasks, but our **Gardener** is specifically trained on vault taxonomy and ontology, ensuring your structural hygiene improves. Our **Dual-Loop + GARS** algorithm drastically outperforms standard semantic search when dealing with complex, multi-hop research questions.
 
 ### 2. Smart Connections (The "linker")
 
--   **Core Value**: Discovery of related notes via an interactive graph view.
--   **Key Advantage**: "Smart Chat" allows chatting with specific notes. Good visualization of connections.
--   **Gap**: Search ranking is purely vector-based, often leading to "noisy" results compared to Hybrid/GARS.
+-   **Core Value**: Discovery of related notes via AI embeddings and an interactive graph view.
+-   **Key Advantage**: "Smart Chat" allows chatting with specific notes. Supports both local embeddings and cloud models, with a Pro version offering advanced controls.
+-   **Gap**: Search ranking is primarily vector-based, often leading to "noisy" results compared to Hybrid/GARS. It lacks a proactive maintenance agent.
 -   **Vault Intelligence Differentiator**: **GARS** (Graph-Augmented Relevance Score) provides significantly better search ranking by weighing _centrality_ and _keywords_, not just vector closeness. Our **Gardener** actively creates connections rather than just visualizing them.
 
 ### 3. Obsidian Copilot (The "Assistant")
 
 -   **Core Value**: General-purpose AI assistant in the sidebar.
--   **Key Advantage**: "Project Mode" and "Composer" for writing assistance. Polished UI.
--   **Gap**: Vault Q&A is often a secondary feature rather than the core Deep Search engine. Less focus on knowledge graph structure.
+-   **Key Advantage**: "Composer V2" for smart file editing, drag-and-drop wikilinks, and broad multi-model support (OpenAI, Anthropic, Gemini, Ollama). Polished UI.
+-   **Gap**: Vault Q&A is often a secondary feature rather than the core Deep Search engine. It connects to external models but lacks deep focus on your knowledge graph's structure.
 -   **Vault Intelligence Differentiator**: We are **Agent-First**. The Researcher is not just a chat bot; it utilizes a **Computational Solver** (Python) and **Deep Recall** to answer complex queries that reasoning models alone cannot solve. We treat the vault as a _Database_, not just text.
 
 ## Multilingual Capabilities
@@ -45,10 +46,10 @@ We treat multilingual support as a first-class citizen, not an afterthought.
 
 -   **Vault Intelligence**:
     -   **Instant Local Search**: We ship with optimised stop-word lists and tokenizers for **30+ languages** (including Chinese, Russian, Arabic, and all major European languages) to ensure your primary search is accurate and fast.
-    -   **Intelligent Reasoning**: The agent leverages state-of-the-art multilingual understanding across **140+ languages**, allowing you to query in one language (eg Japanese) and retrieve or synthesise answers from notes written in another (eg English).
+    -   **Intelligent Reasoning**: By default, the agent leverages state-of-the-art multilingual understanding across **140+ languages**, allowing you to query in one language (eg Japanese) and retrieve or synthesise answers from notes written in another (eg English). Alternative models (like local Ollama setups) will vary based on their training.
 -   **Competitors**:
-    -   **Sonar**: Relies on the quantization of local models (llama.cpp), which often degrades performance in non-English languages.
-    -   **Smart Connections/Copilot**: Heavily dependent on the underlying embedding model. While capable, they lack the specific "Hybrid Search" optimizations (native stop-words) that make retrieval precise across different languages.
+    -   **SystemSculpt / Copilot**: Heavily dependent on the underlying embedding and generation models. While capable, they lack the specific "Hybrid Search" optimizations (native stop-words) that make retrieval precise across different languages.
+    -   **Smart Connections**: Also primarily AI-dependent. While it links well, it relies on English-centric tokenizers for its keyword searches out of the box.
 
 ## Our Unique Selling Propositions (USPs)
 
@@ -56,6 +57,7 @@ We treat multilingual support as a first-class citizen, not an afterthought.
 2.  **Dual-Loop Cognitive Architecture**: Mimics human thought (Fast Reflex vs. Slow Reasoning) to balance speed and depth.
 3.  **Zero-Noise Excalidraw**: The only plugin optimized for visual thinkers, preventing SVG/JSON metadata from polluting semantic search.
 4.  **GARS Scoring**: A proprietary ranking algorithm that outperforms standard vector search by incorporating Graph Theory (centrality/PageRank).
+5.  **Secure Extensibility**: While others blindly pipe local requests, we expose external tools via the **Model Context Protocol (MCP)** under strict cryptographic security and approval gates, ensuring your vault data is manipulated only with explicit consent.
 
 ## Visuals (Placeholders)
 

@@ -102,7 +102,7 @@ export default withMermaid(defineConfig({
                         { text: 'Solver: Data Analysis', link: '/docs/how-to/solver-analysis' },
                         { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
                         { text: 'Explorer: Connections', link: '/docs/how-to/explorer-connections' },
-                        { text: 'Ollama Models & Tuning', link: '/docs/guides/ollama' },
+                        { text: 'Ollama Models & Tuning', link: '/docs/how-to/ollama' },
                         { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
                     ]
                 },
@@ -121,7 +121,8 @@ export default withMermaid(defineConfig({
                         { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
                         { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
                         { text: 'Key Features', link: '/docs/explanation/key-features' },
-                        { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' }
+                        { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' },
+                        { text: 'Strategic Positioning', link: '/docs/explanation/strategic-positioning' }
                     ]
                 },
                 {
