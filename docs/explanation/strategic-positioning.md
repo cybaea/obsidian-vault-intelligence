@@ -22,12 +22,12 @@ While competitors use Vector + Keyword search, we use **Dual-Loop Architecture**
 
 This is our strongest unique selling proposition (USP). Every other AI plugin is a query tool. Vault Intelligence introduces **The Gardener**—the first active agent dedicated to vault hygiene. It proactively classification notes, suggests structural improvements based on a shared ontology, and generates interactive hygiene plans. It maintains the knowledge base so the user can focus on creation.
 
-### 3. Zero-Compromise Security & Power: Hybrid Architecture
+### 3. Zero-Compromise Security & Power: Hybrid & Local Architecture
 
-Users shouldn't have to choose between extreme privacy (hard-to-setup local llama.cpp) or high-intelligence cloud lock-in. Vault Intelligence offers a true Hybrid SOA (Service-Oriented Architecture):
+Users shouldn't have to choose between extreme privacy or high-intelligence cloud lock-in. Vault Intelligence offers a true Service-Oriented Architecture (SOA) that supports both paradigms natively:
 
 -   **Instant Local Reflex (<100ms)**: Fast, sharded local indexing and embedding out of the box (Orama + IndexedDB sharding).
--   **Deep Cloud Reasoning**: When deep analysis is needed, it seamlessly escalates to frontier models (Gemini 3/Flash) via our ProviderRegistry.
+-   **Deep Reasoning**: When complex analysis is needed, you can seamlessly escalate to frontier cloud models (Gemini 3/Flash) OR seamlessly operate 100% offline via our native local Ollama integration.
 
 ### 4. Integrated Knowledge: Web Grounding meets Vault Context
 
@@ -45,4 +45,4 @@ When communicating with our audience (Obsidian power users, researchers, and sys
 
 -   **Focus on the Graph**: "The only AI built for the Graph. We don't just read your notes; we understand how they connect using proprietary Graph-Augmented relevance."
 -   **Focus on Maintenance**: "Stop worrying about vault hygiene. The Gardener Agent proactively organizes your ontology so you can focus on writing."
--   **Focus on Hybrid Capability**: "Local-first speed for your privacy. Frontier-model intelligence for your deepest research. With native Web Grounding to bridge your internal knowledge with the outside world."
+-   **Focus on Choice**: "Local-first speed for your privacy. Frontier-model intelligence for deep research, or 100% offline operation via Ollama. With native Web Grounding to bridge your internal knowledge with the outside world."
