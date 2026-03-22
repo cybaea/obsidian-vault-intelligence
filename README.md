@@ -4,7 +4,7 @@
 
 **Don't just query your vault. Maintain it.**
 
-Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault from a static archive into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing active agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
+Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing active agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
 
 Obsidian vaults naturally degrade. As facts change, your notes become outdated. As the vault grows, connections are forgotten and tagging becomes inconsistent. Standard AI plugins function as search engines for this static data.
 
