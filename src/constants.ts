@@ -396,6 +396,7 @@ export const DOCUMENTATION_URLS = {
     SECTIONS: {
         CONNECTION: `${DOCS_CONFIG}#connection`,
         EXPLORER: `${DOCS_CONFIG}#explorer`,
+        FOLDER_SEMANTICS: `${DOCS_BASE}docs/how-to/explorer-connections.html#folders-as-semantic-topics`,
         GARDENER: `${DOCS_CONFIG}#gardener`,
         OLLAMA_DEBUG: `${DOCS_BASE}docs/how-to/ollama.html#debugging-common-issues`,
         PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,

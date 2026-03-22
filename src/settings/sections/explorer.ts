@@ -362,7 +362,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             }));
 
     const folderSemDesc = document.createDocumentFragment();
-    folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics.');
+    folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
+    folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
     const ul = folderSemDesc.createEl('ul', { cls: 'vault-intelligence-settings-list' });
     ul.createEl('li', { text: 'None: folders are ignored.' });
     ul.createEl('li', { text: 'Ontology: match existing ontology notes.' });
