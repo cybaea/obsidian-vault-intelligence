@@ -122,7 +122,8 @@ flowchart LR
 1.  **Processing details**:
 
 -   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
--   **Semantic context injection**: The system pre-pends a standard header (Title, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
+-   **Semantic context injection**: The system pre-pends a standard header (Title, Folder Structure, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
+-   **Implicit Graph Injection**: The indexing worker actively monitors the `implicitFolderSemantics` matrix to inject physical folder paths as structural graph edges (`source: implicit-folder`). It leverages efficient `aliasMap` validation to securely promote valid overarching directories directly into the semantic graph space without cluttering the WebGL visualization with generic storage names like `/Inbox/`.
 -   **Hybrid storage (Slim-Sync)**:
     -   **Hot Store (IndexedDB)**: The primary, full-content Orama state used for fast local searches. This is sharded by model hash (eg `orama_index_<model-hash>`) to ensure isolation between different embedding models.
     -   **Persistence safety**: To prevent split-brain collisions between the main thread and the background worker, the main thread uses a separate `orama_index_buffer_<model-hash>` namespace for its serialization buffers.

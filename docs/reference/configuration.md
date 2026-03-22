@@ -47,6 +47,7 @@ Configure how connections and similar notes are discovered.
 | Semantic edge thickness | `0.5` | Visual weight of implied AI relationships. Controls how thick the lines representing vector similarity are. **How to set:** The default `0.5` keeps AI suggestions as a subtle background web. Increase to `1.0+` if you are actively using the galaxy to discover new connections and want them visually prioritised. |
 | Keyword match weight | `1.2` | Calibration for keyword vs vector search. Higher values make keyword matches more conservative. |
 | Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
+| Implicit folder semantics | `ontology` | Controls how physical folder paths are mapped to semantic topics. <br>• _none_: Folders are totally ignored.<br>• _ontology_: Folders act as topics only if they securely match an existing note in your Ontology.<br>• _all_: Every folder is automatically treated as a unique semantic topic. |
 | Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
