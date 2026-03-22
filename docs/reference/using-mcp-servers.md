@@ -5,8 +5,8 @@ Vault Intelligence supports the **Model Context Protocol (MCP)**, allowing you t
 ## Transport Types
 
 Vault Intelligence supports three connection methods:
-1. **`stdio`**: Runs the server locally as a child process of Obsidian.
-2. **`sse`** & **`streamable_http`**: Connects to a server hosted elsewhere (useful for remote execution or mobile devices).
+1.  **`stdio`**: Runs the server locally as a child process of Obsidian.
+2.  **`sse`** & **`streamable_http`**: Connects to a server hosted elsewhere (useful for remote execution or mobile devices).
 
 > [!WARNING] Mobile Limitations
 > Due to iOS and Android OS restrictions, Obsidian cannot spawn local background processes. **`stdio` servers will automatically fail on Mobile.** If you use Vault Intelligence on mobile, you must host your MCP servers externally and connect via `sse` or `streamable_http`.
@@ -15,7 +15,7 @@ Vault Intelligence supports three connection methods:
 
 ## The Electron & Obsidian Environment (Crucial Gotchas)
 
-When configuring a `stdio` server, the command is executed by the Obsidian Electron app, *not* your interactive terminal. 
+When configuring a `stdio` server, the command is executed by the Obsidian Electron app, _not_ your interactive terminal. 
 
 **The `$PATH` Problem (macOS & Linux):**
 When you launch Obsidian from your dock/launcher, it does not inherit the `$PATH` from your `.bashrc` or `.zshrc`. This means commands like `node`, `npx`, `python`, or `uvx` will often fail with "command not found" even if they work perfectly in your terminal.
@@ -28,7 +28,7 @@ However, if you use version managers like **NVM (Node)** or **Pyenv (Python)**, 
 *   **Failing Command**: `npx` (Args: `-y`, `@modelcontextprotocol/server-postgres`)
 *   **Fix (Absolute Path)**: `/Users/yourname/.nvm/versions/node/v20.0.0/bin/npx` (Args: `-y`, `@modelcontextprotocol/server-postgres`)
 
-*Windows Users: Vault Intelligence handles path resolution better natively via `;`, but ensure your executable is globally available in your System Environment Variables.*
+Windows Users: Vault Intelligence handles path resolution better natively via `;`, but ensure your executable is globally available in your System Environment Variables.
 
 ---
 
@@ -37,10 +37,10 @@ However, if you use version managers like **NVM (Node)** or **Pyenv (Python)**, 
 Never paste raw API keys into the Environment (Env) or Headers fields of your MCP configuration. Those fields are synced in plain text via Obsidian Sync.
 
 Instead, use Vault Intelligence's secure secret manager:
-1. Go to the **Advanced Settings** tab in Vault Intelligence.
-2. Add a new secret (e.g., Key: `brave_api`, Value: `your-real-key`).
-3. In your MCP Server configuration, reference the secret using the `vi-secret:` prefix.
-    - Example Env Config: `{"BRAVE_API_KEY": "vi-secret:brave_api"}`
+1.  Go to the **Advanced Settings** tab in Vault Intelligence.
+2.  Add a new secret (e.g., Key: `brave_api`, Value: `your-real-key`).
+3.  In your MCP Server configuration, reference the secret using the `vi-secret:` prefix.
+    *   Example Env Config: `{"BRAVE_API_KEY": "vi-secret:brave_api"}`
 
 When the server launches, Vault Intelligence will securely inject the real key directly into memory.
 
