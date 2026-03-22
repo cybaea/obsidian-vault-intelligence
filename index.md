@@ -52,15 +52,15 @@ features:
       dark: /images/icon-privacy.png
       alt: Privacy Icon
     title: "100% Local or Frontier Cloud"
-    details: Complete privacy choice. Run entirely offline via native Ollama integration, or escalate to frontier models like Gemini 1.5 Pro when needed.
-    link: /docs/explanation/strategic-positioning#3-zero-compromise-security-power-hybrid-local-architecture
-    linkText: Read our privacy stance
+    details: Complete privacy choice. Use frontier models like Gemini 3+ or run entirely offline via native Ollama integration.
+    link: /docs/explanation/computing-model
+    linkText: Compare options
   - icon:
       light: /images/icon-visual-light.png
       dark: /images/icon-visual.png
       alt: Visual Notes Icon
     title: "Zero-Noise Visual Indexing"
-    details: Built for visual thinkers. We uniquely index Canvas and Excalidraw text without poisoning your search results with JSON and SVG code.
+    details: Built for visual thinkers. We index Canvas and Excalidraw text without cluttering your search results with JSON and SVG code.
     link: /docs/explanation/strategic-positioning#5-zero-noise-visual-indexing
     linkText: See how it works
 ---

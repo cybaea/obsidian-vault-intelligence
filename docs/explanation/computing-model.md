@@ -1,40 +1,57 @@
-# Why Gemini? (The Computing Model)
+# The Computing Model
 
-Vault Intelligence uses Google Gemini 3 for reasoning. This architectural choice balances privacy, performance, and accessibility.
+Vault Intelligence is built on a modular "Brain and Body" architecture. The "Body" (Search and Graph) always runs locally on your device, ensuring your vault remains fast. The "Brain" (Reasoning), "Senses" (Embeddings), and "Hands" (Gardener) can be configured to use cloud APIs, a dedicated local server, or run entirely within Obsidian itself.
 
-## Reasoning on the Cloud, Searching on Device
+This design gives you total control over the tradeoffs between privacy, capability, hardware cost, and speed.
 
-We use a hybrid computing model to ensure your vault remains private while giving you access to state-of-the-art intelligence.
+## The Three Core Components
 
--   Local Indexing: Your notes are indexed entirely on your machine. The Vector Search and graph analysis happen locally in Obsidian.
--   Cloud Reasoning: Once the relevant snippets of your notes are identified locally, they are sent to the Gemini API for synthesis and reasoning.
+1.  **Search & Graph (Always Local)**: The actual searching of your notes, vector database operations (using Orama), and graph traversals are always handled entirely within Obsidian on your local machine. 
+2.  **Embeddings**: The models that convert your markdown text into mathematical vectors (numbers) for the search engine to use. 
+3.  **Reasoning & Gardening**: The large language models (LLMs) that read retrieved contexts, answer your questions, execute tools, and proactively maintain your vault structure. 
 
-## Rationale for an API Key
+---
 
-_1. Performance on all devices_
+## 1. Trade-offs: Embedding Models (The Senses)
 
-High-end AI models require massive GPU memory (VRAM). By using Gemini via API, you get elite-level reasoning even on older laptops or mobile devices without draining your battery or slowing down your workspace.
+When Vault Intelligence indexes your vault, it must convert text to vectors. You have three choices for the embedding engine:
 
-_2. Multilingual fluency_
+### Option A: Google Gemini (Cloud) - _Default & Recommended_
 
-Gemini is natively trained on dozens of languages. It can synthesize connections between your notes across different languages with a level of nuance that local "small" models cannot yet match.
+-   **Model**: `gemini-embedding-001`
+-   **Pros**: Low cost, extremely high quality semantic matching, multilingual processing, zero local hardware requirements. Soon to feature multi-format support (not just markdown) with `gemini-embeddings-2`.
+-   **Cons**: Requires an internet connection to index new notes, sends your note text to Google.
+-   **Best for**: Almost everyone. It is the perfect balance of semantic quality and device efficiency, preserving your battery and RAM.
 
-_3. Privacy through isolation_
+### Option B: Transformers.js (Local, In-App)
 
-Unlike web-based AI tools, Vault Intelligence does not "upload your vault" to the cloud.
+-   **How it works**: Runs a tiny neural network directly inside Obsidian using WebAssembly (WASM).
+-   **Pros**: Complete privacy, instantaneous (zero network overhead), no extra software needed. Minimal RAM usage.
+-   **Cons**: Limited to smaller context windows (e.g., ~400 words per chunk for `bge-small-en-v1.5`), strains laptop batteries.
+-   **Best for**: Users who want absolute privacy without configuring an external server.
 
--   Only the specific contexts identified by your local search are sent to the API.
--   Data sent to the API is strictly used for your response; it is not used to train Google's models.
--   You control your key and your usage directly.
+### Option C: Ollama (Local, External Server)
 
-## Comparison: Local vs Cloud
+-   **How it works**: Sends text to the Ollama application running on your computer.
+-   **Pros**: Full privacy, supports massive context windows (e.g., `nomic-embed-text` with 8192 tokens), allows for document-scale embedding.
+-   **Cons**: Requires Ollama running in the background, consumes dedicated VRAM/RAM, initial setup overhead.
+-   **Best for**: Power users who want to embed entire long-form documents at once instead of granular paragraphs.
 
-| Feature | Local Models (ONNX) | Cloud Models (Gemini) |
+---
+
+## 2. Tradeoffs: Reasoning & Gardening Models (The Brain & Hands)
+
+Vault Intelligence supports two primary reasoning engines for the active Chat, Solver, and automated Gardener: **Google Gemini** (Cloud) and **Ollama** (Local).
+
+| Feature | Cloud (Gemini) [Default] | Local (Ollama) |
 | :--- | :--- | :--- |
-| Privacy | Complete | High (Context-only) |
-| Speed | Fast (No latency) | Dynamic (Network dependent) |
-| Reasoning Power | Limited (Summary only) | Extreme (Synthesis, Logic) |
-| Hardware Cost | High (Needs modern GPU) | Zero |
-| Battery Life | Heavier | Minimal |
+| **Privacy** | High. Only specific note excerpts retrieved by local search are sent to the API. Data is not trained on. | Complete. No data ever leaves your machine. Ideal for highly sensitive offline vaults. |
+| **Reasoning Power** | Extreme. State-of-the-art synthesis, huge context windows, and multilingual fluency. | Varies. Depends on the model you download (e.g., Llama 3) and your GPU VRAM setup. |
+| **Built-in Tools** | Embedded Web Search and Computational Solver execution capabilities directly in the API. | Requires provisioning external MCP servers to get web search and solver execution. |
+| **Speed** | Consistently fast. | Variable depending on your hardware. |
+| **Hardware Cost** | High-quality reasoning on all devices. | Requires high-end device with a dedicated GPU (ideally 16GB+ VRAM) for acceptable performance. |
+| **Running Cost** | Pay-per-use API with free tier. | Low. Only the cost of electricity and hardware upgrades. |
+| **Configuration** | Simple: only requires an API key. | Complex: Requires [tuning](../how-to/ollama.html) of parameters for your hardware and potentially MCP server configuration. |
+| **Energy Usage** | Minimal battery impact. | Heavy battery drain and heat generation during active use. |
 
-By default, we use local models for search (indexing) and cloud models for reasoning (chat/gardener). This gives you the speed of local search with the power of modern AI.
+**The Verdict**: We recommend **Gemini** for 95% of users. It provides the best reasoning quality, massive context, embedded tools, and zero setup without requiring an expensive workstation. However, if you have the hardware and strict offline/privacy requirements, **Ollama** offers a brilliant, uncompromising alternative.
