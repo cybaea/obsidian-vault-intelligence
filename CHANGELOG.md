@@ -11,11 +11,13 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Gardener Cost Optimizer**: Added a new command `"Gardener: organize vault concepts (new files only)"`. This allows you to aggressively filter out and skip notes that are already well-managed, drastically reducing the token costs and processing time of large vault hygiene runs. Detailed token savings are displayed in the generated Gardener plan summary.
 -   **Graceful streaming cancellation**: Clicking the stop button during a complex agent response now cleanly unlocks the chat input and displays an "Agent explicitly stopped" message, instead of leaving the UI in a frozen or error state.
 -   **Inline error reporting**: Tool execution errors or model failures are now rendered as beautifully styled, persistent inline warnings directly within the chat history, allowing you to easily review and adjust your prompt without background crashing.
 
 ### Developer features
 
+-   **State Batching**: Added `GardenerStateService.recordCheckBatch` to prevent I/O bottleneck freezes when processing thousands of filtered notes.
 -   **Agent execution refactoring**: Dramatically reduced the cyclomatic complexity of `AgentService.chatStream` by isolating the recursive tool-calling loop into a dedicated `processToolLoop` generator yielding cleanly.
 -   **Explicit pipeline abortion**: `AgentService` now leverages `AbortSignal` gracefully, returning a structured `{ isCancelled: true }` metadata frame when an execution loop is interrupted, guaranteeing robust UI unlocking.
 -   **Indexer optimisation**: Extracted 10 heavy pure algorithmic functions (like `semanticSplit` and `parseYaml`) out of the `IndexerWorker` into a globally accessible `src/utils/indexer-utils.ts` module, completely eliminating duplicated parsing logic across the main thread.

@@ -163,6 +163,19 @@ export class GardenerStateService {
         }
     }
 
+    public async recordCheckBatch(paths: string[]): Promise<void> {
+        if (!paths || paths.length === 0) return;
+        const now = Date.now();
+        for (const path of paths) {
+            this.ensureFileState(path);
+            const fileState = this.state.files[path];
+            if (fileState) {
+                fileState.lastChecked = now;
+            }
+        }
+        await this.saveState();
+    }
+
     public async recordUpdate(path: string): Promise<void> {
         this.ensureFileState(path);
         const fileState = this.state.files[path];
