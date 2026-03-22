@@ -102,7 +102,7 @@ export default withMermaid(defineConfig({
                         { text: 'Solver: Data Analysis', link: '/docs/how-to/solver-analysis' },
                         { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
                         { text: 'Explorer: Connections', link: '/docs/how-to/explorer-connections' },
-                        { text: 'Ollama Models & Tuning', link: '/docs/guides/ollama' },
+                        { text: 'Ollama Models & Tuning', link: '/docs/how-to/ollama' },
                         { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
                     ]
                 },

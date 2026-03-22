@@ -10,6 +10,8 @@ Obsidian vaults naturally degrade. As facts change, your notes become outdated. 
 
 Vault Intelligence functions as a maintenance system. It identifies gaps in your notes by cross-referencing your writing with live web searches. It retrieves information based on the explicit structural links you built, rather than just matching text. It audits your tags to connect notes to existing topics, proposing new ones when needed. It connects to external tools—like local scripts or databases—under strict cryptographic security. It is designed to keep your knowledge current, connected, and secure.
 
+Vault Intelligence is **free** and **open source**.
+
 ## Why use Vault Intelligence?
 
 Standard AI plugins retrieve text. Vault Intelligence is designed to actively maintain and update your knowledge base.
