@@ -187,7 +187,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     hiddenModels: [],
     implicitFolderSemantics: 'ontology',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-    indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
+    indexVersion: 6, // 1: Initial... 5: Orama Enum Schema bugfix, 6: Implicit folder topology
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
@@ -221,6 +221,7 @@ export interface IVaultIntelligencePlugin {
     manifest: { id: string };
     mcpClientManager: unknown; // Using unknown here to avoid circular dep, we'll cast it in implementation
     persistenceManager: PersistenceManager;
+    requiresIndexWipeOnExit?: boolean;
     requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;
     settings: VaultIntelligenceSettings;

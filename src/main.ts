@@ -215,7 +215,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Background scan for new/changed files
 		this.app.workspace.onLayoutReady(async () => {
 			// Defer heavy initialization until layout is ready to unblock UI
-			await this.graphSyncOrchestrator.startNode();
+			await this.graphSyncOrchestrator.startNode(this.needsReindex);
 			await this.ontologyService.initialize();
 			await this.gardenerStateService.loadState();
 		});

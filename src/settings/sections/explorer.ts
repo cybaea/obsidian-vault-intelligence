@@ -383,9 +383,11 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .addOption('all', 'All folders')
             .setValue(plugin.settings.implicitFolderSemantics)
             .onChange(async (value) => {
-                plugin.settings.implicitFolderSemantics = value as 'none' | 'ontology' | 'all';
-                plugin.requiresWorkerRestartOnExit = true;
-                await plugin.saveSettings();
+                if (plugin.settings.implicitFolderSemantics !== value) {
+                    plugin.settings.implicitFolderSemantics = value as "none" | "ontology" | "all";
+                    plugin.requiresIndexWipeOnExit = true;
+                    await plugin.saveSettings();
+                }
             }));
 
     // --- 4. Re-index Button ---

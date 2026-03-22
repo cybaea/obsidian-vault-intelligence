@@ -70,9 +70,13 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
     override hide(): void {
         super.hide();
-        if (this.plugin.requiresWorkerRestartOnExit) {
+        if (this.plugin.requiresIndexWipeOnExit) {
             this.plugin.requiresWorkerRestartOnExit = false;
-            void this.plugin.graphSyncOrchestrator?.commitConfigChange();
+            this.plugin.requiresIndexWipeOnExit = false;
+            void this.plugin.graphSyncOrchestrator?.commitConfigChange(true);
+        } else if (this.plugin.requiresWorkerRestartOnExit) {
+            this.plugin.requiresWorkerRestartOnExit = false;
+            void this.plugin.graphSyncOrchestrator?.commitConfigChange(false);
         }
     }
 

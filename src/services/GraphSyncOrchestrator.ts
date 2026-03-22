@@ -64,7 +64,7 @@ export class GraphSyncOrchestrator {
      * Starts the synchronization orchestration.
      * Initializes the worker, loads state, and triggers scanning if needed.
      */
-    public async startNode() {
+    public async startNode(forceWipe = false) {
         try {
             const config = this.buildWorkerConfig();
             await this.workerManager.initializeWorker(config);
@@ -74,7 +74,7 @@ export class GraphSyncOrchestrator {
             this.registerEvents();
 
             // Initial scan (Delta or Full)
-            void this.scanAll(this.needsForcedScan);
+            void this.scanAll(forceWipe || this.needsForcedScan);
 
             this.isNodeRunning = true;
             logger.info("[GraphSyncOrchestrator] Started.");
@@ -420,7 +420,7 @@ export class GraphSyncOrchestrator {
         });
     }
 
-    public async commitConfigChange() {
+    public async commitConfigChange(forceWipe = false) {
         this.cancelPendingSave();
         if (this.abortController) this.abortController.abort();
 
@@ -435,13 +435,13 @@ export class GraphSyncOrchestrator {
         await this.workerManager.waitForIdle();
 
         const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
-        if (oldDimension && oldModelId) {
+        if (oldDimension && oldModelId && !forceWipe) {
             await this.saveState();
         }
 
         this.workerManager.terminate();
         this.driftQuarantine.clear();
-        await this.startNode();
+        await this.startNode(forceWipe);
     }
 
     public async flushAndShutdown() {
