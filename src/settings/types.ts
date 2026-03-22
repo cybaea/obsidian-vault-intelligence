@@ -11,6 +11,8 @@ import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
+export type ImplicitFolderSemanticsMode = 'none' | 'ontology' | 'all';
+
 export interface MCPServerConfig {
     args?: string[];
     command?: string;
@@ -58,6 +60,7 @@ export interface VaultIntelligenceSettings {
     googleApiKey: string;
     groundingModel: string;
     hiddenModels: string[];
+    implicitFolderSemantics: ImplicitFolderSemanticsMode;
     indexingDelayMs: number;
     indexVersion: number;
     keywordWeight: number;
@@ -120,6 +123,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 
 ## YOUR ROLE:
 1.  **LINKING**: Identify notes missing relevant topics and suggest adding Markdown links to existing files in the 'VALID TOPICS' list below.
+    *CRITICAL: Pay close attention to the note's physical \`path\`. Folders often represent the primary semantic context (e.g., a note in \`/Projects/Apollo\` is structurally about "Projects" and "Apollo").*
 2.  **PROPOSING**: If you identify a recurring theme or concept that doesn't have a topic file yet, suggest a NEW topic as a Markdown link.
     - NEW topics should be placed in one of the following folders if they fit, or you can suggest a path:
 {{ONTOLOGY_FOLDERS}}
@@ -181,6 +185,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     groundingModel: 'gemini-flash-lite-latest',
     hiddenModels: [],
+    implicitFolderSemantics: 'ontology',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
     indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
     keywordWeight: 1.2,

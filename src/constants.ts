@@ -251,7 +251,8 @@ export const ONTOLOGY_CONSTANTS = {
     /** Weights for edge sources */
     EDGE_WEIGHTS: {
         BODY: 1.0,
-        FRONTMATTER: 1.5
+        FRONTMATTER: 1.5,
+        IMPLICIT: 0.8
     },
 
     /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */

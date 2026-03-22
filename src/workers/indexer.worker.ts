@@ -876,7 +876,10 @@ const IndexerWorker: WorkerAPI = {
         const cleanlyContent = sanitizeExcalidrawContent(content);
         const { body, frontmatter } = splitFrontmatter(cleanlyContent);
         const parsedFM = parseYaml(frontmatter);
-        const context = generateContextString(title, parsedFM, config);
+        
+        const pathSegments = normalizedPath.split('/').filter(Boolean);
+        const dir = pathSegments.length > 1 ? pathSegments.slice(0, -1).join('/') : '';
+        const context = generateContextString(title, dir, parsedFM, config);
 
         const bodyOffset = cleanlyContent.indexOf(body);
         const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
@@ -985,7 +988,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
 }
 
 
-function generateContextString(title: string, fm: Record<string, unknown>, conf: WorkerConfig): string {
+function generateContextString(title: string, dir: string, fm: Record<string, unknown>, conf: WorkerConfig): string {
     const parts: string[] = [];
     const props = conf.contextAwareHeaderProperties || ['title', 'topics', 'tags', 'type', 'author', 'status'];
     for (const key of props) {
@@ -996,6 +999,13 @@ function generateContextString(title: string, fm: Record<string, unknown>, conf:
             if (sanitized) parts.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${sanitized}.`);
         }
     }
+
+    // Inject folder string safely to prevent truncating metadata
+    if (dir && conf.implicitFolderSemantics && conf.implicitFolderSemantics !== 'none') {
+        const safeDir = dir.substring(0, 200); // Prevent token bloat
+        parts.push(`Folder Structure: ${safeDir}.`);
+    }
+
     return parts.join(' ').substring(0, 1000);
 }
 
@@ -1058,6 +1068,48 @@ function updateGraphEdges(path: string, content: string) {
                     type: 'link',
                     weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.FRONTMATTER
                 });
+            }
+        }
+    }
+
+    // Implicit Folder Edge Injection
+    if (config.implicitFolderSemantics && config.implicitFolderSemantics !== 'none') {
+        const folders = path.split('/').filter(Boolean).slice(0, -1); // Exclude basename
+        const ontologyRoot = workerNormalizePath(config.ontologyPath || 'Ontology');
+        
+        for (const folder of folders) {
+            const folderNameLower = folder.toLowerCase();
+            let shouldInject = false;
+            let targetResolved = resolvePath(folder, aliasMap, dir);
+            
+            if (config.implicitFolderSemantics === 'ontology') {
+                if (aliasMap.has(folderNameLower) && targetResolved.startsWith(ontologyRoot + '/')) {
+                    const segments = targetResolved.split('/');
+                    const targetBasename = (segments[segments.length - 1] || '').replace(/\.md$/i, '').toLowerCase();
+                    const targetParentName = segments.length > 1 ? (segments[segments.length - 2] || '').toLowerCase() : '';
+                    if (targetBasename && targetBasename !== targetParentName) {
+                        shouldInject = true;
+                    }
+                }
+            } else if (config.implicitFolderSemantics === 'all') {
+                shouldInject = true;
+                if (!aliasMap.has(folderNameLower)) {
+                    targetResolved = `_implicit_folder_/${folder}`;
+                }
+            }
+            
+            if (shouldInject) {
+                if (!graph.hasNode(targetResolved)) {
+                    graph.addNode(targetResolved, { mtime: 0, path: targetResolved, size: 0, type: 'topic' });
+                }
+                
+                if (!graph.hasEdge(path, targetResolved)) {
+                    graph.addEdge(path, targetResolved, {
+                        source: 'implicit-folder',
+                        type: 'link',
+                        weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.IMPLICIT || 0.8
+                    });
+                }
             }
         }
     }
