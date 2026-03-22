@@ -317,6 +317,23 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		});
 
 		this.addCommand({
+			callback: async () => {
+				try {
+					const planFile = await this.gardenerService.tidyVault(true);
+					if (planFile) {
+						const leaf = this.app.workspace.getLeaf('tab');
+						await leaf.openFile(planFile);
+					}
+				} catch (error: unknown) {
+					const message = error instanceof Error ? error.message : String(error);
+					new Notice(`${UI_STRINGS.NOTICE_GARDENER_FAILED}${message}`);
+				}
+			},
+			id: 'gardener-tidy-vault-cost-optimizer',
+			name: 'Gardener: organize vault concepts (new files only)'
+		});
+
+		this.addCommand({
 			callback: () => {
 				void this.activateView(VIEW_TYPES.RESEARCH_CHAT);
 			},

@@ -39,6 +39,35 @@ export const GardenerPlanSchema = z.object({
 
 export type GardenerPlan = z.infer<typeof GardenerPlanSchema>;
 
+export function isFileWellManaged(
+    frontmatter: Record<string, unknown> | undefined,
+    topicKeys: readonly string[],
+    validateTopic: (topic: string) => boolean
+): boolean {
+    if (!frontmatter) return false;
+
+    let topicsValue: unknown = undefined;
+    for (const key of topicKeys) {
+        if (frontmatter[key] !== undefined && frontmatter[key] !== null && frontmatter[key] !== "") {
+            topicsValue = frontmatter[key];
+            break;
+        }
+    }
+
+    if (topicsValue === undefined) return false;
+
+    const topicArray = Array.isArray(topicsValue) ? topicsValue : [topicsValue];
+    if (topicArray.length === 0) return false;
+
+    for (const topic of topicArray) {
+        if (!validateTopic(String(topic))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * Service to orchestrate the vault "Tidying" process.
  */
@@ -69,8 +98,8 @@ export class GardenerService {
      * Scans the vault for potential improvements and generates a "gardening plan".
      * @returns The TFile of the generated plan or null if no actions needed.
      */
-    public async tidyVault(): Promise<TFile | null> {
-        logger.info("Starting Gardener: Tidy Vault");
+    public async tidyVault(strictOptimization: boolean = false): Promise<TFile | null> {
+        logger.info(`Starting Gardener: Tidy Vault (Strict: ${strictOptimization})`);
 
         // 0. Purge old plans
         await this.purgeOldPlans();
@@ -106,7 +135,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
         const planFile = await this.app.vault.create(fullPath, placeholderContent);
 
         // Background Analysis
-        void this.runAnalysis(planFile);
+        void this.runAnalysis(planFile, strictOptimization);
 
         return planFile;
     }
@@ -114,7 +143,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
     /**
      * Performs the actual analysis in the background and updates the plan file.
      */
-    private async runAnalysis(planFile: TFile): Promise<void> {
+    private async runAnalysis(planFile: TFile, strictOptimization: boolean): Promise<void> {
         try {
             // 1. Gather context
             const excludedPaths = [
@@ -141,6 +170,9 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 2000) / charsPerToken;
             let currentTokenEstimate = basePromptEstimate;
             const notes: TFile[] = [];
+            const skippedPaths: string[] = [];
+            let savedTokens = 0;
+            let savedFiles = 0;
 
             for (const file of allFiles) {
                 // Check note limit first
@@ -148,6 +180,22 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
                 // Only consider files the state says we should
                 if (this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays, this.settings.gardenerRecheckDays)) {
+                    if (strictOptimization) {
+                        const cache = this.app.metadataCache.getFileCache(file);
+                        const isWellManaged = isFileWellManaged(
+                            cache?.frontmatter,
+                            ['topics', 'topic'],
+                            (topic: string) => this.ontology.validateTopic(topic)
+                        );
+
+                        if (isWellManaged) {
+                            savedTokens += file.stat.size / charsPerToken;
+                            savedFiles++;
+                            skippedPaths.push(file.path);
+                            continue;
+                        }
+                    }
+
                     // Estimate this file's contribution
                     const fileContent = await this.app.vault.cachedRead(file);
                     const fileEstimate = fileContent.length / charsPerToken;
@@ -173,6 +221,11 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             }));
 
             logger.info(`Gardener: analyzing ${context.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
+
+            if (skippedPaths.length > 0) {
+                await this.state.recordCheckBatch(skippedPaths);
+                logger.info(`Gardener: Pre-filtered (skipped) ${skippedPaths.length} notes to save tokens.`);
+            }
 
             // 2b. Prepare System Instruction
             let systemInstruction = this.settings.gardenerSystemInstruction ?? DEFAULT_GARDENER_SYSTEM_PROMPT;
@@ -278,10 +331,15 @@ ${JSON.stringify(context, null, 2)}
             }
 
             // 4. Update the Plan Note
+            let finalSummary = parsedPlan.summary;
+            if (savedFiles > 0) {
+                finalSummary += `\n\n**Cost Optimizer**: Skipped ${savedFiles} well-managed files, saving an estimated ${Math.round(savedTokens)} context tokens.`;
+            }
+
             const content = `
 # ${GARDENER_CONSTANTS.PLAN_PREFIX} - ${parsedPlan.date}
 
-${parsedPlan.summary}
+${finalSummary}
 
 \`\`\`gardener-plan
 ${JSON.stringify(parsedPlan, null, 2)}
