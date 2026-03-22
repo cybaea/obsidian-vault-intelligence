@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import Graph from 'graphology';
+import { describe, expect, it } from 'vitest';
 
 // Mimic the exact logic from indexer.worker.ts to test edge cases securely
 function generateContextString(title: string, dir: string, fm: Record<string, unknown>, conf: { contextAwareHeaderProperties?: string[], implicitFolderSemantics?: string }): string {
@@ -23,6 +24,51 @@ function generateContextString(title: string, dir: string, fm: Record<string, un
 function extractFolders(path: string) {
     return path.split('/').filter(Boolean).slice(0, -1);
 }
+
+// Mock of updateGraphEdges specifically for testing the implicit folder semantics edge injection logic
+function mockUpdateGraphEdges(graph: Graph, path: string, dir: string, aliasMap: Map<string, string>, config: { implicitFolderSemantics?: string, ontologyPath?: string }) {
+    if (config.implicitFolderSemantics && config.implicitFolderSemantics !== 'none') {
+        const folders = path.split('/').filter(Boolean).slice(0, -1);
+        const ontologyRoot = (config.ontologyPath || 'Ontology').toLowerCase();
+        
+        for (const folder of folders) {
+            const folderNameLower = folder.toLowerCase();
+            let shouldInject = false;
+            let targetResolved = aliasMap.get(folderNameLower) || folder;
+            
+            if (config.implicitFolderSemantics === 'ontology') {
+                if (aliasMap.has(folderNameLower) && targetResolved.startsWith(ontologyRoot + '/')) {
+                    const segments = targetResolved.split('/');
+                    const targetBasename = (segments[segments.length - 1] || '').replace(/\.md$/i, '').toLowerCase();
+                    const targetParentName = segments.length > 1 ? (segments[segments.length - 2] || '').toLowerCase() : '';
+                    if (targetBasename && targetBasename !== targetParentName) {
+                        shouldInject = true;
+                    }
+                }
+            } else if (config.implicitFolderSemantics === 'all') {
+                shouldInject = true;
+                if (!aliasMap.has(folderNameLower)) {
+                    targetResolved = `_implicit_folder_/${folder}`;
+                }
+            }
+            
+            if (shouldInject) {
+                if (!graph.hasNode(targetResolved)) {
+                    graph.addNode(targetResolved, { mtime: 0, path: targetResolved, size: 0, type: 'topic' });
+                }
+                
+                if (!graph.hasEdge(path, targetResolved)) {
+                    graph.addEdge(path, targetResolved, {
+                        source: 'implicit-folder',
+                        type: 'link',
+                        weight: 0.8
+                    });
+                }
+            }
+        }
+    }
+}
+
 
 describe('Implicit Folder Semantics & Context String', () => {
 
@@ -90,6 +136,66 @@ describe('Implicit Folder Semantics & Context String', () => {
             const path = "Meeting.md";
             const folders = extractFolders(path);
             expect(folders).toEqual([]);
+        });
+    });
+
+    describe('Graph Edge Injection (updateGraphEdges)', () => {
+        it('Mode none: should NOT inject any structural folder edges', () => {
+            const graph = new Graph();
+            const aliasMap = new Map<string, string>();
+            graph.addNode('Projects/Apollo/Meeting.md');
+            
+            mockUpdateGraphEdges(graph, 'Projects/Apollo/Meeting.md', 'Projects/Apollo', aliasMap, { implicitFolderSemantics: 'none' });
+            
+            expect(graph.edges().length).toBe(0);
+        });
+
+        it('Mode ontology: should ONLY inject edges that match validated Ontology aliasMap items', () => {
+            const graph = new Graph();
+            const aliasMap = new Map<string, string>();
+            
+            aliasMap.set('apollo', 'ontology/projects/apollo.md'); // Valid match
+            aliasMap.set('projects', 'ontology/projects.md'); // Valid match
+            // We do not set 'genericfolder' in alias map
+            
+            graph.addNode('GenericFolder/Apollo/Meeting.md');
+            
+            mockUpdateGraphEdges(graph, 'GenericFolder/Apollo/Meeting.md', 'GenericFolder/Apollo', aliasMap, { implicitFolderSemantics: 'ontology', ontologyPath: 'ontology' });
+            
+            // Should only inject edge to Apollo, ignoring GenericFolder
+            const edges = graph.edges('GenericFolder/Apollo/Meeting.md');
+            expect(edges.length).toBe(1);
+            expect(graph.hasEdge('GenericFolder/Apollo/Meeting.md', 'ontology/projects/apollo.md')).toBe(true);
+            expect(graph.hasNode('ontology/projects/apollo.md')).toBe(true);
+        });
+
+        it('Mode all: should inject ALL folders as virtual graph topics if not in aliasMap', () => {
+            const graph = new Graph();
+            const aliasMap = new Map<string, string>();
+            
+            graph.addNode('Projects/Apollo/Meeting.md');
+            
+            mockUpdateGraphEdges(graph, 'Projects/Apollo/Meeting.md', 'Projects/Apollo', aliasMap, { implicitFolderSemantics: 'all' });
+            
+            const edges = graph.edges('Projects/Apollo/Meeting.md');
+            expect(edges.length).toBe(2);
+            expect(graph.hasEdge('Projects/Apollo/Meeting.md', '_implicit_folder_/Projects')).toBe(true);
+            expect(graph.hasEdge('Projects/Apollo/Meeting.md', '_implicit_folder_/Apollo')).toBe(true);
+        });
+        
+        it('Mode all: should correctly resolve folder names to aliasMap if they happen to exist', () => {
+            const graph = new Graph();
+            const aliasMap = new Map<string, string>();
+            
+            aliasMap.set('apollo', 'ontology/projects/apollo.md');
+            
+            graph.addNode('Projects/Apollo/Meeting.md');
+            
+            mockUpdateGraphEdges(graph, 'Projects/Apollo/Meeting.md', 'Projects/Apollo', aliasMap, { implicitFolderSemantics: 'all' });
+            
+            // "Projects" goes to virtual node. "Apollo" goes to formal aliasMap node.
+            expect(graph.hasEdge('Projects/Apollo/Meeting.md', '_implicit_folder_/Projects')).toBe(true);
+            expect(graph.hasEdge('Projects/Apollo/Meeting.md', 'ontology/projects/apollo.md')).toBe(true);
         });
     });
 });
