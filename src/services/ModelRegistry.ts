@@ -183,7 +183,7 @@ export class ModelRegistry {
 
         const now = Date.now();
         const cacheDurationMs = cacheDurationDays * 24 * 60 * 60 * 1000;
-        
+
         let geminiModels: ModelDefinition[] = [];
         let ollamaModels: ModelDefinition[] = [];
         let useGeminiCache = false;
@@ -196,15 +196,15 @@ export class ModelRegistry {
         if (this.dynamicModels.length > 0) {
             cachedGeminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
             cachedOllamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
-            
+
             if (!forceUpdate && (now - this.lastFetchTime < cacheDurationMs)) {
                 useGeminiCache = true;
                 useOllamaCache = true;
                 geminiModels = cachedGeminiModels;
                 ollamaModels = cachedOllamaModels;
             }
-        } 
-        
+        }
+
         // 2. Check File Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
         if (!cachedOllamaModels || !cachedGeminiModels) {
             const cachePath = this.getCachePath(app);
@@ -237,7 +237,7 @@ export class ModelRegistry {
             const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("vault-intelligence");
             const settings = plugin?.settings;
             if (!settings) throw new Error("Vault Intelligence settings not found during model fetch.");
-            
+
             const tasks: Promise<void>[] = [];
 
             if (apiKey && !useGeminiCache) {
@@ -275,9 +275,9 @@ export class ModelRegistry {
                 } else {
                     tasks.push(
                         this.fetchOllamaModels(settings.ollamaEndpoint)
-                            .then(res => { 
+                            .then(res => {
                                 if (res.success) {
-                                    ollamaModels = res.models; 
+                                    ollamaModels = res.models;
                                     this.rawOllamaResponse = res.rawResponse;
                                 } else if (cachedOllamaModels) {
                                     // Fallback to stale cache if server is offline
@@ -285,8 +285,8 @@ export class ModelRegistry {
                                     useOllamaCache = true; // prevent saving over
                                 }
                             })
-                            .catch(err => { 
-                                logger.debug("Ollama models not available", err); 
+                            .catch(err => {
+                                logger.debug("Ollama models not available", err);
                                 if (cachedOllamaModels) {
                                     ollamaModels = cachedOllamaModels;
                                     useOllamaCache = true;
@@ -332,8 +332,8 @@ export class ModelRegistry {
             const id = m.name.replace('models/', '');
             let supportsNativeSearch = false;
             let supportsUrlContext = false;
-            
-            if (id === 'gemini-flash-latest' || id === 'gemini-pro-latest' || id.includes('gemini-3')) {
+
+            if (id === 'gemini-flash-latest' || id === 'gemini-pro-latest' || id === 'gemini-flash-lite-latest') {
                 supportsNativeSearch = true;
                 supportsUrlContext = true;
             } else {
@@ -347,7 +347,7 @@ export class ModelRegistry {
                     }
                 }
             }
-            
+
             return {
                 description: m.description,
                 id,
@@ -366,7 +366,7 @@ export class ModelRegistry {
 
     private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null, success: boolean }> {
         if (!endpoint) return { models: [], rawResponse: null, success: false };
-        
+
         try {
             const response = await requestUrl({
                 method: 'GET',
@@ -374,21 +374,21 @@ export class ModelRegistry {
             });
 
             if (response.status !== 200) return { models: [], rawResponse: null, success: false };
-            
+
             const data = response.json as OllamaTagsResponse;
             const models: ModelDefinition[] = (data.models || []).map((m: OllamaModel) => {
                 const family = m.details.family?.toLowerCase() || "";
                 const families = (m.details.families || []).map(f => f.toLowerCase());
-                
+
                 // O(1) synchronous classification using details.family
                 // Note: We'll fetch inputTokenLimit JIT later to fix the NaN clamping paradox.
                 const lowerName = m.name.toLowerCase();
-                const isEmbedding = family.includes('bert') || 
-                                   family.includes('nomic') || 
-                                   families.some(f => f.includes('bert') || f.includes('nomic')) ||
-                                   lowerName.includes('embed') || 
-                                   lowerName.includes('bge') ||
-                                   lowerName.includes('minilm');
+                const isEmbedding = family.includes('bert') ||
+                    family.includes('nomic') ||
+                    families.some(f => f.includes('bert') || f.includes('nomic')) ||
+                    lowerName.includes('embed') ||
+                    lowerName.includes('bge') ||
+                    lowerName.includes('minilm');
 
                 return {
                     description: `Local model: ${m.name}`,
@@ -440,7 +440,7 @@ export class ModelRegistry {
                 };
                 const vA = getVersion(a.id.toLowerCase());
                 const vB = getVersion(b.id.toLowerCase());
-                
+
                 const len = Math.max(vA.length, vB.length);
                 for (let i = 0; i < len; i++) {
                     const numA = i < vA.length ? (vA[i] || 0) : 0;
@@ -464,7 +464,7 @@ export class ModelRegistry {
             ...LOCAL_EMBEDDING_MODELS,
             ...GEMINI_EMBEDDING_MODELS
         ];
-        
+
         // Return a deduplicated list
         const unique = new Map<string, ModelDefinition>();
         models.forEach(m => unique.set(m.id, m));
@@ -619,18 +619,18 @@ export class ModelRegistry {
             const details = response.json as OllamaShowResponse;
 
             // Extract Context Length
-            const ctx = (details.model_info?.["llama.context_length"] as number) || 
-                        (details.model_info?.["phi3.context_length"] as number) || 
-                        (details.model_info?.["qwen2.context_length"] as number) || 
-                        (details.model_info?.["context_length"] as number) || 4096;
-            
+            const ctx = (details.model_info?.["llama.context_length"] as number) ||
+                (details.model_info?.["phi3.context_length"] as number) ||
+                (details.model_info?.["qwen2.context_length"] as number) ||
+                (details.model_info?.["context_length"] as number) || 4096;
+
             model.inputTokenLimit = ctx;
 
             // Extract Embedding Dimensions
             const arch = details.details.family || (Object.keys(details.model_info || {})[0]?.split('.')[0]);
-            const dim = (details.model_info?.[`${arch}.embedding_length`] as number) || 
-                        (details.model_info?.["embedding_length"] as number);
-            
+            const dim = (details.model_info?.[`${arch}.embedding_length`] as number) ||
+                (details.model_info?.["embedding_length"] as number);
+
             if (dim) model.dimensions = dim;
 
             // Extract Native Tool Support
@@ -655,6 +655,6 @@ export class ModelRegistry {
 function idLooksLikeChat(id: string): boolean {
     const lower = id.toLowerCase();
     const isGeminiChat = lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
-    const isOllamaChat = lower.startsWith('ollama/') && !lower.includes('embed') && !lower.includes('bge'); 
+    const isOllamaChat = lower.startsWith('ollama/') && !lower.includes('embed') && !lower.includes('bge');
     return isGeminiChat || isOllamaChat;
 }
