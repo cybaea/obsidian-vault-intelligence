@@ -28,36 +28,6 @@ New features are added in the "Unreleased" section.
 -   **Indexer optimisation**: Extracted 10 heavy pure algorithmic functions (like `semanticSplit` and `parseYaml`) out of the `IndexerWorker` into a globally accessible `src/utils/indexer-utils.ts` module, completely eliminating duplicated parsing logic across the main thread.
 -   **URL context tool**: Injected the `urlContext` capability into the `GeminiProvider` for models 3.1 and above.
 
-## [9.0.5] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.4] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.3] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.2] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.1] - 2026-03-18
-
-### User features
-
-### Developer features
-
 ## [9.0.0] - 2026-03-18
 
 ### User features
