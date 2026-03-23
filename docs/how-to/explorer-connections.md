@@ -52,3 +52,44 @@ You can adjust how the Explorer calculates similarity in Settings > Explorer.
 -   Minimum similarity: Increase this if you only want to see very strong matches.
 -   Number of results: Limit this to keep your sidebar clean.
 -   Semantic vs Structural: Adjust the weight of the galaxy layout to prioritise existing Wikilinks or hidden vector similarities.
+
+## Folders as semantic topics
+
+Vault Intelligence supports multiple ways to organise your knowledge. While "Gardeners" often use explicit `topics:` properties (Wikilinks) inside their notes, "Architects" often prefer to organise notes by placing them in physical folders (eg `/Projects/Apollo/Meeting.md`).
+
+To bridge this gap, the **Implicit folder semantics** feature allows the plugin to automatically treat your physical folder structure as semantic graph connections. This means notes in the same folder will naturally cluster together in the semantic galaxy and the Researcher agent will understand they share a context.
+
+You can configure how aggressively the plugin interprets your folders via **Settings > Explorer > Implicit folder semantics**.
+
+There are three modes available:
+
+### 1. Ontology (default)
+
+**Best for:** Most users. Keeps your graph clean while intelligently mapping structured folders.
+
+In this mode, the plugin only treats a folder as a semantic topic **if it perfectly matches an existing concept in your Knowledge Base / Ontology.** For example, if you have a folder named `/AI/` and a perfectly matching ontology note named `AI.md`:
+
+-   The plugin will automatically link all notes inside the `/AI/` folder to the `AI.md` concept node.
+-   If you have a generic storage folder like `/Archive/` or `/Drafts/` (with no matching ontology note), the plugin will **safely ignore them**. This prevents your graph from being ruined by massive, meaningless "black hole" hubs.
+
+### 2. All (aggressive)
+
+**Best for:** Strict "Architect" users who use folders as their _primary_ tagging system.
+
+In this mode, **every single folder** in your vault is treated as a unique semantic topic, regardless of whether a matching note exists.
+
+-   The plugin will generate "Virtual Nodes" for folders behind the scenes.
+-   A note at `/Books/Fantasy/Dune.md` will be strongly linked to the concepts of `Books` and `Fantasy`.
+-   **Warning:** If you have generic folders like `/Attachments/` containing hundreds of images, they will form massive visual clusters in the semantic galaxy view.
+
+### 3. None (disabled)
+
+**Best for:** Strict "Gardener" users who rely 100% on explicit YAML properties and Wikilinks.
+
+In this mode, physical folder paths are completely ignored by the graph and the Orama vector engine. A note's location on your hard drive will have zero impact on its semantic similarity scores or its position in the galaxy view.
+
+---
+
+### Tip: preventing duplicate links
+
+If you physically place a note in `/Projects/Apollo/` AND explicitly tag it with `topics: [[Apollo]]` in the frontmatter, the plugin is smart enough to deduplicate the connection. It will prioritise your explicit frontmatter tag (which carries a higher semantic weight) over the implicit folder path.

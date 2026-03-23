@@ -269,8 +269,14 @@ ${JSON.stringify(context, null, 2)}
                                             items: {
                                                 properties: {
                                                     field: { type: "string" },
-                                                    newValue: { type: "string" },
-                                                    oldValue: { type: "string" }
+                                                    newValue: { 
+                                                        items: { type: "string" },
+                                                        type: "array" 
+                                                    },
+                                                    oldValue: { 
+                                                        items: { type: "string" },
+                                                        type: "array" 
+                                                    }
                                                 },
                                                 required: ["field", "newValue"],
                                                 type: "object"

@@ -129,12 +129,16 @@ export class AgentService {
         // Update ToolRegistry for this turn if model changed
         this.toolRegistry.updateProvider(reasoningClient, provider);
 
-        if (contextFiles.length === 0) {
-            const activeFile = this.app.workspace.getActiveFile();
-            if (activeFile) {
-                contextFiles.push(activeFile);
-            }
+        const activeFile = this.app.workspace.getActiveFile();
+        const explicitlyMentionedCount = contextFiles.length;
 
+        // ALWAYS inject the active file first so the LLM knows what the "current document" is.
+        if (activeFile && !contextFiles.some(f => f.path === activeFile.path)) {
+            contextFiles.unshift(activeFile);
+        }
+
+        // Only auto-inject other visible leaves if NO files were explicitly mentioned via `@`
+        if (explicitlyMentionedCount === 0) {
             this.app.workspace.iterateRootLeaves((leaf) => {
                 const view = leaf.view;
                 if (view instanceof MarkdownView) {
@@ -149,15 +153,15 @@ export class AgentService {
                     }
                 }
             });
+        }
 
-            if (contextFiles.length > 0) {
-                logger.info(`[Agent] Auto-injected ${contextFiles.length} visible files (Active: ${activeFile?.path ?? "None"}).`);
-            }
+        if (contextFiles.length > 0) {
+            logger.info(`[Agent] Context assembled. Total files: ${contextFiles.length}. (Active: ${activeFile?.path ?? "None"}).`);
         }
 
         const usedFiles = new Set<string>();
         const createdFiles = new Set<string>();
-        const wereFilesExplicitlyMentioned = contextFiles.length > 0;
+        const wereFilesExplicitlyMentioned = explicitlyMentionedCount > 0;
 
         // 1. Filter out UI-only messages (e.g., Spotlight results) and map to UnifiedMessage
         const filteredMessages: UnifiedMessage[] = messages
@@ -203,7 +207,10 @@ export class AgentService {
                     const skipped = contextFiles.length - assembledFiles.length;
                     currentPrompt = `[SYSTEM NOTE: ${skipped} context files were skipped because they exceeded the context window budget for the selected model.]\n\n` + currentPrompt;
                 }
-                currentPrompt = `The following notes were automatically injected from your workspace context:\n${context}\n\nUser Query: ${currentPrompt}`;
+                
+                const activeFileNote = activeFile ? `\n\n[SYSTEM NOTE: The user's CURRENTLY OPEN and ACTIVE document is: "${activeFile.path}". If the user asks to "update the current document", "fix the current note", or "add to this", they are referring EXACTLY to "${activeFile.path}".]` : "";
+
+                currentPrompt = `The following notes were automatically injected from your workspace context:\n${context}${activeFileNote}\n\nUser Query: ${currentPrompt}`;
 
                 // ONLY track files that actually survived the budget
                 assembledFiles.forEach(f => usedFiles.add(normalizePath(f)));

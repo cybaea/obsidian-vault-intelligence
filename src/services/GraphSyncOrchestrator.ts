@@ -64,7 +64,7 @@ export class GraphSyncOrchestrator {
      * Starts the synchronization orchestration.
      * Initializes the worker, loads state, and triggers scanning if needed.
      */
-    public async startNode() {
+    public async startNode(forceWipe = false) {
         try {
             const config = this.buildWorkerConfig();
             await this.workerManager.initializeWorker(config);
@@ -74,7 +74,7 @@ export class GraphSyncOrchestrator {
             this.registerEvents();
 
             // Initial scan (Delta or Full)
-            void this.scanAll(this.needsForcedScan);
+            void this.scanAll(forceWipe || this.needsForcedScan);
 
             this.isNodeRunning = true;
             logger.info("[GraphSyncOrchestrator] Started.");
@@ -97,6 +97,7 @@ export class GraphSyncOrchestrator {
             embeddingChunkSize: this.settings.embeddingChunkSize,
             embeddingDimension: activeDimension,
             embeddingModel: activeModelId,
+            implicitFolderSemantics: this.settings.implicitFolderSemantics,
             indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
             minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
             ontologyPath: this.settings.ontologyPath,
@@ -390,6 +391,7 @@ export class GraphSyncOrchestrator {
                 authorName: settings.authorName,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
+                implicitFolderSemantics: settings.implicitFolderSemantics,
                 indexingDelayMs: settings.indexingDelayMs,
                 minSimilarityScore: settings.minSimilarityScore,
                 ontologyPath: settings.ontologyPath,
@@ -418,7 +420,7 @@ export class GraphSyncOrchestrator {
         });
     }
 
-    public async commitConfigChange() {
+    public async commitConfigChange(forceWipe = false) {
         this.cancelPendingSave();
         if (this.abortController) this.abortController.abort();
 
@@ -433,13 +435,13 @@ export class GraphSyncOrchestrator {
         await this.workerManager.waitForIdle();
 
         const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
-        if (oldDimension && oldModelId) {
+        if (oldDimension && oldModelId && !forceWipe) {
             await this.saveState();
         }
 
         this.workerManager.terminate();
         this.driftQuarantine.clear();
-        await this.startNode();
+        await this.startNode(forceWipe);
     }
 
     public async flushAndShutdown() {

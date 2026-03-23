@@ -11,6 +11,8 @@ import { LogLevel } from "../utils/logger";
 
 export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
 
+export type ImplicitFolderSemanticsMode = 'none' | 'ontology' | 'all';
+
 export interface MCPServerConfig {
     args?: string[];
     command?: string;
@@ -58,6 +60,7 @@ export interface VaultIntelligenceSettings {
     googleApiKey: string;
     groundingModel: string;
     hiddenModels: string[];
+    implicitFolderSemantics: ImplicitFolderSemanticsMode;
     indexingDelayMs: number;
     indexVersion: number;
     keywordWeight: number;
@@ -98,6 +101,7 @@ Core Guidelines:
    - Use 'google_search' for live news, dates, and external fact-checking.
    - Use 'computational_solver' (if available) for math, logic, and data analysis.
    - Use 'read_url' if the user provides a specific link.
+   - Use 'create_note', 'update_note', or 'rename_note' to modify the user's vault documents if they specifically request it. **CRITICAL**: The FULL content to be saved MUST be placed inside the 'content' argument of the tool call. It is not sufficient to output the note content in your chat response.
    - **External Integrations (MCP)**: You may be provided with dynamically injected tools from external servers. If a user's request aligns with the specific capabilities of these tools (such as interacting with external APIs, system information, or external files), prioritize executing them over searching the local vault, as the vault will likely not have live external state.
    - **EXECUTION**: If a tool is needed, invoke it IMMEDIATELY and WITHOUT COMMENTARY. Your text response MUST BE EMPTY when you invoke a tool. Never explain what you are going to do.
    - **ANSWERING**: You are in a direct conversation. When providing your final answer after using tools, address the user as 'you'. UNDER NO CIRCUMSTANCES should you speak in the third person (e.g., NEVER say "The user wants to know..." or "Based on the search results..."). Give the answer directly and conversationally.
@@ -120,6 +124,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 
 ## YOUR ROLE:
 1.  **LINKING**: Identify notes missing relevant topics and suggest adding Markdown links to existing files in the 'VALID TOPICS' list below.
+    *CRITICAL: Pay close attention to the note's physical \`path\`. Folders often represent the primary semantic context (e.g., a note in \`/Projects/Apollo\` is structurally about "Projects" and "Apollo").*
 2.  **PROPOSING**: If you identify a recurring theme or concept that doesn't have a topic file yet, suggest a NEW topic as a Markdown link.
     - NEW topics should be placed in one of the following folders if they fit, or you can suggest a path:
 {{ONTOLOGY_FOLDERS}}
@@ -181,8 +186,9 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     googleApiKey: '',
     groundingModel: 'gemini-flash-lite-latest',
     hiddenModels: [],
+    implicitFolderSemantics: 'ontology',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-    indexVersion: 5, // 1: Initial, 2: Field separation, 3: Centroid normalization fix, 4: Slim-Sync Hydration architecture, 5: Orama Enum Schema bugfix
+    indexVersion: 6, // 1: Initial... 5: Orama Enum Schema bugfix, 6: Implicit folder topology
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,
@@ -216,6 +222,7 @@ export interface IVaultIntelligencePlugin {
     manifest: { id: string };
     mcpClientManager: unknown; // Using unknown here to avoid circular dep, we'll cast it in implementation
     persistenceManager: PersistenceManager;
+    requiresIndexWipeOnExit?: boolean;
     requiresWorkerRestartOnExit?: boolean;
     saveSettings(requiresWorkerRestart?: boolean): Promise<void>;
     settings: VaultIntelligenceSettings;

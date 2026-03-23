@@ -47,12 +47,13 @@ Configure how connections and similar notes are discovered.
 | Semantic edge thickness | `0.5` | Visual weight of implied AI relationships. Controls how thick the lines representing vector similarity are. **How to set:** The default `0.5` keeps AI suggestions as a subtle background web. Increase to `1.0+` if you are actively using the galaxy to discover new connections and want them visually prioritised. |
 | Keyword match weight | `1.2` | Calibration for keyword vs vector search. Higher values make keyword matches more conservative. |
 | Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
+| Implicit folder semantics | `ontology` | Controls how physical folder paths are mapped to semantic topics. <br>• _none_: Folders are totally ignored.<br>• _ontology_: Folders act as topics only if they securely match an existing note in your Ontology.<br>• _all_: Every folder is automatically treated as a unique semantic topic. |
 | Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
 | Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
 | Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
 | Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
 | Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) and local models to improve retrieval accuracy. Supports values up to `2048` for Gemini English-only vaults. |
-| Re-index vault | None | Wipe and rebuild all embeddings. **Note:** The plugin now manages this automatically; re-indexing is queued when you change critical embedding settings (provider, model, or chunk size) and triggers when you close the settings dialog. |
+| Re-index vault | None | Wipe and rebuild all embeddings. **Note:** Re-indexing is triggered automatically when you change critical graph settings (provider, model, chunk size, or folder semantics) and close the settings dialog. |
 
 ## Gardener
 

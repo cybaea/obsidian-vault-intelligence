@@ -78,6 +78,7 @@ export interface WorkerConfig {
     embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
+    implicitFolderSemantics?: 'none' | 'ontology' | 'all';
     indexingDelayMs: number;
     minSimilarityScore: number;
     ontologyPath: string;
