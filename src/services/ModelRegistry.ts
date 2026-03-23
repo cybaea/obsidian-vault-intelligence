@@ -333,7 +333,7 @@ export class ModelRegistry {
             let supportsNativeSearch = false;
             let supportsUrlContext = false;
             
-            if (id === 'gemini-flash-latest' || id === 'gemini-pro-latest' || id.includes('gemini-3')) {
+            if (id === 'gemini-flash-latest' || id === 'gemini-pro-latest') {
                 supportsNativeSearch = true;
                 supportsUrlContext = true;
             } else {
