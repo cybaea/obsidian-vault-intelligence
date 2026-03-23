@@ -447,6 +447,10 @@ export class ToolRegistry {
             default: action = "create";
         }
 
+        if ((action === "create" || action === "update") && (!args.content || typeof args.content !== "string" || args.content.trim() === "")) {
+            return { error: "CRITICAL SYSTEM ERROR: You did not provide any text in the 'content' argument! Do NOT generate the file text in your conversation output! You MUST place the final text inside the 'content' parameter of this tool call. Please call the tool again correctly." };
+        }
+
         const confirmedDetails = await ToolConfirmationModal.open(this.app, {
             action,
             content: args.content as string,
