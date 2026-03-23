@@ -108,9 +108,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const tools = this.formatTools(options.tools);
 
             const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
+            const isUrlContextEnabled = options.enableUrlContext !== undefined ? options.enableUrlContext : this.settings.enableUrlContext;
 
             const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
             const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
+            const useUrlContext = isUrlContextEnabled && modelDef?.supportsUrlContext;
 
             let systemInstruction = options.systemInstruction;
             
@@ -136,6 +138,9 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
             if (useNativeSearch) {
                 toolObjects.push({ googleSearch: {} });
+            }
+            if (useUrlContext) {
+                toolObjects.push({ urlContext: {} } as import('@google/genai').Tool);
             }
 
             if (toolObjects.length > 0) {
@@ -185,9 +190,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         const tools = this.formatTools(options.tools);
 
         const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
+        const isUrlContextEnabled = options.enableUrlContext !== undefined ? options.enableUrlContext : this.settings.enableUrlContext;
 
         const modelDef = options.modelId ? ModelRegistry.getModelById(options.modelId) : undefined;
         const useNativeSearch = isWebSearchEnabled && modelDef?.supportsNativeSearch;
+        const useUrlContext = isUrlContextEnabled && modelDef?.supportsUrlContext;
 
         let systemInstruction = options.systemInstruction;
         if (!systemInstruction) {
@@ -209,6 +216,9 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         }
         if (useNativeSearch) {
             toolObjects.push({ googleSearch: {} });
+        }
+        if (useUrlContext) {
+            toolObjects.push({ urlContext: {} } as import('@google/genai').Tool);
         }
 
         if (toolObjects.length > 0) {

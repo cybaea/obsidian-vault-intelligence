@@ -23,6 +23,7 @@ export interface ModelDefinition {
     quantized?: boolean;
     supportedMethods?: string[];
     supportsNativeSearch?: boolean;
+    supportsUrlContext?: boolean;
 }
 
 export interface ModelCache {
@@ -326,6 +327,7 @@ export class ModelRegistry {
         const models = data.models.map((m: GeminiModel) => {
             const id = m.name.replace('models/', '');
             let supportsNativeSearch = false;
+            let supportsUrlContext = false;
             
             const match = id.match(/^gemini-([\d.]+)/);
             if (match && match[1]) {
@@ -333,6 +335,7 @@ export class ModelRegistry {
                 const parts = matchStr.split('.').map(Number);
                 if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
                     supportsNativeSearch = true;
+                    supportsUrlContext = true;
                 }
             }
             
@@ -344,7 +347,8 @@ export class ModelRegistry {
                 outputTokenLimit: m.outputTokenLimit,
                 provider: 'gemini' as const,
                 supportedMethods: m.supportedGenerationMethods || [],
-                supportsNativeSearch
+                supportsNativeSearch,
+                supportsUrlContext
             };
         });
 

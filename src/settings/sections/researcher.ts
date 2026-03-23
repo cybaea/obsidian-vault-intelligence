@@ -265,6 +265,19 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 })();
             }));
 
+    new Setting(containerEl)
+        .setName('Enable link context')
+        .setDesc('Allows Gemini 3.1+ models to natively read and analyze URLs using Google\'s highly optimized internal retrieval system.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableUrlContext)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.enableUrlContext = value;
+                    await plugin.saveSettings();
+                    refreshSettings(plugin);
+                })();
+            }));
+
     if (plugin.settings.enableWebSearch) {
         new Setting(containerEl)
             .setName('Web search model')
