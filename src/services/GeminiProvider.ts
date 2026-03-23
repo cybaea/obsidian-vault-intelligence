@@ -105,7 +105,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         return this.retryOperation(async () => {
             const client = await this.getClient();
             const contents = this.formatHistory(messages);
-            const tools = this.formatTools(options.tools);
 
             const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
             const isUrlContextEnabled = options.enableUrlContext !== undefined ? options.enableUrlContext : this.settings.enableUrlContext;
@@ -124,6 +123,19 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                     systemInstruction = sysMsgs.map(m => m.content).join("\n");
                 }
             }
+
+            let activeTools = options.tools || [];
+            if (useNativeSearch) {
+                activeTools = activeTools.filter(t => t.name !== 'google_search');
+            }
+            if (useUrlContext) {
+                activeTools = activeTools.filter(t => t.name !== 'read_url');
+                if (systemInstruction) {
+                    systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?read_url'?[^\n]*?(?=\n)/gi, "");
+                }
+            }
+
+            const tools = this.formatTools(activeTools);
 
             // Phase 8 SDK unification fix: Move tools and systemInstruction to top-level as well as config
             const requestParams: UnifiedSDKParams = {
@@ -187,7 +199,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     public async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
         const client = await this.getClient();
         const contents = this.formatHistory(messages);
-        const tools = this.formatTools(options.tools);
 
         const isWebSearchEnabled = options.enableWebSearch !== undefined ? options.enableWebSearch : this.settings.enableWebSearch;
         const isUrlContextEnabled = options.enableUrlContext !== undefined ? options.enableUrlContext : this.settings.enableUrlContext;
@@ -205,6 +216,19 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         }
 
         // Phase 8 SDK unification fix: Move tools and systemInstruction to top-level as well as config
+        let activeTools = options.tools || [];
+        if (useNativeSearch) {
+            activeTools = activeTools.filter(t => t.name !== 'google_search');
+        }
+        if (useUrlContext) {
+            activeTools = activeTools.filter(t => t.name !== 'read_url');
+            if (systemInstruction) {
+                systemInstruction = systemInstruction.replace(/\s*-\s*Use\s*'?read_url'?[^\n]*?(?=\n)/gi, "");
+            }
+        }
+
+        const tools = this.formatTools(activeTools);
+
         const requestParams: UnifiedSDKParams = {
             config: {},
             contents: contents,
