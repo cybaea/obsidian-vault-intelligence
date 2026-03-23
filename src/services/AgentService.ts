@@ -98,7 +98,7 @@ export class AgentService {
         messages: ChatMessage[],
         currentPrompt: string,
         contextFiles: TFile[] = [],
-        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
+        options: { modelId?: string; enableCodeExecution?: boolean; enableUrlContext?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): Promise<{ createdFiles: string[]; files: string[]; text: string }> {
         const stream = this.chatStream(messages, currentPrompt, contextFiles, options);
         let finalText = "";
@@ -120,7 +120,7 @@ export class AgentService {
         messages: ChatMessage[],
         currentPrompt: string,
         contextFiles: TFile[] = [],
-        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
+        options: { modelId?: string; enableCodeExecution?: boolean; enableUrlContext?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal } = {}
     ): AsyncIterableIterator<StreamChunk> {
 
         const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
@@ -301,7 +301,7 @@ export class AgentService {
         tools: IToolDefinition[],
         createdFiles: Set<string>,
         usedFiles: Set<string>,
-        options: { modelId?: string; enableCodeExecution?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal },
+        options: { modelId?: string; enableCodeExecution?: boolean; enableUrlContext?: boolean; enableWebSearch?: boolean; enableAgentWriteAccess?: boolean; signal?: AbortSignal },
         maxLoops: number
     ): AsyncIterableIterator<StreamChunk> {
         const reasoningClient = this.providerRegistry.getReasoningClient(options.modelId);
@@ -314,6 +314,7 @@ export class AgentService {
 
             const stream = reasoningClient.generateMessageStream(formattedHistory, {
                 enableCodeExecution: options.enableCodeExecution,
+                enableUrlContext: options.enableUrlContext,
                 enableWebSearch: options.enableWebSearch,
                 modelId: options.modelId,
                 signal: options.signal,

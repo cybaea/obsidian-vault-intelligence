@@ -17,6 +17,7 @@ New features are added in the "Unreleased" section.
 -   **Inline error reporting**: Tool execution errors or model failures are now rendered as beautifully styled, persistent inline warnings directly within the chat history, allowing you to easily review and adjust your prompt.
 -   **Robust Agent Write Access**: Hardened the system prompt and added strict programmatic validation to eliminate a hallucination bug where the agent would successfully execute the "update note" action but mistakenly dump your AI-generated text into the chat interface instead of saving it to your physical file.
 -   **Foolproof Context Injection**: Fixed an issue where explicitly linking external notes using the `@` symbol in your prompt would cause the agent to lose track of your currently open document, leading it to mistakenly overwrite your referenced documents instead of the active one. The active file is now permanently locked into the context payload with a dedicated `[SYSTEM NOTE]`.
+-   **Native link reading**: The Researcher agent can now natively read and analyse URLs you provide in the chat, powered by Google's highly optimised internal retrieval system. This is available for Gemini 3.1+ models and can be toggled via the new "Enable link context" setting.
 
 ### Developer features
 
@@ -25,36 +26,7 @@ New features are added in the "Unreleased" section.
 -   **Agent execution refactoring**: Dramatically reduced the cyclomatic complexity of `AgentService.chatStream` by isolating the recursive tool-calling loop into a dedicated `processToolLoop` generator yielding cleanly.
 -   **Explicit pipeline abortion**: `AgentService` now leverages `AbortSignal` gracefully, returning a structured `{ isCancelled: true }` metadata frame when an execution loop is interrupted, guaranteeing robust UI unlocking.
 -   **Indexer optimisation**: Extracted 10 heavy pure algorithmic functions (like `semanticSplit` and `parseYaml`) out of the `IndexerWorker` into a globally accessible `src/utils/indexer-utils.ts` module, completely eliminating duplicated parsing logic across the main thread.
-
-## [9.0.5] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.4] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.3] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.2] - 2026-03-18
-
-### User features
-
-### Developer features
-
-## [9.0.1] - 2026-03-18
-
-### User features
-
-### Developer features
+-   **URL context tool**: Injected the `urlContext` capability into the `GeminiProvider` for models 3.1 and above.
 
 ## [9.0.0] - 2026-03-18
 

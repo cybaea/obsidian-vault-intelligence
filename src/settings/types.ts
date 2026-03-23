@@ -47,6 +47,7 @@ export interface VaultIntelligenceSettings {
     enableAgentWriteAccess: boolean;
     enableCodeExecution: boolean;
     enableDualLoop: boolean;
+    enableUrlContext: boolean;
     enableWebSearch: boolean;
     excludedFolders: string[];
     gardenerContextBudget: number;
@@ -173,6 +174,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableAgentWriteAccess: false,
     enableCodeExecution: true,
     enableDualLoop: true,
+    enableUrlContext: true,
     enableWebSearch: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerContextBudget: 100000,

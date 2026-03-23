@@ -23,6 +23,7 @@ export interface ModelDefinition {
     quantized?: boolean;
     supportedMethods?: string[];
     supportsNativeSearch?: boolean;
+    supportsUrlContext?: boolean;
 }
 
 export interface ModelCache {
@@ -84,14 +85,18 @@ export const GEMINI_CHAT_MODELS: ModelDefinition[] = [
         inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         isDefault: true,
         label: 'Gemini 3 Flash (Default)',
-        provider: 'gemini'
+        provider: 'gemini',
+        supportsNativeSearch: true,
+        supportsUrlContext: true
     },
     {
         description: 'Maximum intelligence for complex reasoning.',
         id: 'gemini-pro-latest',
         inputTokenLimit: SANITIZATION_CONSTANTS.MAX_TOKEN_LIMIT_SANITY,
         label: 'Gemini 3 Pro',
-        provider: 'gemini'
+        provider: 'gemini',
+        supportsNativeSearch: true,
+        supportsUrlContext: true
     }
 ];
 
@@ -326,13 +331,20 @@ export class ModelRegistry {
         const models = data.models.map((m: GeminiModel) => {
             const id = m.name.replace('models/', '');
             let supportsNativeSearch = false;
+            let supportsUrlContext = false;
             
-            const match = id.match(/^gemini-([\d.]+)/);
-            if (match && match[1]) {
-                const matchStr = match[1];
-                const parts = matchStr.split('.').map(Number);
-                if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
-                    supportsNativeSearch = true;
+            if (id === 'gemini-flash-latest' || id === 'gemini-pro-latest' || id.includes('gemini-3')) {
+                supportsNativeSearch = true;
+                supportsUrlContext = true;
+            } else {
+                const match = id.match(/^gemini-([\d.]+)/);
+                if (match && match[1]) {
+                    const matchStr = match[1];
+                    const parts = matchStr.split('.').map(Number);
+                    if (parts[0] !== undefined && (parts[0] > 3 || (parts[0] === 3 && (parts[1] || 0) >= 1))) {
+                        supportsNativeSearch = true;
+                        supportsUrlContext = true;
+                    }
                 }
             }
             
@@ -344,7 +356,8 @@ export class ModelRegistry {
                 outputTokenLimit: m.outputTokenLimit,
                 provider: 'gemini' as const,
                 supportedMethods: m.supportedGenerationMethods || [],
-                supportsNativeSearch
+                supportsNativeSearch,
+                supportsUrlContext
             };
         });
 
