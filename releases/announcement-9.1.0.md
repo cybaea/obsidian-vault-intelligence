@@ -20,4 +20,4 @@ The Researcher agent can now natively read external URLs (for Gemini 3.1+ models
 
 Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence
 
-(Advance "thanks" to all the people who will react with negative emojis: 🅱️🅾️🅾️! Seriously: I appreciate your enthusiasm and respect your views.)
+(Advance "thanks" to all the people who will react with negative emojis: 🅱️ 🅾️ 🅾️ ! Seriously: I appreciate your enthusiasm and respect your views.)
