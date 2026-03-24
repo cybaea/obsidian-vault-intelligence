@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [9.1.0] - 2026-03-24
+
+### User features
+
 -   **Folders as semantic information**: The Researcher and Explorer now automatically understand that notes organized in physical folders (e.g. `Projects/Apollo`) are structurally related to those topics. This allows powerful structural relationships to emerge organically without requiring explicit wikilinks on every page. This behaviour is highly configurable in Explorer settings.
 -   **Gardener Cost Optimizer**: Added a new command `"Gardener: organize vault concepts (new files only)"`. This allows you to aggressively filter out and skip notes that are already well-managed, drastically reducing the token costs and processing time of large vault hygiene runs. Detailed token savings are displayed in the generated Gardener plan summary.
 -   **Graceful streaming cancellation**: Clicking the stop button during a complex agent response now cleanly unlocks the chat input and displays an "Agent explicitly stopped" message, instead of leaving the UI in a frozen or error state.
