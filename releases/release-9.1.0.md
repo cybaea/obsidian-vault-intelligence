@@ -1,5 +1,7 @@
 # 9.1.0 — The Gardener's Evolution
 
+Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
+
 Other AI plugins wait for you to ask a question. Vault Intelligence actively maintains your knowledge graph. With 9.1.0, we are doubling down on our core differentiator: **The Gardener**. 
 
 This release introduces significant optimizations for vault hygiene, respects how you physically organise your data, and deepens our native external search grounding.
