@@ -2,7 +2,7 @@
 
 Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
 
-This release is focused on our core differentiator: **The Gardener**. We've made massive improvements to how the agent understands and maintains your graph.
+This release is focused on our core feature: **The Gardener**. We've made improvements to how the agent understands and maintains your graph.
 
 **Folders as Semantic Context**
 
@@ -20,4 +20,4 @@ The Researcher agent can now natively read external URLs (for Gemini 3.1+ models
 
 Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence
 
-(Advance "thanks" to all the people who will react with negative emojis: 🅱️🅾️🅾️, though I appreciate your enthusiasm and respect your views.)
+(Advance "thanks" to all the people who will react with negative emojis: 🅱️ 🅾️ 🅾️ ! Seriously: I appreciate your enthusiasm and respect your views.)
