@@ -1,5 +1,7 @@
 # Obsidian Vault Intelligence
 
+![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github)
+
 ![Obsidian Vault Intelligence Social Preview](./public/images/vault-intelligence-social.webp)
 
 **Don't just query your vault. Maintain it.**
