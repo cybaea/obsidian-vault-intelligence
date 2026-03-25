@@ -11,7 +11,13 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Fixed
+
+-   **MCP search compatibility**: Resolved an `INVALID_ARGUMENT` (HTTP 400) error that occurred when using Gemini Web Search Grounding alongside active MCP explicit tools by enabling the `includeServerSideToolInvocations` configuration flag.
+
 ### Developer features
+
+-   **Updated dependency**: Updated `@modelcontextprotocol/sdk` to `v1.28.0`.
 
 ## [9.1.0] - 2026-03-24
 
