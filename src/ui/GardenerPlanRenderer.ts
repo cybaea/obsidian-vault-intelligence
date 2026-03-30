@@ -252,6 +252,22 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         // 2. Perform AST replacement
                         await this.metadataManager.replaceLinksAsync(inboundLinks, source, target);
 
+                        // 3. Add to aliases of target
+                        const targetFile = this.app.vault.getAbstractFileByPath(target);
+                        if (targetFile instanceof TFile) {
+                            const sourceAlias = source.substring(source.lastIndexOf("/") + 1).replace(/\.md$/, "");
+                            await this.metadataManager.updateFrontmatter(targetFile, (fm) => {
+                                if (!fm.aliases) {
+                                    fm.aliases = [sourceAlias];
+                                } else if (Array.isArray(fm.aliases)) {
+                                    if (!fm.aliases.includes(sourceAlias)) fm.aliases.push(sourceAlias);
+                                } else if (typeof fm.aliases === "string") {
+                                    const ex = String(fm.aliases).split(",").map(s => s.trim());
+                                    if (!ex.includes(sourceAlias)) fm.aliases = [...ex, sourceAlias];
+                                }
+                            });
+                        }
+
                         // 3. Move the source file to trash
                         await this.app.fileManager.trashFile(file);
 
