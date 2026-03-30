@@ -196,7 +196,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     hiddenModels: [],
     implicitFolderSemantics: 'ontology',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-    indexVersion: 6, // 1: Initial... 5: Orama Enum Schema bugfix, 6: Implicit folder topology
+    indexVersion: 7, // 1: Initial... 6: Implicit folder topology, 7: Core URI link unification
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,

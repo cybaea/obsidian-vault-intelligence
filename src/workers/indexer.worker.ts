@@ -493,6 +493,12 @@ const IndexerWorker: WorkerAPI = {
                 }
             }
 
+            // 4. Must not be the special Instructions.md settings file
+            const instructionsPath = prefix ? `${prefix}/instructions.md` : `instructions.md`;
+            if (node.toLowerCase() === instructionsPath.toLowerCase()) {
+                return; // Skip instructions
+            }
+
             // 4. Must have inDegree 0
             if (graph.inDegree(node) > 0) return;
 

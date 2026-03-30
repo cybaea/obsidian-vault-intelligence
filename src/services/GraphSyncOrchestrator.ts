@@ -259,13 +259,17 @@ export class GraphSyncOrchestrator {
 
     private getResolvedLinks(file: TFile): string[] {
         const cache = this.app.metadataCache.getFileCache(file);
-        if (!cache || !cache.links) return [];
-        return cache.links.map(l => {
+        if (!cache) return [];
+        
+        const allLinks = [...(cache.links || []), ...(cache.frontmatterLinks || [])];
+        if (allLinks.length === 0) return [];
+
+        return allLinks.map(l => {
             let cleanLink = l.link;
             try {
                 cleanLink = decodeURIComponent(cleanLink).split('#')[0] || cleanLink;
                 cleanLink = normalizePath(cleanLink);
-            } catch (e) {
+            } catch {
                 // Ignore decoding errors
             }
             const dest = this.app.metadataCache.getFirstLinkpathDest(cleanLink, file.path);
