@@ -50,9 +50,11 @@ export interface VaultIntelligenceSettings {
     enableUrlContext: boolean;
     enableWebSearch: boolean;
     excludedFolders: string[];
+    gardenerArchiveFolderPath: string;
     gardenerContextBudget: number;
     gardenerModel: string;
     gardenerNoteLimit: number;
+    gardenerOrphanGracePeriodDays: number;
     gardenerPlansPath: string;
     gardenerRecheckDays: number;
     gardenerSemanticMergeThreshold: number;
@@ -178,9 +180,11 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableUrlContext: true,
     enableWebSearch: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
+    gardenerArchiveFolderPath: 'Ontology/_Archive',
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
     gardenerNoteLimit: 10,
+    gardenerOrphanGracePeriodDays: 7,
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckDays: 1,
     gardenerSemanticMergeThreshold: 0.85,
@@ -192,7 +196,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     hiddenModels: [],
     implicitFolderSemantics: 'ontology',
     indexingDelayMs: GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-    indexVersion: 6, // 1: Initial... 5: Orama Enum Schema bugfix, 6: Implicit folder topology
+    indexVersion: 7, // 1: Initial... 6: Implicit folder topology, 7: Core URI link unification
     keywordWeight: 1.2,
     logLevel: LogLevel.WARN,
     maxAgentSteps: 5,

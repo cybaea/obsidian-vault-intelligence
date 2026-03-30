@@ -62,6 +62,10 @@ And a [[real link]].
             expect(extractLinks(text)).toEqual(['Note A']);
         });
 
+        it('should extract URLs safely when inside double-quoted YAML arrays', () => {
+            const yamlStr = '"[Technology Risk](/Ontology/Concepts/Technology%20Risk.md)"';
+            expect(extractLinks(yamlStr)).toEqual(['Ontology/Concepts/Technology Risk.md']);
+        });
         it('should strip anchors from standard links', () => {
             const text = 'See [Section](Note.md#Section) or [another](AnotherNote.md#header).';
             expect(extractLinks(text)).toEqual(['Note.md', 'AnotherNote.md']);

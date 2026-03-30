@@ -107,6 +107,7 @@ export interface WorkerAPI {
     clearIndex(): Promise<void>;
     deleteFile(path: string): Promise<void>;
     findOntologySynonyms(semanticThreshold: number): Promise<SynonymCandidate[]>;
+    findOrphanCandidates(ontologyPrefix: string, gracePeriodMs: number): Promise<string[]>;
     fullReset(): Promise<void>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>>;

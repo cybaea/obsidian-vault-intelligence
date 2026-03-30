@@ -373,7 +373,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				const plan = GardenerPlanSchema.safeParse(rawPlan);
 
 				if (plan.success) {
-					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService, this.gardenerStateService);
+					const renderer = new GardenerPlanRenderer(this.app, el, plan.data, this.metadataManager, this.ontologyService, this.gardenerStateService, this.settings);
 					ctx.addChild(renderer);
 				} else {
 					el.createEl("pre", { cls: "gardener-error", text: `Invalid Gardener Plan schema: ${plan.error.message}` });

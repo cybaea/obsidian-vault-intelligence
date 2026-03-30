@@ -469,6 +469,48 @@ const IndexerWorker: WorkerAPI = {
         return candidates.sort((a, b) => b.similarityScore - a.similarityScore);
     },
 
+    async findOrphanCandidates(ontologyPrefix: string, gracePeriodMs: number): Promise<string[]> {
+        if (!graph) throw new Error("[IndexerWorker] Graph not initialized");
+        await Promise.resolve();
+        const prefix = workerNormalizePath(ontologyPrefix);
+        const candidates: string[] = [];
+        const now = Date.now();
+
+        graph.forEachNode((node, attr) => {
+            const a = attr as GraphNodeData;
+            // 1. Must be a file
+            if (a.type !== 'file') return;
+            // 2. Must be in the ontology folder (or subfolder)
+            if (!node.startsWith(prefix + '/')) return;
+
+            // 3. Must not be an index file (e.g. Ontology/Concepts/Concepts.md)
+            const parts = node.split('/');
+            if (parts.length >= 2) {
+                const folderName = parts[parts.length - 2];
+                const fileName = parts[parts.length - 1];
+                if (folderName && fileName === folderName + '.md') {
+                    return; // Skip index files
+                }
+            }
+
+            // 4. Must not be the special Instructions.md settings file
+            const instructionsPath = prefix ? `${prefix}/instructions.md` : `instructions.md`;
+            if (node.toLowerCase() === instructionsPath.toLowerCase()) {
+                return; // Skip instructions
+            }
+
+            // 4. Must have inDegree 0
+            if (graph.inDegree(node) > 0) return;
+
+            // 5. Must obey grace period
+            if (gracePeriodMs > 0 && (now - a.mtime) < gracePeriodMs) return;
+
+            candidates.push(node);
+        });
+
+        return candidates;
+    },
+
     async fullReset() {
         if (graph) graph.clear();
         await recreateOrama();
@@ -1039,7 +1081,7 @@ const IndexerWorker: WorkerAPI = {
 
         // We update the node initially, but we might patch it with token counts later
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, 0);
-        updateGraphEdges(normalizedPath, content);
+        updateGraphEdges(normalizedPath, content, links);
 
         if (content.trim().length === 0) return;
 
@@ -1204,13 +1246,24 @@ function updateGraphNode(path: string, content: string, mtime: number, size: num
     }
 }
 
-function updateGraphEdges(path: string, content: string) {
+function updateGraphEdges(path: string, content: string, resolvedLinks: string[]) {
     const { body, frontmatter } = splitFrontmatter(content);
     const fm = parseYaml(frontmatter);
     const dir = path.split('/').slice(0, -1).join('/');
-    const links = new Set([...extractLinks(body), ...extractLinks(frontmatter)]);
 
-    for (const link of links) {
+    // 1. Process Pre-Resolved Links from MetadataCache (Wikilinks)
+    for (const link of resolvedLinks) {
+        // Obisidan resolved link is already a correct canonical path, just normalize backslashes
+        const resolved = workerNormalizePath(link);
+        if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
+        if (!graph.hasEdge(path, resolved)) {
+            graph.addEdge(path, resolved, { source: 'body', type: 'link', weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY });
+        }
+    }
+
+    // 2. Fallback Extraction (for standard MD links starting with '/' not tracked by Obsidian core)
+    const extractedLinks = new Set([...extractLinks(body), ...extractLinks(frontmatter)]);
+    for (const link of extractedLinks) {
         const resolved = resolvePath(link, aliasMap, dir);
         if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
         if (!graph.hasEdge(path, resolved)) {

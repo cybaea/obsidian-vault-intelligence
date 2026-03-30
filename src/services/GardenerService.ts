@@ -13,7 +13,8 @@ import { ProviderRegistry } from "./ProviderRegistry";
 
 export const GardenerActionType = z.enum([
     GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS,
-    "merge_topics"
+    "merge_topics",
+    "archive_topic"
 ]);
 
 export const MergeTopicsActionSchema = z.object({
@@ -45,9 +46,22 @@ export const RefactoringActionSchema = z.object({
     rationale: z.string()
 });
 
+export const ArchiveTopicActionSchema = z.object({
+    action: z.literal("archive_topic"),
+    changes: z.object({
+        field: z.string(),
+        newValue: z.unknown(),
+        oldValue: z.unknown().optional()
+    }).array().optional(),
+    description: z.string(),
+    filePath: z.string(),
+    rationale: z.string()
+});
+
 export const AnyGardenerActionSchema = z.discriminatedUnion("action", [
     RefactoringActionSchema,
-    MergeTopicsActionSchema
+    MergeTopicsActionSchema,
+    ArchiveTopicActionSchema
 ]);
 
 /**
@@ -115,6 +129,13 @@ export class GardenerService {
         this.settings = settings;
         this.state = state;
         this.graphService = graphService;
+    }
+
+    private hasTruthyGardenerIgnore(file: TFile | null): boolean {
+        if (!file) return false;
+        const cache = this.app.metadataCache.getFileCache(file);
+        const ignoreVal = cache?.frontmatter?.['gardener-ignore'] as unknown;
+        return ignoreVal === true || ignoreVal === "true" || ignoreVal === "yes" || ignoreVal === 1;
     }
 
     /**
@@ -269,7 +290,13 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 systemInstruction += `\n\n### ADDITIONAL USER INSTRUCTIONS:\n${ontologyContext.instructions}`;
             }
 
-            const synonyms = await this.graphService.getOntologySynonyms(this.settings.gardenerSemanticMergeThreshold || 0.85);
+            const rawSynonyms = await this.graphService.getOntologySynonyms(this.settings.gardenerSemanticMergeThreshold || 0.85);
+            const synonyms = rawSynonyms.filter(s => {
+                const fileA = this.app.vault.getAbstractFileByPath(s.topicA);
+                const fileB = this.app.vault.getAbstractFileByPath(s.topicB);
+                return !this.hasTruthyGardenerIgnore(fileA instanceof TFile ? fileA : null) && 
+                       !this.hasTruthyGardenerIgnore(fileB instanceof TFile ? fileB : null);
+            });
 
             let synonymPromptExt = "";
             if (synonyms.length > 0) {
@@ -288,6 +315,14 @@ NOTES:
 ${JSON.stringify(context, null, 2)}
 `.trim();
 
+            const gracePeriodMs = (this.settings.gardenerOrphanGracePeriodDays || 7) * 24 * 60 * 60 * 1000;
+            const rawOrphans = await this.graphService.getOrphanCandidates(normalizePath(this.settings.ontologyPath), gracePeriodMs);
+            const orphanCandidates = rawOrphans.filter(o => {
+                const file = this.app.vault.getAbstractFileByPath(o);
+                if (!(file instanceof TFile) || this.hasTruthyGardenerIgnore(file)) return false;
+                return this.state.shouldProcess(file, this.settings.gardenerSkipRetentionDays, this.settings.gardenerRecheckDays);
+            });
+
             const reasoningClient: IReasoningClient = this.providerRegistry.getReasoningClient(this.settings.gardenerModel);
             const parsedPlan = await reasoningClient.generateStructured(
                 [{ content: prompt, role: "user" }],
@@ -299,7 +334,7 @@ ${JSON.stringify(context, null, 2)}
                             actions: {
                                 items: {
                                     properties: {
-                                        action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS, "merge_topics"], type: "string" },
+                                        action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS, "merge_topics", "archive_topic"], type: "string" },
                                         changes: {
                                             items: {
                                                 properties: {
@@ -350,6 +385,19 @@ ${JSON.stringify(context, null, 2)}
                     systemInstruction: systemInstruction
                 }
             );
+
+            // Inject archive_topic actions directly from DB to save tokens
+            if (orphanCandidates.length > 0) {
+                if (!parsedPlan.actions) parsedPlan.actions = [];
+                for (const orphanPath of orphanCandidates) {
+                    parsedPlan.actions.push({
+                        action: "archive_topic",
+                        description: `Archive unused topic: ${orphanPath.split('/').pop()?.replace('.md', '') || orphanPath}`,
+                        filePath: orphanPath,
+                        rationale: "This topic has no inbound links and has not been modified recently. Archiving it will reduce vault clutter."
+                    });
+                }
+            }
 
             // Post-process links to ensure URL encoding if AI missed it
             if (parsedPlan.actions) {

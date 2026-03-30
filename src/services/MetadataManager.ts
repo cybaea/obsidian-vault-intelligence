@@ -81,6 +81,19 @@ export class MetadataManager {
     }
 
     /**
+     * Safely archives a file to a designated archive folder.
+     * @param file - The file to archive.
+     * @param archiveFolderPath - The path to the archive folder.
+     */
+    public async archiveFileAsync(file: TFile, archiveFolderPath: string): Promise<void> {
+        await this.createFolderIfMissing(archiveFolderPath);
+        const newPath = await this.app.fileManager.getAvailablePathForAttachment(file.name, archiveFolderPath);
+        
+        await this.app.fileManager.renameFile(file, newPath);
+        logger.info(`Archived file from ${file.path} to ${newPath}`);
+    }
+
+    /**
      * Replaces vault links from a source topic to a target topic safely using AST character offsets.
      * @param neighbors - Array of file paths that link to the source topic.
      * @param sourceTopic - The vault path of the topic being merged/deleted.
