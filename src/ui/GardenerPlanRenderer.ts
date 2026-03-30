@@ -4,6 +4,7 @@ import { GardenerPlan } from "../services/GardenerService";
 import { GardenerStateService } from "../services/GardenerStateService";
 import { MetadataManager } from "../services/MetadataManager";
 import { OntologyService } from "../services/OntologyService";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
 /**
@@ -16,6 +17,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
     private metadataManager: MetadataManager;
     private ontology: OntologyService;
     private state: GardenerStateService;
+    private settings: VaultIntelligenceSettings;
     private selectedActions: Set<number> = new Set();
 
     constructor(
@@ -24,7 +26,8 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
         plan: GardenerPlan,
         metadataManager: MetadataManager,
         ontology: OntologyService,
-        state: GardenerStateService
+        state: GardenerStateService,
+        settings: VaultIntelligenceSettings
     ) {
         super(containerEl);
         this.app = app;
@@ -32,6 +35,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
         this.metadataManager = metadataManager;
         this.ontology = ontology;
         this.state = state;
+        this.settings = settings;
 
         // Default all to selected
         this.plan.actions.forEach((_, i) => this.selectedActions.add(i));
@@ -213,6 +217,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             case "update_metadata": return "database";
             case "rename_file": return "pencil";
             case "merge_topics": return "git-merge";
+            case "archive_topic": return "archive";
             default: return "help-circle";
         }
     }
@@ -242,7 +247,11 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             const file = this.app.vault.getAbstractFileByPath(filePath);
             if (file instanceof TFile) {
                 try {
-                    if (action.action === "merge_topics" && "sourceTopic" in action && "targetTopic" in action && (action as Record<string, unknown>).sourceTopic && (action as Record<string, unknown>).targetTopic) {
+                    if (action.action === "archive_topic") {
+                        await this.metadataManager.archiveFileAsync(file, this.settings.gardenerArchiveFolderPath);
+                        logger.info(`Archived orphaned topic: ${filePath}`);
+                        successCount++;
+                    } else if (action.action === "merge_topics" && "sourceTopic" in action && "targetTopic" in action && (action as Record<string, unknown>).sourceTopic && (action as Record<string, unknown>).targetTopic) {
                         const source = this.normalizeVaultPath(String((action as Record<string, unknown>).sourceTopic));
                         const target = this.normalizeVaultPath(String((action as Record<string, unknown>).targetTopic));
 

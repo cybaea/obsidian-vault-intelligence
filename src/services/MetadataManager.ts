@@ -81,6 +81,29 @@ export class MetadataManager {
     }
 
     /**
+     * Safely archives a file to a designated archive folder.
+     * @param file - The file to archive.
+     * @param archiveFolderPath - The path to the archive folder.
+     */
+    public async archiveFileAsync(file: TFile, archiveFolderPath: string): Promise<void> {
+        await this.createFolderIfMissing(archiveFolderPath);
+        const newPath = `${archiveFolderPath}/${file.name}`;
+        
+        // Prevent overwriting existing archived files with the same name
+        if (this.app.vault.getAbstractFileByPath(newPath)) {
+            logger.warn(`Archive file already exists at ${newPath}. Generating unique name to prevent overwrite.`);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const uniquePath = `${archiveFolderPath}/${file.basename}_${timestamp}.${file.extension}`;
+            await this.app.fileManager.renameFile(file, uniquePath);
+            logger.info(`Archived file from ${file.path} to ${uniquePath}`);
+            return;
+        }
+
+        await this.app.fileManager.renameFile(file, newPath);
+        logger.info(`Archived file from ${file.path} to ${newPath}`);
+    }
+
+    /**
      * Replaces vault links from a source topic to a target topic safely using AST character offsets.
      * @param neighbors - Array of file paths that link to the source topic.
      * @param sourceTopic - The vault path of the topic being merged/deleted.

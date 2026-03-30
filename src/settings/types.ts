@@ -50,9 +50,11 @@ export interface VaultIntelligenceSettings {
     enableUrlContext: boolean;
     enableWebSearch: boolean;
     excludedFolders: string[];
+    gardenerArchiveFolderPath: string;
     gardenerContextBudget: number;
     gardenerModel: string;
     gardenerNoteLimit: number;
+    gardenerOrphanGracePeriodDays: number;
     gardenerPlansPath: string;
     gardenerRecheckDays: number;
     gardenerSemanticMergeThreshold: number;
@@ -178,9 +180,11 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     enableUrlContext: true,
     enableWebSearch: true,
     excludedFolders: ['Ontology', 'Gardener/Plans'],
+    gardenerArchiveFolderPath: 'Ontology/_Archive',
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
     gardenerNoteLimit: 10,
+    gardenerOrphanGracePeriodDays: 7,
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckDays: 1,
     gardenerSemanticMergeThreshold: 0.85,

@@ -229,6 +229,18 @@ export class GraphService extends Events {
     }
 
     /**
+     * Executes the orphan candidate detection in the background worker.
+     */
+    public async getOrphanCandidates(ontologyRoot: string, gracePeriodMs: number): Promise<string[]> {
+        try {
+            return await this.workerManager.executeQuery(api => api.findOrphanCandidates(ontologyRoot, gracePeriodMs));
+        } catch (e) {
+            console.error(`[GraphService] Failed to get orphan candidates`, e);
+            return [];
+        }
+    }
+
+    /**
      * Builds the priority payload for Dual-Loop Search (RAG).
      */
     public async buildPriorityPayload(queryVector: number[], query: string): Promise<GraphSearchResult[]> {
