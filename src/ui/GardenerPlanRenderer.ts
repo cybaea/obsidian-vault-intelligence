@@ -76,6 +76,9 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
 
         this.plan.actions.forEach((action, index) => {
             const actionCard = actionsContainer.createDiv({ cls: "gardener-action-card" });
+            if (action.action === "merge_topics") {
+                actionCard.addClass("action-merge");
+            }
 
             const actionHeader = actionCard.createDiv({ cls: "action-header" });
 
