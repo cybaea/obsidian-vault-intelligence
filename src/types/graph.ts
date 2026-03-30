@@ -68,6 +68,17 @@ export interface GraphSearchResult extends SerializableGraphSearchResult {
 }
 
 /**
+ * Represents a synonym candidate to merge
+ */
+export interface SynonymCandidate {
+    reason: string;
+    sharedNeighbors: number;
+    similarityScore: number;
+    topicA: string;
+    topicB: string;
+}
+
+/**
  * Configuration passed to the Indexer Worker.
  */
 export interface WorkerConfig {
@@ -95,6 +106,7 @@ export interface WorkerAPI {
     buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]>;
     clearIndex(): Promise<void>;
     deleteFile(path: string): Promise<void>;
+    findOntologySynonyms(semanticThreshold: number): Promise<SynonymCandidate[]>;
     fullReset(): Promise<void>;
     getBatchCentrality(paths: string[]): Promise<Record<string, number>>;
     getBatchMetadata(paths: string[]): Promise<Record<string, { title?: string, headers?: string[], tokenCount?: number }>>;

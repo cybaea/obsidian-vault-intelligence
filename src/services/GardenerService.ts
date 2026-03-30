@@ -6,15 +6,35 @@ import { VaultIntelligenceSettings, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../se
 import { IReasoningClient } from "../types/providers";
 import { logger } from "../utils/logger";
 import { GardenerStateService } from "./GardenerStateService";
+import { GraphService } from "./GraphService";
 import { ModelRegistry } from "./ModelRegistry";
 import { OntologyService } from "./OntologyService";
 import { ProviderRegistry } from "./ProviderRegistry";
+
+export const GardenerActionType = z.enum([
+    GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS,
+    "merge_topics"
+]);
+
+export const MergeTopicsActionSchema = z.object({
+    action: z.literal("merge_topics"),
+    changes: z.object({
+        field: z.string(),
+        newValue: z.unknown(),
+        oldValue: z.unknown().optional()
+    }).array().optional(),
+    description: z.string(),
+    filePath: z.string(),
+    rationale: z.string(),
+    sourceTopic: z.string().optional(), // The one to delete
+    targetTopic: z.string().optional() // The survivor
+});
 
 /**
  * Zod Schema for a single refactoring action.
  */
 export const RefactoringActionSchema = z.object({
-    action: z.enum([GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS]),
+    action: z.literal(GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS),
     changes: z.object({
         field: z.string(),
         newValue: z.unknown(),
@@ -25,11 +45,16 @@ export const RefactoringActionSchema = z.object({
     rationale: z.string()
 });
 
+export const AnyGardenerActionSchema = z.discriminatedUnion("action", [
+    RefactoringActionSchema,
+    MergeTopicsActionSchema
+]);
+
 /**
  * Zod Schema for the entire Gardener Plan.
  */
 export const GardenerPlanSchema = z.object({
-    actions: RefactoringActionSchema.array(),
+    actions: AnyGardenerActionSchema.array(),
     date: z.string(),
     error: z.string().optional(),
     loading: z.boolean().optional(),
@@ -81,13 +106,15 @@ export class GardenerService {
     private ontology: OntologyService;
     private settings: VaultIntelligenceSettings;
     private state: GardenerStateService;
+    private graphService: GraphService;
 
-    constructor(app: App, providerRegistry: ProviderRegistry, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService) {
+    constructor(app: App, providerRegistry: ProviderRegistry, ontology: OntologyService, settings: VaultIntelligenceSettings, state: GardenerStateService, graphService: GraphService) {
         this.app = app;
         this.providerRegistry = providerRegistry;
         this.ontology = ontology;
         this.settings = settings;
         this.state = state;
+        this.graphService = graphService;
     }
 
     /**
@@ -148,7 +175,8 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             // 1. Gather context
             const excludedPaths = [
                 ...this.settings.excludedFolders.map(p => normalizePath(p)),
-                normalizePath(this.settings.gardenerPlansPath)
+                normalizePath(this.settings.gardenerPlansPath),
+                normalizePath(this.settings.ontologyPath)
             ];
 
             const allFiles = this.app.vault.getMarkdownFiles()
@@ -241,12 +269,19 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 systemInstruction += `\n\n### ADDITIONAL USER INSTRUCTIONS:\n${ontologyContext.instructions}`;
             }
 
+            const synonyms = await this.graphService.getOntologySynonyms(this.settings.gardenerSemanticMergeThreshold || 0.85);
+
+            let synonymPromptExt = "";
+            if (synonyms.length > 0) {
+                synonymPromptExt = `\nSUSPECT SYNONYMS:\nIdentify if these semantic matches should be merged into a single topic. Use 'merge_topics' action if you agree.\n${JSON.stringify(synonyms, null, 2)}\n`;
+            }
+
             // 3. Generate structured plan
             const prompt = `
 VALID TOPICS:
 (Note: Multiple names may point to the same file path; these are aliases for the same concept.)
 ${validTopicsList}
-
+${synonymPromptExt}
 Analyze the following ${notes.length} notes and suggest improvements.
 
 NOTES:
@@ -264,7 +299,7 @@ ${JSON.stringify(context, null, 2)}
                             actions: {
                                 items: {
                                     properties: {
-                                        action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS], type: "string" },
+                                        action: { enum: [GARDENER_CONSTANTS.ACTIONS.UPDATE_TOPICS, "merge_topics"], type: "string" },
                                         changes: {
                                             items: {
                                                 properties: {
@@ -285,9 +320,11 @@ ${JSON.stringify(context, null, 2)}
                                         },
                                         description: { type: "string" },
                                         filePath: { type: "string" },
-                                        rationale: { type: "string" }
+                                        rationale: { type: "string" },
+                                        sourceTopic: { type: "string" },
+                                        targetTopic: { type: "string" }
                                     },
-                                    required: ["action", "changes", "description", "filePath", "rationale"],
+                                    required: ["action", "description", "filePath", "rationale"],
                                     type: "object"
                                 },
                                 type: "array"
@@ -317,7 +354,7 @@ ${JSON.stringify(context, null, 2)}
             // Post-process links to ensure URL encoding if AI missed it
             if (parsedPlan.actions) {
                 for (const action of parsedPlan.actions) {
-                    for (const change of action.changes) {
+                    for (const change of action.changes || []) {
                         if (change.field === "topics") {
                             if (Array.isArray(change.newValue)) {
                                 change.newValue = change.newValue.map((val: unknown) => this.ensureUrlEncodedLink(String(val)));

@@ -389,6 +389,10 @@ a.similar-notes-link:hover {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.gardener-action-card.action-merge {
+    border-left-color: var(--color-blue);
+}
+
 .gardener-action-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgb(0 0 0 / 5%);
@@ -406,6 +410,10 @@ a.similar-notes-link:hover {
 .action-type-icon {
     color: var(--text-accent);
     opacity: 0.8;
+}
+
+.gardener-action-card.action-merge .action-type-icon {
+    color: var(--color-blue);
 }
 
 .action-file-path {

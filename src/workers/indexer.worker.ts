@@ -6,8 +6,8 @@ import forceAtlas2 from 'graphology-layout-forceatlas2';
 
 import { GRAPH_CONSTANTS, ONTOLOGY_CONSTANTS, SEARCH_CONSTANTS, WORKER_INDEXER_CONSTANTS, WORKER_LATENCY_CONSTANTS } from '../constants';
 import { STORES, StorageProvider } from '../services/StorageProvider';
-import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig, type FileUpdateData } from '../types/graph';
-import { calculateInheritedScore, ensureArray, estimateTokens, extractHeaders, parseYaml, sanitizeExcalidrawContent, sanitizeProperty, semanticSplit, stripStopWords } from '../utils/indexer-utils';
+import { type GraphNodeData, type GraphSearchResult, type WorkerAPI, type WorkerConfig, type FileUpdateData, type SynonymCandidate } from '../types/graph';
+import { calculateInheritedScore, computeCentroid, ensureArray, estimateTokens, extractHeaders, parseYaml, sanitizeExcalidrawContent, sanitizeProperty, semanticSplit, shuffleArray, stripStopWords } from '../utils/indexer-utils';
 import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-utils';
 import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
@@ -297,6 +297,176 @@ const IndexerWorker: WorkerAPI = {
         } catch (e) {
             workerLogger.warn(`Failed to remove ${normalizedPath} from Orama:`, e);
         }
+    },
+
+    async findOntologySynonyms(semanticThreshold: number): Promise<SynonymCandidate[]> {
+        if (!graph || !orama) throw new Error("[IndexerWorker] Not initialized");
+        await Promise.resolve();
+
+        const ontologyPrefix = workerNormalizePath(config.ontologyPath);
+        const candidates: SynonymCandidate[] = [];
+        
+        // 1. Gather ontology nodes
+        const ontologyNodes: string[] = [];
+        graph.forEachNode((node, attr) => {
+            const a = attr as GraphNodeData;
+            if (a.type === 'file' && node.startsWith(ontologyPrefix + '/')) {
+                ontologyNodes.push(node);
+            }
+        });
+
+        // Precompute values
+        const nodeData = new Map<string, { inNeighbors: Set<string>, name: string, size: number, embedding?: number[] }>();
+
+        
+        for (const node of ontologyNodes) {
+            const attr = graph.getNodeAttributes(node) as GraphNodeData;
+            const inNeighbors = new Set(graph.inNeighbors(node));
+            const name = node.split('/').pop()?.toLowerCase().replace('.md', '') || '';
+            const collectedVectors: number[][] = [];
+            
+            // 1. Explicit Topic Definition: Get embedding if > TOPIC_MIN_EXPLICIT_BYTES
+            let topicEmbedding: number[] | undefined = undefined;
+            if (attr.size > ONTOLOGY_CONSTANTS.TOPIC_MIN_EXPLICIT_BYTES) {
+                const results = await search(orama, {
+                    includeVectors: true,
+                    limit: 1,
+                    where: { path: { eq: node } }
+                });
+                if (results.hits.length > 0 && results.hits[0]?.document.embedding) {
+                    topicEmbedding = results.hits[0].document.embedding as number[];
+                    collectedVectors.push(topicEmbedding);
+                }
+            }
+
+            // 2. Contextual Topic Definition: Get embeddings from inNeighbors
+            if (inNeighbors.size > 0) {
+                // Safeguard Event Loop / RAM: Limit context to max neighbours per topic
+                let neighborsArray = Array.from(inNeighbors);
+                if (neighborsArray.length > ONTOLOGY_CONSTANTS.MAX_CENTROID_NEIGHBORS) {
+                    neighborsArray = shuffleArray(neighborsArray).slice(0, ONTOLOGY_CONSTANTS.MAX_CENTROID_NEIGHBORS);
+                }
+                const neighborResults = await search(orama, {
+                    includeVectors: true,
+                    limit: ONTOLOGY_CONSTANTS.MAX_CENTROID_NEIGHBORS, // Important: keep limit wide enough to catch all sliced elements
+                    where: { path: { in: neighborsArray } }
+                });
+                for (const hit of neighborResults.hits) {
+                    // Safety check needed since typed as unknown internally
+                    const doc = hit.document as unknown as OramaDocument;
+                    if (doc.embedding) {
+                        collectedVectors.push(doc.embedding);
+                    }
+                }
+            }
+            
+            // 3. Hybrid Signature: Mean vector of explicit def + all contexts
+            const embedding = computeCentroid(collectedVectors);
+
+            nodeData.set(node, {
+                embedding,
+                inNeighbors,
+                name,
+                size: attr.size
+            });
+        }
+
+        const oCS = (a: number[], b: number[]) => {
+            let dotProduct = 0; let normA = 0; let normB = 0;
+            for (let i = 0; i < a.length; i++) {
+                const valA = a[i] ?? 0;
+                const valB = b[i] ?? 0;
+                dotProduct += valA * valB;
+                normA += valA * valA;
+                normB += valB * valB;
+            }
+            if (normA === 0 || normB === 0) return 0;
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        };
+        
+        const lev = (a: string, b: string): number => {
+            if(a.length == 0) return b.length; 
+            if(b.length == 0) return a.length; 
+            const matrix: number[][] = [];
+            let i: number;
+            for(i = 0; i <= b.length; i++) matrix[i] = [i];
+            let j: number;
+            const row0 = matrix[0] ?? [];
+            for(j = 0; j <= a.length; j++) row0[j] = j;
+            matrix[0] = row0;
+            for(i = 1; i <= b.length; i++){
+                for(j = 1; j <= a.length; j++){
+                    const rowI = matrix[i] ?? [];
+                    const rowIPrev = matrix[i-1] ?? [];
+                    if(b.charAt(i-1) == a.charAt(j-1)) rowI[j] = rowIPrev[j-1] ?? 0;
+                    else rowI[j] = Math.min((rowIPrev[j-1] ?? 0) + 1, Math.min((rowI[j-1] ?? 0) + 1, (rowIPrev[j] ?? 0) + 1));
+                }
+            }
+            return (matrix[b.length] ?? [])[a.length] ?? 0;
+        };
+
+        const maxLen = (a: string, b: string) => Math.max(a.length, b.length);
+        const levSim = (a: string, b: string) => maxLen(a, b) === 0 ? 1 : 1 - (lev(a, b) / maxLen(a, b));
+
+        for (let i = 0; i < ontologyNodes.length; i++) {
+            for (let j = i + 1; j < ontologyNodes.length; j++) {
+                const nodeA = ontologyNodes[i] ?? "";
+                const nodeB = ontologyNodes[j] ?? "";
+                const dataA = nodeData.get(nodeA);
+                const dataB = nodeData.get(nodeB);
+                if (!dataA || !dataB) continue;
+
+                // Intersection
+                let sharedNeighbors = 0;
+                for (const elem of dataA.inNeighbors) if (dataB.inNeighbors.has(elem)) sharedNeighbors++;
+
+                let matched = false;
+                let reason = "";
+                let score = 0;
+
+                // 1. Lexical Loop
+                const lSim = levSim(dataA.name, dataB.name);
+                if (lSim > 0.85 && sharedNeighbors >= 1) {
+                    matched = true;
+                    reason = "Lexical match (Spelling variation)";
+                    score = lSim;
+                } 
+                else {
+                    // 2. Structural Loop
+                    const unionSize = dataA.inNeighbors.size + dataB.inNeighbors.size - sharedNeighbors;
+                    const jaccard = unionSize === 0 ? 0 : sharedNeighbors / unionSize;
+
+                    if (jaccard > 0.75 && sharedNeighbors >= 2) {
+                        matched = true;
+                        reason = "Structural match (Shared context)";
+                        score = jaccard;
+                    } 
+                    // 3. Semantic Loop
+                    else if (dataA.embedding && dataB.embedding) {
+                        const cosine = oCS(dataA.embedding, dataB.embedding);
+                        if (cosine >= semanticThreshold) {
+                            matched = true;
+                            // Add extra weight logic or format reason slightly differently depending on user threshold
+                            reason = "Semantic match (Similar definitions)";
+                            score = cosine;
+                        }
+                    }
+                }
+
+                if (matched) {
+                    candidates.push({
+                        reason,
+                        sharedNeighbors,
+                        similarityScore: score,
+                        topicA: nodeA,
+                        topicB: nodeB
+                    });
+                }
+            }
+        }
+
+        // Sort descending by score
+        return candidates.sort((a, b) => b.similarityScore - a.similarityScore);
     },
 
     async fullReset() {

@@ -7,6 +7,29 @@ export function stripStopWords(query: string, currentStopWords: string[]): strin
     return filtered.length > 0 ? filtered.join(' ') : query;
 }
 
+export function computeCentroid(vectors: number[][]): number[] | undefined {
+    if (vectors.length === 0) return undefined;
+    const dims = vectors[0]?.length;
+    if (!dims) return undefined;
+    const sum = new Array(dims).fill(0);
+    for (const vec of vectors) {
+        for (let i = 0; i < dims; i++) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- required for type array indexing
+            sum[i]! += vec[i] ?? 0;
+        }
+    }
+    return sum.map(v => v / vectors.length);
+}
+
+export function shuffleArray<T>(array: T[]): T[] {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArr[i], newArr[j]] = [newArr[j] as T, newArr[i] as T];
+    }
+    return newArr;
+}
+
 export function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): Array<{ text: string, start: number, end: number }> {
     const chunks: Array<{ text: string, start: number, end: number }> = [];
 

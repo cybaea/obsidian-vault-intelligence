@@ -76,6 +76,9 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
 
         this.plan.actions.forEach((action, index) => {
             const actionCard = actionsContainer.createDiv({ cls: "gardener-action-card" });
+            if (action.action === "merge_topics") {
+                actionCard.addClass("action-merge");
+            }
 
             const actionHeader = actionCard.createDiv({ cls: "action-header" });
 
@@ -98,85 +101,93 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                 void this.app.workspace.openLinkText(action.filePath, "/", true);
             });
 
-            const changesList = actionCard.createDiv({ cls: "action-changes" });
-            for (const change of action.changes) {
-                const changeItem = changesList.createDiv({ cls: "change-item" });
-                changeItem.createSpan({ cls: "change-field", text: change.field });
-                void setIcon(changeItem.createSpan({ cls: "change-arrow" }), "arrow-right");
+            if (action.action === "merge_topics" && "sourceTopic" in action && "targetTopic" in action) {
+                const mergeNotice = actionCard.createDiv({ cls: "merge-notice" });
+                mergeNotice.createEl("strong", { text: String((action as Record<string, unknown>).sourceTopic) });
+                void setIcon(mergeNotice.createSpan({ cls: "merge-arrow" }), "arrow-right");
+                mergeNotice.createEl("strong", { text: String((action as Record<string, unknown>).targetTopic) });
+                mergeNotice.createEl("p", { cls: "merge-warning tag-warning", text: " This will move all links to the target topic and permanently delete the source file!" });
+            } else {
+                const changesList = actionCard.createDiv({ cls: "action-changes" });
+                for (const change of action.changes || []) {
+                    const changeItem = changesList.createDiv({ cls: "change-item" });
+                    changeItem.createSpan({ cls: "change-field", text: change.field });
+                    void setIcon(changeItem.createSpan({ cls: "change-arrow" }), "arrow-right");
 
-                const valuesContainer = changeItem.createDiv({ cls: "change-values-container" });
-                const values = Array.isArray(change.newValue) ? change.newValue : [change.newValue];
+                    const valuesContainer = changeItem.createDiv({ cls: "change-values-container" });
+                    const values = Array.isArray(change.newValue) ? change.newValue : [change.newValue];
 
-                for (const val of values) {
-                    const valueStr = String(val).replace(/^["']+|["']+$/g, "").trim();
-                    const isLink = valueStr.match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
+                    for (const val of values) {
+                        const valueStr = String(val).replace(/^["']+|["']+$/g, "").trim();
+                        const isLink = valueStr.match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
 
-                    const valueWrapper = valuesContainer.createDiv({ cls: "change-value-wrapper" });
+                        const valueWrapper = valuesContainer.createDiv({ cls: "change-value-wrapper" });
 
-                    if (isLink && isLink[1] && isLink[2]) {
-                        const linkName = isLink[1].replace(/[[\]]/g, "").replace(/^["']+|["']+$/g, "").trim();
-                        const linkPath = decodeURIComponent(isLink[2]);
+                        if (isLink && isLink[1] && isLink[2]) {
+                            const linkName = isLink[1].replace(/[[\]]/g, "").replace(/^["']+|["']+$/g, "").trim();
+                            const linkPath = decodeURIComponent(isLink[2]);
 
-                        const valueSpan = valueWrapper.createEl("a", { cls: "change-value interactive-link", text: linkName });
-                        valueSpan.addEventListener("click", (e) => {
-                            e.preventDefault();
-                            void this.app.workspace.openLinkText(linkPath, "/", true);
-                        });
+                            const valueSpan = valueWrapper.createEl("a", { cls: "change-value interactive-link", text: linkName });
+                            valueSpan.addEventListener("click", (e) => {
+                                e.preventDefault();
+                                void this.app.workspace.openLinkText(linkPath, "/", true);
+                            });
 
-                        // Exclusion Cross
-                        const removeIcon = valueWrapper.createSpan({ cls: "remove-value-icon" });
-                        void setIcon(removeIcon, "x");
-                        removeIcon.addEventListener("click", () => {
-                            let excluded = this.excludedValues.get(index);
-                            if (!excluded) {
-                                excluded = new Set();
-                                this.excludedValues.set(index, excluded);
-                            }
-                            if (excluded.has(valueStr)) {
-                                excluded.delete(valueStr);
-                                valueWrapper.removeClass("is-excluded");
-                            } else {
-                                excluded.add(valueStr);
+                            // Exclusion Cross
+                            const removeIcon = valueWrapper.createSpan({ cls: "remove-value-icon" });
+                            void setIcon(removeIcon, "x");
+                            removeIcon.addEventListener("click", () => {
+                                let excluded = this.excludedValues.get(index);
+                                if (!excluded) {
+                                    excluded = new Set();
+                                    this.excludedValues.set(index, excluded);
+                                }
+                                if (excluded.has(valueStr)) {
+                                    excluded.delete(valueStr);
+                                    valueWrapper.removeClass("is-excluded");
+                                } else {
+                                    excluded.add(valueStr);
+                                    valueWrapper.addClass("is-excluded");
+                                }
+                            });
+
+                            if (this.excludedValues.get(index)?.has(valueStr)) {
                                 valueWrapper.addClass("is-excluded");
                             }
-                        });
 
-                        if (this.excludedValues.get(index)?.has(valueStr)) {
-                            valueWrapper.addClass("is-excluded");
-                        }
-
-                        // Safety Whitelist Check for Topics
-                        if (change.field === "topics") {
-                            const isValid = this.ontology.validateTopic(valueStr);
-                            if (!isValid) {
-                                valueSpan.addClass("invalid-topic");
-                                const warningIcon = valueWrapper.createSpan({ cls: "tag-warning" });
-                                void setIcon(warningIcon, "alert-triangle");
-                                warningIcon.setAttribute("title", `New topic: '${linkName}' will be created with a definition.`);
+                            // Safety Whitelist Check for Topics
+                            if (change.field === "topics") {
+                                const isValid = this.ontology.validateTopic(valueStr);
+                                if (!isValid) {
+                                    valueSpan.addClass("invalid-topic");
+                                    const warningIcon = valueWrapper.createSpan({ cls: "tag-warning" });
+                                    void setIcon(warningIcon, "alert-triangle");
+                                    warningIcon.setAttribute("title", `New topic: '${linkName}' will be created with a definition.`);
+                                }
                             }
-                        }
-                    } else {
-                        valueWrapper.createSpan({ cls: "change-value", text: valueStr });
+                        } else {
+                            valueWrapper.createSpan({ cls: "change-value", text: valueStr });
 
-                        const removeIcon = valueWrapper.createSpan({ cls: "remove-value-icon" });
-                        setIcon(removeIcon, "x");
-                        removeIcon.addEventListener("click", () => {
-                            let excluded = this.excludedValues.get(index);
-                            if (!excluded) {
-                                excluded = new Set();
-                                this.excludedValues.set(index, excluded);
-                            }
-                            if (excluded.has(valueStr)) {
-                                excluded.delete(valueStr);
-                                valueWrapper.removeClass("is-excluded");
-                            } else {
-                                excluded.add(valueStr);
+                            const removeIcon = valueWrapper.createSpan({ cls: "remove-value-icon" });
+                            setIcon(removeIcon, "x");
+                            removeIcon.addEventListener("click", () => {
+                                let excluded = this.excludedValues.get(index);
+                                if (!excluded) {
+                                    excluded = new Set();
+                                    this.excludedValues.set(index, excluded);
+                                }
+                                if (excluded.has(valueStr)) {
+                                    excluded.delete(valueStr);
+                                    valueWrapper.removeClass("is-excluded");
+                                } else {
+                                    excluded.add(valueStr);
+                                    valueWrapper.addClass("is-excluded");
+                                }
+                            });
+
+                            if (this.excludedValues.get(index)?.has(valueStr)) {
                                 valueWrapper.addClass("is-excluded");
                             }
-                        });
-
-                        if (this.excludedValues.get(index)?.has(valueStr)) {
-                            valueWrapper.addClass("is-excluded");
                         }
                     }
                 }
@@ -201,8 +212,13 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             case "update_tags": return "tag";
             case "update_metadata": return "database";
             case "rename_file": return "pencil";
+            case "merge_topics": return "git-merge";
             default: return "help-circle";
         }
+    }
+    
+    private normalizeVaultPath(path: string): string {
+        return path.startsWith("/") ? path.substring(1) : path;
     }
 
     private async applySelectedActions(button: ButtonComponent) {
@@ -222,56 +238,96 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             const action = this.plan.actions[index];
             if (!action) continue;
 
-            const file = this.app.vault.getAbstractFileByPath(action.filePath);
+            const filePath = this.normalizeVaultPath(action.filePath);
+            const file = this.app.vault.getAbstractFileByPath(filePath);
             if (file instanceof TFile) {
                 try {
-                    // 1. Pre-process topics: create new ones if needed (Async)
-                    for (const change of action.changes) {
-                        if (change.field === "topics" && Array.isArray(change.newValue)) {
-                            const value = change.newValue;
-                            const excluded = this.excludedValues.get(index);
-                            const topicsToApply = excluded ? value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim())) : value;
+                    if (action.action === "merge_topics" && "sourceTopic" in action && "targetTopic" in action && (action as Record<string, unknown>).sourceTopic && (action as Record<string, unknown>).targetTopic) {
+                        const source = this.normalizeVaultPath(String((action as Record<string, unknown>).sourceTopic));
+                        const target = this.normalizeVaultPath(String((action as Record<string, unknown>).targetTopic));
 
-                            for (const topicLink of topicsToApply) {
-                                const match = String(topicLink).match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
-                                if (match && match[2]) {
-                                    const path = decodeURIComponent(match[2]);
-                                    if (!(this.app.vault.getAbstractFileByPath(path) instanceof TFile)) {
-                                        // Topic doesn't exist, create it!
-                                        const definition = this.plan.newTopicDefinitions?.find(d => d.topicLink === String(topicLink))?.definition || "No definition provided.";
+                        // 1. Gather all files linking to the source OR target topic (for de-duplication)
+                        const inboundLinks: string[] = [];
+                        for (const [neighborPath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
+                            if (links[source] || links[target]) {
+                                inboundLinks.push(neighborPath);
+                            }
+                        }
 
-                                        // Ensure folders exist (recursive-ish) via MetadataManager
-                                        const folderPath = path.substring(0, path.lastIndexOf('/'));
-                                        await this.metadataManager.createFolderIfMissing(folderPath);
+                        // 2. Perform AST replacement
+                        await this.metadataManager.replaceLinksAsync(inboundLinks, source, target);
 
-                                        await this.metadataManager.createFileIfMissing(path, `# ${match[1]}\n\n${definition}`);
-                                        logger.info(`Automatically created topic: ${path}`);
+                        // 3. Add to aliases of target
+                        const targetFile = this.app.vault.getAbstractFileByPath(target);
+                        if (targetFile instanceof TFile) {
+                            const sourceAlias = source.substring(source.lastIndexOf("/") + 1).replace(/\.md$/, "");
+                            await this.metadataManager.updateFrontmatter(targetFile, (fm) => {
+                                if (!fm.aliases) {
+                                    fm.aliases = [sourceAlias];
+                                } else if (Array.isArray(fm.aliases)) {
+                                    if (!fm.aliases.includes(sourceAlias)) fm.aliases.push(sourceAlias);
+                                } else if (typeof fm.aliases === "string") {
+                                    const ex = String(fm.aliases).split(",").map(s => s.trim());
+                                    if (!ex.includes(sourceAlias)) fm.aliases = [...ex, sourceAlias];
+                                }
+                            });
+                        }
+
+                        // 3. Move the source file to trash
+                        await this.app.fileManager.trashFile(file);
+
+                        logger.info(`Merged topic ${source} -> ${target} and trashed original.`);
+                        successCount++;
+                        // No state update because file is gone
+                    } else {
+                        // 1. Pre-process topics: create new ones if needed (Async)
+                        for (const change of action.changes || []) {
+                            if (change.field === "topics" && Array.isArray(change.newValue)) {
+                                const value = change.newValue;
+                                const excluded = this.excludedValues.get(index);
+                                const topicsToApply = excluded ? value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim())) : value;
+
+                                for (const topicLink of topicsToApply) {
+                                    const match = String(topicLink).match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
+                                    if (match && match[2]) {
+                                        const path = this.normalizeVaultPath(decodeURIComponent(match[2]));
+                                        if (!(this.app.vault.getAbstractFileByPath(path) instanceof TFile)) {
+                                            // Topic doesn't exist, create it!
+                                            const definition = this.plan.newTopicDefinitions?.find(d => d.topicLink === String(topicLink))?.definition || "No definition provided.";
+
+                                            // Ensure folders exist (recursive-ish) via MetadataManager
+                                            const folderPath = path.substring(0, path.lastIndexOf('/'));
+                                            await this.metadataManager.createFolderIfMissing(folderPath);
+
+                                            await this.metadataManager.createFileIfMissing(path, `# ${match[1]}\n\n${definition}`);
+                                            logger.info(`Automatically created topic: ${path}`);
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // 2. Update frontmatter (Safe)
-                    await this.metadataManager.updateFrontmatter(file, (fm: Record<string, unknown>) => {
-                        for (const change of action.changes) {
-                            let value = change.newValue;
-                            if (Array.isArray(value)) {
-                                const excluded = this.excludedValues.get(index);
-                                if (excluded) {
-                                    value = value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim()));
+                        // 2. Update frontmatter (Safe)
+                        await this.metadataManager.updateFrontmatter(file, (fm: Record<string, unknown>) => {
+                            for (const change of action.changes || []) {
+                                let value = change.newValue;
+                                if (Array.isArray(value)) {
+                                    const excluded = this.excludedValues.get(index);
+                                    if (excluded) {
+                                        value = value.filter(v => !excluded.has(String(v).replace(/^["']+|["']+$/g, "").trim()));
+                                    }
+                                } else {
+                                    if (this.excludedValues.get(index)?.has(String(value).replace(/^["']+|["']+$/g, "").trim())) {
+                                        continue; // Skip single value if excluded
+                                    }
                                 }
-                            } else {
-                                if (this.excludedValues.get(index)?.has(String(value).replace(/^["']+|["']+$/g, "").trim())) {
-                                    continue; // Skip single value if excluded
-                                }
+                                fm[change.field] = value;
                             }
-                            fm[change.field] = value;
-                        }
-                    });
-                    successCount++;
-                    // Record successful update in state
-                    await this.state.recordUpdate(action.filePath);
+                        });
+                        successCount++;
+                        // Record successful update in state
+                        await this.state.recordUpdate(action.filePath);
+                    }
                 } catch (e) {
                     logger.error(`Failed to apply action to ${action.filePath}`, e);
                     failCount++;

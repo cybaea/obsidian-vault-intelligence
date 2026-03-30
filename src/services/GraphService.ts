@@ -2,7 +2,7 @@ import Graph from "graphology";
 import { Events, App } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
-import { GraphSearchResult, GraphNodeData, SerializableGraphSearchResult } from "../types/graph";
+import { GraphSearchResult, GraphNodeData, SerializableGraphSearchResult, SynonymCandidate } from "../types/graph";
 import { ResultHydrator } from './ResultHydrator';
 import { VaultManager } from "./VaultManager";
 import { WorkerManager } from './WorkerManager';
@@ -213,6 +213,18 @@ export class GraphService extends Events {
             return await this.workerManager.executeQuery(api => api.getBatchMetadata(paths));
         } catch {
             return {};
+        }
+    }
+
+    /**
+     * Executes the Tri-force synonym detection in the background worker.
+     */
+    public async getOntologySynonyms(semanticThreshold: number): Promise<SynonymCandidate[]> {
+        try {
+            return await this.workerManager.executeQuery(api => api.findOntologySynonyms(semanticThreshold));
+        } catch (e) {
+            console.error(`[GraphService] Failed to get ontology synonyms`, e);
+            return [];
         }
     }
 

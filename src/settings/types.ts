@@ -55,6 +55,7 @@ export interface VaultIntelligenceSettings {
     gardenerNoteLimit: number;
     gardenerPlansPath: string;
     gardenerRecheckDays: number;
+    gardenerSemanticMergeThreshold: number;
     gardenerSkipRetentionDays: number;
     gardenerSystemInstruction: string | null;
     geminiRetries: number;
@@ -182,6 +183,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerNoteLimit: 10,
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckDays: 1,
+    gardenerSemanticMergeThreshold: 0.85,
     gardenerSkipRetentionDays: 7,
     gardenerSystemInstruction: null, // Use default by reference
     geminiRetries: 10,

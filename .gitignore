@@ -34,3 +34,4 @@ data/
 worker.js
 .vault-intelligence/
 model-cache.json
+obsidian-vault-intelligence.code-workspace

@@ -261,8 +261,14 @@ export const ONTOLOGY_CONSTANTS = {
     /** Damping factor for Hubs: Score = Score / log(Degree + 1) */
     HUB_PENALTY_ENABLED: true,
 
+    /** Max number of incoming neighbors to sample when computing a semantic centroid */
+    MAX_CENTROID_NEIGHBORS: 100,
+
     /** Dampening factor for 2-hop (Sibling) relevance */
-    SIBLING_DECAY: 0.25
+    SIBLING_DECAY: 0.25,
+
+    /** Minimum file size in bytes for a topic definition to be included in its own Centroid signature */
+    TOPIC_MIN_EXPLICIT_BYTES: 100
 };
 
 export const UI_CONSTANTS = {
