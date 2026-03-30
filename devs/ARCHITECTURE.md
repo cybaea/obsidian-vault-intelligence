@@ -1,6 +1,6 @@
 # System architecture
 
-**Version**: 8.1.0
+**Version**: 9.1.1
 **Status**: Active
 **Audience**: Developers, Systems Architects, Maintainers
 
@@ -71,7 +71,7 @@ The system follows a _Service-Oriented Architecture (SOA)_ adapted for a monolit
 -   **Facade pattern**: `GraphService` acts as a facade over the complex `WebWorker` <-> `MainThread` communication. It provides high-level methods like `getGraphEnhancedSimilar` for views.
 -   **Delegation pattern**: `AgentService` delegates search and context assembly to `SearchOrchestrator` and `ContextAssembler`. It exposes `reflexSearch` for fast-path UI feedback.
 -   **Plan-review-apply pattern**: Used by the `GardenerService` to ensure user oversight for vault modifications.
--   **Safe Mutation**: `MetadataManager` centralises all vault frontmatter updates, ensuring thread safety and idempotency.
+-   **Safe Mutation**: `MetadataManager` centralises all vault frontmatter updates and link rewiring. It leverages native Obsidian APIs (`parseLinktext`, `frontmatterLinks`) to ensure robust, AST-based resolution that is 100% consistent with the vault's internal index.
 
 ### Brain vs Body
 
@@ -632,6 +632,7 @@ Centralizes and safely manages vault modifications and frontmatter updates to pr
 ```typescript
 export class MetadataManager {
     public updateFrontmatter(file: TFile, updates: (frontmatter: Record<string, unknown>) => void): Promise<void>;
+    public replaceLinksAsync(filePaths: string[], sourceTopic: string, targetTopic: string): Promise<void>;
     public hasKey(file: TFile, key: string): boolean;
     public getKeyValue(file: TFile, key: string): unknown;
     public createFolderIfMissing(path: string): Promise<void>;
