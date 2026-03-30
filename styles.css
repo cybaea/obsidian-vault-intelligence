@@ -954,22 +954,23 @@ a.similar-notes-link:hover {
 
 .chat-error-block {
     color: var(--text-error);
-    padding: 10px;
-    border-left: 3px solid var(--text-error);
-    background-color: var(--background-modifier-error);
-    margin-top: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    font-weight: bold;
+    padding: var(--size-4-2) var(--size-4-3);
+    border: var(--border-width) solid var(--background-modifier-error);
+    border-left: calc(var(--border-width) * 4) solid var(--text-error);
+    background-color: transparent;
+    margin-top: var(--size-4-2);
+    margin-bottom: var(--size-4-2);
+    border-radius: var(--radius-s);
+    font-weight: 500;
 }
 
 .chat-cancelled-block {
     color: var(--text-muted);
     font-style: italic;
-    padding: 10px;
-    border-left: 3px solid var(--text-muted);
+    padding: var(--size-4-2) var(--size-4-3);
+    border-left: calc(var(--border-width) * 3) solid var(--text-muted);
     background-color: var(--background-modifier-hover);
-    margin-top: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
+    margin-top: var(--size-4-2);
+    margin-bottom: var(--size-4-2);
+    border-radius: var(--radius-s);
 }

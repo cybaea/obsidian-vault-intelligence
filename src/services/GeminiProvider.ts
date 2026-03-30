@@ -161,7 +161,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                     requestParams.config.tools = toolObjects;
                     // Fix 'INVALID_ARGUMENT' 400 error when using built-in Google tools (like search)
                     // alongside client-side tools (like function calling/MCP).
-                    requestParams.config.toolConfig = { includeServerSideToolInvocations: true } as unknown as import('@google/genai').ToolConfig;
+                    requestParams.config.toolConfig = { include_server_side_tool_invocations: true, includeServerSideToolInvocations: true } as unknown as import('@google/genai').ToolConfig;
                 }
             }
 
@@ -254,7 +254,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 requestParams.config.tools = toolObjects;
                 // Fix 'INVALID_ARGUMENT' 400 error when using built-in Google tools (like search)
                 // alongside client-side tools (like function calling/MCP).
-                requestParams.config.toolConfig = { includeServerSideToolInvocations: true } as unknown as import('@google/genai').ToolConfig;
+                requestParams.config.toolConfig = { include_server_side_tool_invocations: true, includeServerSideToolInvocations: true } as unknown as import('@google/genai').ToolConfig;
             }
         }
 
