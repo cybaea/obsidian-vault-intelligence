@@ -216,6 +216,10 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             default: return "help-circle";
         }
     }
+    
+    private normalizeVaultPath(path: string): string {
+        return path.startsWith("/") ? path.substring(1) : path;
+    }
 
     private async applySelectedActions(button: ButtonComponent) {
         if (this.selectedActions.size === 0) {
@@ -234,18 +238,19 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
             const action = this.plan.actions[index];
             if (!action) continue;
 
-            const file = this.app.vault.getAbstractFileByPath(action.filePath);
+            const filePath = this.normalizeVaultPath(action.filePath);
+            const file = this.app.vault.getAbstractFileByPath(filePath);
             if (file instanceof TFile) {
                 try {
                     if (action.action === "merge_topics" && "sourceTopic" in action && "targetTopic" in action && (action as Record<string, unknown>).sourceTopic && (action as Record<string, unknown>).targetTopic) {
-                        const source = String((action as Record<string, unknown>).sourceTopic);
-                        const target = String((action as Record<string, unknown>).targetTopic);
+                        const source = this.normalizeVaultPath(String((action as Record<string, unknown>).sourceTopic));
+                        const target = this.normalizeVaultPath(String((action as Record<string, unknown>).targetTopic));
 
                         // 1. Gather all files linking to the source OR target topic (for de-duplication)
                         const inboundLinks: string[] = [];
-                        for (const [filePath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
+                        for (const [neighborPath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
                             if (links[source] || links[target]) {
-                                inboundLinks.push(filePath);
+                                inboundLinks.push(neighborPath);
                             }
                         }
 
@@ -285,7 +290,7 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                                 for (const topicLink of topicsToApply) {
                                     const match = String(topicLink).match(/\[+([^\]]+)\]+\(\/?([^)]+)\)/);
                                     if (match && match[2]) {
-                                        const path = decodeURIComponent(match[2]);
+                                        const path = this.normalizeVaultPath(decodeURIComponent(match[2]));
                                         if (!(this.app.vault.getAbstractFileByPath(path) instanceof TFile)) {
                                             // Topic doesn't exist, create it!
                                             const definition = this.plan.newTopicDefinitions?.find(d => d.topicLink === String(topicLink))?.definition || "No definition provided.";
