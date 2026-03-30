@@ -99,42 +99,40 @@ export class MetadataManager {
                 return linkPath === sourceTopic || this.app.metadataCache.getFirstLinkpathDest(linkPath, neighborPath)?.path === sourceTopic;
             });
 
-            if (linksToReplace.length === 0) continue;
-
-            // Sort descending by offset so we don't mess up subsequent offsets when slicing
-            linksToReplace.sort((a, b) => b.position.start.offset - a.position.start.offset);
-
-            let content = await this.app.vault.cachedRead(file);
-            let modified = false;
-
             const sourceName = sourceTopic.split('/').pop()?.replace('.md', '') || sourceTopic;
             // Target is an absolute vault path string here (usually starting from root but without starting / if normalizePath)
             const cleanTargetTopic = targetTopic.replace(/\.md$/, '');
 
-            for (const link of linksToReplace) {
-                const start = link.position.start.offset;
-                const end = link.position.end.offset;
-                
-                // Original link text (including brackets)
-                const originalLinkText = content.slice(start, end);
-                
-                // Keep the exact same alias if the user had one
-                let alias = sourceName; // Default to old topic name
-                if (link.displayText && link.displayText !== link.link) {
-                    alias = link.displayText;
-                } else if (originalLinkText.includes("|")) {
-                    const match = originalLinkText.match(/\|([^\]]+)\]\]/);
-                    if (match && match[1]) alias = match[1];
-                }
-                
-                const newLink = `[[${cleanTargetTopic}|${alias}]]`;
-                content = content.slice(0, start) + newLink + content.slice(end);
-                modified = true;
-            }
+            if (linksToReplace.length > 0) {
+                // Sort descending by offset so we don't mess up subsequent offsets when slicing
+                linksToReplace.sort((a, b) => b.position.start.offset - a.position.start.offset);
 
-            if (modified) {
-                await this.app.vault.modify(file, content);
-                logger.info(`Replaced ${linksToReplace.length} links to ${sourceTopic} in ${neighborPath}`);
+                let content = await this.app.vault.cachedRead(file);
+                let modified = false;
+
+                for (const link of linksToReplace) {
+                    const start = link.position.start.offset;
+                    const end = link.position.end.offset;
+                    
+                    const originalLinkText = content.slice(start, end);
+                    
+                    let alias = sourceName;
+                    if (link.displayText && link.displayText !== link.link) {
+                        alias = link.displayText;
+                    } else if (originalLinkText.includes("|")) {
+                        const match = originalLinkText.match(/\|([^\]]+)\]\]/);
+                        if (match && match[1]) alias = match[1];
+                    }
+                    
+                    const newLink = `[[${cleanTargetTopic}|${alias}]]`;
+                    content = content.slice(0, start) + newLink + content.slice(end);
+                    modified = true;
+                }
+
+                if (modified) {
+                    await this.app.vault.modify(file, content);
+                    logger.info(`Replaced ${linksToReplace.length} links to ${sourceTopic} in ${neighborPath}`);
+                }
             }
 
             // Also check and update frontmatter topics (since cache.links often ignores frontmatter lists)
@@ -144,6 +142,7 @@ export class MetadataManager {
                     if (Array.isArray(fm.topics)) {
                         const newTopics = fm.topics.map((t: unknown) => {
                             const tStr = String(t);
+                            // Check for exact path or basename match within wikilink syntax
                             if (tStr.includes(sourceName) || tStr.includes(sourceTopic)) {
                                 fmModified = true;
                                 return `[[${cleanTargetTopic}|${sourceName}]]`;
@@ -151,7 +150,6 @@ export class MetadataManager {
                             return t;
                         });
                         if (fmModified) {
-                            // Filter duplicates by tracking stringified values
                             fm.topics = Array.from(new Set(newTopics.map(String)));
                         }
                     } else if (typeof fm.topics === "string") {
