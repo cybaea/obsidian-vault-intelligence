@@ -113,20 +113,23 @@ export class FileTools {
             // 2. Ensure frontmatter exists
             // If splitFrontmatter couldn't find a valid block, we inject a blank one
             if (!frontmatter) {
-                frontmatter = "---\n---";
+                frontmatter = "---\n---\n";
             }
 
             // 3. Apply the update mode
             let newBody: string;
-            const trimmedBody = body.trim();
 
             switch (mode) {
-                case "append":
-                    newBody = (trimmedBody ? trimmedBody + "\n\n" : "") + sanitized;
+                case "append": {
+                    const separator = body === "" ? "" : (body.endsWith("\n\n") ? "" : (body.endsWith("\n") ? "\n" : "\n\n"));
+                    newBody = body + separator + sanitized;
                     break;
-                case "prepend":
-                    newBody = sanitized + (trimmedBody ? "\n\n" + trimmedBody : "");
+                }
+                case "prepend": {
+                    const separator = body === "" ? "" : (body.startsWith("\n\n") ? "" : (body.startsWith("\n") ? "\n" : "\n\n"));
+                    newBody = sanitized + separator + body;
                     break;
+                }
                 case "overwrite":
                     newBody = sanitized;
                     break;
@@ -134,8 +137,8 @@ export class FileTools {
                     throw new Error(`Invalid update mode: ${mode as string}`);
             }
 
-            // 4. Return the final string to be written exactly once
-            return frontmatter.trimEnd() + "\n\n" + newBody.trimStart();
+            // 4. Return the final string, preserving the exact frontmatter spacing
+            return frontmatter + newBody;
         });
 
         return `Successfully updated note: ${normalizedPath} (body ${mode})`;

@@ -82,18 +82,18 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>, basePa
 /**
  * Splits a markdown string into frontmatter and body.
  * @param text - The full markdown file content.
- * @returns An object containing the frontmatter string and the body string.
+ * @returns An object containing the frontmatter string, the body string, and the exact byte offset where the body begins.
  */
-export function splitFrontmatter(text: string): { frontmatter: string, body: string } {
+export function splitFrontmatter(text: string): { frontmatter: string, body: string, bodyOffset: number } {
     if (!text.startsWith("---")) {
-        return { body: text, frontmatter: "" };
+        return { body: text, bodyOffset: 0, frontmatter: "" };
     }
 
     const firstLineEnd = text.indexOf("\n");
-    if (firstLineEnd === -1) return { body: text, frontmatter: "" };
+    if (firstLineEnd === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     const secondSeparator = text.indexOf("\n---", firstLineEnd);
-    if (secondSeparator === -1) return { body: text, frontmatter: "" };
+    if (secondSeparator === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     // Find the end of the second separator line
     let bodyStart = secondSeparator + 4; // Length of "\n---"
@@ -106,7 +106,8 @@ export function splitFrontmatter(text: string): { frontmatter: string, body: str
 
     return {
         body: text.substring(bodyStart),
-        frontmatter: text.substring(0, bodyStart).trim()
+        bodyOffset: bodyStart,
+        frontmatter: text.substring(0, bodyStart)
     };
 }
 
