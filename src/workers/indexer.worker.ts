@@ -1245,10 +1245,20 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
     const fm = parseYaml(frontmatter);
     const dir = path.split('/').slice(0, -1).join('/');
 
-    // 1. Process Pre-Resolved Links from MetadataCache
+    // 1. Process Pre-Resolved Links from MetadataCache (Wikilinks)
     for (const link of resolvedLinks) {
         // Obisidan resolved link is already a correct canonical path, just normalize backslashes
         const resolved = workerNormalizePath(link);
+        if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
+        if (!graph.hasEdge(path, resolved)) {
+            graph.addEdge(path, resolved, { source: 'body', type: 'link', weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY });
+        }
+    }
+
+    // 2. Fallback Extraction (for standard MD links starting with '/' not tracked by Obsidian core)
+    const extractedLinks = new Set([...extractLinks(body), ...extractLinks(frontmatter)]);
+    for (const link of extractedLinks) {
+        const resolved = resolvePath(link, aliasMap, dir);
         if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
         if (!graph.hasEdge(path, resolved)) {
             graph.addEdge(path, resolved, { source: 'body', type: 'link', weight: ONTOLOGY_CONSTANTS.EDGE_WEIGHTS.BODY });

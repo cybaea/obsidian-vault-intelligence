@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { App, TFile, Events, Notice } from "obsidian";
+import { App, TFile, Events, Notice, normalizePath } from "obsidian";
 
 import { GRAPH_CONSTANTS, DOCUMENTATION_URLS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
@@ -261,8 +261,15 @@ export class GraphSyncOrchestrator {
         const cache = this.app.metadataCache.getFileCache(file);
         if (!cache || !cache.links) return [];
         return cache.links.map(l => {
-            const dest = this.app.metadataCache.getFirstLinkpathDest(l.link, file.path);
-            return dest ? dest.path : l.link;
+            let cleanLink = l.link;
+            try {
+                cleanLink = decodeURIComponent(cleanLink).split('#')[0] || cleanLink;
+                cleanLink = normalizePath(cleanLink);
+            } catch (e) {
+                // Ignore decoding errors
+            }
+            const dest = this.app.metadataCache.getFirstLinkpathDest(cleanLink, file.path);
+            return dest ? dest.path : cleanLink;
         });
     }
 
@@ -338,10 +345,17 @@ export class GraphSyncOrchestrator {
         if (typeof this.ontologyService.getValidTopics !== 'function') return;
         const map: Record<string, string> = {};
         const allFiles = this.vaultManager.getMarkdownFiles();
-        for (const file of allFiles) map[file.basename.toLowerCase()] = file.path;
+        for (const file of allFiles) {
+            map[file.basename.toLowerCase()] = file.path;
+            // Map the lowercased full path to the exact canonical path to prevent case-drift node duplication
+            map[file.path.toLowerCase()] = file.path;
+        }
 
         const topics = await this.ontologyService.getValidTopics();
-        for (const t of topics) map[t.name.toLowerCase()] = t.path;
+        for (const t of topics) {
+            map[t.name.toLowerCase()] = t.path;
+            map[t.path.toLowerCase()] = t.path;
+        }
 
         await api.updateAliasMap(map);
     }
