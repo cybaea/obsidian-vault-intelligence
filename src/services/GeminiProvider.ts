@@ -166,8 +166,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
 
             if (systemInstruction) {
-                requestParams.systemInstruction = systemInstruction;
-                requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
                 if (requestParams.config) {
                     requestParams.config.systemInstruction = systemInstruction;
                 }
@@ -259,8 +257,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         }
 
         if (systemInstruction) {
-            requestParams.systemInstruction = systemInstruction;
-            requestParams.system_instruction = systemInstruction; // SDK 2.0 fallback
             if (requestParams.config) {
                 requestParams.config.systemInstruction = systemInstruction;
             }
@@ -374,8 +370,6 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             };
 
             if (options.systemInstruction) {
-                requestParams.systemInstruction = options.systemInstruction;
-                requestParams.system_instruction = options.systemInstruction; // SDK 2.0 fallback
                 if (requestParams.config) {
                     requestParams.config.systemInstruction = options.systemInstruction;
                 }

@@ -304,6 +304,18 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+
+    new Setting(containerEl)
+        .setName("Semantic merge threshold")
+        .setDesc('Similarity score required to merge two isolated topics (from 0.5 to 1.0). Set to 1.0 to disable semantic merging.')
+        .addSlider(slider => slider
+            .setLimits(0.5, 1.0, 0.01)
+            .setValue(plugin.settings.gardenerSemanticMergeThreshold)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.gardenerSemanticMergeThreshold = value;
+                await plugin.saveSettings();
+            }));
 }
 
 function refreshSettings(plugin: IVaultIntelligencePlugin) {
