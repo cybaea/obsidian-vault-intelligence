@@ -23,7 +23,7 @@ New features are added in the "Unreleased" section.
 -   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
 -   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
 -   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
--   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load.
+-   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load. **NOTE** that this will trigger a full re-indexing of your vault on the next workspace load, potentially costing you AI tokens.
 
 ### Fixed
 
