@@ -11,6 +11,7 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+-   **Gardener orphan pruning**: The Gardener agent now automatically detects abandoned topic notes in your ontology that have no incoming links (either via wikilinks or frontmatter arrays), proposing them for deletion to keep your vault cleanly structured.
 -   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
 -   **Mixed-format de-duplication**: Resolved an issue where topics in the frontmatter (`topics:`) were duplicated due to mixed Markdown (`[Name](/Path.md)`) and Wikilink (`[[Link]]`) syntax. All topics are now resolved to canonical vault paths and de-duplicated reliably.
 -   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
@@ -22,6 +23,7 @@ New features are added in the "Unreleased" section.
 -   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
 -   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
 -   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
+-   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load.
 
 ### Fixed
 

@@ -2,13 +2,21 @@
 
 The Gardener agent helps you keep your vault structured by suggesting topics, links, and tags based on your own ontology.
 
+## Hygiene actions
+
+The Gardener performs several types of vault maintenance:
+
+1.  **Topic suggestion**: Identifying notes missing relevant topics and proposing links to existing (or new) topic files based on your semantic history.
+2.  **Topic merging**: Intelligently detecting duplicate or highly similar concepts in your ontology (eg `AI Agents` and `Ai Agents`) using lexical, structural, and semantic matching. When applied, the Gardener safely rewires all links across your vault to point to the canonical topic.
+3.  **Orphan pruning**: Identifying abandoned topic files that have zero incoming links—whether via standard wikilinks or native YAML frontmatter arrays (eg `topics:`)—and proposing them for deletion to keep your folder structure clean.
+
 ## The Workflow: Plan -> Review -> Apply
 
 The Gardener operates on a safe "human-in-the-loop" model. It will never modify your notes without your explicit approval.
 
 1.  **Plan**: The agent scans your notes and proposes changes in a temporary "Plan" file.
 2.  **Review**: You check the suggestions using an interactive UI.
-3.  **Apply**: You confirm the changes, and the agent executes them.
+3.  **Apply**: You confirm the changes, and the agent executes them natively using Obsidian's safe metadata processors.
 
 ## Step 1: Running a hygiene check
 
