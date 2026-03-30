@@ -26,11 +26,6 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 ### Fixed
 
 -   **MCP search compatibility**: Resolved an `INVALID_ARGUMENT` (HTTP 400) error that occurred when using Gemini Web Search Grounding alongside active MCP explicit tools. This was fixed by bypassing an SDK serialization bug and explicitly injecting the required `include_server_side_tool_invocations` (snake_case) configuration flag.
@@ -38,21 +33,12 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   **Native UI scaling**: Refactored hard-coded pixel values in chat error callouts to native Obsidian CSS variables (eg `var(--size-4-2)`, `var(--radius-s)`), ensuring robust scaling and theme consistency.
 -   **Updated dependency**: Updated `@modelcontextprotocol/sdk` to `v1.28.0`.
 
 ## [9.1.0] - 2026-03-24
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Folders as semantic information**: The Researcher and Explorer now automatically understand that notes organized in physical folders (e.g. `Projects/Apollo`) are structurally related to those topics. This allows powerful structural relationships to emerge organically without requiring explicit wikilinks on every page. This behaviour is highly configurable in Explorer settings.
 -   **Gardener Cost Optimizer**: Added a new command `"Gardener: organize vault concepts (new files only)"`. This allows you to aggressively filter out and skip notes that are already well-managed, drastically reducing the token costs and processing time of large vault hygiene runs. Detailed token savings are displayed in the generated Gardener plan summary.
@@ -64,10 +50,6 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   **Implicit graph edges**: Implemented a tri-state graph injection module (`implicitFolderSemantics`) that creates virtual structural nodes during indexing based on physical file paths, maintaining rigorous protective boundaries for Orama embedding limits.
 -   **State Batching**: Added `GardenerStateService.recordCheckBatch` to prevent I/O bottleneck freezes when processing thousands of filtered notes.
 -   **Agent execution refactoring**: Dramatically reduced the cyclomatic complexity of `AgentService.chatStream` by isolating the recursive tool-calling loop into a dedicated `processToolLoop` generator yielding cleanly.
@@ -78,11 +60,6 @@ New features are added in the "Unreleased" section.
 ## [9.0.0] - 2026-03-18
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Local model support (Ollama)**: Full production-ready support for local models via Ollama, including token-by-token streaming and high-reliability JSON mode.
 -   **Model Context Protocol (MCP)**: Extend the Researcher agent with custom tools using MCP. Connect to any standard MCP server via local execution (`stdio`) or remote URLs (using the modern `streamable_http` transport), unlocking capabilities like local filesystem access, database querying, or API interactions.
@@ -103,10 +80,6 @@ New features are added in the "Unreleased" section.
 -   **Granular web search control**: Added an "Enable web search" toggle giving you the ability to completely disable Google search integration, creating a cleaner offline experience.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Ollama integration (Phase 3)**: Finalised the local model provider with strict type safety, NDJSON streaming, and high-fidelity JSON mode support.
 -   **Provider registry architecture**: Introduced a central `ProviderRegistry` to dynamically manage multiple AI model providers (Gemini, Ollama), decoupling model capability discovery from the `AgentService`.
@@ -133,19 +106,10 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Gardener settings refinement**: Standardised the "Re-check cooldown" setting to use **days** instead of hours, ensuring consistency with other retention settings.
 -   **Decimal precision**: Added support for floating-point values (eg `0.1` days) across all Gardener time-based settings. Includes automatic rounding to 3 decimal places to maintain a clean configuration file.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Settings migration**: Implemented a background migration in `main.ts` to convert legacy `gardenerRecheckHours` to `gardenerRecheckDays`.
 
@@ -159,11 +123,6 @@ New features are added in the "Unreleased" section.
 -   **Minimum Obsidian version**: The minimum required version of Obsidian has been bumped to **v1.11.4** to support the native `SecretStorage` API. Users on older versions will not be able to install or update to this version.
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Semantic Galaxy View**: Augmented the static relationship list with a high-performance, interactive 3D-like graph view. The "Semantic Galaxy" visualises your vault's relationships in real-time, centring on your active note.
     -   **Visual RAG**: The graph now reacts to the Researcher agent. When the AI mentions files in its response, those notes are automatically highlighted in the galaxy, providing instant spatial context for the agent's reasoning.
@@ -180,10 +139,6 @@ New features are added in the "Unreleased" section.
 -   **Researcher UI**: Fixed a bug where the model selection dropdown would fail to display newly available models (like Gemini 3.1 Pro) after a fresh API fetch. The dropdown now dynamically updates across all views in real-time.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Secure API key storage**: Migrated Google Gemini API keys from plain text `data.json` to Obsidian's native `SecretStorage` API (v1.11.4+).
     -   **JIT initialization**: Refactored `GeminiService` to use asynchronous just-in-time client instantiation, preventing "Async Constructor" race conditions during plugin load.
@@ -207,19 +162,10 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Explorer stability fix**: Resolved a race condition that prevented the "Similar notes" view from loading results automatically after a plugin reload. Added a helpful "Open a note" message when no file is active to improve onboarding.
 -   **SSRF opt-in security**: Implemented an explicit "Allow Local Network Access" toggle in Advanced settings. This allows power users to grant the agent access to local services (eg Ollama or internal dashboards) while maintaining perfect protection for everyone else. Found and fixed a critical vulnerability where the live agent was bypassing existing SSRF checks.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Service-Oriented Architecture (SOA) Refactor**: Major architectural overhaul of the graph indexing system.
     -   Introduced `GraphSyncOrchestrator` to handle all background maintenance, vault event debouncing, and model lifecycle management.
@@ -242,11 +188,6 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Regex performance optimization**: Completely rewrote the `semanticSplit` function in the Indexer Worker to use index-scanning instead of a lazy-lookahead Regex. This eliminates a CPU-bound loop that caused the worker to freeze when indexing massively large markdown files (5MB+) lacking headers.
 -   **Ghost node prevention**: Fixed a bug where file renames could result in "ghost nodes" and indexing drifts. The `onRename` handler now explicitly deletes the old path before enqueuing a re-index for the new path.
 -   **Indexer schema hardening**: Resolved a schema leak in the Orama worker where undefined properties were being passed to the index, potentially causing hydration failures.
@@ -260,18 +201,9 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Explorer stability**: Fixed an issue where the "Similar notes" view would get stuck in a "Content drifted" display immediately after restarting Obsidian.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Hot Store hydration fix**: Fixed a regression in `IndexerWorker.loadIndex` where the "slim" vault index was loaded instead of the full IndexedDB "Hot Store" index on startup, which caused all search results to return empty text excerpts.
 -   **Drift recovery accuracy**: Corrected the `ResultHydrator.anchoredAlignment` sliding window algorithm to use exact chunk-length hashing rather than line-by-line hashing, allowing it to successfully recover drifted text.
@@ -280,11 +212,6 @@ New features are added in the "Unreleased" section.
 ## [6.0.0] - 2026-02-12
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Large-vault power-up**: We've overhauled the engine to handle 10,000+ notes with ease. By eliminating memory spikes, the plugin is now rock-stable and responsive even in massive knowledge bases.
 -   **Intelligent model switching**: You can now switch embedding models (eg between Local and Gemini) without losing your previous index. Each model maintains its own secure, isolated storage "shard", allowing for seamless transitions.
@@ -298,10 +225,6 @@ New features are added in the "Unreleased" section.
 -   **Instant startup stability**: Fixed a critical "startup crash" flaw, ensuring the plugin is ready to use the moment you open Obsidian.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Model-specific sharding**: Implemented sharded storage in `PersistenceManager` to namespace graph and vector state by model hash and dimension, preventing cross-model data corruption.
 -   **Native token tracking**: Refactored `ContextAssembler` and `SearchOrchestrator` to aggregate `tokenCount` directly from API usage metadata and worker outputs, replacing character-count heuristics.
@@ -322,25 +245,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 ## [5.2.0] - 2026-02-11
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Search performance overhaul**: Reduced agent response times by up to 50% by bypassing redundant reranking loops during tool execution.
 -   **Local embedding stability**: Resolved CORS errors that occurred when using local models by ensuring correct service routing.
@@ -359,10 +268,6 @@ New features are added in the "Unreleased" section.
 -   **Enhanced similarity intelligence**: The "Similar Notes" view now utilises a more robust hybrid scoring engine that prioritises conceptually linked topic siblings (Graph Neighbors) over pure text similarity (Vector matches) when the connection is strong.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Deep search toggling**: Added a `deep` option to the `SearchOrchestrator.search` method to allow manual control over the "Analyst Loop" (Loop 2).
 -   **Dynamic latency sizing**: Refactored `LATENCY_BUDGET_TOKENS` into a dynamic value calculated from a multiplier of the chunk size.
@@ -385,21 +290,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Fast Startup**: Optimized the plugin initialization process to load the application faster, even with large vaults.
 
 ## [5.1.0] - 2026-02-06
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Simplified advanced settings**: Removed obsolete GARS tuning and search expansion sliders that are no longer supported by the version 5 search architecture.
 -   **Improved configuration documentation**: Added detailed descriptions for context tuning parameters (primary, supporting, and structural thresholds) in the documentation.
@@ -407,20 +302,11 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   **Scoring engine cleanup**: Removed unused GARS weight parameters and search expansion seeds/thresholds from settings and types to resolve scoring ambiguity.
 
 ## [5.0.0] - 2026-02-05
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Deep semantic intelligence**: The Researcher now understands the "hidden threads" between your notes. By automatically treating frontmatter properties like `topics`, `tags`, and `author` as semantic bridges, the agent can discover relevant context across your vault even when you haven't used explicit Wikilinks.
 -   **Zero-noise Excalidraw integration**: Visual thinkers will notice a massive improvement in search quality. We've overhauled how drawing files are indexed, stripping away megabytes of internal JSON metadata while preserving actual text labels. This makes the index up to 99% smaller and eliminates "false positive" search results from drawing files.
@@ -431,10 +317,6 @@ New features are added in the "Unreleased" section.
 -   **Tuning control**: Added granular reset buttons to the Advanced Settings panel. You can now restore individual Search and Context thresholds to their default values or reset the entire section with a single click.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Accurate similarity scoring**: Fixed an issue where keyword matches could produce impossible similarity percentages (like 3333%). Scoring is now properly normalized using a sigmoidal calibration function in `SearchOrchestrator` for a reliable 0-100% scale.
 -   **Search Score Fix**: Fixed a critical bug in `SearchOrchestrator` where graph neighbor scores were being zeroed out. Neighbors now correctly retain their spread activation score.
@@ -466,27 +348,13 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Active tab context prioritisation**: The Researcher assistant now correctly identifies and prioritizes the document you are currently focused on. It also excludes "hidden" background tabs from its context, ensuring it only sees what you see.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 ## [4.3.0] - 2026-01-31
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Agentic file modification**: The Researcher is no longer read-only! It can now create notes, update existing files, and organize folders upon request (e.g., "Create a summary of this chat in a new note").
 -   **Human-in-the-loop security**: All write operations trigger a "Trust but Verify" confirmation modal, showing you exactly what the agent wants to change (including diffs for updates) before any data is touched.
@@ -511,10 +379,6 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   **FileTools architecture**: Implemented a dedicated FileTools class to encapsulate safe filesystem operations (createNote, updateNote, renameNote) with recursive folder creation and path normalization.
 -   **Strict content sanitization**: Added a robust sanitization pipeline that aggressively strips YAML frontmatter from agent-generated content to prevent metadata corruption.
 -   **Link-aware renaming**: The rename_note tool utilizes app.fileManager.renameFile, ensuring Obsidian automatically updates all wikilinks pointing to the moved file.
@@ -536,11 +400,6 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **High-performance graph storage**: Migrated graph and search index storage to MessagePack binary format. This results in up to 80% reduction in file size for large vaults and significantly faster plugin startup times.
 -   **Improved disk longevity**: Increased auto-save debounce to 30 seconds and implemented a smart "force-save" on plugin shutdown, drastically reducing unnecessary disk writes without risking data loss.
 -   **Automated privacy protection**: The plugin now automatically manages a nested `.gitignore` for its generated data directory, ensuring large binary index files are never accidentally committed to your repository.
@@ -548,10 +407,6 @@ New features are added in the "Unreleased" section.
 -   **Thinking indicator**: Added a visual pulsing indicator to the chat interface so you know when the agent is "thinking" about your request.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Worker-side serialization**: Offloaded MessagePack encoding and vector optimization to a background worker to eliminate UI thread latency during state persistence.
 -   **Vector packing optimization**: Implemented in-memory casting of embedding arrays to `Float32Array` before serialization, leveraging MessagePack's native binary encoding for near-ideal size efficiency.
@@ -561,20 +416,11 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   Service routing delegation: Fixed an issue where the "force re-download" button was inactive by implementing proper method delegation in the `RoutingEmbeddingService` wrapper, allowing the UI to access the underlying local service instance.
 
 ## [4.1.0] - 2026-01-26
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Configurable context engine**: Introduced a new "Search and context tuning" section in Advanced Settings, allowing users to fine-tune the GARS algorithm and context assembly.
 -   **Structural context pruning**: Implemented intelligent filtering that automatically skips low-relevance results. This restores a clean "3-5 relevant notes" context feel even when search finds dozens of matches.
@@ -583,10 +429,6 @@ New features are added in the "Unreleased" section.
 -   **Expansion score floor**: Implemented an absolute score safety guard that prevents expanding neighbors for weak/low-confidence search matches.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Precision-tuned GARS**: Refined the Graph-Augmented Relevance Score with better spreading activation weights (0.25) and dynamic decay controls.
 -   **Batch metadata optimization**: Context assembly now uses a single high-efficiency worker call to fetch headers and titles for all results, reducing latency by 95% in large vaults.
@@ -599,25 +441,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 ## [4.0.0] - 2026-01-25
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **GARS tuning**: Users can now precisely adjust the similarity, centrality, and activation weights in settings to fine-tune how the Research Assistant ranks notes.
 -   **Graph & ontology awareness**: The Research Assistant now understands vault hierarchy through a new topic sibling traversal algorithm, finding related notes even if they are not directly linked.
@@ -644,10 +472,6 @@ New features are added in the "Unreleased" section.
 -   **UI layout optimization**: Moved the Gardener model selection to sit directly above its corresponding budget setting for a more intuitive configuration flow.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **GARS mathematical model**: Formalized the graph-augmented relevance score calculation in `ScoringStrategy.ts`.
 -   **Dynamic ontology config**: Propagated `ontologyPath` settings to the background worker to ensure traversal logic respects custom folder structures.
@@ -676,11 +500,6 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Multilingual @ Mentions**: Full support for Unicode characters (Korean, Japanese, e.g. Korean `가`) in the `@` mention suggestion box (Resolves #60).
 -   **Improved @ Search**: The suggestion box now remains open during selection even when typing spaces or punctuation, allowing easier multi-word file matching.
 -   **Recursive Directory Context**: Mentioning a folder with `@` now recursively includes all Markdown files within that directory, ranked by semantic similarity to your query (Resolves #48).
@@ -691,10 +510,6 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
-
 -   **Robust Context Resolution**: Updated `ResearchChatView` to use `getAbstractFileByPath` for reliable file and folder resolution.
 -   **Context Safety**: Implemented explicit context budgeting for recursive folder expansions. The agent now prioritizes relevant files using similarity-based ranking and respects the user's `contextWindowTokens` setting.
 -   **Constant Centralization**: Refactored context budget calculations to use centralized `SEARCH_CONSTANTS` for better maintainability.
@@ -703,20 +518,11 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
-
 -   **Folder suggestion in settings**: Introduced an autocomplete folder selector for "Ontology path", "Gardener plans path", and "Excluded folders", making it easier to configure the plugin without manual typing.
 -   **Improved excluded folders management**: Redesigned the "Excluded folders" setting into a dynamic list view. You can now easily search for folders to ignore and remove them with a single click.
 -   **System instruction reset**: Added a "Reset" button to the advanced settings to easily restore the default agent behaviour and persona.
 
 ### Developer features
-
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager enhancements**: Implemented `replaceLinksAsync` using MetadataCache syntax-tree parsing to resolve Regex-brittleness when rewriting Obsidian links.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 
 -   **Reusable folder suggest component**: Implemented `FolderSuggest` (extending `AbstractInputSuggest`) for consistent folder selection across the plugin UI.
 -   **Settings refresh utility**: Added a helper to programmatically refresh the Obsidian settings tab, ensuring the UI stays in sync after automated updates.
@@ -724,11 +530,6 @@ New features are added in the "Unreleased" section.
 ## [2.0.1] - 2026-01-20
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 -   **Unified agentic terminology**: Standardized all major features under a role-based naming convention: **Researcher** for chat and reasoning, **Gardener** for vault hygiene and ontology management, and **Explorer** for similarity search and graph discovery.
 -   **Gardener agent for vault hygiene**: Introduced a proactive agent that analyses note metadata and suggests improvements based on a shared ontology. It operates on a "plan-review-apply" model to ensure user oversight and safety.
@@ -761,11 +562,6 @@ New features are added in the "Unreleased" section.
 ## [1.5.0] - 2026-01-10
 
 ### User features
-
--   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
 
 #### Sovereign intelligence (local + offline)
 
