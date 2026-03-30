@@ -13,10 +13,12 @@ New features are added in the "Unreleased" section.
 
 ### Fixed
 
--   **MCP search compatibility**: Resolved an `INVALID_ARGUMENT` (HTTP 400) error that occurred when using Gemini Web Search Grounding alongside active MCP explicit tools by enabling the `includeServerSideToolInvocations` configuration flag.
+-   **MCP search compatibility**: Resolved an `INVALID_ARGUMENT` (HTTP 400) error that occurred when using Gemini Web Search Grounding alongside active MCP explicit tools. This was fixed by bypassing an SDK serialization bug and explicitly injecting the required `include_server_side_tool_invocations` (snake_case) configuration flag.
+-   **Error message readability**: Fixed an issue where error messages in the Researcher tab were rendered as unreadable red text on a solid red background in some themes.
 
 ### Developer features
 
+-   **Native UI scaling**: Refactored hard-coded pixel values in chat error callouts to native Obsidian CSS variables (eg `var(--size-4-2)`, `var(--radius-s)`), ensuring robust scaling and theme consistency.
 -   **Updated dependency**: Updated `@modelcontextprotocol/sdk` to `v1.28.0`.
 
 ## [9.1.0] - 2026-03-24
