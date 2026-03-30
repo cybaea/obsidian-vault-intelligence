@@ -59,12 +59,8 @@ describe('MetadataManager - Merge Normalization', () => {
                         "[[Ontology/Concepts/Cloud Computing|Cloud Infrastructure]]"
                     ]
                 },
+                // Intentionally omit frontmatterLinks for the Markdown one to test the regex fallback
                 frontmatterLinks: [
-                    {
-                        key: "topics",
-                        link: "Ontology/Concepts/Cloud Computing.md",
-                        original: "[Cloud Computing](/Ontology/Concepts/Cloud%20Computing.md)"
-                    },
                     {
                         key: "topics",
                         link: "Ontology/Concepts/Cloud Computing|Cloud Infrastructure",
@@ -76,7 +72,8 @@ describe('MetadataManager - Merge Normalization', () => {
 
             // Mock resolution
             mockApp.metadataCache.getFirstLinkpathDest.mockImplementation((path: string) => {
-                if (path.includes('Cloud Computing')) {
+                // Should correctly resolve the Markdown path from regex extractor
+                if (path.includes('Cloud Computing') || path === '/Ontology/Concepts/Cloud Computing.md' || path === 'Ontology/Concepts/Cloud Computing.md') {
                     return { path: 'Ontology/Concepts/Cloud Computing.md' };
                 }
                 return null;

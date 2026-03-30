@@ -170,13 +170,22 @@ export class MetadataManager {
                         // 1. Resolve target path using Obsidian's cache (preferred) or best-effort regex (fallback)
                         let resolvedPath = linkMap.get(tStr) || null;
                         
-                        // Fallback for stale cache or links Obsidian missed (using native parseLinktext)
-                        if (!resolvedPath && tStr.startsWith("[[")) {
-                            const inner = tStr.replace(/^\[\[/, "").replace(/\]\]$/, "");
-                            const [linkPart] = inner.split("|");
-                            const parsed = parseLinktext(linkPart || "");
-                            const dest = this.app.metadataCache.getFirstLinkpathDest(parsed.path, neighborPath);
-                            if (dest) resolvedPath = dest.path;
+                        // Fallback for stale cache or links Obsidian missed (using native parseLinktext or best-effort regex for Markdown)
+                        if (!resolvedPath) {
+                            if (tStr.startsWith("[[")) {
+                                const inner = tStr.replace(/^\[\[/, "").replace(/\]\]$/, "");
+                                const [linkPart] = inner.split("|");
+                                const parsed = parseLinktext(linkPart || "");
+                                const dest = this.app.metadataCache.getFirstLinkpathDest(parsed.path, neighborPath);
+                                if (dest) resolvedPath = dest.path;
+                            } else {
+                                const mdMatch = tStr.match(/\[[^\]]*\]\(([^)]+)\)/);
+                                if (mdMatch && mdMatch[1]) {
+                                    const path = decodeURIComponent(mdMatch[1]).split("#")[0] || "";
+                                    const dest = this.app.metadataCache.getFirstLinkpathDest(path, neighborPath);
+                                    if (dest) resolvedPath = dest.path;
+                                }
+                            }
                         }
 
                         // 2. Determine if this topic points to the source we are merging
