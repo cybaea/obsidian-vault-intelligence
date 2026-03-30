@@ -136,6 +136,32 @@ export class MetadataManager {
                 await this.app.vault.modify(file, content);
                 logger.info(`Replaced ${linksToReplace.length} links to ${sourceTopic} in ${neighborPath}`);
             }
+
+            // Also check and update frontmatter topics (since cache.links often ignores frontmatter lists)
+            if (cache.frontmatter && cache.frontmatter.topics) {
+                await this.updateFrontmatter(file, (fm) => {
+                    let fmModified = false;
+                    if (Array.isArray(fm.topics)) {
+                        const newTopics = fm.topics.map((t: unknown) => {
+                            const tStr = String(t);
+                            if (tStr.includes(sourceName) || tStr.includes(sourceTopic)) {
+                                fmModified = true;
+                                return `[[${cleanTargetTopic}|${sourceName}]]`;
+                            }
+                            return t;
+                        });
+                        if (fmModified) {
+                            // Filter duplicates by tracking stringified values
+                            fm.topics = Array.from(new Set(newTopics.map(String)));
+                        }
+                    } else if (typeof fm.topics === "string") {
+                        const tStr = String(fm.topics);
+                        if (tStr.includes(sourceName) || tStr.includes(sourceTopic)) {
+                            fm.topics = [`[[${cleanTargetTopic}|${sourceName}]]`];
+                        }
+                    }
+                });
+            }
         }
     }
 }
