@@ -241,11 +241,11 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         const source = String((action as Record<string, unknown>).sourceTopic);
                         const target = String((action as Record<string, unknown>).targetTopic);
 
-                        // 1. Gather all files linking to the source topic
+                        // 1. Gather all files linking to the source OR target topic (for de-duplication)
                         const inboundLinks: string[] = [];
-                        for (const [sourcePath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
-                            if (links[source]) {
-                                inboundLinks.push(sourcePath);
+                        for (const [filePath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
+                            if (links[source] || links[target]) {
+                                inboundLinks.push(filePath);
                             }
                         }
 

@@ -1,4 +1,4 @@
-import { TFile, TFolder, App } from "obsidian";
+import { TFile, TFolder, App, parseLinktext } from "obsidian";
 
 import { logger } from "../utils/logger";
 
@@ -24,9 +24,9 @@ export class MetadataManager {
             await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
                 updates(frontmatter);
             });
-            logger.info(`Updated frontmatter for: ${file.path}`);
+            logger.info(`Updated frontmatter for: ${file.path || 'unknown'}`);
         } catch (error) {
-            logger.error(`Failed to update frontmatter for: ${file.path}`, error);
+            logger.error(`Failed to update frontmatter for: ${file.path || 'unknown'}`, error);
             throw error;
         }
     }
@@ -113,18 +113,26 @@ export class MetadataManager {
                 for (const link of linksToReplace) {
                     const start = link.position.start.offset;
                     const end = link.position.end.offset;
-                    
                     const originalLinkText = content.slice(start, end);
                     
                     let alias = sourceName;
-                    if (link.displayText && link.displayText !== link.link) {
+                    
+                    // Use native parsing for Wikilinks
+                    if (originalLinkText.startsWith("[[")) {
+                        const inner = originalLinkText.replace(/^\[\[/, "").replace(/\]\]$/, "");
+                        const [linkPart, ...aliasParts] = inner.split("|");
+                        parseLinktext(linkPart || ""); // Validate format
+                        if (aliasParts.length > 0) {
+                            alias = aliasParts.join("|");
+                        }
+                    } else if (link.displayText && link.displayText !== link.link) {
+                        // For Markdown links, Obsidian populates displayText
                         alias = link.displayText;
-                    } else if (originalLinkText.includes("|")) {
-                        const match = originalLinkText.match(/\|([^\]]+)\]\]/);
-                        if (match && match[1]) alias = match[1];
                     }
                     
-                    const newLink = `[[${cleanTargetTopic}|${alias}]]`;
+                    // If the alias is the same as the target path or source name, we might want to simplify
+                    // but usually, we just preserve what was there.
+                    const newLink = `[[${cleanTargetTopic}${alias && alias !== cleanTargetTopic ? "|" + alias : ""}]]`;
                     content = content.slice(0, start) + newLink + content.slice(end);
                     modified = true;
                 }
@@ -137,26 +145,86 @@ export class MetadataManager {
 
             // Also check and update frontmatter topics (since cache.links often ignores frontmatter lists)
             if (cache.frontmatter && cache.frontmatter.topics) {
+                // Map of original string -> resolved path from Obsidian's reference cache
+                const linkMap = new Map<string, string>();
+                if (cache.frontmatterLinks) {
+                    for (const ref of cache.frontmatterLinks) {
+                        if (ref.key === "topics") {
+                            const dest = this.app.metadataCache.getFirstLinkpathDest(ref.link, neighborPath);
+                            if (dest) linkMap.set(ref.original, dest.path);
+                        }
+                    }
+                }
+
                 await this.updateFrontmatter(file, (fm) => {
+                    if (!fm.topics) return;
+                    
+                    const originalTopics = Array.isArray(fm.topics) ? fm.topics : (typeof fm.topics === "string" ? [fm.topics] : []);
+                    const seenTargets = new Set<string>();
+                    const finalTopics: string[] = [];
                     let fmModified = false;
-                    if (Array.isArray(fm.topics)) {
-                        const newTopics = fm.topics.map((t: unknown) => {
-                            const tStr = String(t);
-                            // Check for exact path or basename match within wikilink syntax
-                            if (tStr.includes(sourceName) || tStr.includes(sourceTopic)) {
+
+                    for (const topic of originalTopics) {
+                        const tStr = String(topic);
+                        
+                        // 1. Resolve target path using Obsidian's cache (preferred) or best-effort regex (fallback)
+                        let resolvedPath = linkMap.get(tStr) || null;
+                        
+                        // Fallback for stale cache or links Obsidian missed (using native parseLinktext)
+                        if (!resolvedPath && tStr.startsWith("[[")) {
+                            const inner = tStr.replace(/^\[\[/, "").replace(/\]\]$/, "");
+                            const [linkPart] = inner.split("|");
+                            const parsed = parseLinktext(linkPart || "");
+                            const dest = this.app.metadataCache.getFirstLinkpathDest(parsed.path, neighborPath);
+                            if (dest) resolvedPath = dest.path;
+                        }
+
+                        // 2. Determine if this topic points to the source we are merging
+                        let isMergingSource = false;
+                        if (resolvedPath === sourceTopic) {
+                            resolvedPath = targetTopic;
+                            isMergingSource = true;
+                            fmModified = true;
+                        }
+
+                        if (resolvedPath) {
+                            // De-duplication: only add if we haven't seen this target file yet
+                            if (!seenTargets.has(resolvedPath)) {
+                                seenTargets.add(resolvedPath);
+                                
+                                // Construct the canonical link for the topic
+                                if (resolvedPath === targetTopic || resolvedPath === targetTopic.replace(/\.md$/, "")) {
+                                    // If this was rewired from source, use sourceName as alias
+                                    if (isMergingSource && tStr.includes(sourceName)) {
+                                        finalTopics.push(`[[${cleanTargetTopic}|${sourceName}]]`);
+                                    } else {
+                                        // Standardize to Wikilink but preserve alias if present
+                                        let alias = "";
+                                        if (tStr.startsWith("[[")) {
+                                            const inner = tStr.replace(/^\[\[/, "").replace(/\]\]$/, "");
+                                            const [, ...aliasParts] = inner.split("|");
+                                            if (aliasParts.length > 0) {
+                                                alias = aliasParts.join("|");
+                                            }
+                                        }
+                                        finalTopics.push(`[[${cleanTargetTopic}${alias && alias !== cleanTargetTopic ? "|" + alias : ""}]]`);
+                                    }
+                                } else {
+                                    // Keep existing format for other topics if possible, or standardize
+                                    finalTopics.push(tStr);
+                                }
+                            } else {
+                                // Redundant topic found!
                                 fmModified = true;
-                                return `[[${cleanTargetTopic}|${sourceName}]]`;
                             }
-                            return t;
-                        });
-                        if (fmModified) {
-                            fm.topics = Array.from(new Set(newTopics.map(String)));
+                        } else {
+                            // Doesn't resolve to a file (plain text), just keep it
+                            finalTopics.push(tStr);
                         }
-                    } else if (typeof fm.topics === "string") {
-                        const tStr = String(fm.topics);
-                        if (tStr.includes(sourceName) || tStr.includes(sourceTopic)) {
-                            fm.topics = [`[[${cleanTargetTopic}|${sourceName}]]`];
-                        }
+                    }
+
+                    if (fmModified) {
+                        fm.topics = finalTopics;
                     }
                 });
             }

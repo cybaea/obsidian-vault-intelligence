@@ -41,6 +41,11 @@ export function normalizePath(path: string): string {
     return result.join('/');
 }
 
+export function parseLinktext(linktext: string): { path: string; subpath: string } {
+    const [path, subpath] = linktext.split('#');
+    return { path: path || "", subpath: subpath || "" };
+}
+
 export class TFile {
     basename: string = "";
     extension: string = "";
