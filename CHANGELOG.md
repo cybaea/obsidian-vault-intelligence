@@ -11,6 +11,12 @@ New features are added in the "Unreleased" section.
 
 ### User features
 
+### Developer features
+
+## [9.1.1] - 2026-03-30
+
+### User features
+
 ### Fixed
 
 -   **MCP search compatibility**: Resolved an `INVALID_ARGUMENT` (HTTP 400) error that occurred when using Gemini Web Search Grounding alongside active MCP explicit tools. This was fixed by bypassing an SDK serialization bug and explicitly injecting the required `include_server_side_tool_invocations` (snake_case) configuration flag.
