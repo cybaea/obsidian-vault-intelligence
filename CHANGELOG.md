@@ -21,6 +21,8 @@ New features are added in the "Unreleased" section.
 
 ### Developer features
 
+-   **Magic numbers**: Centralized all hardcoded logic multipliers and constraints into `src/constants.ts` (eg `SEARCH_CONSTANTS.HYBRID_VECTOR_DIVIDER`, `OLLAMA_CONSTANTS.MAX_BUFFER_SIZE`) to improve maintainability.
+-   **Test coverage**: Expanded the automated test framework to rigorously cover complex edge cases in `OllamaProvider` NDJSON string boundary buffering and `SemanticGraphView` WebGL lifecycle observer recovery.
 -   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
 -   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
 -   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
@@ -32,6 +34,9 @@ New features are added in the "Unreleased" section.
 
 ### Fixed
 
+-   **Ollama streaming reliability**: Fixed a critical bug where native Ollama tool calls spanning across NDJSON socket chunk boundaries would fail to parse, by properly tracking buffering context state.
+-   **Regex ReDoS prevention**: Hardened the `@mention` extraction regex against catastrophic backtracking vulnerabilities by using standard negative lookbehinds.
+-   **Fall-back hallucination resilience**: Added case-insensitivity flags to structural markdown JSON and XML Tool Call string parsing regexes to safely handle varying LLM format hallucinations.
 -   **MCP command injection**: Fixed a critical vulnerability in the MCP client manager where shell-based process execution could lead to command injection. Replaced with safe argument-array process spawning.
 -   **Electron sandbox enforcement**: Removed unsecure `globalThis` patching for Node.js modules, explicitly enabling safe dynamic resolution of native modules only on desktop environments to prevent mobile crashes and adhere to Electron security bounderies.
 -   **SSRF DNS rebinding**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding. All external network endpoints are now strictly enforced over HTTPS (when local access is denied) to utilize native TLS/SNI certificate validation as a security boundary against loopback targeting.

@@ -1,6 +1,7 @@
 import { App, normalizePath } from "obsidian";
 import { z } from "zod";
 
+import { SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { IEmbeddingClient, IReasoningClient } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
@@ -204,8 +205,8 @@ export class SearchOrchestrator {
             const normalizedKeywordScore = res.score / (res.score + K);
 
             if (existing !== undefined) {
-                // Blend scores. We give vector results slightly more weight by dividing by 1.5.
-                existing.score = (existing.score + normalizedKeywordScore) / 1.5;
+                // Blend scores. We give vector results slightly more weight by dividing by HYBRID_VECTOR_DIVIDER.
+                existing.score = (existing.score + normalizedKeywordScore) / SEARCH_CONSTANTS.HYBRID_VECTOR_DIVIDER;
                 existing.isKeywordMatch = true;
             } else {
                 mergedMap.set(res.path, { ...res, score: normalizedKeywordScore });

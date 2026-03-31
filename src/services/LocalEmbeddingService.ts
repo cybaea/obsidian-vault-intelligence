@@ -404,7 +404,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
 
             // 2-minute safety timeout for metadata/weights fetching
             const timeoutPromise = new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error(`Proxy request timed out after 120s: ${data.url}`)), 120000)
+                setTimeout(() => reject(new Error(`Proxy request timed out after ${WORKER_CONSTANTS.PROXY_TIMEOUT_MS}ms: ${data.url}`)), WORKER_CONSTANTS.PROXY_TIMEOUT_MS)
             );
 
             const response = await Promise.race([
