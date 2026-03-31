@@ -250,6 +250,30 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     tuningGroup.addSetting(setting => {
+        setting.setName('Search centrality limit')
+        .setDesc('Max number of "bridge" nodes to pull in from the graph to expand search context. Higher values improve thematic recall but increase token usage.')
+        .addSlider(slider => slider
+            .setLimits(10, 200, 10)
+            .setValue(plugin.settings.searchCentralityLimit)
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+                plugin.settings.searchCentralityLimit = value;
+                await plugin.saveSettings();
+            })
+        )
+        .addExtraButton(btn => btn
+            .setIcon('reset')
+            .setTooltip(`Reset to default (${DEFAULT_SETTINGS.searchCentralityLimit})`)
+            .onClick(async () => {
+                plugin.settings.searchCentralityLimit = DEFAULT_SETTINGS.searchCentralityLimit;
+                await plugin.saveSettings();
+                context.containerEl.empty();
+                renderAdvancedSettings(context);
+            })
+        );
+    });
+
+    tuningGroup.addSetting(setting => {
         setting.setName('Max context documents')
         .setDesc('Safety limit for total number of documents injected into context.')
         .addSlider(slider => slider

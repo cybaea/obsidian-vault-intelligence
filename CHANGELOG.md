@@ -9,6 +9,18 @@ New features are added in the "[Unreleased]" section.
 
 ## [Unreleased]
 
+### Added
+- Exposed several previously "hidden" settings in the settings tabs for better user control:
+    - Added **Dual-Loop Search** controls (Enable toggle and Re-ranking model) to the Explorer tab.
+    - Added **Orphan Management** settings (Archive folder and Grace period) to the Gardener tab.
+    - Added **Search Centrality Limit** to the Advanced tab.
+
+### Changed
+- Completely overhauled the **Configuration Reference** documentation (`docs/reference/configuration.md`) to align with the current codebase, adding descriptions for all 60+ settings with a focus on outcome-oriented explanations and hardware optimisation.
+- Integrated troubleshooting callouts directly into the configuration documentation with deep links to the [Troubleshooting Guide](file:///home/allane/Code/GitHub/obsidian-vault-intelligence/docs/reference/troubleshooting.md).
+- Standardised terminology between the UI, documentation, and codebase.
+- Improved the tone and clarity of all setting descriptions using British English and Oxford Dictionary spelling.
+
 ### User features
 
 -   **NOTE** that this release will trigger a full re-indexing of your vault on the next workspace load, potentially costing you AI tokens.

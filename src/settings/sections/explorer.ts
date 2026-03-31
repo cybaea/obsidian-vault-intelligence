@@ -288,6 +288,51 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     new Setting(containerEl).setName('Search').setHeading();
 
     new Setting(containerEl)
+        .setName('Enable dual-loop search')
+        .setDesc('Combine fast local vector search (Loop 1) with deep AI re-ranking (Loop 2) for maximum accuracy.')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.enableDualLoop)
+            .onChange(async (value) => {
+                plugin.settings.enableDualLoop = value;
+                await plugin.saveSettings();
+                renderExplorerSettings(context); // Refresh to show model selector
+            }));
+
+    if (plugin.settings.enableDualLoop) {
+        const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
+        const reRankingModelCurrent = plugin.settings.reRankingModel;
+        const isReRankingPreset = chatModels.some(m => m.id === reRankingModelCurrent);
+
+        new Setting(containerEl)
+            .setName('Re-ranking model')
+            .setDesc('The AI engine used for the second loop (Analyst) to verify and rank search results.')
+            .addDropdown(dropdown => {
+                renderModelDropdown(dropdown, chatModels, reRankingModelCurrent, !!plugin.settings.googleApiKey || !!plugin.settings.ollamaEndpoint, !!plugin.settings.ollamaEndpoint, (val) => {
+                    void (async () => {
+                        if (val !== 'custom') {
+                            plugin.settings.reRankingModel = val;
+                            await plugin.saveSettings();
+                        }
+                        renderExplorerSettings(context);
+                    })();
+                });
+            });
+
+        if (!isReRankingPreset) {
+            new Setting(containerEl)
+                .setName('Custom re-ranking model')
+                .setDesc('Enter the specific Gemini or Ollama model ID.')
+                .addText(text => text
+                    .setPlaceholder(DEFAULT_SETTINGS.reRankingModel)
+                    .setValue(reRankingModelCurrent)
+                    .onChange(async (value) => {
+                        plugin.settings.reRankingModel = value;
+                        await plugin.saveSettings();
+                    }));
+        }
+    }
+
+    new Setting(containerEl)
         .setName('Minimum similarity score')
         .setDesc('Relevance threshold. Results below this are hidden.')
         .addSlider(slider => slider

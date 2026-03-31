@@ -186,6 +186,35 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 })();
             }));
 
+    new Setting(containerEl).setName('Orphan management').setHeading();
+
+    new Setting(containerEl)
+        .setName('Archive folder path')
+        .setDesc('Where to move notes that are pruned or deleted by the Gardener.')
+        .addText(text => {
+            text.setPlaceholder('Ontology/_Archive')
+                .setValue(plugin.settings.gardenerArchiveFolderPath)
+                .onChange(async (value) => {
+                    plugin.settings.gardenerArchiveFolderPath = value;
+                    await plugin.saveSettings();
+                });
+            new FolderSuggest(plugin.app, text.inputEl);
+        });
+
+    new Setting(containerEl)
+        .setName("Orphan grace period (days)")
+        .setDesc('Number of days a note must be unlinked/orphaned before the Gardener suggests pruning it.')
+        .addText(text => text
+            .setPlaceholder('7')
+            .setValue(String(plugin.settings.gardenerOrphanGracePeriodDays))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.gardenerOrphanGracePeriodDays = Math.floor(num);
+                    await plugin.saveSettings();
+                }
+            }));
+
     // --- 4. Exclusions ---
     new Setting(containerEl).setName('Exclusions').setHeading();
 
