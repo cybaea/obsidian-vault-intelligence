@@ -122,7 +122,8 @@ export default withMermaid(defineConfig({
                         { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
                         { text: 'Key Features', link: '/docs/explanation/key-features' },
                         { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' },
-                        { text: 'Strategic Positioning', link: '/docs/explanation/strategic-positioning' }
+                        { text: 'Strategic Positioning', link: '/docs/explanation/strategic-positioning' },
+                        { text: 'Security and Privacy', link: '/devs/security-and-robustness' }
                     ]
                 },
                 {
@@ -155,6 +156,7 @@ export default withMermaid(defineConfig({
                         { text: 'Documentation Standards', link: '/devs/documentation-standards' },
                         { text: 'Codebase Review', link: '/devs/codebase_review' },
                         { text: 'Review Checklist', link: '/devs/review_checklist' },
+                        { text: 'Security and Robustness', link: '/devs/security-and-robustness' },
                         { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },
                         { text: 'Internal Agents Guide', link: '/AGENTS' }
                     ]

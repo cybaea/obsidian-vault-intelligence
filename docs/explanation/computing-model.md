@@ -55,3 +55,5 @@ Vault Intelligence supports two primary reasoning engines for the active Chat, S
 | **Energy Usage** | Minimal battery impact. | Heavy battery drain and heat generation during active use. |
 
 **The Verdict**: We recommend **Gemini** for 95% of users. It provides the best reasoning quality, massive context, embedded tools, and zero setup without requiring an expensive workstation. However, if you have the hardware and strict offline/privacy requirements, **Ollama** offers a brilliant, uncompromising alternative.
+
+Regardless of your choice, Vault Intelligence operates within a rigorous safety model. To understand how we handle credential storage, SSRF prevention, and secure tool execution, see our **[Security and Robustness Standards](../../devs/security-and-robustness.md)**.

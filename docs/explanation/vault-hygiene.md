@@ -29,4 +29,8 @@ The Gardener does not guess; it follows your ontology. It looks at where you hav
 -   If you put all companies in `Entities/Companies`, it will suggest moving new company notes there.
 -   If you tag people with #person, it will suggest that tag for new contacts.
 
-This creates a positive feedback loop: the improved structure makes future suggestions more accurate.
+## Privacy and safety
+
+The Gardener works extensively with your vault's structure, but it never modifies your files without explicit consent. Every action it proposes is held in a "Gardening Plan" for your review.
+
+This "Human-in-the-Loop" model is a core pillar of our security architecture. For a deep dive into how we protect your vault from unintended modifications and external threats, see our **[Security and Robustness Standards](../../devs/security-and-robustness.md)**.
