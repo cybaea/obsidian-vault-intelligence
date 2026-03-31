@@ -68,8 +68,12 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             })();
         }));
 
+    const google = "Google";
+    const gemini = "Gemini";
+    const ollama = "Ollama";
+
     const apiSetting = new Setting(containerEl)
-        .setName('Google API key')
+        .setName(`${google} API key`)
         .setClass('vault-intelligence-api-setting');
 
     if (plugin.settings.secretStorageFailure) {
@@ -136,7 +140,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
     };
 
     new Setting(containerEl)
-        .setName('Ollama endpoint')
+        .setName(`${ollama} endpoint`)
         .setDesc('Server url for local model provider.')
         .addText(text => text
             .setPlaceholder('Enter endpoint (e.g., http://localhost:11434)')
@@ -161,11 +165,13 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             }));
 
     // --- 3. Model List Management ---
-    new Setting(containerEl).setName('Model management').setHeading();
+    new Setting(containerEl)
+        .setName('Model management')
+        .setHeading();
 
     new Setting(containerEl)
         .setName('Refresh model list')
-        .setDesc('Force a fresh fetch of available models from the Gemini API.')
+        .setDesc(`Force a fresh fetch of available models from the ${gemini} API.`)
         .addButton(btn => btn
             .setButtonText("Refresh models")
             .setIcon('refresh-cw')
@@ -203,7 +209,10 @@ function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => vo
     const configDir = app.vault.configDir;
     const fragment = document.createDocumentFragment();
 
-    fragment.append('Enter your Google Gemini API key.');
+    const google = "Google";
+    const gemini = "Gemini";
+
+    fragment.append(`Enter your ${google} ${gemini} API key.`);
 
     fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
         const iconSpan = div.createSpan();
@@ -212,9 +221,9 @@ function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => vo
             textSpan.append('Obtain a key from the ');
             textSpan.createEl('a', {
                 href: 'https://console.cloud.google.com/apis/credentials',
-                text: 'Google Cloud Console'
+                text: `${google} Cloud Console`
             });
-            textSpan.append('. Enable Gemini API.');
+            textSpan.append(`. Enable ${gemini} API.`);
         });
     });
 

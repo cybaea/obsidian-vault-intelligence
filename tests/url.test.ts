@@ -28,9 +28,9 @@ describe('URL Utility', () => {
     });
 
     describe('isExternalUrl', () => {
-        it('should allow public https/http URLs', () => {
+        it('should allow public https URLs', () => {
             expect(isExternalUrl('https://google.com')).toBe(true);
-            expect(isExternalUrl('http://example.org/path')).toBe(true);
+            expect(isExternalUrl('https://example.org/path')).toBe(true);
             expect(isExternalUrl('https://github.com/cybaea/obsidian-vault-intelligence')).toBe(true);
         });
 
@@ -55,9 +55,9 @@ describe('URL Utility', () => {
             expect(isExternalUrl('http://172.31.255.255')).toBe(false);
         });
 
-        it('should allow public IPs near private ranges', () => {
-            expect(isExternalUrl('http://172.15.255.255')).toBe(true);
-            expect(isExternalUrl('http://172.32.0.0')).toBe(true);
+        it('should allow public IPs near private ranges (via HTTPS)', () => {
+            expect(isExternalUrl('https://172.15.255.255')).toBe(true);
+            expect(isExternalUrl('https://172.32.0.0')).toBe(true);
         });
 
         it('should block cloud metadata IPs', () => {

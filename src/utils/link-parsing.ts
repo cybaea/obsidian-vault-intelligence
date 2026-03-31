@@ -82,18 +82,18 @@ export function resolvePath(link: string, aliasMap?: Map<string, string>, basePa
 /**
  * Splits a markdown string into frontmatter and body.
  * @param text - The full markdown file content.
- * @returns An object containing the frontmatter string and the body string.
+ * @returns An object containing the frontmatter string, the body string, and the exact byte offset where the body begins.
  */
-export function splitFrontmatter(text: string): { frontmatter: string, body: string } {
+export function splitFrontmatter(text: string): { frontmatter: string, body: string, bodyOffset: number } {
     if (!text.startsWith("---")) {
-        return { body: text, frontmatter: "" };
+        return { body: text, bodyOffset: 0, frontmatter: "" };
     }
 
     const firstLineEnd = text.indexOf("\n");
-    if (firstLineEnd === -1) return { body: text, frontmatter: "" };
+    if (firstLineEnd === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     const secondSeparator = text.indexOf("\n---", firstLineEnd);
-    if (secondSeparator === -1) return { body: text, frontmatter: "" };
+    if (secondSeparator === -1) return { body: text, bodyOffset: 0, frontmatter: "" };
 
     // Find the end of the second separator line
     let bodyStart = secondSeparator + 4; // Length of "\n---"
@@ -106,19 +106,20 @@ export function splitFrontmatter(text: string): { frontmatter: string, body: str
 
     return {
         body: text.substring(bodyStart),
-        frontmatter: text.substring(0, bodyStart).trim()
+        bodyOffset: bodyStart,
+        frontmatter: text.substring(0, bodyStart)
     };
 }
 
 /**
  * Unified link extractor that handles both Obsidian wikilinks [[link]] 
  * and standard Markdown links [text](url).
+ * Uses a manual character walker to avoid ReDoS and accurately skip code blocks.
  * @param text - The text to extract links from.
  * @returns An array of extracted link strings.
  */
 export function extractLinks(text: string): string[] {
     const links: string[] = [];
-
     let i = 0;
     const len = text.length;
 
@@ -133,46 +134,7 @@ export function extractLinks(text: string): string[] {
 
         // 2. Handle Code (Blocks and Inline)
         if (char === '`') {
-            const startBackticks = i;
-            while (i < len && text[i] === '`') i++;
-            const backtickCount = i - startBackticks;
-            const delimiter = '`'.repeat(backtickCount);
-
-            let searchPos = i;
-            let found = false;
-            while (searchPos < len) {
-                const nextDelimiterPos = text.indexOf(delimiter, searchPos);
-                if (nextDelimiterPos === -1) break;
-
-                let actualCount = 0;
-                let j = nextDelimiterPos;
-                while (j < len && text[j] === '`') {
-                    j++;
-                    actualCount++;
-                }
-
-                if (actualCount === backtickCount) {
-                    if (backtickCount === 1 && nextDelimiterPos > startBackticks && text[nextDelimiterPos - 1] === '\\') {
-                        let backslashCount = 0;
-                        let k = nextDelimiterPos - 1;
-                        while (k >= startBackticks && text[k] === '\\') {
-                            backslashCount++;
-                            k--;
-                        }
-                        if (backslashCount % 2 === 1) {
-                            searchPos = j;
-                            continue;
-                        }
-                    }
-                    i = j;
-                    found = true;
-                    break;
-                } else {
-                    searchPos = j;
-                }
-            }
-            if (found) continue;
-            i = startBackticks + backtickCount;
+            i = skipCode(text, i);
             continue;
         }
 
@@ -180,63 +142,20 @@ export function extractLinks(text: string): string[] {
         if (char === '[') {
             // Case A: Wikilinks [[ ... ]]
             if (text[i + 1] === '[') {
-                const start = i + 2;
-                const end = text.indexOf(']]', start);
-
-                if (end !== -1) {
-                    const rawContent = text.substring(start, end);
-                    if (!rawContent.includes('\n')) {
-                        const link = rawContent.split('|')[0]?.trim();
-                        if (link && link.length > 0) {
-                            links.push(link);
-                        }
-                        i = end + 2;
-                        continue;
-                    }
+                const result = parseWikilink(text, i);
+                if (result) {
+                    if (result.link) links.push(result.link);
+                    i = result.nextIndex;
+                    continue;
                 }
-            }
+            } 
             // Case B: Standard Markdown Links [text](url)
             else {
-                // Find potential closing bracket ]
-                let bracketDepth = 1;
-                let j = i + 1;
-                while (j < len && bracketDepth > 0) {
-                    if (text[j] === '\\') { j += 2; continue; }
-                    if (text[j] === '[') bracketDepth++;
-                    else if (text[j] === ']') bracketDepth--;
-                    j++;
-                }
-
-                // If we found a closing bracket, check for (url)
-                if (bracketDepth === 0 && text[j] === '(') {
-                    const urlStart = j + 1;
-                    let parenDepth = 1;
-                    let k = urlStart;
-                    while (k < len && parenDepth > 0) {
-                        if (text[k] === '\\') { k += 2; continue; }
-                        if (text[k] === '(') parenDepth++;
-                        else if (text[k] === ')') parenDepth--;
-                        k++;
-                    }
-
-                    if (parenDepth === 0) {
-                        const rawUrl = text.substring(urlStart, k - 1).trim();
-
-                        // Clean up the URL
-                        if (rawUrl && !rawUrl.match(/^(https?|mailto):/i)) {
-                            let cleanUrl = rawUrl.split('#')[0] || "";
-                            cleanUrl = cleanUrl.trim();
-
-                            if (cleanUrl.length > 0) {
-                                if (cleanUrl.startsWith('/')) {
-                                    cleanUrl = cleanUrl.substring(1);
-                                }
-                                links.push(decodeURIComponent(cleanUrl));
-                            }
-                        }
-                        i = k;
-                        continue;
-                    }
+                const result = parseMarkdownLink(text, i);
+                if (result) {
+                    if (result.link) links.push(result.link);
+                    i = result.nextIndex;
+                    continue;
                 }
             }
         }
@@ -245,5 +164,123 @@ export function extractLinks(text: string): string[] {
     }
 
     return links;
+}
+
+/**
+ * Internal helper to skip over markdown code delimiters and their contents.
+ */
+function skipCode(text: string, startIndex: number): number {
+    const len = text.length;
+    let i = startIndex;
+    const startBackticks = i;
+    
+    while (i < len && text[i] === '`') i++;
+    const backtickCount = i - startBackticks;
+    const delimiter = '`'.repeat(backtickCount);
+
+    let searchPos = i;
+    while (searchPos < len) {
+        const nextDelimiterPos = text.indexOf(delimiter, searchPos);
+        if (nextDelimiterPos === -1) break;
+
+        let actualCount = 0;
+        let j = nextDelimiterPos;
+        while (j < len && text[j] === '`') {
+            j++;
+            actualCount++;
+        }
+
+        if (actualCount === backtickCount) {
+            // Check for escaped backtick (only relevant for single-backtick inline code)
+            if (backtickCount === 1 && nextDelimiterPos > startBackticks && text[nextDelimiterPos - 1] === '\\') {
+                let backslashCount = 0;
+                let k = nextDelimiterPos - 1;
+                while (k >= startBackticks && text[k] === '\\') {
+                    backslashCount++;
+                    k--;
+                }
+                if (backslashCount % 2 === 1) {
+                    searchPos = j;
+                    continue;
+                }
+            }
+            return j;
+        } else {
+            searchPos = j;
+        }
+    }
+    return startBackticks + backtickCount;
+}
+
+/**
+ * Internal helper to parse an Obsidian wikilink.
+ */
+function parseWikilink(text: string, i: number): { link: string; nextIndex: number } | null {
+    const start = i + 2;
+    const end = text.indexOf(']]', start);
+
+    if (end === -1) return null;
+
+    const rawContent = text.substring(start, end);
+    // Wikilinks cannot contain newlines
+    if (rawContent.includes('\n')) return null;
+
+    const link = rawContent.split('|')[0]?.trim();
+    return {
+        link: link || "",
+        nextIndex: end + 2
+    };
+}
+
+/**
+ * Internal helper to parse a standard Markdown link.
+ */
+function parseMarkdownLink(text: string, i: number): { link: string; nextIndex: number } | null {
+    const len = text.length;
+    
+    // Find potential closing bracket ]
+    let bracketDepth = 1;
+    let j = i + 1;
+    while (j < len && bracketDepth > 0) {
+        if (text[j] === '\\') { j += 2; continue; }
+        if (text[j] === '[') bracketDepth++;
+        else if (text[j] === ']') bracketDepth--;
+        j++;
+    }
+
+    // If we found a closing bracket, check for (url)
+    if (bracketDepth === 0 && j < len && text[j] === '(') {
+        const urlStart = j + 1;
+        let parenDepth = 1;
+        let k = urlStart;
+        while (k < len && parenDepth > 0) {
+            if (text[k] === '\\') { k += 2; continue; }
+            if (text[k] === '(') parenDepth++;
+            else if (text[k] === ')') parenDepth--;
+            k++;
+        }
+
+        if (parenDepth === 0) {
+            const rawUrl = text.substring(urlStart, k - 1).trim();
+
+            // Clean up the URL
+            if (rawUrl && !rawUrl.match(/^(https?|mailto):/i)) {
+                let cleanUrl = rawUrl.split('#')[0] || "";
+                cleanUrl = cleanUrl.trim();
+
+                if (cleanUrl.length > 0) {
+                    if (cleanUrl.startsWith('/')) {
+                        cleanUrl = cleanUrl.substring(1);
+                    }
+                    return {
+                        link: decodeURIComponent(cleanUrl),
+                        nextIndex: k
+                    };
+                }
+            }
+            return { link: "", nextIndex: k };
+        }
+    }
+    return null;
 }
 

@@ -11,11 +11,10 @@ export function computeCentroid(vectors: number[][]): number[] | undefined {
     if (vectors.length === 0) return undefined;
     const dims = vectors[0]?.length;
     if (!dims) return undefined;
-    const sum = new Array(dims).fill(0);
+    const sum: number[] = new Array<number>(dims).fill(0);
     for (const vec of vectors) {
         for (let i = 0; i < dims; i++) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- required for type array indexing
-            sum[i]! += vec[i] ?? 0;
+            sum[i] = (sum[i] ?? 0) + (vec[i] ?? 0);
         }
     }
     return sum.map(v => v / vectors.length);

@@ -523,8 +523,9 @@ export class ToolRegistry {
     private async executeListMcpResources() {
         if (!this.mcpClientManager) return { error: "MCP Client Manager is not available." };
         
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout while fetching MCP resources.")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
+            timeoutId = setTimeout(() => reject(new Error("Timeout while fetching MCP resources.")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
         );
 
         try {
@@ -551,6 +552,8 @@ export class ToolRegistry {
             const message = e instanceof Error ? e.message : String(e);
             logger.error(`Failed to list MCP resources`, e);
             return { error: `Failed to list MCP resources: ${message}` };
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
         }
     }
 
@@ -560,8 +563,9 @@ export class ToolRegistry {
         const uri = args.uri as string;
         if (!serverId || !uri) return { error: "serverId and uri arguments are required." };
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error(`Timeout while reading MCP resource: ${uri}`)), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
+            timeoutId = setTimeout(() => reject(new Error(`Timeout while reading MCP resource: ${uri}`)), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS)
         );
 
         try {
@@ -592,6 +596,8 @@ export class ToolRegistry {
             const message = e instanceof Error ? e.message : String(e);
             logger.error(`Failed to read MCP resource`, e);
             return { error: `Failed to read MCP resource: ${message}` };
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
         }
     }
 }

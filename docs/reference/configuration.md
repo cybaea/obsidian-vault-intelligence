@@ -1,6 +1,6 @@
 ---
 description: Comprehensive reference for all Vault Intelligence plugin settings.
-keywords: configuration, settings, setup, api key, context budget, gardener, researcher
+keywords: configuration, settings, setup, api key, context budget, gardener, researcher, dual-loop, re-ranking
 ---
 
 # Configuration
@@ -9,136 +9,116 @@ Vault Intelligence is designed to be powerful out of the box, but you can custom
 
 ## Connection
 
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored in plain text in your plugin settings (`data.json`), but masked for display and logging using SHA-256 fingerprints. Required for all Gemini models and Gemini embeddings. |
-| Ollama endpoint | `http://localhost:11434` | Server URL for local model provider. Required for Ollama models. |
-| Refresh models | `None` | A manual trigger to force a fresh fetch of available models from the Gemini API. |
-
-## Researcher
-
-Consolidate settings for the Research Assistant agent.
+Manage your core intelligence providers and credentials.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Chat model | `gemini-3-flash-preview` | The main intelligence engine. <br>• _Cloud (Gemini):_ High quality, zero hardware tax. <br>• _Local (Ollama):_ Private, free, runs on your hardware. |
-| Agent language | `English (US)` | The primary language for all agent interactions. Affects the default system prompt and response style. |
-| System instruction | `Default (Managed)` | The core personality, role, and rules for the Researcher. Leave as default to receive automatic improvements in future updates. |
-| Context window budget | `200,000` | Max tokens the AI can consider at once. Automatically scales proportionally when you switch models. <br><br>**Ollama Note:** For local models, this requires careful tuning based on your GPU VRAM, the size of your loaded models, and your quantization levels. High context windows on local hardware will cause out-of-memory errors. |
-| Max agent steps | `5` | Limits reasoning loops to prevent infinite "thinking" or high costs. |
-| Web search model | `gemini-2.5-flash-lite` | Model used specifically for web searches and fact-checking. Choose from Gemini or Ollama models. |
-| Enable computational solver | `On` | Allows the agent to write and execute Python code for math and data analysis. |
-| Code execution model | `gemini-3-flash-preview` | The specialised model used for generating Python code. |
-| Enable agent write access | `Off` | Allows the agent to create and update notes in your vault. Always requires manual confirmation. |
-| Vault reading limit | `25` | Max notes the Researcher can retrieve to answer a single question. |
-
-## Explorer
-
-Configure how connections and similar notes are discovered.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Embedding provider | `gemini` | Google Gemini: Cloud-based. Requires API key. <br>Ollama: Offline. Runs on your local Ollama server. <br>Transformers.js: Offline. Runs on your CPU. |
-| Embedding model | `gemini-embedding-001` | The vector engine. Choose from Gemini presets or various local ONNX / Ollama models. |
-| Embedding dimension | `768` | Output vector size. For supported local models (eg `nomic-embed-text`), allows selecting smaller, compressed Matryoshka dimensions (eg 512, 256, 128, 64) to save disk space with minimal accuracy loss. |
-| Minimum similarity score | `0.5` | Relevance threshold (0.0 to 1.0). Matches below this are ignored. |
-| Semantic graph node limit | `250` | Maximum number of nodes to render in the Semantic Galaxy view. Controls the scale of the visualised universe. **How to set:** Keep at `250` for standard performance. Increase to `500+` on powerful desktops for massive overviews, or lower to `100` if the physics simulation stutters on older devices. |
-| Structural edge thickness | `1.0` | Visual weight of explicit wikilinks. Controls how thick the lines representing your actual markdown links are. **How to set:** The default `1.0` balances visibility. Increase to `2.0+` if you want your manual structure to clearly dominate the graph, or reduce to `0.5` to blend them evenly with AI suggestions. |
-| Semantic edge thickness | `0.5` | Visual weight of implied AI relationships. Controls how thick the lines representing vector similarity are. **How to set:** The default `0.5` keeps AI suggestions as a subtle background web. Increase to `1.0+` if you are actively using the galaxy to discover new connections and want them visually prioritised. |
-| Keyword match weight | `1.2` | Calibration for keyword vs vector search. Higher values make keyword matches more conservative. |
-| Similar notes limit | `20` | Max number of related notes displayed in the sidebar. |
-| Implicit folder semantics | `ontology` | Controls how physical folder paths are mapped to semantic topics. <br>• _none_: Folders are totally ignored.<br>• _ontology_: Folders act as topics only if they securely match an existing note in your Ontology.<br>• _all_: Every folder is automatically treated as a unique semantic topic. |
-| Primary context threshold | `0.9` | Similarity threshold for primary (direct match) context notes. |
-| Supporting context threshold | `0.7` | Similarity threshold for supporting (neighbor) context notes. |
-| Structural context threshold | `0.2` | Similarity threshold for structural (ontology) context notes. |
-| Max context documents | `100` | Total limit on the number of documents added to the prompt context. |
-| Embedding chunk size | `1024` / `512` | Target character count per vector chunk. Automatically adjusts to `512` for complex scripts (Chinese, Japanese, etc.) and local models to improve retrieval accuracy. Supports values up to `2048` for Gemini English-only vaults. |
-| Re-index vault | None | Wipe and rebuild all embeddings. **Note:** Re-indexing is triggered automatically when you change critical graph settings (provider, model, chunk size, or folder semantics) and close the settings dialog. |
-
-## Gardener
-
-Configure the Gardener agent for ontology maintenance and vault hygiene.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Gardener model | `gemini-3-flash-preview` | The model used for analysing vault structure and recommending improvements. |
-| Gardener rules | `Default (Managed)` | The persona and hygiene instructions for the Gardener. Leave as default to receive automatic improvements. |
-| Ontology path | `Ontology` | Folder where concepts, entities, and MOCs are stored. |
-| Gardener plans path | `Gardener/Plans` | Folder where proposed plans are saved. |
-| Plans retention | `7 days` | How long to keep gardener plans before purging. |
-| Excluded folders | _Default_ | Folders the gardener should ignore. |
-| Recent note limit | `10` | Max notes to scan in a single session. |
-| Re-check cooldown | `1.0 days` | Wait duration before re-examining unchanged files. Supports decimal values (eg `0.5` for 12 hours). |
-| Skip retention | `7.0 days` | How long to remember skipped files. Supports decimal values. |
-| Context budget | `100,000` | Max token usage for a single gardener analysis. |
-
-## MCP Servers
-
-Configure connections to Model Context Protocol (MCP) servers to extend the Research Assistant's capabilities.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Server name | `None` | A human-readable name for the server. |
-| Server type | `stdio` | The transport mechanism. `stdio` runs a local command. `sse` connects to a legacy Server-Sent Events URL, while `streamable_http` connects to modern remote enterprise endpoints. |
-| Command | `None` | (stdio only) The executable to run, eg `node` or `npx`. |
-| Arguments | `[]` | (stdio only) A list of arguments passed to the command. |
-| Environment variables | `{}` | (stdio only) Optional JSON object containing environment variables. These are merged with the host environment without overriding critical paths. |
-| HTTP headers (JSON) | `None` | (sse and streamable_http only) Optional JSON object for authentication headers, eg `{"Authorization": "Bearer token"}`. |
-| Require explicit confirmation | `On` | When enabled, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Disable this only for read-only servers. |
-| Connection status | `Disconnected` | Displays the current connection state (eg Connected, Error, Untrusted). |
-
-## Storage (Mobile-Ready)
-
-Manage local vector databases and sharded storage to maintain vault performance and sync reliability.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Active database shards | _Dynamic_ | Displays a list of stored indexes. The plugin uses **Model-Specific Sharding** to isolate data for different embedding models, preventing corruption when switching between Local and Gemini providers. |
-| Delete shard | `None` | Remove inactive indexes to free up disk space. You cannot delete the currently active shard. |
-| Purge all data | `None` | A "nuclear" reset that completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data. |
-
-## Performance and System
-
-Technical tuning for power users.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing background or synced notes. **Note:** The currently active note has a fixed 30s delay to avoid interruptions while typing. |
-| Indexing throttle | `100ms` | Delay between files during indexing task processing to respect API rate limits. |
-| Local worker threads | `1-2` | CPU threads for local embeddings. Higher is faster but heavier. |
-| Local SIMD acceleration | `Auto` | Enables SIMD instructions for local models. Faster but may be unstable on older hardware. |
-| Gemini API retries | `10` | Number of retries for spotty connections. |
-| Model cache duration | `7 days` | Duration to cache Gemini model list locally. |
-| Model filtering | `None` | Hide specific models from dropdown menus to reduce clutter. |
-| Log level | `Warn` | Developer console verbosity (`Debug` for full CoT). |
-
-## Security
-
-Manage agent network access and execution risks.
-
-| Setting | Default | Description |
-| :--- | :--- | :--- |
-| Allow local network access | `Off` | **Advanced/Risky**: Allows the agent to access `localhost` and private network IPs (e.g., `192.168.x.x`). **Warning**: This makes you vulnerable to Server-Side Request Forgery (SSRF) attacks if the agent reads malicious notes or prompt injections. Use with extreme caution. |
-| Require explicit confirmation (MCP) | `On` | When configured per MCP server, the agent will prompt you with a "Trust but Verify" modal before executing any tool from this server. Required to prevent Zero-Click Remote Code Execution (RCE). |
+| Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored securely in your system keychain (or masked in `data.json` if secure storage is unavailable). Required for all Gemini models and embeddings. |
+| Ollama endpoint | `http://localhost:11434` | Server URL for local model providers. Required for Ollama-based chat and embeddings. |
+| Refresh model list | `None` | A manual trigger to fetch available models from the Gemini API and local Ollama server. |
 
 ---
 
-## Gemini vs Local Models
+## Researcher
 
-### Google Gemini (Cloud)
+Customise your primary research assistant’s intelligence and writing style.
 
--   **Pros:** Highest quality (`gemini-embedding-001`), zero local CPU/RAM overhead, handles large documents.
--   **Cons:** Requires API key, internet dependent, remote processing.
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Chat model | `gemini-3-flash-preview` | The primary reasoning engine. <br>• _Cloud (Gemini):_ High quality, zero local overhead. <br>• _Local (Ollama):_ Fully private and free to run. |
+| Agent language | `English (US)` | The primary language for agent responses. This affects the default system prompt and output style. |
+| System instruction | `Default (Managed)` | The core personality and rules for the Researcher. Leave as default to receive automatic improvements in future updates. |
+| Context window budget | `200,000` tokens | The maximum volume of notes the AI can "read" at once. Higher budgets allow for broader research but may hit API limits. <br><br>> [!TIP]<br>> If you experience "429 Too Many Requests" errors, try lowering this budget. See the [Troubleshooting Guide](file:///home/allane/Code/GitHub/obsidian-vault-intelligence/docs/reference/troubleshooting.md#429-too-many-requests) for details. |
+| Max agent steps | `5` | Limits the number of "reasoning loops" the agent can take to prevent infinite thinking or excessive API costs. |
+| Author name | `Me` | The name used when the agent refers to you or credits content. This also acts as a fallback for missing author metadata in your notes. |
+| Context-aware headers | `title, tags...` | A list of frontmatter properties the AI should always be aware of when analyzing a note chunk. |
+| Enable web search | `On` | Allows the agent to verify facts and fetch live news from the internet. |
+| Web search model | `gemini-2.5-flash-lite` | A cost-effective model specialised for verifying information and searching the web. |
+| Enable link context | `On` | Allows Gemini 3.1+ models to natively analyse URLs using Google's internal retrieval system for higher accuracy. |
+| Enable computational solver | `On` | Allows the agent to write and execute Python code for complex math and data analysis. |
+| Code execution model | `gemini-3-flash-preview` | The specialized model used for generating Python code. |
+| Enable agent write access | `Off` | Allows the agent to create or update notes. **Security Note:** This always requires manual confirmation before any file is changed. |
+| Vault reading limit | `25` | Maximum number of notes the researcher can retrieve to answer a single question. |
 
-### Transformers.js (Local)
+---
 
--   **Pros:** 100% private, offline, no API costs.
--   **Cons:** Uses local resources, slightly lower quality on smaller presets.
+## Explorer
 
-## Privacy and Git Sync
+Fine-tune how connections are discovered and how the semantic graph is visualised.
 
-Vault Intelligence stores its search index and relationship graph in a specialized binary format inside the plugin's `data/` directory.
+### Embedding Engine
 
--   **Automated .gitignore**: The plugin automatically creates and maintains a `.gitignore` file inside its internal data folder.
--   **Why?**: These index files can be very large (up to 100MB+ for massive vaults) and change frequently. Excluding them from Git prevents repository bloat and sync conflicts while using plugins like **Obsidian Git**.
--   **Data safety**: Since the index is a derived cache, it can be regenerated automatically from your notes at any time.
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Embedding provider | `gemini` | **Google Gemini:** Cloud-based (requires API key). <br>**Ollama:** Local server (requires Ollama). <br>**Transformers.js:** 100% local CPU processing (no server required). |
+| Embedding model | `gemini-embedding-001` | The vector engine used to calculate relationships. Local models (eg `nomic-embed-text`) are downloaded once (~25MB--150MB). |
+| Embedding dimension | `768` | Output vector size. Higher dimensions provide better accuracy but result in a larger search index on disk. |
+| Embedding chunk size | `1024` / `512` | Character count per vector segment. Automatically adjusts to `512` for complex scripts (Chinese, Japanese) or local models to improve retrieval quality. |
+
+### Search Strategy
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Enable dual-loop search | `On` | Combines fast local vector search (Loop 1) with deep AI re-ranking (Loop 2). This significantly reduces "hallucinations" in search results. |
+| Re-ranking model | `gemini-3-flash-preview` | The AI engine used by the "Analyst" (Loop 2) to verify and rank the most relevant notes. |
+| Minimum similarity score | `0.5` | Relevance threshold (0.0 to 1.0). Lower this if search results feel too sparse. |
+| Keyword match weight | `1.2` | Calibration for keyword vs vector search. Higher values make keyword matches more conservative in hybrid results. |
+| Similar notes limit | `20` | Max results displayed in the sidebar when looking for related content. |
+
+> [!TIP]
+> If your search results are missing known information, consult the [Search Quality](file:///home/allane/Code/GitHub/obsidian-vault-intelligence/docs/reference/troubleshooting.md#the-agent-says-it-cant-find-information-but-i-know-i-have-a-note-on-it) section of the troubleshooting guide.
+
+### Semantic Galaxy
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Semantic graph node limit | `250` | Maximum number of nodes rendered in the Galaxy view and search expansion. |
+| Structural edge thickness | `1.0` | Visual weight of your explicit `[[wikilinks]]`. |
+| Semantic edge thickness | `0.5` | Visual weight of implied relationships discovered by AI. |
+| Implicit folder semantics | `ontology` | Controls how your folder structure is weighted. <br>• _none_: Folders are ignored. <br>• _ontology_: Folders act as topics only if they match your fixed Ontology. <br>• _all_: Every folder is treated as a semantic topic. |
+
+---
+
+## Gardener
+
+Configure the automated hygiene agent to maintain your vault's ontology.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Gardener model | `gemini-3-flash-preview` | The model used for structural analysis and improvement suggestions. |
+| Gardener rules | `Default (Managed)` | The persona and rules for the Gardener. Leave as default to receive automatic updates. |
+| Ontology path | `Ontology` | Folder where concept, entity, and MOC (Map of Content) notes are stored. |
+| Semantic merge threshold | `0.85` | Similarity score required to suggest merging two similar topics. Set to `1.0` to disable merging. |
+
+### Orphan Management
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Orphan grace period | `7 days` | Number of days a note must be unlinked/orphaned before the Gardener suggests pruning it. |
+| Archive folder path | `Ontology/_Archive` | Where pruned or "deleted" notes are moved by the Gardener for safekeeping. |
+| Gardener plans path | `Gardener/Plans` | Folder where proposed hygiene plans are saved for your review. |
+| Plans retention | `7 days` | Duration to keep old plan files before they are automatically purged. |
+
+---
+
+## Advanced Systems
+
+Technical tuning for performance and security.
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| Indexing delay | `5000ms` | Wait time after typing stops before re-indexing in the background. |
+| Indexing throttle | `100ms` | Technical delay between files during processing to avoid API rate limiting. |
+| Search centrality limit | `50` | Max number of "bridge" nodes pulled from the graph to expand search context. |
+| Allow local network access | `Off` | **Advanced:** Allows the agent to access `localhost` or private network IPs. <br>> [!CAUTION]<br>> Enabling this makes you vulnerable to SSRF (Server-Side Request Forgery) attacks. Only enable if you are running local tools you fully trust. |
+| Log level | `Warn` | Console verbosity. Set to `Debug` when collecting information for bug reports. |
+
+---
+
+## Privacy and Storage
+
+Vault Intelligence stores its search index and relationship graph in a specialised binary format inside the plugin's `data/` directory.
+
+-   **Automated .gitignore**: The plugin automatically manages a `.gitignore` file for its data folder to prevent massive index files from bloating your Git repository or causing sync conflicts.
+-   **Data Safety**: The index is a derived cache; it can be regenerated from your notes at any time by clicking **Re-index Vault** in the Explorer settings.
+-   **Secure Storage**: On supported systems (macOS, Windows, Linux with `libsecret`), your API keys are stored in the OS keychain, never in plain text.

@@ -1,18 +1,17 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { App, Platform } from "obsidian";
+import { App } from "obsidian";
 
 import { MCP_CONSTANTS, SANITIZATION_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { MCPServerConfig, VaultIntelligenceSettings } from "../settings/types";
 import { IProvider, IToolDefinition, ProviderError } from "../types/providers";
 import { JsonValue, truncateJsonStrings } from "../utils/json";
 import { logger } from "../utils/logger";
-import { isExternalUrl } from "../utils/url";
+import { IMcpTransportStrategy } from "./mcp/IMcpTransportStrategy";
+import { SseTransportStrategy } from "./mcp/SseTransportStrategy";
+import { StdioTransportStrategy } from "./mcp/StdioTransportStrategy";
+import { StreamableHttpTransportStrategy } from "./mcp/StreamableHttpTransportStrategy";
 
-interface IGlobalRequire {
-    process: { env: Record<string, string>; kill(pid: number): void; platform: string };
-    require(id: string): unknown;
-}
 
 interface InternalSecretStorage {
     clearSecret?(key: string): void;
@@ -26,6 +25,7 @@ interface McpConnection {
     errorMessage?: string;
     pid?: number;
     status: 'connecting' | 'connected' | 'error' | 'untrusted';
+    strategy?: IMcpTransportStrategy;
     transport: unknown; // StdioClientTransport or SSEClientTransport
 }
 
@@ -57,35 +57,10 @@ export class McpClientManager implements IProvider {
     public async terminate(): Promise<void> {
         for (const [, connection] of this.connections.entries()) {
             try {
-                // Gracefully close client first (sends JSON-RPC shutdown)
-                const client = connection.client;
-                if (client) await client.close().catch(() => {});
-                
-                // For stdio, we explicitly kill the process tree to avoid zombies
-                if (connection.config.type === 'stdio' && connection.pid) {
-                    if (Platform.isDesktopApp) {
-                        try {
-                            const g = globalThis as unknown as IGlobalRequire;
-                            const cp = g.require('child_process') as { exec: (cmd: string, callback?: () => void) => void };
-                            const pid = connection.pid;
-                            if (g.process.platform === 'win32') {
-                                cp.exec(`taskkill /pid ${pid} /t /f`);
-                            } else {
-                                try {
-                                    // Attempt to kill child processes asynchronously first (prevents blocking)
-                                    cp.exec(`pkill -P ${pid}`, () => {
-                                        try { g.process.kill(pid); } catch { /* ignore */ }
-                                    });
-                                    // Timeout fallback to guarantee parent death if pkill hangs
-                                    setTimeout(() => { try { g.process.kill(pid); } catch { /* ignore */ } }, 1000);
-                                } catch { 
-                                    try { g.process.kill(pid); } catch { /* ignore */ }
-                                }
-                            }
-                        } catch (e) {
-                            logger.warn(`Failed to kill process tree for MCP server ${connection.config.name}:`, e);
-                        }
-                    }
+                if (connection.strategy) {
+                    await connection.strategy.terminate(connection.client, connection.transport);
+                } else if (connection.client) {
+                    await connection.client.close().catch(() => {});
                 }
             } catch (e) {
                 logger.error(`Error terminating MCP server ${connection.config.name}:`, e);
@@ -158,301 +133,44 @@ export class McpClientManager implements IProvider {
             return;
         }
 
+        const secretResolver = (key: string) => this.getSecretValue(key);
+        let strategy: IMcpTransportStrategy;
+
         if (server.type === 'stdio') {
-            if (!Platform.isDesktopApp) {
-                logger.warn(`Skipping stdio MCP server ${server.name} on Mobile.`);
-                return;
-            }
-
-            const g = globalThis as unknown as IGlobalRequire;
-            // Use dynamic import so esbuild bundles it, but execution is deferred (mobile safe)
-            const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
-            const StdioClientTransport = mcpSdk.StdioClientTransport;
-            
-            // Construct minimal safe environment (Fix for Host Environment Leakage)
-            const safeKeys = [
-                'PATH', 'USER', 'HOME', 'USERPROFILE', 'APPDATA', 'TMPDIR', 'TEMP',
-                'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
-                'LANG', 'LC_ALL', 'PWD', 'LOGNAME', 'SHELL',
-                // Linux Desktop/DBus Requirements
-                'DISPLAY', 'WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_RUNTIME_DIR', 'XAUTHORITY', 'XDG_SESSION_TYPE'
-            ];
-            let mergedEnv: Record<string, string> = {
-                // Let servers know they are being run by Vault Intelligence
-                'OBSIDIAN_VAULT_INTELLIGENCE': 'true'
-            };
-            
-            for (const key of safeKeys) {
-                const val = g.process.env[key];
-                if (val !== undefined) {
-                    mergedEnv[key] = val;
-                }
-            }
-
-            // Fix PATH for GUI-launched apps (Obsidian often lacks user bin paths)
-            const isWin = g.process.platform === 'win32';
-            const pathSeparator = isWin ? ';' : ':';
-            const home = mergedEnv.HOME || mergedEnv.USERPROFILE || '';
-            const extraPaths = isWin ? [] : [
-                '/usr/local/bin',
-                '/opt/homebrew/bin',
-                '/opt/local/bin',
-                home ? `${home}/.local/bin` : '',
-                home ? `${home}/bin` : ''
-            ].filter(p => p.length > 0);
-            
-            if (extraPaths.length > 0) {
-                // Prepend extra paths so they take precedence over system bins
-                mergedEnv.PATH = `${extraPaths.join(pathSeparator)}${pathSeparator}${mergedEnv.PATH || ''}`;
-            }
-
-            if (server.env) {
-                try {
-                    const customEnv = JSON.parse(server.env) as Record<string, string>;
-                    for (const [k, v] of Object.entries(customEnv)) {
-                        if (v.startsWith('vi-secret:')) {
-                            const secretKey = v.substring(10);
-                            const secretVal = this.getSecretValue(secretKey);
-                            if (secretVal === null) {
-                                throw new Error(`Missing secret for ${k}. Please re-enter it in settings.`);
-                            }
-                            mergedEnv[k] = secretVal;
-                        } else {
-                            mergedEnv[k] = v;
-                        }
-                    }
-                } catch (e) {
-                    logger.warn(`Failed to process custom environment for MCP server ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
-                    this.connections.set(server.id, {
-                        client: null as unknown as Client,
-                        config: server,
-                        errorMessage: `Configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
-                        status: 'error',
-                        transport: null
-                    });
-                    return;
-                }
-            }
-
-            if (!server.command) {
-                logger.warn(`MCP server ${server.name} is missing a command.`);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: `Configuration error: missing command`,
-                    status: 'error',
-                    transport: null
-                });
-                return;
-            }
-
-            const transportConfig = {
-                args: server.args || [],
-                command: server.command,
-                env: mergedEnv,
-                stderr: 'pipe' as 'pipe' | 'ignore' | 'inherit' | 'overlapped'
-            };
-            const transport = new StdioClientTransport(transportConfig);
-
-            if (transport.stderr) {
-                transport.stderr.on('data', (chunk: { toString: () => string }) => {
-                    const str = chunk.toString().trim();
-                    if (str) {
-                        const lower = str.toLowerCase();
-                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
-                            logger.error(`[MCP ${server.name} STDERR] ${str}`);
-                        } else if (lower.includes('warn')) {
-                            logger.warn(`[MCP ${server.name} STDERR] ${str}`);
-                        } else if (lower.includes('debug') || lower.includes('trace')) {
-                            logger.debug(`[MCP ${server.name} STDERR] ${str}`);
-                        } else {
-                            // Default to info for diagnostic output that isn't clearly an error
-                            logger.info(`[MCP ${server.name} STDERR] ${str}`);
-                        }
-                    }
-                });
-            }
-
-            // Note: StdioClientTransport spawns the process internally when start() is called.
-            // But we need the PID for killing. It doesn't expose it cleanly, so we might need a workaround.
-            // For now, we instantiate the SDK and hope it doesn't leave zombies.
-
-            const client = new Client({
-                name: "vault-intelligence",
-                version: "1.0.0"
-            }, {
-                capabilities: {}
-            });
-
-            try {
-                await client.connect(transport);
-                this.connections.set(server.id, {
-                    client,
-                    config: server,
-                    pid: (transport as unknown as { _process?: { pid: number } })._process?.pid, // internal SDK access workaround
-                    status: 'connected',
-                     
-                    transport
-                });
-                logger.info(`MCP Server ${server.name} connected.`);
-            } catch (error) {
-                logger.error(`MCP Server ${server.name} connection failed.`, error);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: String(error),
-                    status: 'error',
-                    transport: null
-                });
-            }
-
+            strategy = new StdioTransportStrategy();
         } else if (server.type === 'sse') {
-            if (!server.url) return;
-            const urlStr = server.url.trim();
-            if (!isExternalUrl(urlStr, this.settings.allowLocalNetworkAccess)) {
-                logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: 'Connection blocked by Local Network Access security settings.',
-                    status: 'error',
-                    transport: null
-                });
-                return;
-            }
-
-            const sseImport = await import('@modelcontextprotocol/sdk/client/sse.js') as Record<string, unknown>;
-            const TransportClass = sseImport['SSEClientTransport'] as new (url: URL, options?: { requestInit?: { headers?: Record<string, string> } }) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
-            
-            let headers: Record<string, string> = {};
-            if (server.remoteHeaders) {
-                try { 
-                    const rawHeaders = JSON.parse(server.remoteHeaders) as Record<string, string>;
-                    for (const [k, v] of Object.entries(rawHeaders)) {
-                        if (v.startsWith('vi-secret:')) {
-                            const secretKey = v.substring(10);
-                            const secretVal = this.getSecretValue(secretKey);
-                            if (secretVal === null) {
-                                throw new Error(`Missing secret for header ${k}. Please re-enter it in settings.`);
-                            }
-                            headers[k] = secretVal;
-                        } else {
-                            headers[k] = v;
-                        }
-                    }
-                } catch (e) {
-                    logger.warn(`Failed to process remote headers for ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
-                    this.connections.set(server.id, {
-                        client: null as unknown as Client,
-                        config: server,
-                        errorMessage: `Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
-                        status: 'error',
-                        transport: null
-                    });
-                    return;
-                }
-            }
-
-            const transport = new TransportClass(new URL(urlStr), { requestInit: { headers } });
-            const client = new Client({
-                name: "vault-intelligence",
-                version: "1.0.0"
-            }, {
-                capabilities: {}
-            });
-
-            try {
-                await client.connect(transport);
-                this.connections.set(server.id, {
-                    client,
-                    config: server,
-                    status: 'connected',
-                    transport
-                });
-                logger.info(`MCP Server ${server.name} connected.`);
-            } catch (error) {
-                logger.error(`MCP Server ${server.name} connection failed.`, error);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: String(error),
-                    status: 'error',
-                    transport: null
-                });
-            }
+            strategy = new SseTransportStrategy();
         } else if (server.type === 'streamable_http') {
-            if (!server.url) return;
-            const urlStr = server.url.trim();
-            if (!isExternalUrl(urlStr, this.settings.allowLocalNetworkAccess)) {
-                logger.warn(`MCP server ${server.name} blocked by Local Network Access security settings.`);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: 'Connection blocked by Local Network Access security settings.',
-                    status: 'error',
-                    transport: null
-                });
-                return;
-            }
+            strategy = new StreamableHttpTransportStrategy();
+        } else {
+            logger.warn(`MCP server ${server.name} has unknown type ${String(server.type)}.`);
+            return;
+        }
 
-            let headers: Record<string, string> = {};
-            if (server.remoteHeaders) {
-                try { 
-                    const rawHeaders = JSON.parse(server.remoteHeaders) as Record<string, string>;
-                    for (const [k, v] of Object.entries(rawHeaders)) {
-                        if (v.startsWith('vi-secret:')) {
-                            const secretKey = v.substring(10);
-                            const secretVal = this.getSecretValue(secretKey);
-                            if (secretVal === null) {
-                                throw new Error(`Missing secret for header ${k}. Please re-enter it in settings.`);
-                            }
-                            headers[k] = secretVal;
-                        } else {
-                            headers[k] = v;
-                        }
-                    }
-                } catch (e) {
-                    logger.warn(`Failed to process MCP headers for ${server.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
-                    this.connections.set(server.id, {
-                        client: null as unknown as Client,
-                        config: server,
-                        errorMessage: `Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`,
-                        status: 'error',
-                        transport: null
-                    });
-                    return;
-                }
-            }
-
-            const httpImport = await import('@modelcontextprotocol/sdk/client/streamableHttp.js') as Record<string, unknown>;
-            const TransportClass = httpImport['StreamableHTTPClientTransport'] as new (url: URL, options?: { headers?: Record<string, string> }) => import('@modelcontextprotocol/sdk/shared/transport.js').Transport;
-            const transport = new TransportClass(new URL(urlStr), { headers });
-            const client = new Client({
-                name: "vault-intelligence",
-                version: "1.0.0"
-            }, {
-                capabilities: {}
+        try {
+            const { client, transport } = await strategy.connect(
+                server, 
+                secretResolver, 
+                this.settings.allowLocalNetworkAccess
+            );
+            this.connections.set(server.id, {
+                client,
+                config: server,
+                status: 'connected',
+                strategy,
+                transport
             });
-
-            try {
-                await client.connect(transport);
-                this.connections.set(server.id, {
-                    client,
-                    config: server,
-                    status: 'connected',
-                    transport
-                });
-                logger.info(`MCP Server ${server.name} connected.`);
-            } catch (error) {
-                logger.error(`MCP Server ${server.name} connection failed.`, error);
-                this.connections.set(server.id, {
-                    client: null as unknown as Client,
-                    config: server,
-                    errorMessage: String(error),
-                    status: 'error',
-                    transport: null
-                });
-            }
+            logger.info(`MCP Server ${server.name} connected.`);
+        } catch (error) {
+            logger.error(`MCP Server ${server.name} connection failed.`, error);
+            this.connections.set(server.id, {
+                client: null as unknown as Client,
+                config: server,
+                errorMessage: String(error),
+                status: 'error',
+                strategy,
+                transport: null
+            });
         }
     }
 
@@ -555,15 +273,20 @@ export class McpClientManager implements IProvider {
             }
         }
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let onAbort: (() => void) | undefined;
+
         try {
             // Include strict timeout
-            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS));
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
+            });
             
             const abortPromises: Promise<never>[] = [];
             if (signal) {
                 if (signal.aborted) return { text: "[Tool execution was cancelled by the user]" };
                 abortPromises.push(new Promise<never>((_, reject) => {
-                    const onAbort = () => reject(new Error("AbortError"));
+                    onAbort = () => reject(new Error("AbortError"));
                     signal.addEventListener('abort', onAbort, { once: true });
                 }));
             }
@@ -610,6 +333,9 @@ export class McpClientManager implements IProvider {
                 return { text: "[Tool execution was cancelled by the user]" };
             }
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (signal && onAbort) signal.removeEventListener('abort', onAbort);
         }
     }
 

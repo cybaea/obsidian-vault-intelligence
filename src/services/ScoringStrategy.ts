@@ -83,6 +83,11 @@ export class ScoringStrategy {
         return fuzzyScore;
     }
 
+    /**
+     * Applies heuristic boosts to a base vector score based on keyword and title matches.
+     * @param vectorScore The base embedding similarity score.
+     * @param keywordMatch Optional fuzzy hit data.
+     */
     public boostHybridResult(vectorScore: number, keywordMatch?: ScoringResult): number {
         let score = vectorScore;
         if (keywordMatch) {

@@ -1,8 +1,18 @@
 # Obsidian Vault Intelligence
 
-![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github)
+![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![100% Free & Open Source](https://img.shields.io/badge/100%25_Free_%26_Open_Source-blue) ![Local LLM Support](https://img.shields.io/badge/Local_LLM_Support-green) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github) 
 
 ![Obsidian Vault Intelligence Social Preview](./public/images/vault-intelligence-social.webp)
+
+<figure>
+  <img src="./public/images/semantic-galaxy-graph.png" alt="Semantic Galaxy Graph">
+  <figcaption><em>Explore your vault's hidden connections with the 3D Semantic Galaxy Graph.</em></figcaption>
+</figure>
+
+<figure>
+  <img src="./public/images/gardener-plan-ui.png" alt="Gardener Interactive Plan">
+  <figcaption><em>Review and apply structural improvements with the Gardener's interactive checklist.</em></figcaption>
+</figure>
 
 **Don't just query your vault. Maintain it.**
 
@@ -10,7 +20,11 @@ Vault Intelligence is a different AI plugin for Obsidian. It transforms your vau
 
 Obsidian vaults naturally degrade. As facts change, your notes become outdated. As the vault grows, connections are forgotten and tagging becomes inconsistent. Standard AI plugins function as search engines for this static data.
 
-Vault Intelligence functions as a maintenance system. It identifies gaps in your notes by cross-referencing your writing with live web searches. It retrieves information based on the explicit structural links you built, rather than just matching text. It audits your tags to connect notes to existing topics, proposing new ones when needed. It connects to external tools—like local scripts or databases—under strict cryptographic security. It is designed to keep your knowledge current, connected, and secure.
+Vault Intelligence functions as a maintenance system. It identifies gaps in your notes by cross-referencing your writing with live web searches. It retrieves information based on the explicit structural links you built, rather than just matching text. It audits your tags to connect notes to existing topics, proposing new ones when needed. It connects to external tools—like local scripts or databases—under strict cryptographic security.
+
+-   **100% Local, Offline capability:** Your privacy is paramount. Vault Intelligence can run entirely offline using local embeddings via Transformers.js and local language models via Ollama. Your data never has to leave your device.
+
+It is designed to keep your knowledge current, connected, and secure.
 
 Vault Intelligence is **free** and **open source**.
 

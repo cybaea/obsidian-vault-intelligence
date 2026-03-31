@@ -4,9 +4,12 @@ import { isExternalUrl } from "./url";
 
 describe("isExternalUrl", () => {
     describe("Default Mode (allowLocal = false)", () => {
-        it("should allow public URLs", () => {
+        it("should allow public HTTPS URLs", () => {
             expect(isExternalUrl("https://google.com")).toBe(true);
-            expect(isExternalUrl("http://example.org/path")).toBe(true);
+        });
+
+        it("should block public HTTP URLs to prevent DNS Rebinding (TLS/SNI protection)", () => {
+            expect(isExternalUrl("http://example.org/path")).toBe(false);
         });
 
         it("should block localhost and loopback", () => {
@@ -44,6 +47,10 @@ describe("isExternalUrl", () => {
             expect(isExternalUrl("http://localhost", true)).toBe(true);
             expect(isExternalUrl("http://127.0.0.1", true)).toBe(true);
             expect(isExternalUrl("http://[::1]", true)).toBe(true);
+        });
+
+        it("should allow public HTTP URLs when local access is explicitly enabled", () => {
+            expect(isExternalUrl("http://example.org/path", true)).toBe(true);
         });
 
         it("should allow private IP ranges", () => {

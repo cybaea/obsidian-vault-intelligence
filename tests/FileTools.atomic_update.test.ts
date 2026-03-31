@@ -112,4 +112,42 @@ describe('FileTools Atomic Update', () => {
         expect(capturedResult).toContain('---\nt: 1\n---');
         expect(capturedResult).toContain('New start\n\nOld body');
     });
+
+    it('should preserve arbitrary line breaks exactly', async () => {
+        const oldContent = '---\nfoo: bar\n---\n\n\nSome text here\n\n';
+        const newPart = 'Appended';
+
+        let capturedResult: string = '';
+        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+            capturedResult = callback(oldContent);
+            return capturedResult;
+        });
+
+        await fileTools.updateNote('test.md', newPart, 'append');
+
+        // Body was: \n\nSome text here\n\n
+        // trimEnd() makes it \n\nSome text here
+        // separator for append when body has lines is \n\n
+        // so we expect ---\nfoo: bar\n---\n\n\nSome text here\n\nAppended
+        expect(capturedResult).toBe('---\nfoo: bar\n---\n\n\nSome text here\n\nAppended');
+    });
+
+    it('should preserve whitespace strictly when prepending', async () => {
+        const oldContent = '---\nfoo: bar\n---\n\n\n\nSome text here\n\n';
+        const newPart = 'Prepended';
+
+        let capturedResult: string = '';
+        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+            capturedResult = callback(oldContent);
+            return capturedResult;
+        });
+
+        await fileTools.updateNote('test.md', newPart, 'prepend');
+
+        // Prepend logic: body is \n\n\nSome text here\n\n
+        // separator is "" since body starts with \n\n
+        // So Prepended\n\n\nSome text here\n\n
+        // And frontmatter is literally ---\nfoo: bar\n---\n
+        expect(capturedResult).toBe('---\nfoo: bar\n---\nPrepended\n\n\nSome text here\n\n');
+    });
 });

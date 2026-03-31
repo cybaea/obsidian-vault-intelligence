@@ -254,6 +254,44 @@ describe('OllamaProvider', () => {
             expect(results[0]?.text).toBe("Text A ");
             expect(results[1]?.text).toBe(" Text B ");
         });
+
+        it('should handle tool call content spanning across multiple chunks securely', () => {
+             const mockStreamState = { fullMessageText: "", inToolCall: false, tempToolCallBuffer: "" };
+             const mockService = service as unknown as { processNdjsonChunk: (chunk: unknown, state: unknown) => IterableIterator<{text?: string}> };
+             
+             const chunk1 = {
+                 created_at: "now", done: false, message: { content: "Start <tool_call>{\"name\":", role: "assistant" },
+                 model: "llama3"
+             };
+             const chunk2 = {
+                 created_at: "now", done: false, message: { content: "\"tool1\"}</", role: "assistant" },
+                 model: "llama3"
+             };
+             const chunk3 = {
+                 created_at: "now", done: false, message: { content: "tool_call> End", role: "assistant" },
+                 model: "llama3"
+             };
+
+             const results = [];
+             for (const item of mockService.processNdjsonChunk(chunk1, mockStreamState)) results.push(item);
+             for (const item of mockService.processNdjsonChunk(chunk2, mockStreamState)) results.push(item);
+             for (const item of mockService.processNdjsonChunk(chunk3, mockStreamState)) results.push(item);
+             
+             expect(results).toHaveLength(2);
+             expect(results[0]?.text).toBe("Start ");
+             expect(results[1]?.text).toBe(" End");
+             expect(mockStreamState.inToolCall).toBe(false);
+             expect(mockStreamState.tempToolCallBuffer).toBe("");
+        });
+        
+        it('should gracefully recover and scrub malformed JSON in fallback extraction', () => {
+             const mockService = service as unknown as { extractFallbackToolCalls: (text: string) => { toolCalls: unknown[], scrubbedText: string } };
+             const text = "Prefix \n```json\n{malformed: 'json'} \n```\n Suffix";
+             
+             const result = mockService.extractFallbackToolCalls(text);
+             expect(result.toolCalls).toHaveLength(0); // Fails to parse but doesn't throw
+             expect(result.scrubbedText).toBe("Prefix \n```json\n{malformed: 'json'} \n```\n Suffix"); // Preserves the malformed block because it might be valid code!
+        });
     });
 
     describe('Robust JSON Parsing', () => {

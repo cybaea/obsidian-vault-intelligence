@@ -5,9 +5,6 @@ import { ONTOLOGY_TEMPLATES } from "../templates/ontology-en-GB";
 import { logger } from "../utils/logger";
 
 /**
- * Service to manage the vault's ontology and classification rules.
- */
-/**
  * Service responsible for managing the vault's ontology and knowledge model.
  * It handles concept validation, topic discovery, and structural rules.
  */

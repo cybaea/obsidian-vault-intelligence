@@ -15,9 +15,13 @@ interface InternalApp extends App {
 
 export function renderGardenerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
+    const gardener = "Gardener";
+    const gemini = "Gemini";
+    const ontology = "Ontology";
+    const archive = "Archive";
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.createSpan({ text: 'Configure the gardener to maintain your vault’s ontology and hygiene. ' });
+        div.createSpan({ text: `Configure the ${gardener.toLowerCase()} to maintain your vault’s ontology and hygiene. ` });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' },
             text: 'View documentation'
@@ -35,7 +39,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
 
     new Setting(containerEl)
-        .setName('Gardener model')
+        .setName(`${gardener} model`)
         .setDesc('The model used for analysis and suggesting improvements.')
         .addDropdown(dropdown => {
             renderModelDropdown(dropdown, chatModels, gardenerModelCurrent, canUseChat, hasOllama, (val) => {
@@ -51,8 +55,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
 
     if (canUseChat && !isGardenerPreset) {
         new Setting(containerEl)
-            .setName('Custom gardener model')
-            .setDesc('Enter the specific Gemini model ID.')
+            .setName(`Custom ${gardener.toLowerCase()} model`)
+            .setDesc(`Enter the specific ${gemini} model ID.`)
             .addText(text => text
                 .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
                 .setValue(gardenerModelCurrent)
@@ -108,7 +112,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
 
     // --- 2. System Instruction ---
     new Setting(containerEl)
-        .setName('Gardener rules')
+        .setName(`${gardener} rules`)
         .setDesc('The base persona and hygiene rules. Use {{ONTOLOGY_FOLDERS}} and {{NOTE_COUNT}} as placeholders.')
         .setClass('vault-intelligence-system-instruction-setting')
         .addExtraButton(btn => btn
@@ -144,7 +148,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .setName('Ontology path')
         .setDesc('Folder where concepts, entities, and MOCs are stored.')
         .addText(text => {
-            text.setPlaceholder('Ontology')
+            text.setPlaceholder(ontology)
                 .setValue(plugin.settings.ontologyPath)
                 .onChange((value) => {
                     void (async () => {
@@ -156,10 +160,10 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         });
 
     new Setting(containerEl)
-        .setName('Gardener plans path')
-        .setDesc('Folder where proposed gardener plans are saved.')
+        .setName(`${gardener} plans path`)
+        .setDesc(`Folder where proposed ${gardener.toLowerCase()} plans are saved.`)
         .addText(text => {
-            text.setPlaceholder('Gardener/plans')
+            text.setPlaceholder(`${gardener}/plans`)
                 .setValue(plugin.settings.gardenerPlansPath)
                 .onChange((value) => {
                     void (async () => {
@@ -184,6 +188,35 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                         await plugin.saveSettings();
                     }
                 })();
+            }));
+
+    new Setting(containerEl).setName('Orphan management').setHeading();
+
+    new Setting(containerEl)
+        .setName('Archive folder path')
+        .setDesc(`Where to move notes that are pruned or deleted by the ${gardener}.`)
+        .addText(text => {
+            text.setPlaceholder(`${ontology}/_${archive}`)
+                .setValue(plugin.settings.gardenerArchiveFolderPath)
+                .onChange(async (value) => {
+                    plugin.settings.gardenerArchiveFolderPath = value;
+                    await plugin.saveSettings();
+                });
+            new FolderSuggest(plugin.app, text.inputEl);
+        });
+
+    new Setting(containerEl)
+        .setName("Orphan grace period (days)")
+        .setDesc(`Number of days a note must be unlinked/orphaned before the ${gardener} suggests pruning it.`)
+        .addText(text => text
+            .setPlaceholder('7')
+            .setValue(String(plugin.settings.gardenerOrphanGracePeriodDays))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.gardenerOrphanGracePeriodDays = Math.floor(num);
+                    await plugin.saveSettings();
+                }
             }));
 
     // --- 4. Exclusions ---

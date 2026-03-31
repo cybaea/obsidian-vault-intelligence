@@ -67,6 +67,9 @@ export const SEARCH_CONSTANTS = {
     /** Search: Extra boost if keyword match is specifically in title */
     HYBRID_TITLE_BOOST: 0.5,
 
+    /** Search: Divider applied to vector scores when overlapping with keyword scores */
+    HYBRID_VECTOR_DIVIDER: 1.5,
+
     /** Max number of keyword matches to find before stopping */
     MAX_KEYWORD_MATCHES: 100,
 
@@ -117,6 +120,14 @@ export const EMBEDDING_CONSTANTS = {
     RESUME_TIMEOUT_MS: 60000
 };
 
+export const OLLAMA_CONSTANTS = {
+    /** Maximum safe buffer size for NDJSON streaming (1MB) */
+    MAX_BUFFER_SIZE: 1048576,
+
+    /** Socket timeout for Node HTTP connections to Ollama (30s) */
+    SOCKET_TIMEOUT_MS: 30000
+};
+
 export const WORKER_CONSTANTS = {
     /** Timeout for standard API requests (30 seconds) */
     API_REQUEST_TIMEOUT_MS: 30000,
@@ -141,6 +152,9 @@ export const WORKER_CONSTANTS = {
 
     /** Token limit for most local models (standard BERT/MiniLM) */
     MAX_TOKENS: 512,
+
+    /** Timeout for proxied asset fetch requests (2 minutes) */
+    PROXY_TIMEOUT_MS: 120000,
 
     /** Base URL for JS Delivr CDN for Transformers.js assets */
     WASM_CDN_URL: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/',
@@ -441,7 +455,7 @@ export const URL_CONSTANTS = {
 
 export const REGEX_CONSTANTS = {
     /** Pattern to match @[link] or @link mentions */
-    MENTION: /@(?:\[\[([^\]]+)\]\]|"([^"]+)"|(\b[a-zA-Z0-9_\-./]+\b))/g
+    MENTION: /(?<!\w)@(?:\[\[([^\]]+)\]\]|"([^"]+)"|([a-z0-9_\-./]+(?=$|\s|[^\w\-./])))/gi
 };
 
 export const MODEL_CONSTANTS = {

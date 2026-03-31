@@ -5,30 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-New features are added in the "Unreleased" section.
+New features are added in the "[Unreleased]" section.
 
 ## [Unreleased]
 
 ### User features
 
 -   **NOTE** that this release will trigger a full re-indexing of your vault on the next workspace load, potentially costing you AI tokens.
--   **Gardener orphan pruning**: The Gardener agent now automatically detects abandoned topic notes in your ontology that have no incoming links (either via wikilinks or frontmatter arrays), proposing them for deletion to keep your vault cleanly structured.
 -   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Mixed-format de-duplication**: Resolved an issue where topics in the frontmatter (`topics:`) were duplicated due to mixed Markdown (`[Name](/Path.md)`) and Wikilink (`[[Link]]`) syntax. All topics are now resolved to canonical vault paths and de-duplicated reliably.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
+    -   **Human-in-the-loop UX**: Discovered merges are presented in an interactive card, giving you full oversight before any files are modified.
+    -   **Safe link rewiring**: Merging topics uses Obsidian's intelligent parsing to surgically and non-destructively rewrite links throughout your vault.
+    -   **Tri-force detection**: Uses lexical, structural, and semantic (vector) checks to identify conceptual duplicates.
+-   **Gardener orphan pruning**: The Gardener mathematically detects abandoned topic notes that have no incoming links (via wikilinks or frontmatter), proposing them for archive or deletion to keep your vault cleanly structured.
+-   **Settings expansion**: Exposed previously hidden powerful settings including Dual-Loop Search controls, Orphan Management (Archive folder and grace period), and Search Centrality logic.
+-   **Configuration documentation**: Completely overhauled the configuration documentation with outcome-oriented explanations, deep troubleshooting links, and standardized terminology.
 
 ### Developer features
 
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
+-   **GraphSyncOrchestrator refactoring**: Decomposed the monolithic `GraphSyncOrchestrator` God Object into specialized `EventDebouncer` and `WorkerLifecycleManager` services to improve maintainability and strictly enforce the Single Responsibility Principle.
+-   **McpClientManager Strategy Refactoring**: Modularised the `McpClientManager` by implementing the Strategy Pattern for MCP transports (`stdio`, `sse`, `streamable_http`). Transport-specific connection and termination logic is now delegated to dedicated strategy classes, significantly reducing cyclomatic complexity.
+-   **Memory leak mitigation**: Resolved multiple memory leaks in `LocalEmbeddingService`, `McpClientManager`, and `ToolRegistry` by ensuring `setTimeout` handles are captured and cleared within `finally` blocks during `Promise.race()` operations.
+-   **Centralised secret resolution**: Consolidated `vi-secret:` resolution logic into a reusable `resolveMcpSecrets` utility, replacing duplicated resolution blocks with a unified, testable function yielding enhanced error handling and resilience.
+-   **Worker backpressure handling**: Implemented a robust `pause`/`resume` mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
+-   **Unified file batching**: Centralized all file-chunking logic (50-file/5mb limits) within the `EventDebouncer`, eliminating duplicated processing loops and ensuring consistent I/O patterns across real-time events and full vault scans.
+-   **Robust stdio termination**: Transferred OS-specific `pkill` and `taskkill` teardown workflows from the core manager directly into the cohesive `StdioTransportStrategy`, yielding a much cleaner termination loop.
+-   **Strict PID handling**: Eliminated unsafe TypeScript `any` type casting when reading process IDs from the `@modelcontextprotocol/sdk` output by adopting the official `.pid` getter, allowing robust validation of process tree management for `stdio` connections.
 -   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
 -   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
+-   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
+-   **Link parsing modularisation**: Refactored the character-walker in `src/utils/link-parsing.ts` to eliminate deep nesting. Extracted modular logic for code-block skipping and link type identification, significantly improving maintainability without introducing ReDoS-vulnerable regex.
+-   **Mutation queue hardening**: Refactored `WorkerManager.executeMutation` to use a robust `async/await` serialization pattern, resolving execution order ambiguity and improving the reliability of background worker tasks.
+-   **Type safety enforcement**: Eliminated unsafe non-null assertion ("bang") operators in `src/utils/indexer-utils.ts` and enhanced array indexing types to satisfy strict TypeScript boundaries.
+-   **Magic numbers**: Centralized all hardcoded logic multipliers and constraints into `src/constants.ts` (eg `SEARCH_CONSTANTS.HYBRID_VECTOR_DIVIDER`, `OLLAMA_CONSTANTS.MAX_BUFFER_SIZE`) to improve maintainability.
+-   **Test coverage**: Expanded the automated test framework to rigorously cover complex edge cases in `OllamaProvider` NDJSON string boundary buffering and `SemanticGraphView` WebGL lifecycle observer recovery.
 -   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load.
 
 ### Fixed
 
+-   **Ollama streaming reliability**: Fixed a critical bug where native Ollama tool calls spanning across NDJSON socket chunk boundaries would fail to parse, by properly tracking buffering context state.
+-   **Regex ReDoS prevention**: Hardened the `@mention` extraction regex against catastrophic backtracking vulnerabilities by using standard negative lookbehinds.
+-   **Fall-back hallucination resilience**: Added case-insensitivity flags to structural markdown JSON and XML Tool Call string parsing regexes to safely handle varying LLM format hallucinations.
+-   **MCP command injection**: Fixed a critical vulnerability in the MCP client manager where shell-based process execution could lead to command injection. Replaced with safe argument-array process spawning.
+-   **Electron sandbox enforcement**: Removed unsecure `globalThis` patching for Node.js modules, explicitly enabling safe dynamic resolution of native modules only on desktop environments to prevent mobile crashes and adhere to Electron security bounderies.
+-   **SSRF DNS rebinding**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding. All external network endpoints are now strictly enforced over HTTPS (when local access is denied) to utilize native TLS/SNI certificate validation as a security boundary against loopback targeting.
 -   **Gardener path normalization**: Fixed a "File not found" warning during merge actions caused by leading slashes in AI-generated topic paths. All paths are now automatically normalized to root-relative before vault operations.
+-   **Unsafe operator mitigation**: Removed redundant non-null assertions in vector calculation loops to prevent potential runtime boundary errors.
 
 ## [9.1.1] - 2026-03-30
 

@@ -12,6 +12,7 @@ import type {
     UnifiedMessage 
 } from "../types/providers";
 
+import { OLLAMA_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { ProviderError } from "../types/providers";
 import { logger } from "../utils/logger";
@@ -137,8 +138,6 @@ interface NdjsonStreamState {
  * Uses Obsidian's requestUrl to bypass CORS and implement SSRF protection.
  */
 export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbeddingClient {
-    private static MAX_BUFFER_SIZE = 1024 * 1024; // 1MB buffer cap
-    private static SOCKET_TIMEOUT = 30000; // 30s
     private supportsJsonSchema: boolean | null = null;
     private embeddingQueue: Promise<void> = Promise.resolve();
     private activeModels: Set<string> = new Set();
@@ -282,16 +281,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         newText = "";
                     }
                 } else {
-                    const endIdx = newText.indexOf("</tool_call>");
+                    state.tempToolCallBuffer += newText;
+                    const endIdx = state.tempToolCallBuffer.indexOf("</tool_call>");
                     if (endIdx !== -1) {
-                        state.tempToolCallBuffer += newText.substring(0, endIdx);
                         state.inToolCall = false;
-                        // body is consumed, continue scanning remainder
-                        state.tempToolCallBuffer = "";
-                        newText = newText.substring(endIdx + 12); // length of </tool_call>
+                        newText = state.tempToolCallBuffer.substring(endIdx + 12); // remainder after </tool_call>
+                        state.tempToolCallBuffer = ""; 
                     } else {
-                        state.tempToolCallBuffer += newText;
-                        newText = "";
+                        newText = ""; // consumed all, wait for next chunk
                     }
                 }
             }
@@ -312,7 +309,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             const extractedToolCalls: ToolCall[] = [];
             let scrubbedText = state.fullMessageText;
             
-            const regex = /<tool_call>([\s\S]*?)<\/tool_call>/g;
+            const regex = /<tool_call>([\s\S]*?)<\/tool_call>/gi;
             let match;
             while ((match = regex.exec(state.fullMessageText)) !== null) {
                 if (!match[1]) continue;
@@ -434,7 +431,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         break;
                     }
 
-                    if (buffer.length > OllamaProvider.MAX_BUFFER_SIZE) {
+                    if (buffer.length > OLLAMA_CONSTANTS.MAX_BUFFER_SIZE) {
                         throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
                     }
                     const lines = buffer.split("\n");
@@ -524,7 +521,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const req = (httpProvider as { request: (opts: unknown) => NodeRequest }).request(reqOptions);
         
         // Timeout guard
-        req.setTimeout(OllamaProvider.SOCKET_TIMEOUT, () => {
+        req.setTimeout(OLLAMA_CONSTANTS.SOCKET_TIMEOUT_MS, () => {
             req.destroy(new ProviderError("Connection timeout: Ollama is unreachable.", "ollama"));
         });
 
@@ -557,7 +554,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             for await (const chunk of res) {
                 buffer += decoder.decode(chunk as BufferSource, { stream: true });
-                if (buffer.length > OllamaProvider.MAX_BUFFER_SIZE) {
+                if (buffer.length > OLLAMA_CONSTANTS.MAX_BUFFER_SIZE) {
                     throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
                 }
 
@@ -629,7 +626,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             
             // Strip markdown fences for robust parsing of local tools that ignore `format: json`
             content = content.trim();
-            const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
             if (match && match[1]) {
                 content = match[1].trim();
             }
@@ -739,7 +736,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         scrubbedText += text.substring(lastEndIndex);
 
         // Clean up empty markdown json fences that might be left behind: ```json\n\n``` or ```\n\n```
-        scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n*\s*```/g, '').trim();
+        scrubbedText = scrubbedText.replace(/```(?:json)?\s*\n*\s*```/gi, '').trim();
 
         return { scrubbedText, toolCalls };
     }

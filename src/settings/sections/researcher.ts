@@ -15,6 +15,8 @@ interface InternalApp extends App {
 
 export function renderResearcherSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
+    const google = "Google";
+    const gemini = "Gemini";
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: 'Personalise your research assistant’s intelligence and capabilities. ' });
@@ -51,7 +53,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     if (canUseChat && !isChatPreset) {
         new Setting(containerEl)
             .setName('Custom chat model')
-            .setDesc('Enter the specific Gemini model ID.')
+            .setDesc(`Enter the specific ${gemini} model ID.`)
             .addText(text => text
                 .setPlaceholder(DEFAULT_SETTINGS.chatModel)
                 .setValue(chatModelCurrent)
@@ -267,7 +269,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
 
     new Setting(containerEl)
         .setName('Enable link context')
-        .setDesc('Allows Gemini 3.1+ models to natively read and analyze URLs using Google\'s highly optimized internal retrieval system.')
+        .setDesc(`Allows ${gemini} 3.1+ models to natively read and analyze URLs using ${google}'s highly optimized internal retrieval system.`)
         .addToggle(toggle => toggle
             .setValue(plugin.settings.enableUrlContext)
             .onChange((value) => {
@@ -293,11 +295,10 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                     })();
                 });
             });
-
         if (hasApiKey && !isGroundingPreset) {
             new Setting(containerEl)
                 .setName('Custom web search model')
-                .setDesc('Enter the specific Gemini model ID.')
+                .setDesc(`Enter the specific ${gemini} model ID.`)
                 .addText(text => text
                     .setPlaceholder(DEFAULT_SETTINGS.groundingModel)
                     .setValue(groundingModelCurrent)
@@ -358,9 +359,9 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
             });
 
         if (canUseChat && !isCodePreset) {
-            new Setting(containerEl)
+        new Setting(containerEl)
                 .setName('Custom code model')
-                .setDesc('Enter the specific Gemini model ID.')
+                .setDesc(`Enter the specific ${gemini} model ID.`)
                 .addText(text => text
                     .setPlaceholder(DEFAULT_SETTINGS.codeModel)
                     .setValue(codeModelCurrent)

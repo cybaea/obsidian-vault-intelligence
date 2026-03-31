@@ -223,7 +223,7 @@ describe('McpClientManager', () => {
         
         expect(connection).toBeDefined();
         expect(connection?.status).toBe('error');
-        expect(connection?.errorMessage).toContain('Missing secret for header Authorization');
+        expect(connection?.errorMessage).toContain('Missing secret for Authorization');
     });
 
     it('should abort MCP tool execution if AbortSignal is used', async () => {
@@ -276,13 +276,19 @@ describe('McpClientManager', () => {
         expect(resources[0]?.id).toBe('mcp__test-server__file:///schema.sql');
     });
 
-    it('should use async cp.exec to kill zombie processes on terminate', async () => {
+    it('should use cp.spawn to kill zombie processes on terminate (prevent command injection)', async () => {
         const manager = new McpClientManager(mockApp, mockSettings);
         const managerWithInternal = manager as unknown as { 
             connections: Map<string, unknown>; 
         };
 
-        const mockExec = vi.fn();
+        const mockSpawn = vi.fn().mockImplementation(() => ({
+            on: vi.fn(),
+        }));
+        
+        vi.doMock('child_process', () => ({
+            spawn: mockSpawn
+        }));
         const mockKill = vi.fn();
         
         const originalProcessKill = (globalThis.process as unknown as { kill: typeof mockKill }).kill;
@@ -291,37 +297,24 @@ describe('McpClientManager', () => {
         const originalPlatform = globalThis.process.platform;
         Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: 'linux' });
 
-        const originalRequire = Reflect.get(globalThis, 'require');
-
-        Reflect.set(globalThis, 'require', vi.fn((moduleName: string) => {
-            if (moduleName === 'child_process') {
-                return { exec: mockExec };
-            }
-            return originalRequire ? (originalRequire as (m: string) => unknown)(moduleName) : {};
-        }));
-
+        const { StdioTransportStrategy } = await import('../../src/services/mcp/StdioTransportStrategy');
         managerWithInternal.connections.set('test-server', {
             client: {
                 close: vi.fn().mockResolvedValue(undefined)
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
-            pid: 12345,
-            status: 'connected'
+            status: 'connected',
+            strategy: new StdioTransportStrategy(),
+            transport: { pid: 12345 }
         });
 
         try {
             await manager.terminate();
             
-            expect(mockExec).toHaveBeenCalledWith('pkill -P 12345', expect.any(Function));
+            expect(mockSpawn).toHaveBeenCalledWith('pkill', ['-P', '12345']);
             
-            // Invoke the callback to test if g.process.kill is called
-            const callback = mockExec.mock.calls[0]?.[1] as (() => void) | undefined;
-            if (callback) {
-                callback();
-                expect(mockKill).toHaveBeenCalledWith(12345);
-            }
         } finally {
-            Reflect.set(globalThis, 'require', originalRequire);
+            vi.doUnmock('child_process');
             Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: originalPlatform });
             
             if (originalProcessKill !== undefined) {
