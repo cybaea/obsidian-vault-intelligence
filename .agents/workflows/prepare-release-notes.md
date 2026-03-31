@@ -26,6 +26,8 @@ _Before generating any files, analyze the `CHANGELOG.md`._
 2.  **The "Soul"**: How do these pillars connect? (e.g., "This release is about _autonomy_ and _accessibility_").
 3.  **Categorize**: Separate the "Headline" features from the "Quality of Life" improvements.
 
+If needed for additional clarity then you can analyze the code, the user documentation (`docs/`) or the developer documentation (`devs/`).
+
 ---
 
 ### 📄 Task 1: GitHub Release Notes
@@ -36,7 +38,7 @@ _Before generating any files, analyze the `CHANGELOG.md`._
 **Guidelines**:
 
 *   **Header**: `# {VERSION} — {Thematic Title}`
-    *   _Create a title that captures the Pillars. Compound titles are fine (e.g., "The Agentic & Polyglot Update")._
+    *   _Create a title that captures the Pillars. Compound titles are fine. Keep it real and meaningful to the user._
 *   **The Narrative**: Start with a paragraph that weaves the **Pillars** into a coherent story. Why do they belong in the same update?
 *   **Feature Deep Dives**:
     *   Use headers for each Pillar feature.
@@ -57,7 +59,7 @@ _Before generating any files, analyze the `CHANGELOG.md`._
 *   **The Pitch**: One sentence that defines the plugin for a total stranger.
 *   **The Hook**: "This update brings..." (Summarize the Pillars)
 *   **The Highlights**: 3-4 bullet points covering the Pillars + 1 top "Delight" feature.
-*   **Call to Action**: "Install via BRAT: [Link]"
+*   **Call to Action**: "Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence "
 
 ---
 
@@ -69,12 +71,12 @@ _Before generating any files, analyze the `CHANGELOG.md`._
 **Guidelines**:
 
 *   **Format**: 3-6 posts separated by `---`. Max 450 chars/post.
-*   **Tone**: Authentic, transparent, "Quiet Confidence". Avoid marketing hype words ("game-changer", "unleashed").
+*   **Tone**: Authentic, transparent, "Quiet Confidence". Avoid marketing hype words ("game-changer", "unleashed"), avoid superlatives unless strictly factual, and minimise adjectives in favour of facts.
 
 **Structure**:
 
 **Post 1: The Context**
-*   **Requirement**: First sentence MUST define what the plugin is (e.g., "Vault Intelligence brings AI to #Obsidian").
+*   **Requirement**: First sentence MUST define what the plugin is and what it is for.
 *   **The Hook**: Then transition to the frustration that motivated this update, linking it to the solution (pain-reliever or gain-creator) and the "Soul" of this release.
 *   _Mandatory_: Link to repo. Include `@obsidian@mas.to`, and hashtags `#Obsidian #PKM` if not already used in main text.
 
@@ -88,7 +90,7 @@ _Before generating any files, analyze the `CHANGELOG.md`._
 3.  **Post X (The Polish)**: Briefly mention the "Delight" features (speed, UI).
 4.  **Final Post**: 
     *   Gratitude: Pick ONE of {sponsors, users, testers, people who raised bug reports, people who submitted feature requests, people who starred our GitHub repository} and express gratitude. Keep it brief.
-    *   **Mandatory**: CTA to install via BRAT.
+    *   **Mandatory**: CTA to install via BRAT using https://github.com/cybaea/obsidian-vault-intelligence link.
     *   Optional: up to five additional hashtags if relevant. Zero is fine.
 
 ---
