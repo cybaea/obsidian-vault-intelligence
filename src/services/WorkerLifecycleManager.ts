@@ -6,6 +6,10 @@ import { OntologyService } from "./OntologyService";
 import { PersistenceManager } from "./PersistenceManager";
 import { WorkerManager } from "./WorkerManager";
 
+/**
+ * Manages the lifecycle of the background worker, handling initialization,
+ * persistence state (saving/loading), and safe shutdown/restart sequences.
+ */
 export class WorkerLifecycleManager {
     private workerManager: WorkerManager;
     private persistenceManager: PersistenceManager;
@@ -31,6 +35,11 @@ export class WorkerLifecycleManager {
         this.settings = settings;
     }
 
+    /**
+     * Bootstraps the worker process and loads index state if available.
+     * @param forceWipe Whether to clear existing state and force a fresh scan.
+     * @returns A boolean indicating if a forced scan is required.
+     */
     public async initializeWorker(forceWipe = false): Promise<boolean> {
         try {
             const config = this.buildWorkerConfig();
@@ -72,6 +81,10 @@ export class WorkerLifecycleManager {
         };
     }
 
+    /**
+     * Updates the worker config dynamically and syncs with the active worker.
+     * @param settings The updated VaultIntelligence settings.
+     */
     public async updateConfig(settings: VaultIntelligenceSettings) {
         this.settings = { ...settings };
         const api = this.workerManager.getApi();
@@ -92,6 +105,9 @@ export class WorkerLifecycleManager {
         }
     }
     
+    /**
+     * Requests an idle save of the index state. Batches successive calls.
+     */
     public requestSave() {
         if (this.saveTimeout) return;
         this.saveTimeout = requestIdleCallback(() => {
@@ -100,6 +116,9 @@ export class WorkerLifecycleManager {
         }, { timeout: GRAPH_CONSTANTS.IDLE_SAVE_TIMEOUT_MS });
     }
 
+    /**
+     * Cancels any pending idle save request.
+     */
     public cancelPendingSave() {
         if (this.saveTimeout !== undefined) {
             cancelIdleCallback(this.saveTimeout);
@@ -107,6 +126,9 @@ export class WorkerLifecycleManager {
         }
     }
 
+    /**
+     * Triggers an immediate persistence save of the worker state.
+     */
     public async saveState() {
         if (this.savePromise) return this.savePromise;
         const { dimension, id: modelId } = this.workerManager.activeModel;
@@ -125,6 +147,10 @@ export class WorkerLifecycleManager {
         return this.savePromise;
     }
     
+    /**
+     * Loads the persistence state and passes it to the worker.
+     * @returns True if the index is missing or out-of-date (requiring a full scan).
+     */
     public async loadState(): Promise<boolean> {
         const { dimension, id: modelId } = this.workerManager.activeModel;
         if (!dimension || !modelId) return false;
@@ -143,6 +169,9 @@ export class WorkerLifecycleManager {
         });
     }
 
+    /**
+     * Gracefully stops the worker, waiting for idle and ensuring final state is saved.
+     */
     public async shutdownWorker(): Promise<void> {
         this.cancelPendingSave();
         this.isNodeRunning = false;
@@ -157,6 +186,10 @@ export class WorkerLifecycleManager {
         }
     }
     
+    /**
+     * Restarts the worker process, optionally wiping the index first.
+     * @param forceWipe Whether to wipe the local index before restarting.
+     */
     public async commitRestart(forceWipe = false): Promise<boolean> {
         this.cancelPendingSave();
         

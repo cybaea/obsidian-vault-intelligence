@@ -366,11 +366,27 @@ classDiagram
         +search(query)
     }
     class ContextAssembler {
-        +assemble(results)
+        +assemble(results, query, budgetTokens)
     }
     class GraphService {
         +initialize()
         +search()
+    }
+    class WorkerLifecycleManager {
+        +initializeWorker()
+        +shutdownWorker()
+        +commitRestart()
+    }
+    class EventDebouncer {
+        +registerEvents()
+        +flushPending()
+    }
+    class ResultHydrator {
+        +hydrate(results)
+    }
+    class VaultManager {
+        +readFile(file)
+        +onModify(callback)
     }
     class IndexerWorker {
         +search(vector)
@@ -402,6 +418,10 @@ classDiagram
     TR_VAULT_SEARCH[Tool: vault_search] -.-> SearchOrchestrator : calls
     TR_READ_NOTE[Tool: read_note] -.-> FileTools : calls
     SearchOrchestrator --> GraphService : uses index
+    GraphService --> WorkerLifecycleManager : delegates lifecycle
+    GraphService --> EventDebouncer : buffers file events
+    GraphService --> ResultHydrator : hydrates results
+    EventDebouncer --> VaultManager : monitors vault
     GraphService ..> IndexerWorker : via Comlink
     GeminiProvider ..|> IReasoningClient : implements
     GeminiProvider ..|> IEmbeddingClient : implements
@@ -594,6 +614,107 @@ Orchestrates hybrid search strategies.
 ```typescript
 export class SearchOrchestrator {
     public search(query: string, limit: number): Promise<VaultSearchResult[]>;
+}
+```
+
+#### `ContextAssembler`
+
+Assembles "context windows" for the Reasoning Engine by aggregating search results, respecting token budgets, and employing dynamic compression.
+
+```typescript
+export class ContextAssembler {
+    public assemble(results: VaultSearchResult[], query: string, budgetTokens: number): Promise<{ context: string; usedFiles: string[] }>;
+}
+```
+
+#### `WorkerLifecycleManager`
+
+Manages the lifecycle of the background worker, handling initialization, persistence state (saving/loading), and safe shutdown/restart sequences.
+
+```typescript
+export class WorkerLifecycleManager {
+    public initializeWorker(forceWipe?: boolean): Promise<boolean>;
+    public updateConfig(settings: VaultIntelligenceSettings): Promise<void>;
+    public requestSave(): void;
+    public cancelPendingSave(): void;
+    public saveState(): Promise<void>;
+    public loadState(): Promise<boolean>;
+    public shutdownWorker(): Promise<void>;
+    public commitRestart(forceWipe?: boolean): Promise<boolean>;
+}
+```
+
+#### `EventDebouncer`
+
+Buffers and debounces real-time file changes from the Obsidian Vault to prevent thrashing the indexing worker.
+
+```typescript
+export class EventDebouncer {
+    public registerEvents(onDelete: (path: string) => void): void;
+    public isPathExcluded(path: string): boolean;
+    public processBatch(files: TFile[]): Promise<void>;
+    public pause(): void;
+    public resume(): void;
+    public flushPending(): Promise<void>;
+    public clearQuarantine(): void;
+}
+```
+
+#### `ResultHydrator`
+
+Service responsible for hydrating "hollow" search results from the worker with actual content from the Obsidian vault. Handles drift detection.
+
+```typescript
+export interface HydrationResult {
+    driftDetected: TFile[];
+    hydrated: GraphSearchResult[];
+}
+
+export class ResultHydrator {
+    public hydrate(results: GraphSearchResult[]): Promise<HydrationResult>;
+}
+```
+
+#### `StorageProvider`
+
+StorageProvider abstracts IndexedDB access for both Main Thread and Web Worker. Used for the "Hot Store" in the Hybrid Slim-Sync architecture.
+
+```typescript
+export class StorageProvider {
+    public put(storeName: string, key: string, value: unknown): Promise<void>;
+    public get(storeName: string, key: string): Promise<unknown>;
+    public clear(): Promise<void>;
+    public delete(storeName: string, key: string): Promise<void>;
+}
+```
+
+#### `ScoringStrategy`
+
+Encapsulates the heuristic scoring logic for search results.
+
+```typescript
+export class ScoringStrategy {
+    public calculateTitleScore(titleLower: string, queryLower: string): number | null;
+    public calculateExactBodyScore(contentLower: string, queryLower: string): number | null;
+    public calculateFuzzyScore(tokens: string[], contentLower: string): number;
+    public boostHybridResult(vectorScore: number, keywordMatch?: ScoringResult): number;
+    public calculateGARS(similarity: number, centrality: number, activation: number, weights: any): number;
+}
+```
+
+#### `VaultManager`
+
+VaultManager abstracts Obsidian vault operations to decouple core logic from the Obsidian API.
+
+```typescript
+export class VaultManager {
+    public getMarkdownFiles(): TFile[];
+    public readFile(file: TFile): Promise<string>;
+    public getFileByPath(path: string): TFile | null;
+    public onModify(callback: (file: TFile) => void): void;
+    public onDelete(callback: (path: string) => void): void;
+    public onRename(callback: (oldPath: string, newPath: string) => void): void;
+    public getFileStat(file: TFile): { basename: string, mtime: number, size: number };
 }
 ```
 

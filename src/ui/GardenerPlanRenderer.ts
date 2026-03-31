@@ -269,7 +269,8 @@ export class GardenerPlanRenderer extends MarkdownRenderChild {
                         // 3. Add to aliases of target
                         const targetFile = this.app.vault.getAbstractFileByPath(target);
                         if (targetFile instanceof TFile) {
-                            const sourceAlias = source.substring(source.lastIndexOf("/") + 1).replace(/\.md$/, "");
+                            const rawAlias = source.substring(source.lastIndexOf("/") + 1);
+                            const sourceAlias = rawAlias.endsWith(".md") ? rawAlias.slice(0, -3) : rawAlias;
                             await this.metadataManager.updateFrontmatter(targetFile, (fm) => {
                                 if (!fm.aliases) {
                                     fm.aliases = [sourceAlias];

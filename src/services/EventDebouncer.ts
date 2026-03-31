@@ -5,6 +5,10 @@ import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 import { VaultManager } from "./VaultManager";
 
+/**
+ * Buffers and debounces real-time file changes from the Obsidian Vault to prevent
+ * thrashing the indexing worker. Includes heuristics for active files and backpressure.
+ */
 export class EventDebouncer {
     private app: App;
     private vaultManager: VaultManager;
@@ -43,6 +47,10 @@ export class EventDebouncer {
         this.onChunkReady = onChunkReady;
     }
 
+    /**
+     * Registers Obsidian Vault event hooks for indexing.
+     * @param onDelete Callback fired when a file is deleted.
+     */
     public registerEvents(onDelete: (path: string) => void) {
         if (this.eventsRegistered) return;
         this.eventsRegistered = true;
@@ -84,6 +92,10 @@ export class EventDebouncer {
         });
     }
 
+    /**
+     * Checks whether a file path is excluded from indexing based on settings.
+     * @param path The vault-relative file path.
+     */
     public isPathExcluded(path: string): boolean {
         if (path.startsWith(GRAPH_CONSTANTS.VAULT_DATA_DIR)) return true;
         
@@ -218,6 +230,9 @@ export class EventDebouncer {
         }
     }
 
+    /**
+     * Clears tracking of quarantined files that drifted excessively.
+     */
     public clearQuarantine() {
         this.driftQuarantine.clear();
     }

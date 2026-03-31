@@ -7,12 +7,19 @@ import { logger } from "../utils/logger";
 import { GraphService } from "./GraphService";
 import { McpClientManager } from "./McpClientManager";
 
+/**
+ * Assembles "context windows" for the Reasoning Engine by aggregating search
+ * results, respecting token budgets, and employing dynamic compression (Accordion).
+ */
 export class ContextAssembler {
     private app: App;
     private graphService?: GraphService;
     private settings?: VaultIntelligenceSettings;
     private mcpClientManager?: McpClientManager;
 
+    /**
+     * Initialises the Context Assembler with references to required providers.
+     */
     constructor(app: App, graphService?: GraphService, settings?: VaultIntelligenceSettings, mcpClientManager?: McpClientManager) {
         this.app = app;
         this.graphService = graphService;

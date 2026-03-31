@@ -47,6 +47,9 @@ export class VaultManager {
         });
     }
 
+    /**
+     * Registers a callback for tracking file deletions.
+     */
     public onDelete(callback: (path: string) => void): void {
         this.app.vault.on('delete', (file: TAbstractFile) => {
             if (file instanceof TFile && file.extension === 'md') {
@@ -55,6 +58,9 @@ export class VaultManager {
         });
     }
 
+    /**
+     * Registers a callback for tracking file renames and moves.
+     */
     public onRename(callback: (oldPath: string, newPath: string) => void): void {
         this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
             if (file instanceof TFile && file.extension === 'md') {
