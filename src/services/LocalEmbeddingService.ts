@@ -403,32 +403,37 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             }
 
             // 2-minute safety timeout for metadata/weights fetching
+            let timeoutId: ReturnType<typeof setTimeout> | undefined;
             const timeoutPromise = new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error(`Proxy request timed out after ${WORKER_CONSTANTS.PROXY_TIMEOUT_MS}ms: ${data.url}`)), WORKER_CONSTANTS.PROXY_TIMEOUT_MS)
+                timeoutId = setTimeout(() => reject(new Error(`Proxy request timed out after ${WORKER_CONSTANTS.PROXY_TIMEOUT_MS}ms: ${data.url}`)), WORKER_CONSTANTS.PROXY_TIMEOUT_MS)
             );
 
-            const response = await Promise.race([
-                requestUrl({
-                    body: data.body,
-                    headers: headers,
-                    method: data.method || 'GET',
-                    throw: false, 
-                    url: data.url,
-                }),
-                timeoutPromise
-            ]);
+            try {
+                const response = await Promise.race([
+                    requestUrl({
+                        body: data.body,
+                        headers: headers,
+                        method: data.method || 'GET',
+                        throw: false, 
+                        url: data.url,
+                    }),
+                    timeoutPromise
+                ]);
 
-            if (response.status >= 400) {
-                logger.debug(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
+                if (response.status >= 400) {
+                    logger.debug(`[LocalEmbedding] Fetch failed (${response.status}): ${data.url}`);
+                }
+
+                this.worker.postMessage({
+                    body: response.arrayBuffer,
+                    headers: response.headers,
+                    requestId: data.requestId,
+                    status: response.status,
+                    type: 'fetch_response',
+                }, [response.arrayBuffer]); // Use transferrable
+            } finally {
+                if (timeoutId) clearTimeout(timeoutId);
             }
-
-            this.worker.postMessage({
-                body: response.arrayBuffer,
-                headers: response.headers,
-                requestId: data.requestId,
-                status: response.status,
-                type: 'fetch_response',
-            }, [response.arrayBuffer]); // Use transferrable
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
             this.worker.postMessage({

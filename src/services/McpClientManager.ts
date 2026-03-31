@@ -273,15 +273,20 @@ export class McpClientManager implements IProvider {
             }
         }
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let onAbort: (() => void) | undefined;
+
         try {
             // Include strict timeout
-            const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS));
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
+            });
             
             const abortPromises: Promise<never>[] = [];
             if (signal) {
                 if (signal.aborted) return { text: "[Tool execution was cancelled by the user]" };
                 abortPromises.push(new Promise<never>((_, reject) => {
-                    const onAbort = () => reject(new Error("AbortError"));
+                    onAbort = () => reject(new Error("AbortError"));
                     signal.addEventListener('abort', onAbort, { once: true });
                 }));
             }
@@ -328,6 +333,9 @@ export class McpClientManager implements IProvider {
                 return { text: "[Tool execution was cancelled by the user]" };
             }
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (signal && onAbort) signal.removeEventListener('abort', onAbort);
         }
     }
 

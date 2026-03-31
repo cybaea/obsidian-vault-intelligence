@@ -21,6 +21,10 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **Memory leak mitigation**: Resolved multiple memory leaks in `LocalEmbeddingService`, `McpClientManager`, and `ToolRegistry` by ensuring `setTimeout` handles are captured and cleared within `finally` blocks during `Promise.race()` operations.
+-   **Link parsing modularisation**: Refactored the character-walker in `src/utils/link-parsing.ts` to eliminate deep nesting. Extracted modular logic for code-block skipping and link type identification, significantly improving maintainability without introducing ReDoS-vulnerable regex.
+-   **Mutation queue hardening**: Refactored `WorkerManager.executeMutation` to use a robust `async/await` serialization pattern, resolving execution order ambiguity and improving the reliability of background worker tasks.
+-   **Type safety enforcement**: Eliminated unsafe non-null assertion ("bang") operators in `src/utils/indexer-utils.ts` and enhanced array indexing types to satisfy strict TypeScript boundaries.
 -   **Magic numbers**: Centralized all hardcoded logic multipliers and constraints into `src/constants.ts` (eg `SEARCH_CONSTANTS.HYBRID_VECTOR_DIVIDER`, `OLLAMA_CONSTANTS.MAX_BUFFER_SIZE`) to improve maintainability.
 -   **Test coverage**: Expanded the automated test framework to rigorously cover complex edge cases in `OllamaProvider` NDJSON string boundary buffering and `SemanticGraphView` WebGL lifecycle observer recovery.
 -   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
@@ -44,6 +48,7 @@ New features are added in the "[Unreleased]" section.
 -   **Electron sandbox enforcement**: Removed unsecure `globalThis` patching for Node.js modules, explicitly enabling safe dynamic resolution of native modules only on desktop environments to prevent mobile crashes and adhere to Electron security bounderies.
 -   **SSRF DNS rebinding**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding. All external network endpoints are now strictly enforced over HTTPS (when local access is denied) to utilize native TLS/SNI certificate validation as a security boundary against loopback targeting.
 -   **Gardener path normalization**: Fixed a "File not found" warning during merge actions caused by leading slashes in AI-generated topic paths. All paths are now automatically normalized to root-relative before vault operations.
+-   **Unsafe operator mitigation**: Removed redundant non-null assertions in vector calculation loops to prevent potential runtime boundary errors.
 
 ## [9.1.1] - 2026-03-30
 

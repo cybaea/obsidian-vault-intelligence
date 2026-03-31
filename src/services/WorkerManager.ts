@@ -102,26 +102,31 @@ export class WorkerManager {
     public async executeMutation<T>(task: (api: Comlink.Remote<WorkerAPI>) => Promise<T>, delayMs = 100): Promise<T> {
         const capturedSessionId = this.workerSessionId;
 
-        const result = this.mutationQueue.then(async () => {
+        // Serialise execution by appending to the queue tail
+        const taskInQueue = (async () => {
+            // Always wait for the previous promise in the queue to settle (success or fail)
+            await this.mutationQueue.catch(() => {});
+
             if (!this.api || this.workerSessionId !== capturedSessionId) {
                 logger.debug(`[WorkerManager] Dropping zombie mutation (Session ${capturedSessionId} vs ${this.workerSessionId})`);
                 throw new Error("TaskDropped: Worker session changed");
             }
 
-            const val = await task(this.api);
+            const result = await task(this.api);
             if (delayMs > 0) {
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             }
-            return val;
-        });
+            return result;
+        })();
 
-        // Update the queue but ensure failures don't block the next task
-        this.mutationQueue = result.then(() => { }).catch((err) => {
+        // Update the queue tail to be this new task. 
+        // We catch here so that a failure in this task doesn't cause the next task to automatically reject.
+        this.mutationQueue = taskInQueue.catch((err) => {
             if (err instanceof Error && err.message.includes("TaskDropped")) return;
             logger.error("[WorkerManager] Mutation task failed:", err);
         });
 
-        return result;
+        return taskInQueue;
     }
 
     /**
