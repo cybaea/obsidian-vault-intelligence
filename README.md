@@ -68,8 +68,7 @@ To make this seamless, Vault Intelligence uses a "Slim-Sync" Hybrid Architecture
 -   **Flexible Privacy** (Local or Cloud): Choose how your vault is mapped. Use the default Gemini embeddings for unmatched multilingual support and mobile performance, or switch to 100% local WASM embeddings to ensure your raw notes never leave your device.
 -   **Zero Sync Bloat**: Full vector indexes are kept in your device's local IndexedDB, while only a feather-light blueprint is synced across your devices.
 -   **Dynamic Context**: An "Accordion" assembly system dynamically scales from reading full documents to just reading headers, ensuring the AI never hallucinates due to context overload.
-
-📖 **[Read our Vision & Roadmap](https://cybaea.github.io/obsidian-vault-intelligence/VISION.html)** to understand our philosophy, our pivot to local LLMs, and where we are heading next.
+-   **Rigorous Security**: We implement a strict "Human-in-the-Loop" model with SSRF protection, command injection prevention, and cryptographically signed tool configurations. Read our **[Security and Robustness Standards](https://cybaea.github.io/obsidian-vault-intelligence/devs/security-and-robustness)** for the full technical breakdown.
 
 ---
 
@@ -93,7 +92,7 @@ Currently available in Beta via BRAT:
 
 We welcome contributions from developers, designers, and prompt engineers! 
 
-🛠️ **Developers:** Please read our **[Architecture & Standards Guide (`ARCHITECTURE.md`)](ARCHITECTURE.md)** before submitting a pull request to understand our Web Worker constraints, strict SSRF protections, and internal API contracts.
+🛠️ **Developers:** Please read our **[Architecture & Standards Guide (`ARCHITECTURE.md`)](ARCHITECTURE.md)** and our **[Security and Robustness Standards (`security-and-robustness.md`)](devs/security-and-robustness.md)** before submitting a pull request to understand our Web Worker constraints, strict SSRF protections, and internal API contracts.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for general guidelines.
 
