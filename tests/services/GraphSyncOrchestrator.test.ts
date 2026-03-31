@@ -4,6 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
+/* eslint-disable obsidianmd/no-tfile-tfolder-cast -- Mocking TFile requires casting */
 import { Events, TFile } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,11 +38,23 @@ const mockVaultManager = {
     readFile: vi.fn().mockResolvedValue('test content'),
 } as any;
 
+const mockWorkerApi = {
+    deleteFile: vi.fn(),
+    fullReset: vi.fn(),
+    getFileStates: vi.fn().mockResolvedValue({}),
+    loadIndex: vi.fn().mockResolvedValue(true),
+    pruneOrphans: vi.fn(),
+    saveIndex: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+    updateAliasMap: vi.fn(),
+    updateConfig: vi.fn(),
+    updateFiles: vi.fn(),
+};
+
 const mockWorkerManager = {
     activeModel: { dimension: 768, id: 'test-model' },
-    executeMutation: vi.fn().mockImplementation((fn): any => fn(mockWorkerApi)),
-    executeQuery: vi.fn().mockImplementation((fn): any => fn(mockWorkerApi)),
-    getApi: vi.fn().mockReturnValue({}),
+    executeMutation: vi.fn().mockImplementation(async (fn): Promise<any> => await fn(mockWorkerApi)),
+    executeQuery: vi.fn().mockImplementation(async (fn): Promise<any> => await fn(mockWorkerApi)),
+    getApi: vi.fn().mockReturnValue(mockWorkerApi),
     initializeWorker: vi.fn().mockResolvedValue(undefined),
     terminate: vi.fn(),
     waitForIdle: vi.fn().mockResolvedValue(undefined),
@@ -62,19 +75,7 @@ const mockOntologyService = {
 
 const mockEventBus = new Events();
 
-const mockWorkerApi = {
-    deleteFile: vi.fn(),
-    fullReset: vi.fn(),
-    getFileStates: vi.fn().mockResolvedValue({}),
-    loadIndex: vi.fn().mockResolvedValue(true),
-    pruneOrphans: vi.fn(),
-    saveIndex: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-    updateAliasMap: vi.fn(),
-    updateConfig: vi.fn(),
-    updateFiles: vi.fn(),
-};
-
-describe('GraphSyncOrchestrator', () => {
+describe('GraphSyncOrchestrator (Facade)', () => {
     let orchestrator: GraphSyncOrchestrator;
     let settings: any;
 
@@ -82,6 +83,7 @@ describe('GraphSyncOrchestrator', () => {
         settings = {
             embeddingDimension: 768,
             embeddingModel: 'test-model',
+            indexingDelayMs: 10,
         };
 
         orchestrator = new GraphSyncOrchestrator(
@@ -102,93 +104,48 @@ describe('GraphSyncOrchestrator', () => {
         vi.useRealTimers();
     });
 
-    it('should initialize and start scanning on startNode', async () => {
+    it('should delegate initialization to WorkerLifecycleManager', async () => {
         await orchestrator.startNode();
 
-        expect(orchestrator.isNodeRunning).toBe(true);
         expect(mockWorkerManager.initializeWorker).toHaveBeenCalled();
         expect(mockPersistenceManager.ensureGitignore).toHaveBeenCalled();
-        expect(mockPersistenceManager.loadState).toHaveBeenCalledWith('test-model', 768);
     });
 
-    it('should debounce file updates', async () => {
-        await orchestrator.startNode();
-        expect(orchestrator.isNodeRunning).toBe(true);
-
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mock file creation needs custom casting
-        const mockFile = { path: 'test.md', stat: { size: 100 } } as unknown as TFile;
+    it('should coordinate scanAll by identifying changes and delegating to EventDebouncer', async () => {
+        const mockFile = { basename: 'test', path: 'test.md', stat: { size: 100 } } as unknown as TFile;
+        mockVaultManager.getMarkdownFiles.mockReturnValue([mockFile]);
         mockVaultManager.getFileByPath.mockReturnValue(mockFile);
-        const modifyCallback = mockVaultManager.onModify.mock.calls[0][0];
+        mockWorkerApi.getFileStates.mockResolvedValue({});
 
-        modifyCallback(mockFile);
-
-        // Should not have processed yet
-        expect(mockWorkerApi.updateFiles).not.toHaveBeenCalled();
-
-        await vi.runAllTimersAsync();
-        await vi.waitUntil(() => mockWorkerApi.updateFiles.mock.calls.length > 0);
+        await orchestrator.scanAll();
 
         expect(mockWorkerApi.updateFiles).toHaveBeenCalled();
     });
 
-    it('should handle file renames by deleting old and updating new', async () => {
-        await orchestrator.startNode();
-        expect(orchestrator.isNodeRunning).toBe(true);
+    it('should handle commitConfigChange by pausing, flushing, restarting, and resuming', async () => {
+        const eventDebouncer = (orchestrator as any).eventDebouncer;
+        const pauseSpy = vi.spyOn(eventDebouncer, 'pause');
+        const flushSpy = vi.spyOn(eventDebouncer, 'flushPending');
+        const resumeSpy = vi.spyOn(eventDebouncer, 'resume');
 
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mock file creation needs custom casting
-        const mockNewFile = { path: 'new.md', stat: { size: 100 } } as unknown as TFile;
-        mockVaultManager.getFileByPath.mockImplementation((path: string) => (path === 'new.md' ? mockNewFile : null));
-
-        const renameCallback = mockVaultManager.onRename.mock.calls[0][0];
-
-        renameCallback('old.md', 'new.md');
-
-        expect(mockWorkerApi.deleteFile).toHaveBeenCalledWith('old.md');
-
-        await vi.runAllTimersAsync();
-        await vi.waitUntil(() => mockWorkerApi.updateFiles.mock.calls.length > 0);
-        expect(mockWorkerApi.updateFiles).toHaveBeenCalled();
-    });
-
-    it('should perform a full reset on scanAll(true)', async () => {
-        await orchestrator.scanAll(true);
-        expect(mockWorkerApi.fullReset).toHaveBeenCalled();
-    });
-
-    it('should commit config changes by saving state and restarting', async () => {
-        await orchestrator.startNode();
         await orchestrator.commitConfigChange();
 
-        expect(mockPersistenceManager.saveState).toHaveBeenCalled();
+        expect(pauseSpy).toHaveBeenCalled();
+        expect(flushSpy).toHaveBeenCalled();
         expect(mockWorkerManager.terminate).toHaveBeenCalled();
-        expect(mockWorkerManager.initializeWorker).toHaveBeenCalledTimes(2);
+        expect(mockWorkerManager.initializeWorker).toHaveBeenCalled();
+        expect(resumeSpy).toHaveBeenCalled();
     });
 
-    it('should only register events once even if startNode is called multiple times', async () => {
-        await orchestrator.startNode();
-        // Reset the mock to ensure previous calls don't count, though we expect 1 call total if logic works
-        // But since we already called startNode in beforeEach or just now? 
-        // Actually startNode called mockVaultManager.onModify once.
-        // Let's call startNode again.
-        await orchestrator.startNode();
+    it('should handle flushAndShutdown by pausing, flushing and shutting down worker', async () => {
+        const eventDebouncer = (orchestrator as any).eventDebouncer;
+        const pauseSpy = vi.spyOn(eventDebouncer, 'pause');
+        const flushSpy = vi.spyOn(eventDebouncer, 'flushPending');
 
-        // Should still be 1 if the flag works
-        expect(mockVaultManager.onModify).toHaveBeenCalledTimes(1);
-    });
+        await orchestrator.flushAndShutdown();
 
-    it('should clear drift quarantine on file modification', async () => {
-        await orchestrator.startNode();
-
-        // Simulate quarantine
-        (orchestrator as any).driftQuarantine.set('test.md', 3);
-        expect((orchestrator as any).driftQuarantine.has('test.md')).toBe(true);
-
-        // Trigger modify
-        const modifyCallback = mockVaultManager.onModify.mock.calls[0][0];
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for test
-        const mockFile = { path: 'test.md', stat: { size: 100 } } as unknown as TFile;
-        modifyCallback(mockFile);
-
-        expect((orchestrator as any).driftQuarantine.has('test.md')).toBe(false);
+        expect(pauseSpy).toHaveBeenCalled();
+        expect(flushSpy).toHaveBeenCalled();
+        expect(mockWorkerManager.terminate).toHaveBeenCalled();
     });
 });

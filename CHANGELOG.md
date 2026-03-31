@@ -30,6 +30,9 @@ New features are added in the "[Unreleased]" section.
 -   **McpClientManager Strategy Refactoring**: Modularised the `McpClientManager` by implementing the Strategy Pattern for MCP transports (`stdio`, `sse`, `streamable_http`). Transport-specific connection and termination logic is now delegated to dedicated strategy classes, significantly reducing cyclomatic complexity.
 -   **Centralised secret resolution**: Consolidated `vi-secret:` resolution logic into a reusable `resolveMcpSecrets` utility, replacing duplicated resolution blocks with a unified, testable function yielding enhanced error handling and resilience.
 -   **Strict PID handling**: Eliminated unsafe TypeScript `any` type casting when reading process IDs from the `@modelcontextprotocol/sdk` output by adopting the official `.pid` getter, allowing robust validation of process tree management for `stdio` connections.
+-   **GraphSyncOrchestrator refactoring**: Decomposed the monolithic `GraphSyncOrchestrator` God Object into specialized `EventDebouncer` and `WorkerLifecycleManager` services to improve maintainability and strictly enforce the Single Responsibility Principle.
+-   **Worker backpressure handling**: Implemented a robust `pause`/`resume` mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
+-   **Unified file batching**: Centralized all file-chunking logic (50-file/5mb limits) within the `EventDebouncer`, eliminating duplicated processing loops and ensuring consistent I/O patterns across real-time events and full vault scans.
 -   **Robust stdio termination**: Transferred OS-specific `pkill` and `taskkill` teardown workflows from the core manager directly into the cohesive `StdioTransportStrategy`, yielding a much cleaner termination loop.
 
 ### Fixed

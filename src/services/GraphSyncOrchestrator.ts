@@ -1,46 +1,34 @@
 import * as Comlink from 'comlink';
 import { App, TFile, Events, Notice, normalizePath } from "obsidian";
 
-import { GRAPH_CONSTANTS, DOCUMENTATION_URLS } from "../constants";
+import { DOCUMENTATION_URLS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
-import { WorkerAPI, WorkerConfig, FileUpdateData } from "../types/graph";
+import { FileUpdateData, WorkerAPI } from "../types/graph";
 import { logger } from "../utils/logger";
+import { EventDebouncer } from "./EventDebouncer";
 import { OntologyService } from "./OntologyService";
 import { PersistenceManager } from "./PersistenceManager";
 import { VaultManager } from "./VaultManager";
+import { WorkerLifecycleManager } from "./WorkerLifecycleManager";
 import { WorkerManager } from "./WorkerManager";
 
 export class GraphSyncOrchestrator {
     private app: App;
     private vaultManager: VaultManager;
     private workerManager: WorkerManager;
-    private persistenceManager: PersistenceManager;
-    private settings: VaultIntelligenceSettings;
-    private ontologyService: OntologyService;
     private eventBus: Events;
+    private ontologyService: OntologyService;
+    private settings: VaultIntelligenceSettings;
+
+    // Sub-Managers
+    private lifecycleManager: WorkerLifecycleManager;
+    private eventDebouncer: EventDebouncer;
 
     private _isScanning = false;
-    public isNodeRunning = false;
-    private needsForcedScan = false;
-    private reindexQueued = false;
     private abortController: AbortController | null = null;
-    private eventsRegistered = false;
-
-    // Batching state
-    private pendingBackgroundUpdates: Map<string, TFile> = new Map();
-    private backgroundBatchTimer: ReturnType<typeof setTimeout> | null = null;
-    private pendingActiveUpdate: { path: string, file: TFile } | null = null;
-    private activeFileTimer: ReturnType<typeof setTimeout> | null = null;
-
-    // Persistence state
-    private saveTimeout: number | undefined = undefined;
-    private savePromise: Promise<void> | null = null;
 
     // Error Throttling
     private lastErrorNoticeTime = 0;
-
-    // Drift Quarantine (cap at 3 retries per session)
-    private driftQuarantine: Map<string, number> = new Map();
 
     constructor(
         app: App,
@@ -54,164 +42,51 @@ export class GraphSyncOrchestrator {
         this.app = app;
         this.vaultManager = vaultManager;
         this.workerManager = workerManager;
-        this.persistenceManager = persistenceManager;
-        this.settings = settings;
-        this.ontologyService = ontologyService;
         this.eventBus = eventBus;
+        this.ontologyService = ontologyService;
+        this.settings = settings;
+
+        this.lifecycleManager = new WorkerLifecycleManager(
+            workerManager,
+            persistenceManager,
+            ontologyService,
+            settings
+        );
+
+        this.eventDebouncer = new EventDebouncer(
+            app,
+            vaultManager,
+            eventBus,
+            () => this.settings, // Dynamic getter
+            this.processChunkInWorker.bind(this)
+        );
+    }
+
+    public get isNodeRunning(): boolean {
+        return this.lifecycleManager.isNodeRunning;
+    }
+
+    public get isScanning(): boolean {
+        return this._isScanning;
     }
 
     /**
      * Starts the synchronization orchestration.
-     * Initializes the worker, loads state, and triggers scanning if needed.
      */
     public async startNode(forceWipe = false) {
         try {
-            const config = this.buildWorkerConfig();
-            await this.workerManager.initializeWorker(config);
-            await this.persistenceManager.ensureGitignore();
-
-            this.needsForcedScan = await this.loadState();
-            this.registerEvents();
+            const needsForcedScan = await this.lifecycleManager.initializeWorker(forceWipe);
+            
+            this.eventDebouncer.registerEvents((path) => {
+                void this.workerManager.executeMutation(api => api.deleteFile(path));
+                this.lifecycleManager.requestSave();
+            });
 
             // Initial scan (Delta or Full)
-            void this.scanAll(forceWipe || this.needsForcedScan);
-
-            this.isNodeRunning = true;
-            logger.info("[GraphSyncOrchestrator] Started.");
-        } catch (error) {
-            logger.error("[GraphSyncOrchestrator] Initialization failed:", error);
+            void this.scanAll(needsForcedScan);
+        } catch {
             new Notice("Failed to initialize vault intelligence graph sync");
         }
-    }
-
-    private buildWorkerConfig(): WorkerConfig {
-        const { dimension, id: modelId } = this.workerManager.activeModel;
-        const activeModelId = modelId || this.settings.embeddingModel;
-        const activeDimension = dimension || this.settings.embeddingDimension;
-
-        return {
-            agentLanguage: this.settings.agentLanguage,
-            authorName: this.settings.authorName,
-            chatModel: this.settings.chatModel,
-            contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
-            embeddingChunkSize: this.settings.embeddingChunkSize,
-            embeddingDimension: activeDimension,
-            embeddingModel: activeModelId,
-            implicitFolderSemantics: this.settings.implicitFolderSemantics,
-            indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
-            minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
-            ontologyPath: this.settings.ontologyPath,
-            sanitizedModelId: this.persistenceManager.getSanitizedModelId(activeModelId, activeDimension),
-            semanticEdgeThickness: this.settings.semanticEdgeThickness || 0.5,
-            semanticGraphNodeLimit: this.settings.semanticGraphNodeLimit || 250,
-            structuralEdgeThickness: this.settings.structuralEdgeThickness || 1.0
-        };
-    }
-
-    private registerEvents() {
-        if (this.eventsRegistered) return;
-        this.eventsRegistered = true;
-
-        this.vaultManager.onModify((file) => {
-            this.driftQuarantine.delete(file.path);
-            if (this.isPathExcluded(file.path)) {
-                void this.workerManager.executeMutation(api => api.deleteFile(file.path));
-                this.requestSave();
-                return;
-            }
-            this.debounceUpdate(file.path, file);
-        });
-
-        this.vaultManager.onDelete((path) => {
-            this.driftQuarantine.delete(path);
-            void this.workerManager.executeMutation(api => api.deleteFile(path));
-            this.requestSave();
-        });
-
-        this.vaultManager.onRename((oldPath, newPath) => {
-            this.driftQuarantine.delete(oldPath);
-            this.driftQuarantine.delete(newPath);
-            void this.workerManager.executeMutation(api => api.deleteFile(oldPath));
-            const renamedFile = this.vaultManager.getFileByPath(newPath);
-            if (renamedFile && !this.isPathExcluded(newPath)) {
-                this.debounceUpdate(newPath, renamedFile);
-            }
-            this.requestSave();
-        });
-
-        // Drift bridge from Facade
-        this.eventBus.on('graph:drift-detected', (file: TFile) => {
-            const retryCount = this.driftQuarantine.get(file.path) || 0;
-            if (retryCount < 3) {
-                this.driftQuarantine.set(file.path, retryCount + 1);
-                this.debounceUpdate(file.path, file);
-            } else {
-                logger.warn(`[GraphSyncOrchestrator] File ${file.path} quarantined due to excessive drift.`);
-            }
-        });
-    }
-
-    private isPathExcluded(path: string): boolean {
-        if (path.startsWith(GRAPH_CONSTANTS.VAULT_DATA_DIR)) return true;
-        if (this.settings.excludedFolders && this.settings.excludedFolders.length > 0) {
-            const normalizedPath = path.toLowerCase();
-            for (const folder of this.settings.excludedFolders) {
-                const normalizedFolder = folder.toLowerCase().replace(/\/+$/, "");
-                if (normalizedPath === normalizedFolder || normalizedPath.startsWith(normalizedFolder + '/')) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private debounceUpdate(path: string, file: TFile) {
-        const activeFile = this.app.workspace.getActiveFile();
-        const isActive = activeFile?.path === path;
-
-        if (isActive) {
-            if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
-            if (this.pendingActiveUpdate && this.pendingActiveUpdate.path !== path) {
-                this.pendingBackgroundUpdates.set(this.pendingActiveUpdate.path, this.pendingActiveUpdate.file);
-                this.scheduleBackgroundBatch();
-            }
-            this.pendingBackgroundUpdates.delete(path);
-            this.pendingActiveUpdate = { file, path };
-            this.activeFileTimer = setTimeout(() => {
-                const update = this.pendingActiveUpdate;
-                this.pendingActiveUpdate = null;
-                this.activeFileTimer = null;
-                if (update) void this.processChunkInWorker([update.file]);
-            }, GRAPH_CONSTANTS.ACTIVE_FILE_INDEXING_DELAY_MS);
-        } else {
-            if (this.pendingActiveUpdate?.path === path) return;
-            this.pendingBackgroundUpdates.set(path, file);
-            this.scheduleBackgroundBatch();
-        }
-    }
-
-    private scheduleBackgroundBatch() {
-        if (this.backgroundBatchTimer) return;
-        const delay = this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS;
-        this.backgroundBatchTimer = setTimeout(() => {
-            this.backgroundBatchTimer = null;
-            const files = Array.from(this.pendingBackgroundUpdates.values());
-            this.pendingBackgroundUpdates.clear();
-
-            let currentChunk: TFile[] = [];
-            let currentSize = 0;
-
-            for (const f of files) {
-                currentChunk.push(f);
-                currentSize += f.stat.size;
-                if (currentChunk.length >= 50 || currentSize >= 5 * 1024 * 1024) {
-                    void this.processChunkInWorker(currentChunk);
-                    currentChunk = [];
-                    currentSize = 0;
-                }
-            }
-            if (currentChunk.length > 0) void this.processChunkInWorker(currentChunk);
-        }, delay);
     }
 
     private async processChunkInWorker(chunk: TFile[]) {
@@ -221,25 +96,24 @@ export class GraphSyncOrchestrator {
                 const filesData: FileUpdateData[] = [];
                 for (const file of chunk) {
                     const currentFile = this.vaultManager.getFileByPath(file.path);
-                    if (!currentFile || this.isPathExcluded(file.path)) continue;
+                    if (!currentFile || this.eventDebouncer.isPathExcluded(file.path)) continue;
 
                     const content = await this.vaultManager.readFile(currentFile);
                     const { basename, mtime, size } = this.vaultManager.getFileStat(currentFile);
 
-                    // Helper to resolve links within the Orchestrator
                     const links = this.getResolvedLinks(currentFile);
                     filesData.push({ content, links, mtime, path: file.path, size, title: basename });
                 }
                 if (filesData.length > 0) {
                     await api.updateFiles(filesData);
-                    this.requestSave();
+                    this.lifecycleManager.requestSave();
                     this.eventBus.trigger('graph:index-updated');
                 }
             });
         } catch (e) {
             if (e instanceof Error && e.message.includes("TaskDropped")) return;
             logger.error("[GraphSyncOrchestrator] Chunk processing failed:", e);
-            
+
             // Throttle UI Error Notices to once every 30 seconds to prevent spam
             if (!this.lastErrorNoticeTime || Date.now() - this.lastErrorNoticeTime > 30000) {
                 this.lastErrorNoticeTime = Date.now();
@@ -247,8 +121,7 @@ export class GraphSyncOrchestrator {
                     "Background indexing failed. Is your AI provider offline?\n\nCheck the developer console for details or ",
                     10000
                 );
-                
-                // Append clickable link to the notice DOM
+
                 notice.messageEl.createEl('a', {
                     href: DOCUMENTATION_URLS.SECTIONS.OLLAMA_DEBUG,
                     text: `View the ${'Ollama'} guide to troubleshoot`
@@ -260,7 +133,7 @@ export class GraphSyncOrchestrator {
     private getResolvedLinks(file: TFile): string[] {
         const cache = this.app.metadataCache.getFileCache(file);
         if (!cache) return [];
-        
+
         const allLinks = [...(cache.links || []), ...(cache.frontmatterLinks || [])];
         if (allLinks.length === 0) return [];
 
@@ -299,28 +172,23 @@ export class GraphSyncOrchestrator {
             const files = this.vaultManager.getMarkdownFiles();
             const states = await this.workerManager.executeQuery(api => api.getFileStates()) as Record<string, { mtime: number; size: number }>;
 
-            let currentChunk: TFile[] = [];
-            let currentSize = 0;
+            const filesToProcess: TFile[] = [];
 
             for (const file of files) {
                 if (signal.aborted) break;
-                if (this.isPathExcluded(file.path)) continue;
+                if (this.eventDebouncer.isPathExcluded(file.path)) continue;
 
                 const state = states[file.path];
                 const { mtime, size } = this.vaultManager.getFileStat(file);
 
                 if (!state || state.mtime !== mtime || state.size !== size) {
-                    currentChunk.push(file);
-                    currentSize += size;
-                    if (currentChunk.length >= 50 || currentSize >= 5 * 1024 * 1024) {
-                        void this.processChunkInWorker(currentChunk);
-                        currentChunk = [];
-                        currentSize = 0;
-                    }
+                    filesToProcess.push(file);
                 }
             }
-            if (!signal.aborted && currentChunk.length > 0) {
-                void this.processChunkInWorker(currentChunk);
+
+            if (!signal.aborted && filesToProcess.length > 0) {
+                // Delegate chunking and dispatch to EventDebouncer
+                await this.eventDebouncer.processBatch(filesToProcess);
             }
 
             // WAIT for the mutation queue to finish processing all chunks
@@ -328,7 +196,7 @@ export class GraphSyncOrchestrator {
 
             if (!signal.aborted) {
                 // Prune orphans (nodes that exist in graph but not in vault)
-                const validPaths = files.filter(f => !this.isPathExcluded(f.path)).map(f => f.path);
+                const validPaths = files.filter(f => !this.eventDebouncer.isPathExcluded(f.path)).map(f => f.path);
                 await this.workerManager.executeMutation(api => api.pruneOrphans(validPaths));
 
                 logger.info("[GraphSyncOrchestrator] Scan complete.");
@@ -351,7 +219,6 @@ export class GraphSyncOrchestrator {
         const allFiles = this.vaultManager.getMarkdownFiles();
         for (const file of allFiles) {
             map[file.basename.toLowerCase()] = file.path;
-            // Map the lowercased full path to the exact canonical path to prevent case-drift node duplication
             map[file.path.toLowerCase()] = file.path;
         }
 
@@ -364,128 +231,54 @@ export class GraphSyncOrchestrator {
         await api.updateAliasMap(map);
     }
 
-    private requestSave() {
-        if (this.saveTimeout) return;
-        this.saveTimeout = requestIdleCallback(() => {
-            this.saveTimeout = undefined;
-            void this.saveState();
-        }, { timeout: GRAPH_CONSTANTS.IDLE_SAVE_TIMEOUT_MS });
+    public async updateConfig(settings: VaultIntelligenceSettings) {
+        this.settings = settings;
+        await this.lifecycleManager.updateConfig(settings);
     }
 
     public cancelPendingSave() {
-        if (this.saveTimeout !== undefined) {
-            cancelIdleCallback(this.saveTimeout);
-            this.saveTimeout = undefined;
-        }
-    }
-
-    private async saveState() {
-        if (this.savePromise) return this.savePromise;
-        const { dimension, id: modelId } = this.workerManager.activeModel;
-        if (!dimension || !modelId) return;
-
-        this.savePromise = this.workerManager.executeQuery(async (api) => {
-            try {
-                const stateBuffer = await api.saveIndex();
-                await this.persistenceManager.saveState(stateBuffer, modelId, dimension);
-            } catch (error) {
-                logger.error("[GraphSyncOrchestrator] Save failed:", error);
-            } finally {
-                this.savePromise = null;
-            }
-        });
-        return this.savePromise;
-    }
-
-    /**
-     * Updates the worker configuration with new settings without restarting.
-     */
-    public async updateConfig(settings: VaultIntelligenceSettings) {
-        this.settings = { ...settings };
-        const api = this.workerManager.getApi();
-        if (api) {
-            await api.updateConfig({
-                agentLanguage: settings.agentLanguage,
-                authorName: settings.authorName,
-                chatModel: settings.chatModel,
-                contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
-                implicitFolderSemantics: settings.implicitFolderSemantics,
-                indexingDelayMs: settings.indexingDelayMs,
-                minSimilarityScore: settings.minSimilarityScore,
-                ontologyPath: settings.ontologyPath,
-                semanticEdgeThickness: settings.semanticEdgeThickness,
-                semanticGraphNodeLimit: settings.semanticGraphNodeLimit,
-                structuralEdgeThickness: settings.structuralEdgeThickness
-            });
-        }
-    }
-
-    private async loadState(): Promise<boolean> {
-        const { dimension, id: modelId } = this.workerManager.activeModel;
-        if (!dimension || !modelId) return false;
-
-        const stateData = await this.persistenceManager.loadState(modelId, dimension);
-        if (!stateData) return true; // Start fresh
-
-        return await this.workerManager.executeMutation(async (api) => {
-            try {
-                const success = await api.loadIndex(stateData);
-                return !success;
-            } catch (error) {
-                logger.error("[GraphSyncOrchestrator] Load failed:", error);
-                return true;
-            }
-        });
+        this.lifecycleManager.cancelPendingSave();
     }
 
     public async commitConfigChange(forceWipe = false) {
-        this.cancelPendingSave();
         if (this.abortController) this.abortController.abort();
 
-        // Flush timers and wait for pending mutations to finish!
-        if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
-        if (this.backgroundBatchTimer) clearTimeout(this.backgroundBatchTimer);
-        const allPending = [...Array.from(this.pendingBackgroundUpdates.values())];
-        if (this.pendingActiveUpdate) allPending.push(this.pendingActiveUpdate.file);
-        if (allPending.length > 0) {
-            await this.processChunkInWorker(allPending);
-        }
+        // 1. Tell EventDebouncer to Pause its batch execution
+        this.eventDebouncer.pause();
+        
+        // 2. Synchronously halt all UI timers and flush pending updates into the internal buffer
+        await this.eventDebouncer.flushPending();
+
+        // 3. Ensure prior worker updates have finished
         await this.workerManager.waitForIdle();
 
-        const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
-        if (oldDimension && oldModelId && !forceWipe) {
-            await this.saveState();
-        }
+        // 4. Safe to shutdown worker, save old state, restart
+        const needsForcedScan = await this.lifecycleManager.commitRestart(forceWipe);
 
-        this.workerManager.terminate();
-        this.driftQuarantine.clear();
-        await this.startNode(forceWipe);
+        // 5. Clear transient error tracking
+        this.eventDebouncer.clearQuarantine();
+
+        // 6. Tell EventDebouncer to Resume, flushing the buffer 
+        this.eventDebouncer.resume();
+
+        // 7. Rescan
+        void this.scanAll(needsForcedScan);
     }
 
     public async flushAndShutdown() {
-        this.cancelPendingSave();
-        this.isNodeRunning = false;
         if (this.abortController) this.abortController.abort();
-        if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
-        if (this.backgroundBatchTimer) clearTimeout(this.backgroundBatchTimer);
-
-        const allPending = [...Array.from(this.pendingBackgroundUpdates.values())];
-        if (this.pendingActiveUpdate) allPending.push(this.pendingActiveUpdate.file);
-
-        try {
-            if (allPending.length > 0) {
-                await this.processChunkInWorker(allPending);
-            }
-
-            // Ensure all queued mutations finish before dumping the state to disk
-            await this.workerManager.waitForIdle();
-            await this.saveState();
-        } catch (e) {
-            logger.error("[GraphSyncOrchestrator] Error during flushAndShutdown", e);
-        } finally {
-            this.workerManager.terminate();
-        }
+        
+        // Block new timer pushes and flush them into the processing buffer
+        this.eventDebouncer.pause();
+        await this.eventDebouncer.flushPending();
+        
+        // Clear any buffered entries manually since we are shutting down
+        // (Wait, flushPending forces processBatch, but since we are paused, they get bufferd.
+        // Actually flushPending should probably bypass pause during a final shutdown, or we 
+        // should do resume right after flushPending before shutdown. Let's do resume).
+        this.eventDebouncer.resume();
+        
+        // Worker shutdown handles saving state
+        await this.lifecycleManager.shutdownWorker();
     }
-
-    public get isScanning(): boolean { return this._isScanning; }
 }
