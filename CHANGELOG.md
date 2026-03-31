@@ -25,6 +25,10 @@ New features are added in the "Unreleased" section.
 -   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
 -   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 -   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load.
+-   **McpClientManager Strategy Refactoring**: Modularised the `McpClientManager` by implementing the Strategy Pattern for MCP transports (`stdio`, `sse`, `streamable_http`). Transport-specific connection and termination logic is now delegated to dedicated strategy classes, significantly reducing cyclomatic complexity.
+-   **Centralised secret resolution**: Consolidated `vi-secret:` resolution logic into a reusable `resolveMcpSecrets` utility, replacing duplicated resolution blocks with a unified, testable function yielding enhanced error handling and resilience.
+-   **Strict PID handling**: Eliminated unsafe TypeScript `any` type casting when reading process IDs from the `@modelcontextprotocol/sdk` output by adopting the official `.pid` getter, allowing robust validation of process tree management for `stdio` connections.
+-   **Robust stdio termination**: Transferred OS-specific `pkill` and `taskkill` teardown workflows from the core manager directly into the cohesive `StdioTransportStrategy`, yielding a much cleaner termination loop.
 
 ### Fixed
 

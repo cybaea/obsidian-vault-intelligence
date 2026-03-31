@@ -1,0 +1,143 @@
+/* global process -- Native Node.js global available on desktop */
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Platform } from "obsidian";
+
+import { MCPServerConfig } from "../../settings/types";
+import { logger } from "../../utils/logger";
+import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
+import { resolveMcpSecrets } from "./utils";
+
+export class StdioTransportStrategy implements IMcpTransportStrategy {
+    public async connect(server: MCPServerConfig, resolveSecret: SecretResolver): Promise<McpConnectionResult> {
+        if (!Platform.isDesktopApp) {
+            throw new Error(`Skipping stdio MCP server ${server.name} on Mobile.`);
+        }
+
+        const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
+        const StdioClientTransport = mcpSdk.StdioClientTransport;
+
+        // Construct minimal safe environment (Fix for Host Environment Leakage)
+        const safeKeys = [
+            'PATH', 'USER', 'HOME', 'USERPROFILE', 'APPDATA', 'TMPDIR', 'TEMP',
+            'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
+            'LANG', 'LC_ALL', 'PWD', 'LOGNAME', 'SHELL',
+            // Linux Desktop/DBus Requirements
+            'DISPLAY', 'WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_RUNTIME_DIR', 'XAUTHORITY', 'XDG_SESSION_TYPE'
+        ];
+        const mergedEnv: Record<string, string> = {
+            'OBSIDIAN_VAULT_INTELLIGENCE': 'true'
+        };
+
+        const processEnv = process.env as Record<string, string | undefined>;
+
+        for (const key of safeKeys) {
+            const val = processEnv[key];
+            if (val !== undefined) {
+                mergedEnv[key] = val;
+            }
+        }
+
+        const isWin = process.platform === 'win32';
+        const pathSeparator = isWin ? ';' : ':';
+        const home = mergedEnv.HOME || mergedEnv.USERPROFILE || '';
+        const extraPaths = isWin ? [] : [
+            '/usr/local/bin',
+            '/opt/homebrew/bin',
+            '/opt/local/bin',
+            home ? `${home}/.local/bin` : '',
+            home ? `${home}/bin` : ''
+        ].filter(p => p.length > 0);
+
+        if (extraPaths.length > 0) {
+            mergedEnv.PATH = `${extraPaths.join(pathSeparator)}${pathSeparator}${mergedEnv.PATH || ''}`;
+        }
+
+        if (server.env) {
+            try {
+                const customEnv = resolveMcpSecrets(server.env, resolveSecret);
+                for (const [k, v] of Object.entries(customEnv)) {
+                    mergedEnv[k] = v;
+                }
+            } catch (e) {
+                throw new Error(`Configuration error: ${e instanceof Error ? e.message : "Unknown error"}`);
+            }
+        }
+
+        if (!server.command) {
+            throw new Error(`Configuration error: missing command`);
+        }
+
+        const transportConfig = {
+            args: server.args || [],
+            command: server.command,
+            env: mergedEnv,
+            stderr: 'pipe' as const
+        };
+        const transport = new StdioClientTransport(transportConfig);
+
+        if (transport.stderr) {
+            transport.stderr.on('data', (chunk: { toString: () => string }) => {
+                const str = chunk.toString().trim();
+                if (str) {
+                    const lower = str.toLowerCase();
+                    if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                        logger.error(`[MCP ${server.name} STDERR] ${str}`);
+                    } else if (lower.includes('warn')) {
+                        logger.warn(`[MCP ${server.name} STDERR] ${str}`);
+                    } else if (lower.includes('debug') || lower.includes('trace')) {
+                        logger.debug(`[MCP ${server.name} STDERR] ${str}`);
+                    } else {
+                        logger.info(`[MCP ${server.name} STDERR] ${str}`);
+                    }
+                }
+            });
+        }
+
+        const client = new Client({
+            name: "vault-intelligence",
+            version: "1.0.0"
+        }, {
+            capabilities: {}
+        });
+
+        await client.connect(transport);
+
+        return { client, transport };
+    }
+
+    public async terminate(client: Client | null, transport: unknown): Promise<void> {
+        if (client) {
+            await client.close().catch(() => {});
+        }
+
+        if (transport && Platform.isDesktopApp) {
+            const typedTransport = transport as { pid?: number | null };
+            const pid = typedTransport.pid;
+
+            if (pid) {
+                try {
+                    // eslint-disable-next-line import/no-nodejs-modules -- required for desktop only process termination
+                    const cp = await import('child_process');
+                    
+                    const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
+                    
+                    if (processLib.platform === 'win32') {
+                        const killer = cp.spawn('taskkill', ['/pid', String(pid), '/t', '/f']);
+                        killer.on('error', (err: Error) => logger.warn(`taskkill failed for MCP server ${pid}:`, err));
+                    } else {
+                        const killer = cp.spawn('pkill', ['-P', String(pid)]);
+                        killer.on('error', () => {
+                            try { processLib.kill(pid); } catch { /* ignore */ }
+                        });
+                        killer.on('close', () => {
+                            try { processLib.kill(pid); } catch { /* ignore */ }
+                        });
+                        setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
+                    }
+                } catch (e) {
+                    logger.warn(`Failed to kill process tree for MCP pid ${pid}:`, e);
+                }
+            }
+        }
+    }
+}

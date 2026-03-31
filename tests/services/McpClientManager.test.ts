@@ -223,7 +223,7 @@ describe('McpClientManager', () => {
         
         expect(connection).toBeDefined();
         expect(connection?.status).toBe('error');
-        expect(connection?.errorMessage).toContain('Missing secret for header Authorization');
+        expect(connection?.errorMessage).toContain('Missing secret for Authorization');
     });
 
     it('should abort MCP tool execution if AbortSignal is used', async () => {
@@ -297,13 +297,15 @@ describe('McpClientManager', () => {
         const originalPlatform = globalThis.process.platform;
         Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: 'linux' });
 
+        const { StdioTransportStrategy } = await import('../../src/services/mcp/StdioTransportStrategy');
         managerWithInternal.connections.set('test-server', {
             client: {
                 close: vi.fn().mockResolvedValue(undefined)
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
-            pid: 12345,
-            status: 'connected'
+            status: 'connected',
+            strategy: new StdioTransportStrategy(),
+            transport: { pid: 12345 }
         });
 
         try {
