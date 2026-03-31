@@ -9,49 +9,36 @@ New features are added in the "[Unreleased]" section.
 
 ## [Unreleased]
 
-### Added
-
--   Exposed several previously "hidden" settings in the settings tabs for better user control:
-    -   Added **Dual-Loop Search** controls (Enable toggle and Re-ranking model) to the Explorer tab.
-    -   Added **Orphan Management** settings (Archive folder and Grace period) to the Gardener tab.
-    -   Added **Search Centrality Limit** to the Advanced tab.
-
-### Changed
-
--   Completely overhauled the **Configuration Reference** documentation (`docs/reference/configuration.md`) to align with the current codebase, adding descriptions for all 60+ settings with a focus on outcome-oriented explanations and hardware optimisation.
--   Integrated troubleshooting callouts directly into the configuration documentation with deep links to the [Troubleshooting Guide](file:///home/allane/Code/GitHub/obsidian-vault-intelligence/docs/reference/troubleshooting.md).
--   Standardised terminology between the UI, documentation, and codebase.
--   Improved the tone and clarity of all setting descriptions using British English and Oxford Dictionary spelling.
-
 ### User features
 
 -   **NOTE** that this release will trigger a full re-indexing of your vault on the next workspace load, potentially costing you AI tokens.
--   **Gardener orphan pruning**: The Gardener agent now automatically detects abandoned topic notes in your ontology that have no incoming links (either via wikilinks or frontmatter arrays), proposing them for deletion to keep your vault cleanly structured.
 -   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
--   **Mixed-format de-duplication**: Resolved an issue where topics in the frontmatter (`topics:`) were duplicated due to mixed Markdown (`[Name](/Path.md)`) and Wikilink (`[[Link]]`) syntax. All topics are now resolved to canonical vault paths and de-duplicated reliably.
--   **Tri-force detection algorithm**: Uses a combination of Lexical (Levenshtein distance), Structural (Jaccard similarity of inbound links), and Semantic (Orama embedding logic) checks to identify duplicate conceptual topics in your vault.
--   **Human-in-the-loop UX**: The Gardener agent proposes merges within an interactive UI card. You have full oversight on what changes occur to your files.
--   **Safe link rewiring**: Merging topics uses Obsidian's intelligent AST offsets (MetadataCache) to surgically rewrite links throughout the vault in a safe, non-destructive way.
+    -   **Human-in-the-loop UX**: Discovered merges are presented in an interactive card, giving you full oversight before any files are modified.
+    -   **Safe link rewiring**: Merging topics uses Obsidian's intelligent parsing to surgically and non-destructively rewrite links throughout your vault.
+    -   **Tri-force detection**: Uses lexical, structural, and semantic (vector) checks to identify conceptual duplicates.
+-   **Gardener orphan pruning**: The Gardener mathematically detects abandoned topic notes that have no incoming links (via wikilinks or frontmatter), proposing them for archive or deletion to keep your vault cleanly structured.
+-   **Settings expansion**: Exposed previously hidden powerful settings including Dual-Loop Search controls, Orphan Management (Archive folder and grace period), and Search Centrality logic.
+-   **Configuration documentation**: Completely overhauled the configuration documentation with outcome-oriented explanations, deep troubleshooting links, and standardized terminology.
 
 ### Developer features
 
+-   **GraphSyncOrchestrator refactoring**: Decomposed the monolithic `GraphSyncOrchestrator` God Object into specialized `EventDebouncer` and `WorkerLifecycleManager` services to improve maintainability and strictly enforce the Single Responsibility Principle.
+-   **McpClientManager Strategy Refactoring**: Modularised the `McpClientManager` by implementing the Strategy Pattern for MCP transports (`stdio`, `sse`, `streamable_http`). Transport-specific connection and termination logic is now delegated to dedicated strategy classes, significantly reducing cyclomatic complexity.
 -   **Memory leak mitigation**: Resolved multiple memory leaks in `LocalEmbeddingService`, `McpClientManager`, and `ToolRegistry` by ensuring `setTimeout` handles are captured and cleared within `finally` blocks during `Promise.race()` operations.
+-   **Centralised secret resolution**: Consolidated `vi-secret:` resolution logic into a reusable `resolveMcpSecrets` utility, replacing duplicated resolution blocks with a unified, testable function yielding enhanced error handling and resilience.
+-   **Worker backpressure handling**: Implemented a robust `pause`/`resume` mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
+-   **Unified file batching**: Centralized all file-chunking logic (50-file/5mb limits) within the `EventDebouncer`, eliminating duplicated processing loops and ensuring consistent I/O patterns across real-time events and full vault scans.
+-   **Robust stdio termination**: Transferred OS-specific `pkill` and `taskkill` teardown workflows from the core manager directly into the cohesive `StdioTransportStrategy`, yielding a much cleaner termination loop.
+-   **Strict PID handling**: Eliminated unsafe TypeScript `any` type casting when reading process IDs from the `@modelcontextprotocol/sdk` output by adopting the official `.pid` getter, allowing robust validation of process tree management for `stdio` connections.
+-   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
+-   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
+-   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
 -   **Link parsing modularisation**: Refactored the character-walker in `src/utils/link-parsing.ts` to eliminate deep nesting. Extracted modular logic for code-block skipping and link type identification, significantly improving maintainability without introducing ReDoS-vulnerable regex.
 -   **Mutation queue hardening**: Refactored `WorkerManager.executeMutation` to use a robust `async/await` serialization pattern, resolving execution order ambiguity and improving the reliability of background worker tasks.
 -   **Type safety enforcement**: Eliminated unsafe non-null assertion ("bang") operators in `src/utils/indexer-utils.ts` and enhanced array indexing types to satisfy strict TypeScript boundaries.
 -   **Magic numbers**: Centralized all hardcoded logic multipliers and constraints into `src/constants.ts` (eg `SEARCH_CONSTANTS.HYBRID_VECTOR_DIVIDER`, `OLLAMA_CONSTANTS.MAX_BUFFER_SIZE`) to improve maintainability.
 -   **Test coverage**: Expanded the automated test framework to rigorously cover complex edge cases in `OllamaProvider` NDJSON string boundary buffering and `SemanticGraphView` WebGL lifecycle observer recovery.
--   **IndexerWorker expansion**: Expanded the IndexerWorker API with the `findOntologySynonyms` logic.
--   **MetadataManager expansion**: Refactored link rewiring to natively support Obsidian `parseLinktext` and `frontmatterLinks`. This eliminated regex-based parsing and ensured robust support for URL-encoded paths and mixed link formats.
--   **GraphService facade integration**: GraphService safely exposes `getOntologySynonyms` for the Gardener Service.
 -   **Forced index migration**: Bumped the local layout state `indexVersion` (to version 7) to automatically invalidate stale shadow graphs and unconditionally reconstruct cross-file edges on the next workspace load.
--   **McpClientManager Strategy Refactoring**: Modularised the `McpClientManager` by implementing the Strategy Pattern for MCP transports (`stdio`, `sse`, `streamable_http`). Transport-specific connection and termination logic is now delegated to dedicated strategy classes, significantly reducing cyclomatic complexity.
--   **Centralised secret resolution**: Consolidated `vi-secret:` resolution logic into a reusable `resolveMcpSecrets` utility, replacing duplicated resolution blocks with a unified, testable function yielding enhanced error handling and resilience.
--   **Strict PID handling**: Eliminated unsafe TypeScript `any` type casting when reading process IDs from the `@modelcontextprotocol/sdk` output by adopting the official `.pid` getter, allowing robust validation of process tree management for `stdio` connections.
--   **GraphSyncOrchestrator refactoring**: Decomposed the monolithic `GraphSyncOrchestrator` God Object into specialized `EventDebouncer` and `WorkerLifecycleManager` services to improve maintainability and strictly enforce the Single Responsibility Principle.
--   **Worker backpressure handling**: Implemented a robust `pause`/`resume` mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
--   **Unified file batching**: Centralized all file-chunking logic (50-file/5mb limits) within the `EventDebouncer`, eliminating duplicated processing loops and ensuring consistent I/O patterns across real-time events and full vault scans.
--   **Robust stdio termination**: Transferred OS-specific `pkill` and `taskkill` teardown workflows from the core manager directly into the cohesive `StdioTransportStrategy`, yielding a much cleaner termination loop.
 
 ### Fixed
 
