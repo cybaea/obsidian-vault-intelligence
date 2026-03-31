@@ -28,6 +28,9 @@ New features are added in the "Unreleased" section.
 
 ### Fixed
 
+-   **MCP command injection**: Fixed a critical vulnerability in the MCP client manager where shell-based process execution could lead to command injection. Replaced with safe argument-array process spawning.
+-   **Electron sandbox enforcement**: Removed unsecure `globalThis` patching for Node.js modules, explicitly enabling safe dynamic resolution of native modules only on desktop environments to prevent mobile crashes and adhere to Electron security bounderies.
+-   **SSRF DNS rebinding**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding. All external network endpoints are now strictly enforced over HTTPS (when local access is denied) to utilize native TLS/SNI certificate validation as a security boundary against loopback targeting.
 -   **Gardener path normalization**: Fixed a "File not found" warning during merge actions caused by leading slashes in AI-generated topic paths. All paths are now automatically normalized to root-relative before vault operations.
 
 ## [9.1.1] - 2026-03-30

@@ -1,3 +1,4 @@
+/* global process -- Native Node.js global available on desktop */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { App, Platform } from "obsidian";
@@ -9,10 +10,6 @@ import { JsonValue, truncateJsonStrings } from "../utils/json";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
 
-interface IGlobalRequire {
-    process: { env: Record<string, string>; kill(pid: number): void; platform: string };
-    require(id: string): unknown;
-}
 
 interface InternalSecretStorage {
     clearSecret?(key: string): void;
@@ -65,22 +62,24 @@ export class McpClientManager implements IProvider {
                 if (connection.config.type === 'stdio' && connection.pid) {
                     if (Platform.isDesktopApp) {
                         try {
-                            const g = globalThis as unknown as IGlobalRequire;
-                            const cp = g.require('child_process') as { exec: (cmd: string, callback?: () => void) => void };
+                            // eslint-disable-next-line import/no-nodejs-modules -- safe dynamic require guarded by isDesktopApp
+                            const cp = await import('child_process');
                             const pid = connection.pid;
-                            if (g.process.platform === 'win32') {
-                                cp.exec(`taskkill /pid ${pid} /t /f`);
+                            if (process.platform === 'win32') {
+                                const killer = cp.spawn('taskkill', ['/pid', String(pid), '/t', '/f']);
+                                killer.on('error', (err: Error) => logger.warn(`taskkill failed for MCP server ${connection.config.name}:`, err));
                             } else {
-                                try {
-                                    // Attempt to kill child processes asynchronously first (prevents blocking)
-                                    cp.exec(`pkill -P ${pid}`, () => {
-                                        try { g.process.kill(pid); } catch { /* ignore */ }
-                                    });
-                                    // Timeout fallback to guarantee parent death if pkill hangs
-                                    setTimeout(() => { try { g.process.kill(pid); } catch { /* ignore */ } }, 1000);
-                                } catch { 
-                                    try { g.process.kill(pid); } catch { /* ignore */ }
-                                }
+                                // Attempt to kill child processes (prevents blocking)
+                                const killer = cp.spawn('pkill', ['-P', String(pid)]);
+                                killer.on('error', () => {
+                                    // Fallback: if pkill is missing, attempt to kill the parent cleanly
+                                    try { process.kill(pid); } catch { /* ignore */ }
+                                });
+                                killer.on('close', () => {
+                                    try { process.kill(pid); } catch { /* ignore */ }
+                                });
+                                // Timeout fallback to guarantee parent death if pkill hangs
+                                setTimeout(() => { try { process.kill(pid); } catch { /* ignore */ } }, 1000);
                             }
                         } catch (e) {
                             logger.warn(`Failed to kill process tree for MCP server ${connection.config.name}:`, e);
@@ -164,7 +163,7 @@ export class McpClientManager implements IProvider {
                 return;
             }
 
-            const g = globalThis as unknown as IGlobalRequire;
+
             // Use dynamic import so esbuild bundles it, but execution is deferred (mobile safe)
             const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
             const StdioClientTransport = mcpSdk.StdioClientTransport;
@@ -183,14 +182,14 @@ export class McpClientManager implements IProvider {
             };
             
             for (const key of safeKeys) {
-                const val = g.process.env[key];
+                const val = process.env[key];
                 if (val !== undefined) {
                     mergedEnv[key] = val;
                 }
             }
 
             // Fix PATH for GUI-launched apps (Obsidian often lacks user bin paths)
-            const isWin = g.process.platform === 'win32';
+            const isWin = process.platform === 'win32';
             const pathSeparator = isWin ? ';' : ':';
             const home = mergedEnv.HOME || mergedEnv.USERPROFILE || '';
             const extraPaths = isWin ? [] : [

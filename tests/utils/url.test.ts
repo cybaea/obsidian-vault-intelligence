@@ -20,9 +20,14 @@ describe('url utils', () => {
             expect(isExternalUrl('http://[::ffff:169.254.169.254]')).toBe(false);
         });
 
-        test('allows valid external URLs', () => {
-            expect(isExternalUrl('http://example.com')).toBe(true);
+        test('allows valid external URLs over HTTPS natively', () => {
+            expect(isExternalUrl('https://example.com')).toBe(true);
             expect(isExternalUrl('https://google.com')).toBe(true);
+        });
+
+        test('blocks valid external URLs over HTTP natively (SSRF protection)', () => {
+            expect(isExternalUrl('http://example.com')).toBe(false);
+            expect(isExternalUrl('http://example.com', true)).toBe(true);
         });
 
         test('blocks non-http protocols', () => {

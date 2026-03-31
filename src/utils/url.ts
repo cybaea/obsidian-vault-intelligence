@@ -39,6 +39,15 @@ export function isExternalUrl(urlString: string, allowLocal: boolean = false): b
             return false;
         }
 
+        // 2. Defeat DNS Rebinding SSRF via TLS Validation natively
+        // If local access is explicitly disabled, we ONLY permit https:
+        // Ensures that even if the DNS is poisoned/rebound to 127.0.0.1 immediately before the fetch executes,
+        // Chromium's TLS/SNI check will instantly terminate it because the local developer loopback
+        // will not possess a valid SSL certificate for the attacker's public hostname (e.g., attacker.com).
+        if (!allowLocal && url.protocol === 'http:') {
+            return false;
+        }
+
         let host = url.hostname.toLowerCase().replace(/\.$/, '');
         
         // Normalize IPv4-mapped IPv6 loopbacks and variants to capture them in regular rules
