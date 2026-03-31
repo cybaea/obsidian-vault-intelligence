@@ -11,6 +11,12 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+### Developer features
+
+## [9.2.0] - 2026-03-31
+
+### User features
+
 -   **NOTE** that this release will trigger a full re-indexing of your vault on the next workspace load, potentially costing you AI tokens.
 -   **Gardener semantic merging**: The Gardener agent can now intelligently detect identical and duplicate topics in your ontology and automatically propose to merge them.
     -   **Human-in-the-loop UX**: Discovered merges are presented in an interactive card, giving you full oversight before any files are modified.
