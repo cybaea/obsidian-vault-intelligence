@@ -13,7 +13,8 @@ __Important_: The `npm run release:prep` command has run, so `package.json` and 
 **Your Mission**:
  
 Translate technical changes into compelling narratives. You are not just listing features; you are explaining _why_ this update improves the user's life. 
-Tone of voice: That of the developer sharing his project; avoid corporate speak and excessive superlatives.
+
+Tone of voice: That of the developer sharing his project; avoid corporate speak and excessive superlatives; keep adjectives to minimum and be factual. Use British English language and idioms with Oxford spelling throughout.
 
 ---
 
