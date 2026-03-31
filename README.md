@@ -70,8 +70,6 @@ To make this seamless, Vault Intelligence uses a "Slim-Sync" Hybrid Architecture
 -   **Dynamic Context**: An "Accordion" assembly system dynamically scales from reading full documents to just reading headers, ensuring the AI never hallucinates due to context overload.
 -   **Rigorous Security**: We implement a strict "Human-in-the-Loop" model with SSRF protection, command injection prevention, and cryptographically signed tool configurations. Read our **[Security and Robustness Standards](https://cybaea.github.io/obsidian-vault-intelligence/devs/security-and-robustness)** for the full technical breakdown.
 
-📖 **[Read our Vision & Roadmap](https://cybaea.github.io/obsidian-vault-intelligence/VISION.html)** to understand our philosophy, our pivot to local LLMs, and where we are heading next.
-
 ---
 
 ## Documentation
