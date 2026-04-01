@@ -8,6 +8,11 @@ head:
 
 # Security and Robustness in Obsidian AI Plugins: Lessons from Vault Intelligence
 
+<figure>
+  <img src="/obsidian-vault-intelligence/images/security-robustness-banner.png" alt="Vault Intelligence Security and Robustness Hero Banner">
+  <figcaption><em>Vault Intelligence implements rigorous, multi-layered security to protect your private notes and local environment.</em></figcaption>
+</figure>
+
 The integration of autonomous artificial intelligence into a personal knowledge management system like Obsidian introduces new threats. You are bridging an inherently unpredictable, prompt-injectable entity (the large language model) with a highly privileged local environment that has access to the user’s private files, local network, and operating system.
 
 During the development of the **Vault Intelligence** plugin, we dedicated a massive proportion of our engineering effort to system security, isolation, and stability. We adopted a strict "Red Team" mindset, assuming that the LLM acts as a "Confused Deputy" that will inevitably be compromised by malicious input.
