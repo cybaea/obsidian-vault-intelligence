@@ -44,11 +44,11 @@ export default withMermaid(defineConfig({
         ['meta', { property: 'og:type', content: 'website' }],
         ['meta', { property: 'og:title', content: 'Vault Intelligence' }],
         ['meta', { property: 'og:description', content: 'AI research assistant for your Obsidian vault' }],
-        ['meta', { property: 'og:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
+        ['meta', { property: 'og:image', content: 'https://cybaea.github.io/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
         ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
         ['meta', { name: 'twitter:title', content: 'Vault Intelligence' }],
         ['meta', { name: 'twitter:description', content: 'AI research assistant for your Obsidian vault' }],
-        ['meta', { name: 'twitter:image', content: '/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
+        ['meta', { name: 'twitter:image', content: 'https://cybaea.github.io/obsidian-vault-intelligence/images/vault-intelligence-social-1280.png' }],
         ['style', {}, '.vi-doc-icon { display: inline-flex; vertical-align: middle; height: 1.25em; width: 1.25em; color: var(--vp-c-text-1); margin: 0 0.2rem; } .vi-doc-icon svg { width: 100%; height: 100%; stroke: currentColor; }'],
     ],
     srcExclude: [

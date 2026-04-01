@@ -3,7 +3,7 @@ description: Detailed security and robustness standards for the Vault Intelligen
 head:
   - - meta
     - property: og:image
-      content: /obsidian-vault-intelligence/images/security-robustness-banner.png
+      content: https://cybaea.github.io/obsidian-vault-intelligence/images/security-robustness-banner.png
 ---
 
 # Security and Robustness in Obsidian AI Plugins: Lessons from Vault Intelligence
@@ -241,4 +241,4 @@ By standardizing these practices, we can collectively ensure that the Obsidian e
 
 ---
 
-![Vault Intelligence Security and Robustness Hero Banner](/images/security-robustness-banner.png)
+![Vault Intelligence Security and Robustness Hero Banner](https://cybaea.github.io/obsidian-vault-intelligence/images/security-robustness-banner.png)
