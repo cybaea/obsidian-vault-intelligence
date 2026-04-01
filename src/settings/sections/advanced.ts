@@ -346,7 +346,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .setIcon('terminal')
             .onClick(async () => {
                 const apiKey = await plugin.geminiService.getApiKey();
-                await ModelRegistry.fetchModels(plugin.app, apiKey || '', 0, true);
+                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true);
                 
                 const raw = ModelRegistry.getRawResponse();
                 const rawOllama = ModelRegistry.getRawOllamaResponse();

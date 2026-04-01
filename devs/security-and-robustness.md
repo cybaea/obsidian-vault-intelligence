@@ -2,7 +2,7 @@
 description: Detailed security and robustness standards for the Vault Intelligence plugin, covering SSRF protection, credential management, and "Red Team" engineering.
 head:
   - - meta
-    - name: og:image
+    - property: og:image
       content: /obsidian-vault-intelligence/images/security-robustness-banner.png
 ---
 
@@ -238,3 +238,7 @@ If you are developing an AI agent or RAG system for Obsidian, we highly recommen
 -   [ ] **ReDoS Checks:** Have you tested your Markdown parsing regexes (eg wikilink extraction) against maliciously crafted, deeply nested strings to avoid Catastrophic Backtracking?
 
 By standardizing these practices, we can collectively ensure that the Obsidian ecosystem remains a secure, private, and robust environment for the next generation of AI tooling.
+
+---
+
+![Vault Intelligence Security and Robustness Hero Banner](/images/security-robustness-banner.png)

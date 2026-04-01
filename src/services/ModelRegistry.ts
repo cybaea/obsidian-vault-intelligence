@@ -164,9 +164,8 @@ export class ModelRegistry {
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
     private static ollamaDetailsCache = new Set<string>();
-    private static getCachePath(app: App): string {
-        const plugin = (app as unknown as { plugins: { getPlugin(id: string): { manifest?: { dir?: string } } } }).plugins?.getPlugin("vault-intelligence");
-        const dir = plugin?.manifest?.dir || `${app.vault.configDir}/plugins/vault-intelligence`;
+    private static getCachePath(app: App, pluginDir: string): string {
+        const dir = pluginDir || `${app.vault.configDir}/plugins/vault-intelligence`;
         return `${dir}/model-cache.json`;
     }
 
@@ -176,7 +175,7 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
+    public static async fetchModels(app: App, pluginDir: string, settings: VaultIntelligenceSettings, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
         if (this.isFetching) return;
 
         this.ollamaDetailsCache.clear();
@@ -207,7 +206,7 @@ export class ModelRegistry {
 
         // 2. Check File Cache for models (we ALWAYS load the cached OLLAMA memory as fallback regardless of expiry)
         if (!cachedOllamaModels || !cachedGeminiModels) {
-            const cachePath = this.getCachePath(app);
+            const cachePath = this.getCachePath(app, pluginDir);
             if (await app.vault.adapter.exists(cachePath)) {
                 try {
                     const cached = await app.vault.adapter.read(cachePath);
@@ -234,8 +233,6 @@ export class ModelRegistry {
         logger.debug("Fetching models from APIs...");
         this.isFetching = true;
         try {
-            const plugin = (app as unknown as { plugins: { getPlugin(id: string): { settings: VaultIntelligenceSettings } } }).plugins.getPlugin("vault-intelligence");
-            const settings = plugin?.settings;
             if (!settings) throw new Error("Vault Intelligence settings not found during model fetch.");
 
             const tasks: Promise<void>[] = [];
@@ -308,7 +305,7 @@ export class ModelRegistry {
                     rawResponse: this.rawApiResponse || undefined,
                     timestamp: this.lastFetchTime
                 };
-                const cachePath = this.getCachePath(app);
+                const cachePath = this.getCachePath(app, pluginDir);
                 await app.vault.adapter.write(cachePath, JSON.stringify(cacheData));
             }
             app.workspace.trigger('vault-intelligence:models-updated');

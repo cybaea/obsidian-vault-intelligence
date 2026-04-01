@@ -227,7 +227,7 @@ export interface IVaultIntelligencePlugin {
     geminiService: GeminiProvider;
     graphService: GraphService;
     graphSyncOrchestrator: GraphSyncOrchestrator;
-    manifest: { id: string };
+    manifest: { id: string; dir?: string };
     mcpClientManager: unknown; // Using unknown here to avoid circular dep, we'll cast it in implementation
     persistenceManager: PersistenceManager;
     requiresIndexWipeOnExit?: boolean;

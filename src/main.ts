@@ -168,7 +168,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
 				// Pass skipOllamaFetch=true so we exclusively use the Ollama cache on startup to save costs
-				await ModelRegistry.fetchModels(this.app, apiKey, this.settings.modelCacheDurationDays, false, false, true);
+				await ModelRegistry.fetchModels(this.app, this.manifest.dir || `${this.app.vault.configDir}/plugins/vault-intelligence`, this.settings, apiKey, this.settings.modelCacheDurationDays, false, false, true);
 				// Re-sanitize after fetch completes in case dynamic limits are different
 				await this.sanitizeBudgets();
 			})();
