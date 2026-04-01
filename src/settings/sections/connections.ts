@@ -103,7 +103,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
                 if (actualKey && actualKey.startsWith('AIza')) {
                     try {
-                        await ModelRegistry.fetchModels(plugin.app, actualKey, 0);
+                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0);
                         new Notice("API key valid. Models loaded.");
                     } catch {
                         if (actualKey.length > 30) new Notice("Failed to load models.");
@@ -183,7 +183,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     const apiKey = await plugin.geminiService.getApiKey();
                     if (!apiKey) throw new Error("API key not found.");
 
-                    await ModelRegistry.fetchModels(plugin.app, apiKey, 0, true);
+                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true);
                     new Notice("Model list refreshed");
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);
