@@ -11,7 +11,17 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+-   **Mobile compatibility**: Resolved critical startup crashes on Obsidian Mobile, ensuring the plugin initializes correctly in restricted WebView environments.
+
 ### Developer features
+
+-   **Environment-aware bundling**: Hardened the _esbuild_ configuration to apply Node.js mocks and environment definitions (_process.release.name_) to the main process, preventing runtime errors on mobile devices.
+-   **ModelRegistry architectural refactoring**: De-coupled _ModelRegistry.fetchModels_ from the global Obsidian app registry. It now accepts explicit settings and directory paths, eliminating a startup race condition and improving initialization reliability.
+-   **Type safety enforcement**: Extended the _IVaultIntelligencePlugin_ interface to include the _manifest.dir_ property, eliminating the need for unsafe _any_ casts and improving project-wide linting compliance.
+
+### Fixed
+
+-   **EventEmitter crash**: Fixed a _TypeError_ where the plugin failed to resolve the Node.js _events_ module on mobile by force-bundling a browser-compatible polyfill.
 
 ## [9.2.0] - 2026-03-31
 
