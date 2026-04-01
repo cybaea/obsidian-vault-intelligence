@@ -29,8 +29,8 @@ const mainExternalModules = [
 	"@lezer/lr",
 	"sharp",
 	"onnxruntime-node",
-	...builtinModules,
-	...builtinModules.map(m => `node:${m}`)
+	...builtinModules.filter(m => m !== 'events'),
+	...builtinModules.filter(m => m !== 'events').map(m => `node:${m}`)
 ];
 
 // 2. Worker Process Externals (Browser)
@@ -45,7 +45,7 @@ const workerExternalModules = [
 const mockPlugin = {
 	name: 'mock-plugin',
 	setup(build) {
-		build.onResolve({ filter: /^(sharp|onnxruntime-node|fs|path|url|node:fs|node:path|node:url)$/ }, args => ({
+		build.onResolve({ filter: /^(sharp|onnxruntime-node|fs|path|url|child_process|node:fs|node:path|node:url|node:child_process)$/ }, args => ({
 			path: args.path,
 			namespace: 'mock-ns'
 		}));
@@ -71,7 +71,12 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	define: {
+		'process.release.name': '"browser"',
+		'process.versions.node': 'false' 
+	},
 	plugins: [
+		mockPlugin,
 		inlineWorkerPlugin({
 			bundle: true,
 			format: 'iife',
