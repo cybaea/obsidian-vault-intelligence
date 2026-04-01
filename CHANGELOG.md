@@ -11,6 +11,12 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+### Developer features
+
+## [9.2.1] - 2026-04-01
+
+### User features
+
 -   **Mobile compatibility**: Resolved critical startup crashes on Obsidian Mobile, ensuring the plugin initializes correctly in restricted WebView environments.
 
 ### Developer features
