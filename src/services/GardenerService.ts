@@ -284,6 +284,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             // Legacy support: Replace {{NOTE_COUNT}} with a static string to ensure prefix caching is not defeated
             systemInstruction = systemInstruction.replace("{{NOTE_COUNT}}", "the");
             systemInstruction = systemInstruction.replace("{{LANGUAGE}}", this.settings.agentLanguage || "English (US)");
+            systemInstruction = systemInstruction.replace("{{ONTOLOGY_ROOT}}", normalizePath(this.settings.ontologyPath));
 
             // Merge with Instructions.md if exists
             if (ontologyContext.instructions) {
@@ -512,8 +513,29 @@ ${JSON.stringify(errorObj, null, 2)}
         // Ensure path starts with ontology root if it was stripped (e.g. AI returned Concepts/Topic.md instead of Ontology/Concepts/Topic.md)
         const ontologyRoot = normalizePath(this.settings.ontologyPath);
         if (ontologyRoot && !processedPath.startsWith(ontologyRoot)) {
-            // Check if it's a known subfolder name that should be inside the ontology root
-            processedPath = normalizePath(`${ontologyRoot}/${processedPath}`);
+            const rootSegments = ontologyRoot.split('/').filter(Boolean);
+            const suggestedSegments = processedPath.split('/').filter(Boolean);
+
+            // Find the longest suffix of root that is a prefix of suggested
+            let overlapCount = 0;
+            for (let i = 1; i <= Math.min(rootSegments.length, suggestedSegments.length); i++) {
+                const rootSuffix = rootSegments.slice(-i);
+                const suggestedPrefix = suggestedSegments.slice(0, i);
+                if (rootSuffix.every((seg, idx) => seg.toLowerCase() === suggestedPrefix[idx]?.toLowerCase())) {
+                    overlapCount = i;
+                }
+            }
+
+            if (overlapCount > 0) {
+                // Suggested starts with a suffix of root, so we prepend only the unique part of root
+                const uniqueRoot = rootSegments.slice(0, rootSegments.length - overlapCount);
+                const overlapFromRoot = rootSegments.slice(-overlapCount);
+                const uniqueSuggested = suggestedSegments.slice(overlapCount);
+                processedPath = [...uniqueRoot, ...overlapFromRoot, ...uniqueSuggested].join('/');
+            } else {
+                // No overlap, prepend the whole root
+                processedPath = normalizePath(`${ontologyRoot}/${processedPath}`);
+            }
         }
 
         const decodedPath = decodeURIComponent(processedPath);

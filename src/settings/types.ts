@@ -142,7 +142,7 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
 ## CONSTRAINTS:
 - Suggestions for 'topics' MUST be standard Markdown links: [Name](/Path/to/file.md).
 - DO NOT use double brackets [[ ]] anywhere in the links.
-- Use the EXACT vault-absolute paths provided in the 'VALID TOPICS' list below. These paths MUST start with the ontology root folder (e.g., /Ontology/...).
+- Use the EXACT vault-absolute paths provided in the 'VALID TOPICS' list below. These paths MUST start with the ontology root folder (e.g., /{{ONTOLOGY_ROOT}}/... (replace with actual root)).
 - **NEW TOPICS**: If you suggest a topic that is NOT in the 'VALID TOPICS' list:
     - You MUST provide a clear, concise definition for it.
     - For entities (people, organizations, places) or complex technical concepts, include at least one authoritative reference within the definition.
