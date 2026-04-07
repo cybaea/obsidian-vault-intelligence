@@ -10,6 +10,14 @@ prompt: "Please review, verify, and summarize PR {{ pr_number }}"
 extensions:
   - type: builtin
     name: developer
+  - type: builtin
+    name: code_execution
+  - type: builtin
+    name: extensionmanager
+  - type: builtin
+    name: analyze
+  - type: builtin
+    name: todo
 activities:
   - "Review PR {{ pr_number }}"
 instructions: |
