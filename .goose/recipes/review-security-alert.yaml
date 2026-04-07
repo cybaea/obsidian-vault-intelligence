@@ -1,0 +1,47 @@
+version: 1.0.0
+title: "Review Dependabot Security Alert"
+description: "Analyze a security alert from the GitHub Security tab using the GitHub API."
+parameters:
+  - key: alert_number
+    input_type: string
+    requirement: required
+    description: "The ID from the security alert URL (e.g., 21 from .../security/dependabot/21)."
+prompt: "Investigate Dependabot security alert #{{ alert_number }}"
+extensions:
+  - type: builtin
+    name: developer
+activities:
+  - "Security Analysis for Alert {{ alert_number }}"
+instructions: |
+  You are acting as a Security Engineer. Since this is a security alert and not yet a PR, you will analyze the risk against the current 'main' branch.
+
+  1. Fetch Alert Details
+     Use the GitHub API to get the vulnerability metadata. Execute:
+     `gh api repos/:owner/:repo/dependabot/alerts/{{ alert_number }}`
+     (Note: Ensure you are in the project root so `gh` detects the correct repository context).
+
+  2. Identify the Threat
+     From the API response, extract and summarize:
+     - **Package**: The name of the vulnerable dependency.
+     - **Vulnerability**: The CVE or GHSA ID.
+     - **Severity**: Critical, High, Medium, or Low.
+     - **Fixed Version**: The version we need to move to.
+
+  3. Deep Security Research
+     Use your search tools to research the specific CVE/GHSA:
+     - Find the "Attack Vector" (e.g., is it a network-based exploit?).
+     - Identify which specific functions or modules in the library are affected.
+
+  4. Reachability Analysis (Codebase Impact)
+     Search the current codebase (staying on your current branch) to see if the project actually uses the vulnerable code:
+     - Use `grep` or search tools to find imports and calls to the affected package.
+     - Determine if the vulnerability is "reachable" in our current implementation.
+
+  5. Recommendation
+     Provide a clear recommendation in the chat:
+     - **Update Priority**: (Immediate / Next Sprint / Informational)
+     - **Risk Summary**: Explain if we are actually vulnerable based on our code usage.
+     - **Next Step**: Usually "Click 'Create Security Update' on GitHub" or "Manually update package.json".
+
+  6. Optional: Post a Discussion Comment
+     If there is a related issue or if you want to log your findings, you can ask the user if they want you to create a GitHub Issue summarizing this research.

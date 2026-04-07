@@ -44,7 +44,7 @@ instructions: |
      
   6. Automated Verification Suite
      Run the tests using `npm ci` to respect the lockfile and avoid unnecessary changes. Execute:
-     `npm ci && npm run build && npm test && npm run lint`
+     `npm ci && npm run build && npm test && npm run lint && npm run docs:build`
      
   7. Report Findings
      Do NOT create artifacts in the repository. Summarize your research and verification results explicitly in the chat.
