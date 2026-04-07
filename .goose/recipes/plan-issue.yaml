@@ -1,0 +1,68 @@
+version: 1.0.0
+title: "Develop Implementation Plan for Issue"
+description: "Analyzes a GitHub issue, delegates planning, gets a fresh peer review (using configurable models/providers), and feeds comments back."
+parameters:
+  - name: issue_number
+    type: string
+    required: true
+    description: "The GitHub issue number to plan."
+  - name: reviewer_provider
+    type: string
+    required: false
+    description: "The AI provider for the Reviewer (e.g., anthropic, google, openai)."
+  - name: reviewer_model
+    type: string
+    required: false
+    description: "The model to use for the Reviewer subagent (e.g., claude-3-7-sonnet-20250219)."
+  - name: planner_provider
+    type: string
+    required: false
+    description: "The AI provider for the Planner subagent."
+  - name: planner_model
+    type: string
+    required: false
+    description: "The model to use for the Planner subagent."
+prompt: "Please develop, review, and refine an implementation plan for issue #{{ issue_number }}. Reviewer: {{ reviewer_provider }}/{{ reviewer_model }}. Planner: {{ planner_provider }}/{{ planner_model }}."
+extensions:
+  - type: builtin
+    name: developer
+  - type: builtin
+    name: summon
+activities:
+  - "Plan, review, and refine issue #{{ issue_number }}"
+instructions: |
+  You are the Orchestrator. Manage the end-to-end planning phase for GitHub issue #{{ issue_number }}.
+
+  **Phase 1: Context Gathering & Codebase Exploration**
+  1. Use `Developer.shell` to retrieve the full issue details AND all comments using JSON to prevent truncation (e.g., `gh issue view {{ issue_number }} --json title,body,comments`).
+  2. Read the issue text and identify keywords, components, or filenames.
+  3. **CRITICAL**: Goose does not auto-index codebases like other tools. You MUST explicitly use `Analyze.analyze` or `Developer.shell` (e.g., `grep`, `find`, `cat`) to map out and read the relevant source files.
+  4. Build a comprehensive context payload containing the actual code snippets or architectural structures related to the issue.
+
+  **Phase 2: Initial Draft (Planner)**
+  1. Delegate to the "planner" agent using `Summon.delegate`. 
+  2. Pass `{{ planner_provider }}` as the `provider` and `{{ planner_model }}` as the `model` in the delegate payload if they are provided.
+  3. Pass the issue context and relevant code references, and instruct the planner to draft a comprehensive implementation plan.
+
+  **Phase 3: Fresh Peer Review (Reviewer)**
+  1. Use `Summon.delegate` to spawn a fresh reviewer subagent. 
+  2. Pass `{{ reviewer_provider }}` as the `provider` and `{{ reviewer_model }}` as the `model` in the delegate payload. If none provided, use best judgment.
+  3. Pass ONLY the drafted plan text and this exact prompt:
+     "Please review the attached implementation plan carefully and widely, including (but not limited to) considering:
+     - Is it complete - does it solve all requirements?
+     - Does it provide an outstanding user experience (UX) and does it build an outstanding user interface (UI)? We want this plugin to be better than anything else.
+     - Is it minimal, or is it unnecessarily complex or does it build technology debt?
+     - Is it missing any opportunities to do more that we can and should reasonably do as part of this change?
+     - Does it have enough test coverage and the right tests?
+     - What does a comprehensive red-team analysis reveal?"
+  4. Wait for the reviewer to return its critique.
+
+  **Phase 4: Plan Revision (Planner)**
+  1. Delegate to the "planner" agent once more (respecting provider/model overrides).
+  2. Pass both the Original Draft Plan AND the Reviewer's Critique.
+  3. Instruct the planner to produce a **Final Unified Implementation Plan** that thoughtfully incorporates the feedback.
+
+  **Phase 5: File Output & Clean State**
+  1. Save the Final Implementation Plan to `.tasks/plan-issue-{{ issue_number }}.md`. (No conversational history).
+  2. Save the Reviewer's Critique to a separate file: `.tasks/review-issue-{{ issue_number }}.md`.
+  3. Present a high-level summary to the user and **STOP**. Do not proceed to execution.
