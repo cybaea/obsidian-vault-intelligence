@@ -13,6 +13,8 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   Updated packages and applied security fixes.
+
 ## [9.2.3] - 2026-04-07
 
 ### User features

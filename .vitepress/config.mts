@@ -67,7 +67,13 @@ export default withMermaid(defineConfig({
     ],
     vite: {
         build: {
-            chunkSizeWarningLimit: 600
+            target: 'es2022',
+            chunkSizeWarningLimit: 800
+        },
+        esbuild: {
+            supported: {
+                'destructuring': true
+            }
         }
     },
     themeConfig: {
