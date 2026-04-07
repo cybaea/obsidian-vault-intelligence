@@ -19,6 +19,7 @@ New features are added in the "[Unreleased]" section.
 
 ## [9.2.2] - 2026-04-07
 
+-   _No changes_.
 
 ## [9.2.1] - 2026-04-01
 
