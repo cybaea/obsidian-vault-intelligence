@@ -13,6 +13,12 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+## [9.2.3] - 2026-04-07
+
+### User features
+
+### Developer features
+
 ### Fixed
 
 -   **Gardener path nesting**: Resolved an issue where new topics were created in redundant nested folders (eg `Work/Ontology/Ontology/...`) by implementing a robust path-merging algorithm that correctly handles custom nested ontology roots.
