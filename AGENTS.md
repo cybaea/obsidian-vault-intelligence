@@ -17,7 +17,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
 - **Constraint Map**:
     - **UI Interaction** -> Use `VaultManager` (Service)
     - **Binary Processing** -> Offload to Web Workers (Worker)
-    - **Multimodal Content** -> Use Gemini native parts (SDK). **Restriction**: Avoid external binary processing libraries if native model capabilities or Obsidian APIs suffice.
+    - **Multimodal Content** -> Use Provider native capabilities (SDK). **Restriction**: Avoid external binary processing libraries if native model capabilities or Obsidian APIs suffice.
     - **Search Ranking** -> Update `SearchOrchestrator` (Service)
     - **Dependency Policy**: Proposing a library that overlaps with a Core Domain SDK (e.g., using `axios` when native `fetch` or Obsidian `requestUrl` suffices) is an automatic "Architectural Failure."
 - **Show Your Work**: Proposing any new dependency or significant file change WITHOUT a corresponding `grep` or research proof is an automatic "Architectural Failure."

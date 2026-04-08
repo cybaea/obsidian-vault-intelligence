@@ -28,8 +28,8 @@ Proposing new libraries is a high-risk action. You must favor native platform AP
 
 ### Quality Gate (Critical)
 - **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist in `src/services/` or `src/utils/`.
-- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than external binary processing libraries.
-- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Gemini API.
+- **Modality Rule**: For multimodal content, you MUST prioritize the identified Provider's native data structures (e.g. binary parts, image arrays, or base64 fields) over external binary processing libraries. Proposing an external library requires a `grep` proof that the provider SDK lacks the capability.
+- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Provider's native API.
 - **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
 - **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
 - **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?
