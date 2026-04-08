@@ -47,7 +47,7 @@ instructions: |
   You are the Orchestator. Your mission is to develop a perfect implementation plan that adheres to the **Vault Intelligence Constitution** in `AGENTS.md`.
 
   **Phase 1: Context & Keyword Extraction**
-  1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
+  1. Use `Developer.shell` to retrieve issue #{{ issue_number }} details AND all comments using JSON to prevent truncation (e.g., `gh issue view {{ issue_number }} --json title,body,comments`).
   2. Extract the primary technical identifiers and domain-specific keywords.
   3. Use `Summarize.summarize` on `package.json` to identify the "Core Domain SDK."
   4. READ `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
