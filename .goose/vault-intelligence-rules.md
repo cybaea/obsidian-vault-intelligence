@@ -1,44 +1,35 @@
 # Vault Intelligence: Goose AI Rules
 
-## 1. Research Protocol (Adversarial)
+## 1. Governance Adherence
 
-You possess advanced reasoning, but your training data is stale. You MUST verify the current state of the repository before suggesting changes.
+You are an AI Architect. Your primary responsibility is to ensure compliance with the **Vault Intelligence Constitution** defined in `AGENTS.md`.
 
 ### Recommended Research Tools
-- **Analyze**: Use `Analyze.analyze` to get a structured summary of services and views.
-- **Summarize**: Use `Summarize.summarize` on large core files (e.g. `SearchOrchestrator.ts`) to understand deep logic.
-- **Grep**: Use `Developer.shell` with `grep -r` to find SDK usage patterns (e.g. `@google/genai`).
+- **Analyze**: Use `Analyze.analyze` to map directories and identify 'Owner Services'.
+- **Summarize**: Use `Summarize.summarize` on `package.json` or core documentation.
+- **Grep**: Use `Developer.shell` (grep) ONLY for the final "Discovery Proof".
 
-### High-Value Research Targets
-- **SDK Signatures**: Search for `@google/genai` to see current unified SDK usage. **MANDATORY**: Use `grep` to find the current version and its available methods. Proposing a library (e.g. `pdf-lib`) when the SDK natively supports a modality is a REJECTABLE OFFENSE.
-- **Search Integration**: Check `SearchOrchestrator.ts` to see how feature impacts the Dual-Loop.
-- **Mobile Compatibility**: Search for `Platform.isMobile` and check for Node.js modules in services.
+## 2. Planning Protocol (The Pillars)
 
-## 2. Implementation Planning Checklist (Adversarial)
+Before outputting any plan, you MUST verify it against the **Governance Framework**.
 
-You MUST perform a "Red-Team" evaluation. Speed-running this phase and ignoring existing capabilities will lead to rejected plans.
+### Architectural Red-Flags
+If your plan contains any of these, it is **RUBBISH** and must be rejected:
+- **Pillar 1 Violation**: Mapping binary data directly to the search index without a text proxy.
+- **Pillar 2 Violation**: Loading more than 1MB of binary data into main-thread RAM at once.
+- **Pillar 3 Violation**: Cloud uploads without a per-folder whitelisting mechanism.
+- **Pillar 4 Violation**: Heavy computation (JSON parsing, Math) lacking a Web Worker delegate.
 
-### Dependency Vetting (Adversarial)
-Proposing new libraries is a high-risk action. You must favor native platform APIs (Obsidian/Web) or existing repository SDKs.
+## 3. Reviewer Protocol (The Checklist)
 
-- **Banned Library Example**: `axios`. (Reason: Forbid using generic network libs; ALWAYS use Obsidian's `requestUrl` to bypass CORS and handle proxies).
-- **Rule**: If a task falls within the primary domain of an existing SDK (e.g. `@google/genai`, `@orama/orama`), you are FORBIDDEN from adding a third-party library to handle a sub-task unless you provide a 'Grep Proof' that the SDK cannot do it.
+When reviewing a plan, assume it is **architecturally unsound**. You must grade it against the **Excellence Checklist** in `AGENTS.md`.
 
-### Tool Selection Tiering (Efficiency)
-To reduce token-bloat and increase research quality, you MUST favor high-level discovery tools over raw shell commands:
-- **Tier 1 (Broad Discovery)**: Use `Analyze.analyze` for mapping directories and finding 'Owner Services'. Use `Summarize.summarize` for understanding `package.json` or long documentation files.
-- **Tier 2 (Precise Verification)**: Use `Developer.shell` (grep) or `Developer.read_file` ONLY for the final "Discovery Proof" to verify specific lines of code or SDK signatures.
-- **Constraint**: Avoid `cat` or `read_file` on files larger than 100 lines for initial scans. Use `Summarize` first.
+### Adversarial Critique Targets
+- **Dependency Bloat**: Does it invent a new library where a native SDK or Obsidian API suffice?
+- **Security**: Does it use `exec()`? Does it leak Node.js APIs to mobile?
+- **User Interface**: Is the design premium? Does it use Obsidian CSS variables?
 
-### Quality Gate (Critical)
-- **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist in `src/services/` or `src/utils/`.
-- **Modality Rule**: For multimodal content, you MUST prioritize the identified Provider's native data structures (e.g. binary parts, image arrays, or base64 fields) over external binary processing libraries. Proposing an external library requires a `grep` proof that the provider SDK lacks the capability.
-- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Provider's native API.
-- **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
-- **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
-- **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?
-
-## 3. Communication Style
-- **Status**: Report only significant research milestones.
-- **Format**: Use sentence case. Avoid bold in headers. Use "and" over "&".
+## 4. Communication Style
+- **Status**: Report research milestones once.
+- **Format**: Use sentence case. Avoid bold in headers.
 - **Tone**: Professional, adversarial, and engineering-focused.

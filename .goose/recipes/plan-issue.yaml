@@ -1,50 +1,24 @@
-version: 1.0.0
-title: "Develop Implementation Plan for Issue"
-description: "Parallelizes codebase research, delegates planning, gets a peer review, and refines the plan using specialized agents."
-parameters:
-  - key: issue_number
-    input_type: string
-    requirement: required
-    description: "The GitHub issue number to plan."
-  - key: reviewer_provider
-    input_type: string
-    requirement: optional
-    default: ""
-    description: "Override provider for the reviewer agent (defaults to system lead provider)."
-  - key: reviewer_model
-    input_type: string
-    requirement: optional
-    default: ""
-    description: "Override model for the reviewer agent (defaults to system lead model)."
-  - key: planner_provider
-    input_type: string
-    requirement: optional
-    default: ""
-    description: "Override provider for the planner agent (defaults to system planner provider)."
-  - key: planner_model
-    input_type: string
-    requirement: optional
-    default: ""
-    description: "Override model for the planner agent (defaults to system planner model)."
-prompt: "Please develop, review, and refine an implementation plan for issue #{{ issue_number }}."
-extensions:
-  - type: builtin
-    name: developer
-  - type: builtin
-    name: summon
-  - type: platform
-    name: analyze
-  - type: platform
-    name: code_execution
-  - type: platform
-    name: extensionmanager
-activities:
-  - "Plan, review, and refine issue #{{ issue_number }}"
-instructions: |
-  You are the Orchestrator. Manage the end-to-end planning phase for GitHub issue #{{ issue_number }}.
-  
-  **PRE-FLIGHT**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to establish constraints.
+name: Develop Implementation Plan for Issue
+description: Parallelizes codebase research, delegates planning, gets a peer review, and refine the plan using specialized agents.
 
+parameters:
+  - name: issue_number
+    description: The GitHub issue number to plan for.
+    required: true
+  - name: planner_provider
+    description: Model provider for the planning agent.
+    default: "google"
+  - name: planner_model
+    description: Model name for the planning agent.
+    default: "gemini-flash-latest"
+  - name: reviewer_provider
+    description: Model provider for the reviewing agent.
+    default: "google"
+  - name: reviewer_model
+    description: Model name for the reviewing agent.
+    default: "gemini-flash-latest"
+
+steps:
   ## Phase 1: Context & Keyword Extraction
   
   1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
@@ -56,36 +30,30 @@ instructions: |
   
   Establish the "State of the Repository" dynamically based on the extracted keywords.
   
-  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify where logic is restricted.
-  2. Audit (Service): Use `Analyze.analyze` on `src/services/` with the extracted keywords to find the "Owner Service." 
-  3. Audit (SDK): If a Core Domain SDK was identified in Phase 1, use `Summarize.summarize` or `Developer.shell` (grep) to find its current usage patterns.
-  
-  ## Phase 3: Adversarial Challenge (The Gate)
-  
-  **STOP**. Before drafting, you must perform a "Discovery Proof." 
-  - Why can't we solve this with the **existing** identified Services or SDKs?
-  - You MUST prove that the current codebase lacks the capability before proposing a new dependency.
-  - Proposing a library for a task that is the primary domain of an identified SDK is a REJECTABLE OFFENSE.
+  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify the "Owner Service" for this feature.
+  2. Audit (Context): Use `Analyze.analyze` on `src/services/` to understand the data flow of the identified service.
+  3. Audit (Compliance): Cite the specific document in `devs/` (e.g., `security-and-robustness.md`) that defines the constraints for this feature.
 
-  ## Phase 4: Implementation Plan (Draft)
+  ## Phase 3: Adversarial Planning (The First Draft)
   
   1. Delegate to the "planner" agent.
      - Use `{{ planner_provider }}` and `{{ planner_model }}` if provided.
-  2. Instructions: Follow the **Red-Team Checklist**. Reference ACTUAL line numbers or service names found in Phase 2.
-  3. Proposing `npm install` without a "Capability Gap Proof" is an automatic rejection.
-  
-  ## Phase 5: Adversarial Reviewer
+  2. Instructions: Develop a detailed implementation plan for issue #{{ issue_number }}.
+     - **Constraint**: You MUST score your plan against the **Four Pillars in AGENTS.md** before outputting.
+     - **Constraint**: Identify any potential "Architectural Red-Flags" and explain your mitigation.
+  3. Save the plan to `.tasks/plan-issue-{{ issue_number }}.md`.
+
+  ## Phase 4: Adversarial Reviewer (The High Bar)
   
   1. Delegate to the "reviewer" agent.
      - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
-  2. Instructions: Assume the plan is "rubbish." ACTIVELY look for dependency bloat and SOA violations. Specifically check for violations of the **Dependency Policy** and any **Banned Library Examples** identified in the rules.
-    
-  ## Phase 6: Plan Revision
-  
-  1. Finalize the plan in `.tasks/plan-issue-{{ issue_number }}.md`.
-  2. YOU MUST include a "Verification Table" listing the tools and commands used to verify the existence of every service mentioned.
-  
-  ## Phase 7: File Output
+  2. Instructions: Assume the planning draft is "Architecturally Unsound." Grade it against the **Excellence Checklist** in `AGENTS.md`.
+     - Specifically verify compliance with the **Four Pillars**.
+     - Actively look for "Hidden Dependencies" and "Main-Thread Bloat."
+  3. Save the critique to `.tasks/review-issue-{{ issue_number }}.md`.
 
-  1. Save Final Plan to `.tasks/plan-issue-{{ issue_number }}.md`.
-  2. Save Critique to `.tasks/review-issue-{{ issue_number }}.md`.
+  ## Phase 5: Refinement & Verification
+  
+  1. Based on the review, refine the implementation plan. 
+  2. Perform a final `grep` to verify any contested SDK signatures or code paths.
+  3. Save the final verified plan to `.tasks/plan-issue-{{ issue_number }}.md`.
