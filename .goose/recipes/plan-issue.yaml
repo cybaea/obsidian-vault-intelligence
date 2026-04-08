@@ -1,59 +1,75 @@
-name: Develop Implementation Plan for Issue
-description: Parallelizes codebase research, delegates planning, gets a peer review, and refine the plan using specialized agents.
+version: 1.0.0
+title: "Develop Implementation Plan for Issue"
+description: "Parallelizes codebase research, delegates planning, gets a peer review, and refines the plan using specialized agents."
 
 parameters:
-  - name: issue_number
-    description: The GitHub issue number to plan for.
-    required: true
-  - name: planner_provider
-    description: Model provider for the planning agent.
+  - key: issue_number
+    input_type: string
+    requirement: required
+    description: "The GitHub issue number to plan for."
+  - key: planner_provider
+    input_type: string
+    requirement: optional
     default: "google"
-  - name: planner_model
-    description: Model name for the planning agent.
+    description: "Model provider for the planning agent."
+  - key: planner_model
+    input_type: string
+    requirement: optional
     default: "gemini-flash-latest"
-  - name: reviewer_provider
-    description: Model provider for the reviewing agent.
+    description: "Model name for the planning agent."
+  - key: reviewer_provider
+    input_type: string
+    requirement: optional
     default: "google"
-  - name: reviewer_model
-    description: Model name for the reviewing agent.
+    description: "Model provider for the reviewing agent."
+  - key: reviewer_model
+    input_type: string
+    requirement: optional
     default: "gemini-flash-latest"
+    description: "Model name for the reviewing agent."
 
-steps:
-  ## Phase 1: Context & Keyword Extraction
-  
+prompt: "Please develop, review, and refine an implementation plan for issue #{{ issue_number }}."
+
+extensions:
+  - type: builtin
+    name: developer
+  - type: builtin
+    name: extensionmanager
+  - type: builtin
+    name: analyze
+  - type: builtin
+    name: summarize
+
+activities:
+  - "Plan, review, and refine issue #{{ issue_number }}"
+
+instructions: |
+  You are the Orchestator. Your mission is to develop a perfect implementation plan that adheres to the **Vault Intelligence Constitution** in `AGENTS.md`.
+
+  **Phase 1: Context & Keyword Extraction**
   1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
-  2. **MANDATORY**: Extract the primary technical identifiers and domain-specific keywords from the issue.
-  3. **MANDATORY**: Use `Summarize.summarize` on `package.json` with the extracted keywords to identify the "Core Domain SDK."
-  4. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
+  2. Extract the primary technical identifiers and domain-specific keywords.
+  3. Use `Summarize.summarize` on `package.json` to identify the "Core Domain SDK."
+  4. READ `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
 
-  ## Phase 2: Sequential Capability Audit
-  
-  Establish the "State of the Repository" dynamically based on the extracted keywords.
-  
-  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify the "Owner Service" for this feature.
-  2. Audit (Context): Use `Analyze.analyze` on `src/services/` to understand the data flow of the identified service.
+  **Phase 2: Sequential Capability Audit**
+  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify the "Owner Service."
+  2. Audit (Context): Use `Analyze.analyze` on `src/services/` to understand the data flow.
   3. Audit (Compliance): Cite the specific document in `devs/` (e.g., `security-and-robustness.md`) that defines the constraints for this feature.
 
-  ## Phase 3: Adversarial Planning (The First Draft)
-  
-  1. Delegate to the "planner" agent.
-     - Use `{{ planner_provider }}` and `{{ planner_model }}` if provided.
-  2. Instructions: Develop a detailed implementation plan for issue #{{ issue_number }}.
-     - **Constraint**: You MUST score your plan against the **Four Pillars in AGENTS.md** before outputting.
-     - **Constraint**: Identify any potential "Architectural Red-Flags" and explain your mitigation.
-  3. Save the plan to `.tasks/plan-issue-{{ issue_number }}.md`.
+  **Phase 3: Adversarial Planning (The First Draft)**
+  1. Delegate to the "planner" agent (use `{{ planner_provider }}`/`{{ planner_model }}`). 
+  2. **Constraint**: The plan MUST respect the **Four Pillars in AGENTS.md** (Markdown-Centric, Mobile-First, Explicit Privacy, Good Neighbor).
+  3. **Constraint**: Propose a "Text-Proxy" (Transcription/Summary) for any non-text data.
+  4. Save the plan to `.tasks/plan-issue-{{ issue_number }}.md`.
 
-  ## Phase 4: Adversarial Reviewer (The High Bar)
-  
-  1. Delegate to the "reviewer" agent.
-     - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
-  2. Instructions: Assume the planning draft is "Architecturally Unsound." Grade it against the **Excellence Checklist** in `AGENTS.md`.
-     - Specifically verify compliance with the **Four Pillars**.
-     - Actively look for "Hidden Dependencies" and "Main-Thread Bloat."
-  3. Save the critique to `.tasks/review-issue-{{ issue_number }}.md`.
+  **Phase 4: Adversarial Reviewer (The High Bar)**
+  1. Delegate to a fresh "reviewer" agent (use `{{ reviewer_provider }}`/`{{ reviewer_model }}`).
+  2. **Constraint**: Use the **Excellence Checklist** and **Architectural Red-Flags** in `AGENTS.md` and `rules.md`.
+  3. Assume the plan is "Architecturally Unsound" and look for Pillar violations.
+  4. Save the critique to `.tasks/review-issue-{{ issue_number }}.md`.
 
-  ## Phase 5: Refinement & Verification
-  
-  1. Based on the review, refine the implementation plan. 
-  2. Perform a final `grep` to verify any contested SDK signatures or code paths.
-  3. Save the final verified plan to `.tasks/plan-issue-{{ issue_number }}.md`.
+  **Phase 5: Refinement & Verification**
+  1. Based on the review, produce a **Final Unified Implementation Plan**.
+  2. Verify all SDK signatures and file paths via `grep`.
+  3. Save the final plan to `.tasks/plan-issue-{{ issue_number }}.md`.
