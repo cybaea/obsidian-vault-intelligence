@@ -37,8 +37,9 @@
         "node_modules",
         "dist",
         ".tmp",
-        "README_DOC.md",
         "AGENTS.md",
+        ".goose/**",
+        ".tasks/**",
         ".agents/**",
         "releases"
     ]
