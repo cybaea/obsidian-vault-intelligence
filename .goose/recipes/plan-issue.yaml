@@ -78,7 +78,7 @@ instructions: |
   
   1. Delegate to the "reviewer" agent.
      - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
-  2. Instructions: Assume the plan is "rubbish." ACTIVELY look for dependency bloat and SOA violations. Specifically check for the **Banned List** (`pdf-lib`, `Canvas`).
+  2. Instructions: Assume the plan is "rubbish." ACTIVELY look for dependency bloat and SOA violations. Specifically check for violations of the **Dependency Policy** and any **Banned Library Examples** identified in the rules.
     
   ## Phase 6: Plan Revision
   
