@@ -45,48 +45,46 @@ instructions: |
   
   **PRE-FLIGHT**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to establish constraints.
 
-  ## Phase 1: Issue Retrieval
+  ## Phase 1: Issue & Reality Retrieval
   
-  1. Use `Developer.shell` to retrieve the full issue details using JSON:
-     `gh issue view {{ issue_number }} --json title,body,comments`
+  1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
+  2. **MANDATORY**: Read `package.json` to verify the current `@google/genai` version.
+  3. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to internalize the **Hard Ban List**.
 
-  ## Phase 2: Parallel Codebase Research (ADVERSARIAL)
+  ## Phase 2: Sequential Capability Audit
   
-  Spawn 3 parallel researcher agents using `Summon.delegate` with `async: true`. 
+  Do NOT parallelize. You must establish the "State of the Repository" first.
   
-  1. Researcher 1 (Integrity & Standards): Use `Analyze.analyze` on `devs/` and `src/`. Identify "Golden Rules" (SOA, Dumb Views).
-  2. Researcher 2 (Security & Settings): Audit `src/settings/` and `devs/security-and-robustness.md`. Report on Privacy whitelisting and Slim-Sync impacts.
-  3. Researcher 3 (Capability Audit): Use `Developer.shell` with `grep -r` to verify unified SDK signatures (@google/genai). **MANDATORY**: Research the SDK version to see if it ALREADY supports the feature (e.g. Multimodal) before allowing new dependencies.
+  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/review_checklist.md`. Identify where logic is FORBIDDEN (UI, Main thread).
+  2. Audit (Multimodal): Use `Developer.shell` with `grep -r` to find every instance of `GeminiProvider`. Specifically look for `Part` and `inlineData` usage.
+  3. Audit (Search): Find `SearchOrchestrator.ts` and verify how it handles different MIME types.
   
-  Wait for all researchers in parallel using `Summon.load`.
+  ## Phase 3: Adversarial Challenge (The Gate)
+  
+  **STOP**. Before drafting, you must perform a "Negative Proof." 
+  - Why can't we solve this with our **existing** SDK multimodal capabilities?
+  - If you propose a library (like `pdf-lib`), you MUST prove that the native Gemini API cannot embed the document.
+  - Flag any proposal that involves the "Main Thread" as a failure.
 
-  ## Phase 3: Synthesis & Adversarial Check
-  
-  1. Synthesize results.
-  2. **ADVERSARIAL CHALLENGE**: You MUST ask: "Why can't we solve this with Gemini's native API or our existing @google/genai SDK without adding the proposed libraries? Prove that @google/genai does NOT support this natively."
-
-  ## Phase 4: Initial Draft (Planner)
+  ## Phase 4: Implementation Plan (Draft)
   
   1. Delegate to the "planner" agent.
      - Use `{{ planner_provider }}` and `{{ planner_model }}` if provided.
-  2. Instruct it to follow the **Red-Team Checklist** in `.goose/vault-intelligence-rules.md`.
-  3. Prioritize "Leveraging existing pipelines" over adding new binary dependencies.
+  2. Instructions: Follow the **Red-Team Checklist**. Reference ACTUAL line numbers or service names found in Phase 2.
+  3. Proposing `npm install` without a "Capability Gap Proof" is an automatic rejection.
   
-  ## Phase 5: Peer Review (Adversarial Reviewer)
+  ## Phase 5: Adversarial Reviewer
   
-  1. Delegate to a reviewer agent. 
+  1. Delegate to the "reviewer" agent.
      - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
-  2. **ADVERSARIAL EVALUATION**: Assume the plan is "rubbish." Flag any new `npm install` as a point of failure unless the Planner provided `grep` proof that the SDK doesn't support the feature.
-  3. Evaluate: SOA integrity, UX quality, Technical Debt, Privacy, and Mobile OOM risks.
+  2. Instructions: Assume the plan is "rubbish." ACTIVELY look for dependency bloat and SOA violations. Specifically check for the **Banned List** (`pdf-lib`, `Canvas`).
     
-  ## Phase 6: Plan Revision (Planner)
+  ## Phase 6: Plan Revision
   
-  1. Delegate to the "planner" for a final unified plan.
-     - Use `{{ planner_provider }}` and `{{ planner_model }}` if provided.
-     - Reference ACTUAL file paths discovered by Researcher 3.
+  1. Finalize the plan in `.tasks/plan-issue-{{ issue_number }}.md`.
+  2. YOU MUST include a "Verification Table" listing the tools and commands used to verify the existence of every service mentioned.
   
   ## Phase 7: File Output
 
   1. Save Final Plan to `.tasks/plan-issue-{{ issue_number }}.md`.
   2. Save Critique to `.tasks/review-issue-{{ issue_number }}.md`.
-  3. Present summary and STOP.

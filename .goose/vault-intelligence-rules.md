@@ -12,18 +12,24 @@ Goose does not possess a permanent index of the codebase. You MUST build your ow
 - **Grep**: Use `Developer.shell` with `grep -r` to find SDK usage patterns (e.g. `@google/genai`).
 
 ### High-Value Research Targets
-- **SDK Signatures**: Search for `@google/genai` to see current unified SDK usage. **MANDATORY**: Verify if the SDK version supports the requested feature (e.g. multimodal) before proposing new libraries.
+- **SDK Signatures**: Search for `@google/genai` to see current unified SDK usage. **MANDATORY**: Use `grep` to find the current version and its available methods. Proposing a library (e.g. `pdf-lib`) when the SDK natively supports a modality is a REJECTABLE OFFENSE.
 - **Search Integration**: Check `SearchOrchestrator.ts` to see how feature impacts the Dual-Loop.
 - **Mobile Compatibility**: Search for `Platform.isMobile` and check for Node.js modules in services.
 
 ## 2. Implementation Planning Checklist (Adversarial)
 
-Before finalizing any `.tasks/plan-*.md`, you must perform a "Red-Team" evaluation:
+You MUST perform a "Red-Team" evaluation. Speed-running this phase and ignoring existing capabilities will lead to rejected plans.
+
+### Hard Ban List (Hallucinated Complexity)
+Proposing these libraries is FORBIDDEN without explicit proof that native APIs (Gemini/Obsidian) are insufficient:
+- `pdf-lib`, `pdfjs-dist`: Use Gemini Multimodal `Part` or Obsidian's built-in PDF reader.
+- `Canvas`, `sharp`, `jimp`: Use CSS/HTML5 native scaling or Gemini's 4MB image auto-scaling.
+- `axios`, `fetch-node`: Use Obsidian's `requestUrl`.
 
 ### Quality Gate (Critical)
-- **Dependency Audit**: If you propose `npm install`, you MUST provide a `grep` proof that the capability is NOT available in our current `@google/genai` SDK or the Obsidian API.
-- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than main-thread JS libraries (like `pdf-lib` or `Canvas`).
-- **Main-Thread Ban**: Processing binary blobs (PDF split, Image resize) on the main thread is FORBIDDEN. Use Workers or offload to the Gemini API.
+- **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist in `src/services/` or `src/utils/`.
+- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than main-thread JS libraries.
+- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Gemini API.
 - **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
 - **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
 - **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?
