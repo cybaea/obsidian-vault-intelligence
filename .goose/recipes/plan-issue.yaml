@@ -48,7 +48,7 @@ instructions: |
   ## Phase 1: Context & Keyword Extraction
   
   1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
-  2. **MANDATORY**: Extract 3-5 technical keywords from the issue.
+  2. **MANDATORY**: Extract the primary technical identifiers and domain-specific keywords from the issue.
   3. **MANDATORY**: Use `Summarize.summarize` on `package.json` with the extracted keywords to identify the "Core Domain SDK."
   4. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
 
