@@ -20,15 +20,15 @@ Goose does not possess a permanent index of the codebase. You MUST build your ow
 
 You MUST perform a "Red-Team" evaluation. Speed-running this phase and ignoring existing capabilities will lead to rejected plans.
 
-### Hard Ban List (Hallucinated Complexity)
-Proposing these libraries is FORBIDDEN without explicit proof that native APIs (Gemini/Obsidian) are insufficient:
-- `pdf-lib`, `pdfjs-dist`: Use Gemini Multimodal `Part` or Obsidian's built-in PDF reader.
-- `Canvas`, `sharp`, `jimp`: Use CSS/HTML5 native scaling or Gemini's 4MB image auto-scaling.
-- `axios`, `fetch-node`: Use Obsidian's `requestUrl`.
+### Dependency Vetting (Adversarial)
+Proposing new libraries is a high-risk action. You must favor native platform APIs (Obsidian/Web) or existing repository SDKs.
+
+- **Banned Library Example**: `axios`. (Reason: Forbid using generic network libs; ALWAYS use Obsidian's `requestUrl` to bypass CORS and handle proxies).
+- **Rule**: If a task falls within the primary domain of an existing SDK (e.g. `@google/genai`, `@orama/orama`), you are FORBIDDEN from adding a third-party library to handle a sub-task unless you provide a 'Grep Proof' that the SDK cannot do it.
 
 ### Quality Gate (Critical)
 - **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist in `src/services/` or `src/utils/`.
-- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than main-thread JS libraries.
+- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than external binary processing libraries.
 - **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Gemini API.
 - **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
 - **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?

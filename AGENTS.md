@@ -19,6 +19,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
     - **Binary Processing** -> Offload to Web Workers (Worker)
     - **Multimodal Content** -> Use Gemini native parts (SDK). **Restriction**: Avoid external binary processing libraries if native model capabilities or Obsidian APIs suffice.
     - **Search Ranking** -> Update `SearchOrchestrator` (Service)
+    - **Dependency Policy**: Proposing a library that overlaps with a Core Domain SDK (e.g., using `axios` when native `fetch` or Obsidian `requestUrl` suffices) is an automatic "Architectural Failure."
 - **Show Your Work**: Proposing any new dependency or significant file change WITHOUT a corresponding `grep` or research proof is an automatic "Architectural Failure."
 
 - **Deep Architecture**: The file `devs/ARCHITECTURE.md` contains the comprehensive system design (Data Flows, Indexing pipelines, Shadow Graph). **Do not read this file by default.** Only read it autonomously if your specific task requires a deep understanding of core internal systems.

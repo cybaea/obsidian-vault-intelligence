@@ -45,26 +45,27 @@ instructions: |
   
   **PRE-FLIGHT**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to establish constraints.
 
-  ## Phase 1: Issue & Reality Retrieval
+  ## Phase 1: Context & Keyword Extraction
   
   1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
-  2. **MANDATORY**: Read `package.json` to verify the current `@google/genai` version.
-  3. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to internalize the **Hard Ban List**.
+  2. **MANDATORY**: Extract 3-5 technical keywords from the issue (e.g. 'embeddings', 'CSS variables', 'web worker').
+  3. **MANDATORY**: Search `package.json` for dependencies matching these keywords to identify the "Core Domain SDK."
+  4. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
 
   ## Phase 2: Sequential Capability Audit
   
-  Do NOT parallelize. You must establish the "State of the Repository" first.
+  Establish the "State of the Repository" dynamically based on the extracted keywords.
   
-  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/review_checklist.md`. Identify where logic is FORBIDDEN (UI, Main thread).
-  2. Audit (Multimodal): Use `Developer.shell` with `grep -r` to find every instance of `GeminiProvider`. Specifically look for `Part` and `inlineData` usage.
-  3. Audit (Search): Find `SearchOrchestrator.ts` and verify how it handles different MIME types.
+  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify where logic is restricted.
+  2. Audit (Service): Use `Developer.shell` with `grep -I` on the extracted keywords to find the "Owner Service" in `src/services/`.
+  3. Audit (SDK): If a Core Domain SDK was identified in Phase 1, use `grep` to find its current usage patterns in the codebase.
   
   ## Phase 3: Adversarial Challenge (The Gate)
   
-  **STOP**. Before drafting, you must perform a "Negative Proof." 
-  - Why can't we solve this with our **existing** SDK multimodal capabilities?
-  - If you propose a library (like `pdf-lib`), you MUST prove that the native Gemini API cannot embed the document.
-  - Flag any proposal that involves the "Main Thread" as a failure.
+  **STOP**. Before drafting, you must perform a "Discovery Proof." 
+  - Why can't we solve this with the **existing** identified Services or SDKs?
+  - You MUST prove that the current codebase lacks the capability before proposing a new dependency.
+  - Proposing a library for a task that is the primary domain of an identified SDK is a REJECTABLE OFFENSE.
 
   ## Phase 4: Implementation Plan (Draft)
   
