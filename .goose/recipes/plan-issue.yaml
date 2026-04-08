@@ -54,16 +54,16 @@ instructions: |
   
   Spawn 3 parallel researcher agents using `Summon.delegate` with `async: true`. 
   
-  1. Researcher 1 (Integrity & Standards): Use `Analyze.analyze` on `devs/` and `src/`. Identify "Golden Rules" (SOA, Dumb Views) and No-Node (mobile) patterns.
-  2. Researcher 2 (Security & Settings): Use `Analyze.analyze` and `Developer.shell` to audit `src/settings/` and `devs/security-and-robustness.md`. Report on Privacy whitelisting and Slim-Sync impacts.
-  3. Researcher 3 (Core Service Investigation): Use `Developer.shell` with `grep -r` to verify unified SDK signatures (@google/genai) and search anchors (SearchOrchestrator.ts). Use `Summarise.summarise` on core logic if complex.
+  1. Researcher 1 (Integrity & Standards): Use `Analyze.analyze` on `devs/` and `src/`. Identify "Golden Rules" (SOA, Dumb Views).
+  2. Researcher 2 (Security & Settings): Audit `src/settings/` and `devs/security-and-robustness.md`. Report on Privacy whitelisting and Slim-Sync impacts.
+  3. Researcher 3 (Capability Audit): Use `Developer.shell` with `grep -r` to verify unified SDK signatures (@google/genai). **MANDATORY**: Research the SDK version to see if it ALREADY supports the feature (e.g. Multimodal) before allowing new dependencies.
   
   Wait for all researchers in parallel using `Summon.load`.
 
-  ## Phase 3: Synthesis & Conflict Check
+  ## Phase 3: Synthesis & Adversarial Check
   
   1. Synthesize results.
-  2. **CRITICAL**: Perform an adversarial check: "Does the discovered code path conflict with our Security standards or Mobile constraints? Does it ignore the Dual-Loop?".
+  2. **ADVERSARIAL CHALLENGE**: You MUST ask: "Why can't we solve this with Gemini's native API or our existing @google/genai SDK without adding the proposed libraries? Prove that @google/genai does NOT support this natively."
 
   ## Phase 4: Initial Draft (Planner)
   
@@ -72,11 +72,12 @@ instructions: |
   2. Instruct it to follow the **Red-Team Checklist** in `.goose/vault-intelligence-rules.md`.
   3. Prioritize "Leveraging existing pipelines" over adding new binary dependencies.
   
-  ## Phase 5: Peer Review (Reviewer)
+  ## Phase 5: Peer Review (Adversarial Reviewer)
   
   1. Delegate to a reviewer agent. 
      - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
-  2. Evaluate: Completeness, UX/UI quality, Technical Debt (specifically binary libs), Privacy, Rate Limits, and Mobile OOM risks.
+  2. **ADVERSARIAL EVALUATION**: Assume the plan is "rubbish." Flag any new `npm install` as a point of failure unless the Planner provided `grep` proof that the SDK doesn't support the feature.
+  3. Evaluate: SOA integrity, UX quality, Technical Debt, Privacy, and Mobile OOM risks.
     
   ## Phase 6: Plan Revision (Planner)
   

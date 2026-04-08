@@ -12,15 +12,18 @@ Goose does not possess a permanent index of the codebase. You MUST build your ow
 - **Grep**: Use `Developer.shell` with `grep -r` to find SDK usage patterns (e.g. `@google/genai`).
 
 ### High-Value Research Targets
-- **SDK Signatures**: Search for `@google/genai` to see current unified SDK usage.
+- **SDK Signatures**: Search for `@google/genai` to see current unified SDK usage. **MANDATORY**: Verify if the SDK version supports the requested feature (e.g. multimodal) before proposing new libraries.
 - **Search Integration**: Check `SearchOrchestrator.ts` to see how feature impacts the Dual-Loop.
 - **Mobile Compatibility**: Search for `Platform.isMobile` and check for Node.js modules in services.
 
-## 2. Implementation Planning Checklist (Red-Team)
+## 2. Implementation Planning Checklist (Adversarial)
 
-Before finalizing any `.tasks/plan-*.md`, evaluate against these criteria:
+Before finalizing any `.tasks/plan-*.md`, you must perform a "Red-Team" evaluation:
 
 ### Quality Gate (Critical)
+- **Dependency Audit**: If you propose `npm install`, you MUST provide a `grep` proof that the capability is NOT available in our current `@google/genai` SDK or the Obsidian API.
+- **Modality Rule**: Multimodal work MUST use the Gemini native API (`Part`/`inlineData`) rather than main-thread JS libraries (like `pdf-lib` or `Canvas`).
+- **Main-Thread Ban**: Processing binary blobs (PDF split, Image resize) on the main thread is FORBIDDEN. Use Workers or offload to the Gemini API.
 - **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
 - **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
 - **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?

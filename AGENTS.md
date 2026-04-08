@@ -13,6 +13,13 @@
 
 Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside in services, and UI components must remain "dumb."
 
+- **Technical Integrity Directive**: You are a senior architect. **Assume your internal knowledge of third-party libraries is wrong/out-of-date.** You MUST verify the current capabilities of `@google/genai` and the Obsidian API via `grep` or research before proposing new dependencies. Proactively check if a "new" feature is already supported natively by the model (e.g., multimodal embeddings).
+- **Constraint Map**:
+    - **UI Interaction** -> Use `VaultManager` (Service)
+    - **Binary Processing** -> Offload to Web Workers (Worker)
+    - **Multimodal Content** -> Use Gemini native parts (SDK)
+    - **Search Ranking** -> Update `SearchOrchestrator` (Service)
+
 - **Deep Architecture**: The file `devs/ARCHITECTURE.md` contains the comprehensive system design (Data Flows, Indexing pipelines, Shadow Graph). **Do not read this file by default.** Only read it autonomously if your specific task requires a deep understanding of core internal systems.
 
 ### Research Map: Where to Look
