@@ -48,8 +48,8 @@ instructions: |
   ## Phase 1: Context & Keyword Extraction
   
   1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
-  2. **MANDATORY**: Extract 3-5 technical keywords from the issue (e.g. 'embeddings', 'CSS variables', 'web worker').
-  3. **MANDATORY**: Search `package.json` for dependencies matching these keywords to identify the "Core Domain SDK."
+  2. **MANDATORY**: Extract 3-5 technical keywords from the issue.
+  3. **MANDATORY**: Use `Summarize.summarize` on `package.json` with the extracted keywords to identify the "Core Domain SDK."
   4. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
 
   ## Phase 2: Sequential Capability Audit
@@ -57,8 +57,8 @@ instructions: |
   Establish the "State of the Repository" dynamically based on the extracted keywords.
   
   1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify where logic is restricted.
-  2. Audit (Service): Use `Developer.shell` with `grep -I` on the extracted keywords to find the "Owner Service" in `src/services/`.
-  3. Audit (SDK): If a Core Domain SDK was identified in Phase 1, use `grep` to find its current usage patterns in the codebase.
+  2. Audit (Service): Use `Analyze.analyze` on `src/services/` with the extracted keywords to find the "Owner Service." 
+  3. Audit (SDK): If a Core Domain SDK was identified in Phase 1, use `Summarize.summarize` or `Developer.shell` (grep) to find its current usage patterns.
   
   ## Phase 3: Adversarial Challenge (The Gate)
   
