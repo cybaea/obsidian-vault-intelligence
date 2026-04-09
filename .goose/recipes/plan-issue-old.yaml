@@ -1,0 +1,73 @@
+version: 1.0.0
+title: "Develop Implementation Plan for Issue"
+description: "Parallelizes codebase research, delegates planning, gets a peer review, and refines the plan."
+parameters:
+  - name: issue_number
+    type: string
+    required: true
+    description: "The GitHub issue number to plan."
+  - name: reviewer_provider
+    type: string
+    required: false
+  - name: reviewer_model
+    type: string
+    required: false
+  - name: planner_provider
+    type: string
+    required: false
+  - name: planner_model
+    type: string
+    required: false
+prompt: "Please develop, review, and refine an implementation plan for issue #{{ issue_number }}. Reviewer: {{ reviewer_provider }}/{{ reviewer_model }}. Planner: {{ planner_provider }}/{{ planner_model }}."
+extensions:
+  - type: builtin
+    name: developer
+  - type: builtin
+    name: summon
+  - type: platform
+    name: analyze
+activities:
+  - "Plan, review, and refine issue #{{ issue_number }}"
+instructions: |
+  You are the Orchestrator. Manage the end-to-end planning phase for GitHub issue #{{ issue_number }}.
+
+  **Phase 1: Issue Retrieval**
+  1. Use `Developer.shell` to retrieve the full issue details AND all comments using JSON to prevent truncation (e.g., `gh issue view {{ issue_number }} --json title,body,comments`).
+
+  **Phase 2: Parallel Codebase Research (CRITICAL)**
+  Goose does not auto-index. You MUST explicitly research the codebase before planning. To do this efficiently, use `Summon.delegate` with `async: true` to spawn 3 parallel researcher agents.
+  1. **Researcher 1 (Docs & Architecture)**: Delegate with instructions to read `devs/ARCHITECTURE_AND_STANDARDS.md`, `devs/maintainability.md`, and any other relevant files in `devs/`. Have it summarize the architectural constraints and rules relevant to issue #{{ issue_number }}.
+  2. **Researcher 2 (UI & Settings)**: Delegate with instructions to use `Analyze.analyze` or `Developer.shell` to read the files in `src/settings/`, `src/views/`, or related UI code. Have it report exactly how settings or UI must be updated for issue #{{ issue_number }}, including exact file paths.
+  3. **Researcher 3 (Core & Workers)**: Delegate with instructions to explore `src/workers/`, `src/services/`, or core logic relevant to the issue. Have it report exactly which data flows or worker messages need changing, including exact file paths.
+  *Note: Capture the `taskId` returned by each delegate call.*
+
+  **Phase 3: Synthesis**
+  1. Use `Summon.load(source: "taskId")` to wait for and collect the results from all 3 researchers.
+  2. Synthesize their findings into a single "Master Codebase Context" payload.
+
+  **Phase 4: Initial Draft (Planner)**
+  1. Delegate to the "planner" agent using `Summon.delegate` (sync, not async). 
+  2. Pass `{{ planner_provider }}` and `{{ planner_model }}` if provided.
+  3. Pass the Issue Details AND the Master Codebase Context. Instruct the planner to draft a comprehensive implementation plan.
+
+  **Phase 5: Fresh Peer Review (Reviewer)**
+  1. Use `Summon.delegate` to spawn a fresh reviewer subagent. 
+  2. Pass `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
+  3. Pass ONLY the drafted plan text and this exact prompt:
+     "Please review the attached implementation plan carefully and widely, including (but not limited to) considering:
+     - Is it complete - does it solve all requirements?
+     - Does it provide an outstanding user experience (UX) and does it build an outstanding user interface (UI)? We want this plugin to be better than anything else.
+     - Is it minimal, or is it unnecessarily complex or does it build technology debt?
+     - Is it missing any opportunities to do more that we can and should reasonably do as part of this change?
+     - Does it have enough test coverage and the right tests?
+     - What does a comprehensive red-team analysis reveal?"
+
+  **Phase 6: Plan Revision (Planner)**
+  1. Delegate to the "planner" agent once more.
+  2. Pass both the Original Draft Plan AND the Reviewer's Critique.
+  3. Instruct the planner to produce a **Final Unified Implementation Plan** that thoughtfully incorporates the feedback and references the actual file paths discovered in Phase 2.
+
+  **Phase 7: File Output & Clean State**
+  1. Save the Final Implementation Plan to `.tasks/plan-issue-{{ issue_number }}.md`. (Do not include raw chat history).
+  2. Save the Reviewer's Critique to a separate file: `.tasks/review-issue-{{ issue_number }}.md`.
+  3. Present a high-level summary to the user and **STOP**. Do not proceed to execution.

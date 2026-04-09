@@ -1,0 +1,91 @@
+version: 1.0.0
+title: "Develop Implementation Plan for Issue"
+description: "Parallelizes codebase research, delegates planning, gets a peer review, and refines the plan using specialized agents."
+parameters:
+  - key: issue_number
+    input_type: string
+    requirement: required
+    description: "The GitHub issue number to plan."
+  - key: reviewer_provider
+    input_type: string
+    requirement: optional
+    default: ""
+    description: "Override provider for the reviewer agent (defaults to system lead provider)."
+  - key: reviewer_model
+    input_type: string
+    requirement: optional
+    default: ""
+    description: "Override model for the reviewer agent (defaults to system lead model)."
+  - key: planner_provider
+    input_type: string
+    requirement: optional
+    default: ""
+    description: "Override provider for the planner agent (defaults to system planner provider)."
+  - key: planner_model
+    input_type: string
+    requirement: optional
+    default: ""
+    description: "Override model for the planner agent (defaults to system planner model)."
+prompt: "Please develop, review, and refine an implementation plan for issue #{{ issue_number }}."
+extensions:
+  - type: builtin
+    name: developer
+  - type: builtin
+    name: summon
+  - type: platform
+    name: analyze
+  - type: platform
+    name: code_execution
+  - type: platform
+    name: extensionmanager
+activities:
+  - "Plan, review, and refine issue #{{ issue_number }}"
+instructions: |
+  You are the Orchestrator. Manage the end-to-end planning phase for GitHub issue #{{ issue_number }}.
+  
+  **PRE-FLIGHT**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md` to establish constraints.
+
+  ## Phase 1: Context & Keyword Extraction
+  
+  1. Use `Developer.shell` to retrieve issue #{{ issue_number }}.
+  2. **MANDATORY**: Extract the primary technical identifiers and domain-specific keywords from the issue.
+  3. **MANDATORY**: Use `Summarize.summarize` on `package.json` with the extracted keywords to identify the "Core Domain SDK."
+  4. **MANDATORY**: Read `AGENTS.md` and `.goose/vault-intelligence-rules.md`.
+
+  ## Phase 2: Sequential Capability Audit
+  
+  Establish the "State of the Repository" dynamically based on the extracted keywords.
+  
+  1. Audit (Integrity): Read `devs/ARCHITECTURE_AND_STANDARDS.md`. Identify where logic is restricted.
+  2. Audit (Service): Use `Analyze.analyze` on `src/services/` with the extracted keywords to find the "Owner Service." 
+  3. Audit (SDK): If a Core Domain SDK was identified in Phase 1, use `Summarize.summarize` or `Developer.shell` (grep) to find its current usage patterns.
+  
+  ## Phase 3: Adversarial Challenge (The Gate)
+  
+  **STOP**. Before drafting, you must perform a "Discovery Proof." 
+  - Why can't we solve this with the **existing** identified Services or SDKs?
+  - You MUST prove that the current codebase lacks the capability before proposing a new dependency.
+  - Proposing a library for a task that is the primary domain of an identified SDK is a REJECTABLE OFFENSE.
+
+  ## Phase 4: Implementation Plan (Draft)
+  
+  1. Delegate to the "planner" agent.
+     - Use `{{ planner_provider }}` and `{{ planner_model }}` if provided.
+  2. Instructions: Follow the **Red-Team Checklist**. Reference ACTUAL line numbers or service names found in Phase 2.
+  3. Proposing `npm install` without a "Capability Gap Proof" is an automatic rejection.
+  
+  ## Phase 5: Adversarial Reviewer
+  
+  1. Delegate to the "reviewer" agent.
+     - Use `{{ reviewer_provider }}` and `{{ reviewer_model }}` if provided.
+  2. Instructions: Assume the plan is "rubbish." ACTIVELY look for dependency bloat and SOA violations. Specifically check for violations of the **Dependency Policy** and any **Banned Library Examples** identified in the rules.
+    
+  ## Phase 6: Plan Revision
+  
+  1. Finalize the plan in `.tasks/plan-issue-{{ issue_number }}.md`.
+  2. YOU MUST include a "Verification Table" listing the tools and commands used to verify the existence of every service mentioned.
+  
+  ## Phase 7: File Output
+
+  1. Save Final Plan to `.tasks/plan-issue-{{ issue_number }}.md`.
+  2. Save Critique to `.tasks/review-issue-{{ issue_number }}.md`.

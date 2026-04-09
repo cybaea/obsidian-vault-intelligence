@@ -1,2 +1,8 @@
 # Agent Initialization
-Read the file `AGENTS.md` to understand your core directives and constraints for this project.
+1. Read `AGENTS.md` for core project architecture and standards.
+2. Read `.goose/vault-intelligence-rules.md` for Goose-specific research and planning protocols.
+
+# Research Protocol
+- Use the `Analyze` extension to understand service/view relationships.
+- Use the `Summarize` extension for deep dives into core logic files.
+- Always use `grep` (shell) to verify SDK signatures and service anchors.
