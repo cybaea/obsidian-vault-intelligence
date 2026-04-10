@@ -57,67 +57,67 @@ class NativeStdioTransport implements Transport {
     }
 
     async start(): Promise<void> {
-        return new Promise((resolve, reject) => {
+        // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
+        const cp = require("child_process") as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
+        return new Promise<void>((resolve, reject) => {
             try {
-                const cp = require("child_process") as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
-
                 this.childProcess = cp.spawn(this.command, this.args, {
-                    env: this.env,
-                    stdio: ["pipe", "pipe", "pipe"],
-                    windowsHide: true
-                });
+                        env: this.env,
+                        stdio: ["pipe", "pipe", "pipe"],
+                        windowsHide: true
+                    });
 
-                let resolved = false;
+                    let resolved = false;
 
-                this.childProcess.on("error", (error: unknown) => {
-                    const err = error instanceof Error ? error : new Error(String(error));
-                    if (!resolved) {
-                        reject(err);
-                    } else if (this.onerror) {
-                        this.onerror(err);
+                    this.childProcess.on("error", (error: unknown) => {
+                        const err = error instanceof Error ? error : new Error(String(error));
+                        if (!resolved) {
+                            reject(err);
+                        } else if (this.onerror) {
+                            this.onerror(err);
+                        }
+                    });
+
+                    if (this.childProcess.pid) {
+                        resolved = true;
+                        resolve();
                     }
-                });
 
-                if (this.childProcess.pid) {
-                    resolved = true;
-                    resolve();
-                }
-
-                this.childProcess.stdout.setEncoding('utf-8');
-                this.childProcess.stdout.on("data", (chunk: string) => {
-                    this.buffer += chunk;
-                    let newlineIndex;
-                    while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
-                        const line = this.buffer.slice(0, newlineIndex);
-                        this.buffer = this.buffer.slice(newlineIndex + 1);
-                        const trimmed = line.trim();
-                        if (trimmed) {
-                            try {
-                                const message = JSON.parse(trimmed) as JSONRPCMessage;
-                                if (this.onmessage) this.onmessage(message);
-                            } catch {
-                                if (this.onerror) this.onerror(new Error("Failed to parse MCP message: " + trimmed));
+                    this.childProcess.stdout.setEncoding('utf-8');
+                    this.childProcess.stdout.on("data", (chunk: string) => {
+                        this.buffer += chunk;
+                        let newlineIndex;
+                        while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
+                            const line = this.buffer.slice(0, newlineIndex);
+                            this.buffer = this.buffer.slice(newlineIndex + 1);
+                            const trimmed = line.trim();
+                            if (trimmed) {
+                                try {
+                                    const message = JSON.parse(trimmed) as JSONRPCMessage;
+                                    if (this.onmessage) this.onmessage(message);
+                                } catch {
+                                    if (this.onerror) this.onerror(new Error("Failed to parse MCP message: " + trimmed));
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                this.childProcess.stderr.setEncoding('utf-8');
-                this.childProcess.stderr.on("data", (chunk: string) => {
-                    const str = chunk.trim();
-                    if (str) {
-                        const lower = str.toLowerCase();
-                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
-                            logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
-                        } else if (lower.includes('warn')) {
-                            logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
-                        } else if (lower.includes('debug') || lower.includes('trace')) {
-                            logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
-                        } else {
-                            logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
+                    this.childProcess.stderr.setEncoding('utf-8');
+                    this.childProcess.stderr.on("data", (chunk: string) => {
+                        const str = chunk.trim();
+                        if (str) {
+                            const lower = str.toLowerCase();
+                            if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                                logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
+                            } else if (lower.includes('warn')) {
+                                logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
+                            } else if (lower.includes('debug') || lower.includes('trace')) {
+                                logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
+                            } else {
+                                logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
+                            }
                         }
-                    }
-                });
+                    });
 
                 this.childProcess.on("close", () => {
                     if (this.onclose) this.onclose();
@@ -211,6 +211,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
+                    // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
                     const cp = require('child_process') as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
