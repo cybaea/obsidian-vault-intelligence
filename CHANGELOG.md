@@ -11,14 +11,13 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
--   **Gardener Context Enrichment**: The Gardener service now reads the full text of your notes to provide more accurate and context-aware ontology suggestions.
+-   **Gardener Context Enrichment**: The Gardener service now again reads the full text of your notes to provide more accurate and context-aware ontology suggestions.
 -   **Improved Hygiene Analysis**: Increased the default note limit for gardening analysis from 10 to 50 notes, allowing for better discovery of vault-wide patterns.
 
 ### Developer features
 
 -   **Accurate Token Budgeting**: Implemented precise token estimation for Gardener by stringifying individual note objects to account for JSON overhead.
--   **Build Optimization**: Updated `.markdownlint-cli2.jsonc` and `.vitepress/config.mts` to ignore `thoughts/` and `cache/` directories, reducing build noise and site size.
--   Updated packages and applied security fixes.
+-   **Security Updates**:Updated packages and applied security fixes.
 
 ## [9.2.3] - 2026-04-07
 
