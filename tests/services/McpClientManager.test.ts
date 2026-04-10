@@ -4,12 +4,23 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { McpClientManager } from "../../src/services/McpClientManager";
 import { VaultIntelligenceSettings, DEFAULT_SETTINGS, MCPServerConfig } from "../../src/settings/types";
 
-// Mock StdioClientTransport
-vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-    StdioClientTransport: vi.fn().mockImplementation(() => ({
-        close: vi.fn(),
-        start: vi.fn()
-    }))
+// Mock child_process globally so NativeStdioTransport works
+const mockSpawn = vi.fn().mockImplementation(() => ({
+    kill: vi.fn(),
+    on: vi.fn(),
+    pid: 12345,
+    stderr: { on: vi.fn(), setEncoding: vi.fn() },
+    stdin: { 
+        write: vi.fn((data: string, cb: (err?: Error) => void) => {
+            // Fail the handshake immediately to prevent the SDK's client.connect() from hanging
+            if (typeof cb === 'function') cb(new Error("Mock write error to prevent hang"));
+        })
+    },
+    stdout: { on: vi.fn(), setEncoding: vi.fn() }
+}));
+
+vi.mock('child_process', () => ({
+    spawn: mockSpawn
 }));
 
 vi.mock('obsidian', () => ({
@@ -26,6 +37,15 @@ const mockCryptoSubtle = {
 
 Object.defineProperty(globalThis, 'crypto', {
     value: { subtle: mockCryptoSubtle },
+});
+
+// Inject global require for tests to map dynamic require("child_process") exactly as NativeStdioTransport expects
+Object.defineProperty(globalThis, 'require', {
+    value: (id: string) => {
+        if (id === 'child_process') return { spawn: mockSpawn };
+        throw new Error(`Cannot require ${id} in test environment`);
+    },
+    writable: true
 });
 
 // Mock localStorage
@@ -83,7 +103,6 @@ describe('McpClientManager', () => {
             type: 'stdio' as const
         };
 
-        // Note: this casts to access the private method for unit testing purposes
         const managerWithInternal = manager as unknown as { generateTrustHash(config: MCPServerConfig): Promise<string> };
         const hash = await managerWithInternal.generateTrustHash(serverConfig);
         
@@ -116,34 +135,27 @@ describe('McpClientManager', () => {
             type: 'stdio' as const
         };
 
-        // Inject trust so it connects
         mockLocalStorageValue[`vi-mcp-trust-${serverConfig.id}`] = '0102030405';
 
         const managerWithInternal = manager as unknown as { connectServer(config: MCPServerConfig): Promise<void> };
         
-        // This will attempt import of @modelcontextprotocol/sdk/client/stdio.js which is mocked
-        // However, there is a client creation in the manager which will fail because `Client` isn't mocked.
-        // Let's mock Client
         try {
             await managerWithInternal.connectServer(serverConfig as MCPServerConfig);
         } catch {
-            // Error intentionally swallowed for test purposes if it fails down the line
+            // Internal tests may swallow execution failures, but we verify environment injection regardless
         }
 
-        const mcpSdkMock = await import('@modelcontextprotocol/sdk/client/stdio.js');
-        const mk = mcpSdkMock.StdioClientTransport as unknown as ReturnType<typeof vi.fn>;
-        
-        expect(mk).toHaveBeenCalled();
-        const firstCall = mk.mock.calls[0];
+        expect(mockSpawn).toHaveBeenCalled();
+        const firstCall = mockSpawn.mock.calls[0] as unknown[];
         if (!firstCall) throw new Error("Expected call arguments");
-        const transportConfig = firstCall[0] as { env?: Record<string, string> };
         
-        // SENSITIVE_KEY is in global process.env from line 34, but should not be in transportConfig.env
-        expect(transportConfig.env).toBeDefined();
-        if (transportConfig.env) {
-            expect(transportConfig.env['SENSITIVE_KEY']).toBeUndefined();
-            expect(transportConfig.env['PATH']).toContain('/bin');
-            expect(transportConfig.env['OBSIDIAN_VAULT_INTELLIGENCE']).toBe('true');
+        const transportConfigEnv = (firstCall[2] as { env?: Record<string, string> }).env;
+        
+        expect(transportConfigEnv).toBeDefined();
+        if (transportConfigEnv) {
+            expect(transportConfigEnv['SENSITIVE_KEY']).toBeUndefined();
+            expect(transportConfigEnv['PATH']).toContain('/bin');
+            expect(transportConfigEnv['OBSIDIAN_VAULT_INTELLIGENCE']).toBe('true');
         }
     });
 
@@ -162,7 +174,6 @@ describe('McpClientManager', () => {
             connections: Map<string, { status: string; errorMessage?: string; }>;
         };
         
-        // No hash stored yet
         await managerWithInternal.connectServer(remoteServerConfig);
         
         const connection = managerWithInternal.connections.get(remoteServerConfig.id);
@@ -183,7 +194,6 @@ describe('McpClientManager', () => {
             url: 'http://169.254.169.254/latest/meta-data/'
         };
 
-        // Note: this casts to access the private method for unit testing purposes
         const managerWithInternal = manager as unknown as { 
             connectServer(config: MCPServerConfig): Promise<void>; 
             connections: Map<string, { status: string; errorMessage?: string; }>;
@@ -282,15 +292,7 @@ describe('McpClientManager', () => {
             connections: Map<string, unknown>; 
         };
 
-        const mockSpawn = vi.fn().mockImplementation(() => ({
-            on: vi.fn(),
-        }));
-        
-        vi.doMock('child_process', () => ({
-            spawn: mockSpawn
-        }));
         const mockKill = vi.fn();
-        
         const originalProcessKill = (globalThis.process as unknown as { kill: typeof mockKill }).kill;
         (globalThis.process as unknown as { kill: typeof mockKill }).kill = mockKill;
         
@@ -308,13 +310,14 @@ describe('McpClientManager', () => {
             transport: { pid: 12345 }
         });
 
+        mockSpawn.mockClear();
+
         try {
             await manager.terminate();
             
             expect(mockSpawn).toHaveBeenCalledWith('pkill', ['-P', '12345']);
             
         } finally {
-            vi.doUnmock('child_process');
             Object.defineProperty(globalThis.process, 'platform', { configurable: true, value: originalPlatform });
             
             if (originalProcessKill !== undefined) {
@@ -324,5 +327,4 @@ describe('McpClientManager', () => {
             }
         }
     });
-
 });
