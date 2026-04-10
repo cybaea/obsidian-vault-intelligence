@@ -63,14 +63,18 @@ class NativeStdioTransport implements Transport {
         
         return new Promise<void>((resolve, reject) => {
             try {
-                // Bypass esbuild static analysis completely using dynamic require
-                // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Required to bypass esbuild static analysis
-                const cpModule = (typeof window !== 'undefined' && 'require' in window) 
-                    ? (window as unknown as { require: (m: string) => unknown }).require("child_process")
-                    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- safe eval for require
-                    : new Function('return require("child_process")')();
+                // Dynamically pull native require to completely bypass esbuild bundling 
+                // while remaining strictly typed to satisfy ESLint
+                const req = (typeof window !== "undefined" && "require" in window)
+                    ? (window as unknown as { require: (id: string) => unknown }).require
+                    : (globalThis as unknown as { require?: (id: string) => unknown }).require;
 
-                const spawnFn = (cpModule as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal }).spawn;
+                if (typeof req !== "function") {
+                    throw new Error("Native require is not available in this environment");
+                }
+
+                const cpModule = req("child_process") as { spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal };
+                const spawnFn = cpModule.spawn;
 
                 if (typeof spawnFn !== "function") {
                     throw new Error("child_process.spawn is not a function (bundler environment issue)");
@@ -135,12 +139,12 @@ class NativeStdioTransport implements Transport {
                     }
                 });
 
-            child.on("close", () => {
-                if (this.onclose) this.onclose();
-            });
-        } catch (e) {
-            reject(e instanceof Error ? e : new Error(String(e)));
-        }
+                child.on("close", () => {
+                    if (this.onclose) this.onclose();
+                });
+            } catch (e) {
+                reject(e instanceof Error ? e : new Error(String(e)));
+            }
         });
     }
 }
@@ -227,14 +231,16 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // Bypass esbuild static analysis completely using dynamic require
-                    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Required to bypass esbuild static analysis
-                    const cpModule = (typeof window !== 'undefined' && 'require' in window) 
-                        ? (window as unknown as { require: (m: string) => unknown }).require("child_process")
-                        // eslint-disable-next-line @typescript-eslint/no-implied-eval -- safe eval for require
-                        : new Function('return require("child_process")')();
+                    const req = (typeof window !== "undefined" && "require" in window)
+                        ? (window as unknown as { require: (id: string) => unknown }).require
+                        : (globalThis as unknown as { require?: (id: string) => unknown }).require;
 
-                    const spawnFn = (cpModule as { spawn: (command: string, args: string[]) => ChildProcessMinimal }).spawn;
+                    if (typeof req !== "function") {
+                        logger.warn("Native require is not available for process cleanup");
+                        return;
+                    }
+                    const cpModule = req("child_process") as { spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal };
+                    const spawnFn = cpModule.spawn;
 
                     if (typeof spawnFn !== "function") {
                         logger.warn("child_process.spawn not available for process cleanup (bundler environment issue)");

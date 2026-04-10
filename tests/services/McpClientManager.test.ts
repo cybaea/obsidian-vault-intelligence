@@ -39,6 +39,15 @@ Object.defineProperty(globalThis, 'crypto', {
     value: { subtle: mockCryptoSubtle },
 });
 
+// Inject global require for tests to map dynamic require("child_process") exactly as NativeStdioTransport expects
+Object.defineProperty(globalThis, 'require', {
+    value: (id: string) => {
+        if (id === 'child_process') return { spawn: mockSpawn };
+        throw new Error(`Cannot require ${id} in test environment`);
+    },
+    writable: true
+});
+
 // Mock localStorage
 const mockLocalStorageValue: Record<string, string> = {};
 const mockLocalStorage = {
@@ -140,7 +149,7 @@ describe('McpClientManager', () => {
         const firstCall = mockSpawn.mock.calls[0] as unknown[];
         if (!firstCall) throw new Error("Expected call arguments");
         
-        const transportConfigEnv = (firstCall[2] as { env: Record<string, string> }).env;
+        const transportConfigEnv = (firstCall[2] as { env?: Record<string, string> }).env;
         
         expect(transportConfigEnv).toBeDefined();
         if (transportConfigEnv) {
