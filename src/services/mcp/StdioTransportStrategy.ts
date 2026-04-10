@@ -9,8 +9,6 @@ import { logger } from "../../utils/logger";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
 import { resolveMcpSecrets } from "./utils";
 
-declare const require: (id: string) => unknown;
-
 interface ChildProcessMinimal {
     kill: () => void;
     on: (event: string, listener: (...args: unknown[]) => void) => void;
@@ -61,7 +59,6 @@ class NativeStdioTransport implements Transport {
     async start(): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-nodejs-modules -- required for desktop only process spawn
                 const cp = require("child_process") as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
 
                 this.childProcess = cp.spawn(this.command, this.args, {
@@ -214,7 +211,6 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-nodejs-modules -- required for desktop only process termination
                     const cp = require('child_process') as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
