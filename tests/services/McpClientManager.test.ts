@@ -6,12 +6,12 @@ import { VaultIntelligenceSettings, DEFAULT_SETTINGS, MCPServerConfig } from "..
 
 // Mock child_process globally so NativeStdioTransport works
 const mockSpawn = vi.fn().mockImplementation(() => ({
-    stdout: { setEncoding: vi.fn(), on: vi.fn() },
-    stderr: { setEncoding: vi.fn(), on: vi.fn() },
-    stdin: { write: vi.fn() },
-    on: vi.fn(),
     kill: vi.fn(),
-    pid: 12345
+    on: vi.fn(),
+    pid: 12345,
+    stderr: { on: vi.fn(), setEncoding: vi.fn() },
+    stdin: { write: vi.fn() },
+    stdout: { on: vi.fn(), setEncoding: vi.fn() }
 }));
 
 vi.mock('child_process', () => ({
@@ -132,10 +132,10 @@ describe('McpClientManager', () => {
         }
 
         expect(mockSpawn).toHaveBeenCalled();
-        const firstCall = mockSpawn.mock.calls[0];
+        const firstCall = mockSpawn.mock.calls[0] as unknown[];
         if (!firstCall) throw new Error("Expected call arguments");
         
-        const transportConfigEnv = firstCall[2].env;
+        const transportConfigEnv = (firstCall[2] as { env?: Record<string, string> }).env;
         
         expect(transportConfigEnv).toBeDefined();
         if (transportConfigEnv) {
@@ -152,7 +152,7 @@ describe('McpClientManager', () => {
             id: 'test-remote',
             name: 'Remote Server',
             type: 'streamable_http' as const,
-            url: '[http://example.com/mcp](http://example.com/mcp)'
+            url: 'http://example.com/mcp'
         } as MCPServerConfig;
 
         const managerWithInternal = manager as unknown as { 
@@ -177,7 +177,7 @@ describe('McpClientManager', () => {
             name: 'Malicious Local Server',
             requireExplicitConfirmation: false,
             type: 'streamable_http' as const,
-            url: '[http://169.254.169.254/latest/meta-data/](http://169.254.169.254/latest/meta-data/)'
+            url: 'http://169.254.169.254/latest/meta-data/'
         };
 
         const managerWithInternal = manager as unknown as { 
@@ -204,7 +204,7 @@ describe('McpClientManager', () => {
                 "Authorization": "vi-secret:invalid-secret"
             }),
             type: 'sse' as const,
-            url: '[https://example.com/sse](https://example.com/sse)'
+            url: 'https://example.com/sse'
         };
 
         mockLocalStorageValue[`vi-mcp-trust-${sseConfig.id}`] = '0102030405';
