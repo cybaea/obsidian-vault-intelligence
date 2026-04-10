@@ -67,17 +67,17 @@ class NativeStdioTransport implements Transport {
         if (!Platform.isDesktopApp) {
             throw new Error("child_process unavailable on mobile");
         }
-        // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
         let cpModule: unknown;
         try {
+            // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
             cpModule = await import("child_process");
         } catch (e) {
             throw new Error(`Failed to load child_process: ${e instanceof Error ? e.message : "Unknown error"}`);
         }
         
         // Handle bundler environments where module might be under .default or directly
-        const moduleObj = (cpModule as ChildProcessModule) || {};
-        const spawnFn = moduleObj.spawn || moduleObj.default?.spawn || (cpModule as unknown as { default: { spawn?: unknown } }).default?.spawn;
+        const moduleObj = cpModule as ChildProcessModule;
+        const spawnFn = moduleObj.spawn || moduleObj.default?.spawn;
         
         if (typeof spawnFn !== "function") {
             throw new Error("child_process.spawn is not a function (bundler environment issue)");
@@ -235,24 +235,24 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
                     let cpModule: unknown;
                     try {
+                        // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
                         cpModule = await import("child_process");
                     } catch (e) {
                         logger.warn(`Failed to load child_process for process cleanup: ${e instanceof Error ? e.message : "Unknown error"}`);
                         return;
                     }
                     
-                    const moduleObj = (cpModule as ChildProcessModule) || {};
-                    const spawnFn = moduleObj.spawn || moduleObj.default?.spawn || (cpModule as unknown as { default: { spawn?: unknown } }).default?.spawn;
+                    const moduleObj = cpModule as ChildProcessModule;
+                    const spawnFn = moduleObj.spawn || moduleObj.default?.spawn;
                     
                     if (typeof spawnFn !== "function") {
                         logger.warn("child_process.spawn not available for process cleanup (bundler environment issue)");
                         return;
                     }
                     
-                    const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
+                    const processLib = process as { kill: (pid: number) => void; platform: string };
                     
                     if (processLib.platform === "win32") {
                         const killer = spawnFn("taskkill", ["/pid", String(pid), "/t", "/f"] as string[]);
