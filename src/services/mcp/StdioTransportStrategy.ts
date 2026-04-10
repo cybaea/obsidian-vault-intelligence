@@ -1,4 +1,4 @@
-/* global process, require -- Native Node.js globals available on desktop */
+/* global process -- Native Node.js global available on desktop */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
@@ -57,11 +57,11 @@ class NativeStdioTransport implements Transport {
     }
 
     async start(): Promise<void> {
-        // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
-        const cp = await import("child_process") as unknown as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
+        // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
+        const { spawn } = await import("child_process");
         return new Promise<void>((resolve, reject) => {
             try {
-                this.childProcess = cp.spawn(this.command, this.args, {
+                this.childProcess = spawn(this.command, this.args, {
                         env: this.env,
                         stdio: ["pipe", "pipe", "pipe"],
                         windowsHide: true
@@ -211,19 +211,19 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
-                    const cp = await import("child_process") as unknown as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
+                    // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
+                    const { spawn } = await import("child_process");
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
-                    if (processLib.platform === 'win32') {
-                        const killer = cp.spawn('taskkill', ['/pid', String(pid), '/t', '/f']);
+                    if (processLib.platform === "win32") {
+                        const killer = spawn("taskkill", ["/pid", String(pid), "/t", "/f"]);
                         killer.on('error', (error: unknown) => {
                             const err = error instanceof Error ? error : new Error(String(error));
                             logger.warn(`taskkill failed for MCP server ${pid}:`, err);
                         });
                     } else {
-                        const killer = cp.spawn('pkill', ['-P', String(pid)]);
+                        const killer = spawn("pkill", ["-P", String(pid)]);
                         killer.on('error', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
