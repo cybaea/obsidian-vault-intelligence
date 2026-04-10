@@ -105,6 +105,8 @@ describe('GardenerService Payload and Budgeting', () => {
             frontmatter: { topics: ['Topic A'] }
         });
 
+        // Increase budget to accommodate new overhead and safety margin
+        mockSettings.gardenerContextBudget = 5000;
         await gardenerService.tidyVault();
 
         await vi.waitFor(() => {
@@ -135,15 +137,19 @@ describe('GardenerService Payload and Budgeting', () => {
             return Promise.resolve('');
         });
 
-        // charsPerToken is 4.
-        // basePromptEstimate = (0 + 0 + 0 + 2000) / 4 = 500 tokens.
-        // file1 JSON (roughly 550 chars) = ~137 tokens.
-        // file2 JSON (roughly 550 chars) = ~137 tokens.
+        // charsPerToken is now 3.0 in the implementation.
+        // basePromptEstimate = (0 + 0 + 0 + 5000) / 3.0 = ~1667 tokens.
+        // safetyMargin is 0.8.
         
-        // Set budget to 700 tokens:
-        // base (500) + file1 (137) = 637 tokens. (OK)
-        // 637 + file2 (137) = 774 tokens. (EXCEEDS 700)
-        mockSettings.gardenerContextBudget = 700;
+        // file1 JSON is ~550 chars => ~183 tokens.
+        // file2 JSON is ~550 chars => ~183 tokens.
+        
+        // Let's set budget so only file1 fits:
+        // Try raw budget = 2350.
+        // 2350 * 0.8 = 1880 tokens available.
+        // base (1667) + file1 (183) = 1850. (OK)
+        // 1850 + file2 (183) = 2033. (EXCEEDS 1880)
+        mockSettings.gardenerContextBudget = 2350;
         
         await gardenerService.tidyVault();
 

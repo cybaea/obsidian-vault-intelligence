@@ -13,6 +13,9 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **Gardener Budgeting Hardening**: Implemented a 20% safety margin (`CONTEXT_SAFETY_MARGIN`) and adopted a more conservative token estimation ratio (3.0 chars/token) for Gardener payloads to prevent API truncation or failures.
+-   **Realistic Overhead Estimation**: Improved base prompt overhead calculation for Gardener to account for system instructions and complex JSON schemas.
+
 ## [9.2.4] - 2026-04-10
 
 ### User features
