@@ -13,6 +13,7 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **Fixed upstream changes**: Fixed a know interoperability issue when Obsidian's bundler (esbuild) encounters `@modelcontextprotocol/sdk`.
 -   **Gardener Budgeting Hardening**: Implemented a 20% safety margin (`CONTEXT_SAFETY_MARGIN`) and adopted a more conservative token estimation ratio (3.0 chars/token) for Gardener payloads to prevent API truncation or failures.
 -   **Realistic Overhead Estimation**: Improved base prompt overhead calculation for Gardener to account for system instructions and complex JSON schemas.
 
