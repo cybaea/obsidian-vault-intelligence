@@ -10,7 +10,12 @@ const mockSpawn = vi.fn().mockImplementation(() => ({
     on: vi.fn(),
     pid: 12345,
     stderr: { on: vi.fn(), setEncoding: vi.fn() },
-    stdin: { write: vi.fn() },
+    stdin: { 
+        write: vi.fn((data: string, cb: (err?: Error) => void) => {
+            // Fail the handshake immediately to prevent the SDK's client.connect() from hanging
+            if (typeof cb === 'function') cb(new Error("Mock write error to prevent hang"));
+        })
+    },
     stdout: { on: vi.fn(), setEncoding: vi.fn() }
 }));
 
@@ -152,7 +157,7 @@ describe('McpClientManager', () => {
             id: 'test-remote',
             name: 'Remote Server',
             type: 'streamable_http' as const,
-            url: 'http://example.com/mcp'
+            url: '[http://example.com/mcp](http://example.com/mcp)'
         } as MCPServerConfig;
 
         const managerWithInternal = manager as unknown as { 
@@ -177,7 +182,7 @@ describe('McpClientManager', () => {
             name: 'Malicious Local Server',
             requireExplicitConfirmation: false,
             type: 'streamable_http' as const,
-            url: 'http://169.254.169.254/latest/meta-data/'
+            url: '[http://169.254.169.254/latest/meta-data/](http://169.254.169.254/latest/meta-data/)'
         };
 
         const managerWithInternal = manager as unknown as { 
@@ -204,7 +209,7 @@ describe('McpClientManager', () => {
                 "Authorization": "vi-secret:invalid-secret"
             }),
             type: 'sse' as const,
-            url: 'https://example.com/sse'
+            url: '[https://example.com/sse](https://example.com/sse)'
         };
 
         mockLocalStorageValue[`vi-mcp-trust-${sseConfig.id}`] = '0102030405';
