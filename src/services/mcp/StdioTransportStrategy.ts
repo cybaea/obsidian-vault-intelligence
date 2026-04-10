@@ -18,6 +18,10 @@ interface ChildProcessMinimal {
     stdout: { on: (event: string, listener: (data: string) => void) => void; setEncoding: (enc: string) => void };
 }
 
+interface ChildProcessModule {
+    spawn: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
+}
+
 // Native implementation to bypass esbuild/CJS/ESM corruption of cross-spawn
 // See also: https://github.com/cybaea/obsidian-vault-intelligence/issues/389
 class NativeStdioTransport implements Transport {
@@ -58,10 +62,10 @@ class NativeStdioTransport implements Transport {
 
     async start(): Promise<void> {
         // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-        const { spawn } = await import("child_process");
+        const cpModule = await import("child_process") as unknown as ChildProcessModule;
         return new Promise<void>((resolve, reject) => {
             try {
-                this.childProcess = spawn(this.command, this.args, {
+                this.childProcess = cpModule.spawn(this.command, this.args, {
                         env: this.env,
                         stdio: ["pipe", "pipe", "pipe"],
                         windowsHide: true
@@ -212,18 +216,18 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
             if (pid) {
                 try {
                     // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-                    const { spawn } = await import("child_process");
+                    const cpModule = await import("child_process") as unknown as ChildProcessModule;
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
                     if (processLib.platform === "win32") {
-                        const killer = spawn("taskkill", ["/pid", String(pid), "/t", "/f"]);
+                        const killer = cpModule.spawn("taskkill", ["/pid", String(pid), "/t", "/f"] as string[]);
                         killer.on('error', (error: unknown) => {
                             const err = error instanceof Error ? error : new Error(String(error));
                             logger.warn(`taskkill failed for MCP server ${pid}:`, err);
                         });
                     } else {
-                        const killer = spawn("pkill", ["-P", String(pid)]);
+                        const killer = cpModule.spawn("pkill", ["-P", String(pid)] as string[]);
                         killer.on('error', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
