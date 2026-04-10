@@ -19,7 +19,10 @@ interface ChildProcessMinimal {
 }
 
 interface ChildProcessModule {
-    spawn: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
+    default?: {
+        spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
+    };
+    spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
 }
 
 // Native implementation to bypass esbuild/CJS/ESM corruption of cross-spawn
@@ -61,34 +64,51 @@ class NativeStdioTransport implements Transport {
     }
 
     async start(): Promise<void> {
+        if (!Platform.isDesktopApp) {
+            throw new Error("child_process unavailable on mobile");
+        }
         // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-        const cpModule = await import("child_process") as unknown as ChildProcessModule;
+        let cpModule: unknown;
+        try {
+            cpModule = await import("child_process");
+        } catch (e) {
+            throw new Error(`Failed to load child_process: ${e instanceof Error ? e.message : "Unknown error"}`);
+        }
+        
+        // Handle bundler environments where module might be under .default or directly
+        const moduleObj = (cpModule as ChildProcessModule) || {};
+        const spawnFn = moduleObj.spawn || moduleObj.default?.spawn || (cpModule as unknown as { default: { spawn?: unknown } }).default?.spawn;
+        
+        if (typeof spawnFn !== "function") {
+            throw new Error("child_process.spawn is not a function (bundler environment issue)");
+        }
         return new Promise<void>((resolve, reject) => {
             try {
-                this.childProcess = cpModule.spawn(this.command, this.args, {
-                        env: this.env,
-                        stdio: ["pipe", "pipe", "pipe"],
-                        windowsHide: true
-                    });
+                const child = spawnFn(this.command, this.args, {
+                    env: this.env,
+                    stdio: ["pipe", "pipe", "pipe"],
+                    windowsHide: true
+                });
+                this.childProcess = child;
 
-                    let resolved = false;
+                let resolved = false;
 
-                    this.childProcess.on("error", (error: unknown) => {
-                        const err = error instanceof Error ? error : new Error(String(error));
-                        if (!resolved) {
-                            reject(err);
-                        } else if (this.onerror) {
-                            this.onerror(err);
-                        }
-                    });
-
-                    if (this.childProcess.pid) {
-                        resolved = true;
-                        resolve();
+                child.on("error", (error: unknown) => {
+                    const err = error instanceof Error ? error : new Error(String(error));
+                    if (!resolved) {
+                        reject(err);
+                    } else if (this.onerror) {
+                        this.onerror(err);
                     }
+                });
 
-                    this.childProcess.stdout.setEncoding('utf-8');
-                    this.childProcess.stdout.on("data", (chunk: string) => {
+                if (child.pid) {
+                    resolved = true;
+                    resolve();
+                }
+
+                child.stdout.setEncoding('utf-8');
+                child.stdout.on("data", (chunk: string) => {
                         this.buffer += chunk;
                         let newlineIndex;
                         while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
@@ -106,29 +126,29 @@ class NativeStdioTransport implements Transport {
                         }
                     });
 
-                    this.childProcess.stderr.setEncoding('utf-8');
-                    this.childProcess.stderr.on("data", (chunk: string) => {
-                        const str = chunk.trim();
-                        if (str) {
-                            const lower = str.toLowerCase();
-                            if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
-                                logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else if (lower.includes('warn')) {
-                                logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else if (lower.includes('debug') || lower.includes('trace')) {
-                                logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else {
-                                logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
-                            }
+                child.stderr.setEncoding('utf-8');
+                child.stderr.on("data", (chunk: string) => {
+                    const str = chunk.trim();
+                    if (str) {
+                        const lower = str.toLowerCase();
+                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                            logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('warn')) {
+                            logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('debug') || lower.includes('trace')) {
+                            logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else {
+                            logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
                         }
-                    });
-
-                this.childProcess.on("close", () => {
-                    if (this.onclose) this.onclose();
+                    }
                 });
-            } catch (e) {
-                reject(e instanceof Error ? e : new Error(String(e)));
-            }
+
+            child.on("close", () => {
+                if (this.onclose) this.onclose();
+            });
+        } catch (e) {
+            reject(e instanceof Error ? e : new Error(String(e)));
+        }
         });
     }
 }
@@ -216,18 +236,32 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
             if (pid) {
                 try {
                     // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-                    const cpModule = await import("child_process") as unknown as ChildProcessModule;
+                    let cpModule: unknown;
+                    try {
+                        cpModule = await import("child_process");
+                    } catch (e) {
+                        logger.warn(`Failed to load child_process for process cleanup: ${e instanceof Error ? e.message : "Unknown error"}`);
+                        return;
+                    }
+                    
+                    const moduleObj = (cpModule as ChildProcessModule) || {};
+                    const spawnFn = moduleObj.spawn || moduleObj.default?.spawn || (cpModule as unknown as { default: { spawn?: unknown } }).default?.spawn;
+                    
+                    if (typeof spawnFn !== "function") {
+                        logger.warn("child_process.spawn not available for process cleanup (bundler environment issue)");
+                        return;
+                    }
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
                     if (processLib.platform === "win32") {
-                        const killer = cpModule.spawn("taskkill", ["/pid", String(pid), "/t", "/f"] as string[]);
+                        const killer = spawnFn("taskkill", ["/pid", String(pid), "/t", "/f"] as string[]);
                         killer.on('error', (error: unknown) => {
                             const err = error instanceof Error ? error : new Error(String(error));
                             logger.warn(`taskkill failed for MCP server ${pid}:`, err);
                         });
                     } else {
-                        const killer = cpModule.spawn("pkill", ["-P", String(pid)] as string[]);
+                        const killer = spawnFn("pkill", ["-P", String(pid)] as string[]);
                         killer.on('error', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
