@@ -7,21 +7,127 @@ import { logger } from "../../utils/logger";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
 import { resolveMcpSecrets } from "./utils";
 
+// Native implementation to bypass esbuild/CJS/ESM corruption of cross-spawn
+// See also: https://github.com/cybaea/obsidian-vault-intelligence/issues/389
+class NativeStdioTransport {
+    private process: any = null;
+    private buffer: string = "";
+    
+    public onclose?: () => void;
+    public onerror?: (error: Error) => void;
+    public onmessage?: (message: any) => void;
+
+    constructor(private command: string, private args: string[], private env: Record<string, string>, private serverName: string) {}
+
+    async start(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const cp = require("child_process");
+                
+                this.process = cp.spawn(this.command, this.args, {
+                    env: this.env,
+                    stdio: ["pipe", "pipe", "pipe"],
+                    windowsHide: true
+                });
+
+                let resolved = false;
+
+                this.process.on("error", (error: Error) => {
+                    if (!resolved) {
+                        reject(error);
+                    } else if (this.onerror) {
+                        this.onerror(error);
+                    }
+                });
+
+                if (this.process.pid) {
+                    resolved = true;
+                    resolve();
+                }
+
+                this.process.stdout.setEncoding('utf-8');
+                this.process.stdout.on("data", (chunk: string) => {
+                    this.buffer += chunk;
+                    let newlineIndex;
+                    while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
+                        const line = this.buffer.slice(0, newlineIndex);
+                        this.buffer = this.buffer.slice(newlineIndex + 1);
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            try {
+                                const message = JSON.parse(trimmed);
+                                if (this.onmessage) this.onmessage(message);
+                            } catch (e) {
+                                if (this.onerror) this.onerror(new Error("Failed to parse MCP message: " + trimmed));
+                            }
+                        }
+                    }
+                });
+
+                this.process.stderr.setEncoding('utf-8');
+                this.process.stderr.on("data", (chunk: string) => {
+                    const str = chunk.trim();
+                    if (str) {
+                        const lower = str.toLowerCase();
+                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                            logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('warn')) {
+                            logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('debug') || lower.includes('trace')) {
+                            logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else {
+                            logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
+                        }
+                    }
+                });
+
+                this.process.on("close", () => {
+                    if (this.onclose) this.onclose();
+                });
+
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    async close(): Promise<void> {
+        if (this.process) {
+            this.process.kill();
+            this.process = null;
+        }
+        if (this.onclose) this.onclose();
+    }
+
+    async send(message: any): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (!this.process || !this.process.stdin) {
+                return reject(new Error("MCP Process not running"));
+            }
+            const json = JSON.stringify(message);
+            this.process.stdin.write(json + "\n", (err: Error) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+    }
+
+    get pid() {
+        return this.process ? this.process.pid : null;
+    }
+}
+
 export class StdioTransportStrategy implements IMcpTransportStrategy {
     public async connect(server: MCPServerConfig, resolveSecret: SecretResolver): Promise<McpConnectionResult> {
         if (!Platform.isDesktopApp) {
             throw new Error(`Skipping stdio MCP server ${server.name} on Mobile.`);
         }
 
-        const mcpSdk = await import('@modelcontextprotocol/sdk/client/stdio.js');
-        const StdioClientTransport = mcpSdk.StdioClientTransport;
-
-        // Construct minimal safe environment (Fix for Host Environment Leakage)
         const safeKeys = [
             'PATH', 'USER', 'HOME', 'USERPROFILE', 'APPDATA', 'TMPDIR', 'TEMP',
             'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
             'LANG', 'LC_ALL', 'PWD', 'LOGNAME', 'SHELL',
-            // Linux Desktop/DBus Requirements
             'DISPLAY', 'WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS', 'XDG_RUNTIME_DIR', 'XAUTHORITY', 'XDG_SESSION_TYPE'
         ];
         const mergedEnv: Record<string, string> = {
@@ -67,31 +173,8 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
             throw new Error(`Configuration error: missing command`);
         }
 
-        const transportConfig = {
-            args: server.args || [],
-            command: server.command,
-            env: mergedEnv,
-            stderr: 'pipe' as const
-        };
-        const transport = new StdioClientTransport(transportConfig);
-
-        if (transport.stderr) {
-            transport.stderr.on('data', (chunk: { toString: () => string }) => {
-                const str = chunk.toString().trim();
-                if (str) {
-                    const lower = str.toLowerCase();
-                    if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
-                        logger.error(`[MCP ${server.name} STDERR] ${str}`);
-                    } else if (lower.includes('warn')) {
-                        logger.warn(`[MCP ${server.name} STDERR] ${str}`);
-                    } else if (lower.includes('debug') || lower.includes('trace')) {
-                        logger.debug(`[MCP ${server.name} STDERR] ${str}`);
-                    } else {
-                        logger.info(`[MCP ${server.name} STDERR] ${str}`);
-                    }
-                }
-            });
-        }
+        // Initialize our Native wrapper rather than the bundled SDK
+        const transport = new NativeStdioTransport(server.command, server.args || [], mergedEnv, server.name);
 
         const client = new Client({
             name: "vault-intelligence",
@@ -100,7 +183,8 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
             capabilities: {}
         });
 
-        await client.connect(transport);
+        // The SDK's Client.connect accepts any standard implementation matching the Transport interface
+        await client.connect(transport as any);
 
         return { client, transport };
     }
@@ -116,8 +200,8 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // eslint-disable-next-line import/no-nodejs-modules -- required for desktop only process termination
-                    const cp = await import('child_process');
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const cp = require('child_process');
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
