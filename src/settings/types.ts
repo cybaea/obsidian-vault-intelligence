@@ -183,7 +183,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerArchiveFolderPath: 'Ontology/_Archive',
     gardenerContextBudget: 100000,
     gardenerModel: 'gemini-flash-latest',
-    gardenerNoteLimit: 10,
+    gardenerNoteLimit: 50,
     gardenerOrphanGracePeriodDays: 7,
     gardenerPlansPath: 'Gardener/Plans',
     gardenerRecheckDays: 1,

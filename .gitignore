@@ -28,7 +28,7 @@ data/
 # Agents & Tasks
 /*.txt
 .tasks/
-
+thoughts/
 
 # VitePress
 .vitepress/dist
