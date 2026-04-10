@@ -212,11 +212,15 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 .join("\n");
 
             // 2. Token Estimation & Budgeting
-            const charsPerToken = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
-            const contextBudget = ModelRegistry.resolveContextBudget(this.settings.gardenerModel, this.settings.modelContextOverrides, this.settings.gardenerContextBudget);
+            // For Gardener we use a more conservative estimate (3 chars/token) due to JSON overhead
+            const charsPerToken = 3.0; 
+            const rawBudget = ModelRegistry.resolveContextBudget(this.settings.gardenerModel, this.settings.modelContextOverrides, this.settings.gardenerContextBudget);
+            
+            // Apply safety margin (typically 0.8) to prevent API failures due to estimation errors
+            const contextBudget = Math.floor(rawBudget * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN);
 
-            // Estimate base prompt overhead
-            const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 2000) / charsPerToken;
+            // Estimate base prompt overhead (including system instructions and schema overhead)
+            const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 5000) / charsPerToken;
             let currentTokenEstimate = basePromptEstimate;
             const notes: { path: string; content: string; topics: string[] }[] = [];
             const skippedPaths: string[] = [];
@@ -274,7 +278,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 }
             }
 
-            logger.info(`Gardener: analyzing ${notes.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
+            logger.info(`Gardener: analyzing ${notes.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget} (Limit: ${rawBudget}).`);
 
             if (skippedPaths.length > 0) {
                 await this.state.recordCheckBatch(skippedPaths);
