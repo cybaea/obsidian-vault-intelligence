@@ -58,7 +58,7 @@ class NativeStdioTransport implements Transport {
 
     async start(): Promise<void> {
         // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
-        const cp = require("child_process") as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
+        const cp = await import("child_process") as unknown as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
         return new Promise<void>((resolve, reject) => {
             try {
                 this.childProcess = cp.spawn(this.command, this.args, {
@@ -212,7 +212,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
             if (pid) {
                 try {
                     // eslint-disable-next-line import/no-nodejs-modules, @typescript-eslint/no-require-imports -- Desktop-only child_process operations
-                    const cp = require('child_process') as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
+                    const cp = await import("child_process") as unknown as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     

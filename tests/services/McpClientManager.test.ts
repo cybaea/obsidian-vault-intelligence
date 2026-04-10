@@ -140,7 +140,7 @@ describe('McpClientManager', () => {
         const firstCall = mockSpawn.mock.calls[0] as unknown[];
         if (!firstCall) throw new Error("Expected call arguments");
         
-        const transportConfigEnv = (firstCall[2] as unknown as { env: Record<string, string> }).env;
+        const transportConfigEnv = (firstCall[2] as { env: Record<string, string> }).env;
         
         expect(transportConfigEnv).toBeDefined();
         if (transportConfigEnv) {
