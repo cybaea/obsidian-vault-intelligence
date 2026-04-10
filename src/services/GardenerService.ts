@@ -218,7 +218,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
             // Estimate base prompt overhead
             const basePromptEstimate = (validTopicsList.length + (ontologyContext.instructions?.length || 0) + ontologyFolders.length + 2000) / charsPerToken;
             let currentTokenEstimate = basePromptEstimate;
-            const notes: TFile[] = [];
+            const notes: { path: string; content: string; topics: string[] }[] = [];
             const skippedPaths: string[] = [];
             let savedTokens = 0;
             let savedFiles = 0;
@@ -247,7 +247,17 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
                     // Estimate this file's contribution
                     const fileContent = await this.app.vault.cachedRead(file);
-                    const fileEstimate = fileContent.length / charsPerToken;
+                    const topics = (this.app.metadataCache.getFileCache(file)?.frontmatter?.["topics"] as string[]) || [];
+                    
+                    const noteObject = {
+                        content: fileContent,
+                        path: file.path,
+                        topics: topics
+                    };
+
+                    // Stringify to get EXACT length including JSON overhead (escaped chars, etc.)
+                    const jsonRepresentation = JSON.stringify(noteObject);
+                    const fileEstimate = jsonRepresentation.length / charsPerToken;
 
                     if (currentTokenEstimate + fileEstimate > contextBudget) {
                         if (notes.length === 0) {
@@ -259,17 +269,12 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                         break;
                     }
 
-                    notes.push(file);
+                    notes.push(noteObject);
                     currentTokenEstimate += fileEstimate;
                 }
             }
 
-            const context = notes.map(f => ({
-                path: f.path,
-                topics: (this.app.metadataCache.getFileCache(f)?.frontmatter?.["topics"] as string[]) || []
-            }));
-
-            logger.info(`Gardener: analyzing ${context.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
+            logger.info(`Gardener: analyzing ${notes.length} notes. Estimated tokens: ${Math.round(currentTokenEstimate)} / ${contextBudget}.`);
 
             if (skippedPaths.length > 0) {
                 await this.state.recordCheckBatch(skippedPaths);
@@ -301,7 +306,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
 
             let synonymPromptExt = "";
             if (synonyms.length > 0) {
-                synonymPromptExt = `\nSUSPECT SYNONYMS:\nIdentify if these semantic matches should be merged into a single topic. Use 'merge_topics' action if you agree.\n${JSON.stringify(synonyms, null, 2)}\n`;
+                synonymPromptExt = `\nSUSPECT SYNONYMS:\nIdentify if these semantic matches should be merged into a single topic. Use 'merge_topics' action if you agree.\n${JSON.stringify(synonyms)}\n`;
             }
 
             // 3. Generate structured plan
@@ -313,7 +318,7 @@ ${synonymPromptExt}
 Analyze the following ${notes.length} notes and suggest improvements.
 
 NOTES:
-${JSON.stringify(context, null, 2)}
+${JSON.stringify(notes)}
 `.trim();
 
             const gracePeriodMs = (this.settings.gardenerOrphanGracePeriodDays || 7) * 24 * 60 * 60 * 1000;

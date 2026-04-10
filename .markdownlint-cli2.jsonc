@@ -41,6 +41,8 @@
         ".goose/**",
         ".tasks/**",
         ".agents/**",
-        "releases"
+        "releases",
+        "thoughts",
+        "cache"
     ]
 }

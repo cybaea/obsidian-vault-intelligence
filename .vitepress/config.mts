@@ -63,7 +63,8 @@ export default withMermaid(defineConfig({
         'releases/about.md',
         'README.md',
         'README_DOC.md',
-        'docs/my-ontology-system.md'
+        'docs/my-ontology-system.md',
+        'thoughts/**'
     ],
     vite: {
         build: {
