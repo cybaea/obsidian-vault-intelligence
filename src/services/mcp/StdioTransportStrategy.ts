@@ -18,13 +18,6 @@ interface ChildProcessMinimal {
     stdout: { on: (event: string, listener: (data: string) => void) => void; setEncoding: (enc: string) => void };
 }
 
-interface ChildProcessModule {
-    default?: {
-        spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
-    };
-    spawn?: (command: string, args: string[], options?: unknown) => ChildProcessMinimal;
-}
-
 // Native implementation to bypass esbuild/CJS/ESM corruption of cross-spawn
 // See also: https://github.com/cybaea/obsidian-vault-intelligence/issues/389
 class NativeStdioTransport implements Transport {
@@ -67,23 +60,22 @@ class NativeStdioTransport implements Transport {
         if (!Platform.isDesktopApp) {
             throw new Error("child_process unavailable on mobile");
         }
-        let cpModule: unknown;
-        try {
-            // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-            cpModule = await import("child_process");
-        } catch (e) {
-            throw new Error(`Failed to load child_process: ${e instanceof Error ? e.message : "Unknown error"}`);
-        }
         
-        // Handle bundler environments where module might be under .default or directly
-        const moduleObj = cpModule as ChildProcessModule;
-        const spawnFn = moduleObj.spawn || moduleObj.default?.spawn;
-        
-        if (typeof spawnFn !== "function") {
-            throw new Error("child_process.spawn is not a function (bundler environment issue)");
-        }
         return new Promise<void>((resolve, reject) => {
             try {
+                // Bypass esbuild static analysis completely using dynamic require
+                // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Required to bypass esbuild static analysis
+                const cpModule = (typeof window !== 'undefined' && 'require' in window) 
+                    ? (window as unknown as { require: (m: string) => unknown }).require("child_process")
+                    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- safe eval for require
+                    : new Function('return require("child_process")')();
+
+                const spawnFn = (cpModule as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal }).spawn;
+
+                if (typeof spawnFn !== "function") {
+                    throw new Error("child_process.spawn is not a function (bundler environment issue)");
+                }
+
                 const child = spawnFn(this.command, this.args, {
                     env: this.env,
                     stdio: ["pipe", "pipe", "pipe"],
@@ -235,33 +227,30 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    let cpModule: unknown;
-                    try {
-                        // eslint-disable-next-line import/no-nodejs-modules -- Desktop-only child_process operations
-                        cpModule = await import("child_process");
-                    } catch (e) {
-                        logger.warn(`Failed to load child_process for process cleanup: ${e instanceof Error ? e.message : "Unknown error"}`);
-                        return;
-                    }
-                    
-                    const moduleObj = cpModule as ChildProcessModule;
-                    const spawnFn = moduleObj.spawn || moduleObj.default?.spawn;
-                    
+                    // Bypass esbuild static analysis completely using dynamic require
+                    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Required to bypass esbuild static analysis
+                    const cpModule = (typeof window !== 'undefined' && 'require' in window) 
+                        ? (window as unknown as { require: (m: string) => unknown }).require("child_process")
+                        // eslint-disable-next-line @typescript-eslint/no-implied-eval -- safe eval for require
+                        : new Function('return require("child_process")')();
+
+                    const spawnFn = (cpModule as { spawn: (command: string, args: string[]) => ChildProcessMinimal }).spawn;
+
                     if (typeof spawnFn !== "function") {
                         logger.warn("child_process.spawn not available for process cleanup (bundler environment issue)");
                         return;
                     }
                     
-                    const processLib = process as { kill: (pid: number) => void; platform: string };
+                    const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
-                    if (processLib.platform === "win32") {
-                        const killer = spawnFn("taskkill", ["/pid", String(pid), "/t", "/f"] as string[]);
+                    if (processLib.platform === 'win32') {
+                        const killer = spawnFn('taskkill', ['/pid', String(pid), '/t', '/f']);
                         killer.on('error', (error: unknown) => {
                             const err = error instanceof Error ? error : new Error(String(error));
                             logger.warn(`taskkill failed for MCP server ${pid}:`, err);
                         });
                     } else {
-                        const killer = spawnFn("pkill", ["-P", String(pid)] as string[]);
+                        const killer = spawnFn('pkill', ['-P', String(pid)]);
                         killer.on('error', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
