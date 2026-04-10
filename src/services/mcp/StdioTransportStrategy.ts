@@ -1,4 +1,4 @@
-/* global process -- Native Node.js global available on desktop */
+/* global process, require -- Native Node.js globals available on desktop */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
@@ -8,6 +8,8 @@ import { MCPServerConfig } from "../../settings/types";
 import { logger } from "../../utils/logger";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
 import { resolveMcpSecrets } from "./utils";
+
+declare const require: (id: string) => unknown;
 
 interface ChildProcessMinimal {
     kill: () => void;
@@ -58,76 +60,74 @@ class NativeStdioTransport implements Transport {
 
     async start(): Promise<void> {
         return new Promise((resolve, reject) => {
-            // eslint-disable-next-line import/no-nodejs-modules -- required for desktop only process spawn
-            import("child_process").then((cp) => {
-                try {
-                    this.childProcess = cp.spawn(this.command, this.args, {
-                        env: this.env,
-                        stdio: ["pipe", "pipe", "pipe"],
-                        windowsHide: true
-                    }) as unknown as ChildProcessMinimal;
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-nodejs-modules -- required for desktop only process spawn
+                const cp = require("child_process") as { spawn: (command: string, args: string[], options: unknown) => ChildProcessMinimal };
 
-                    let resolved = false;
+                this.childProcess = cp.spawn(this.command, this.args, {
+                    env: this.env,
+                    stdio: ["pipe", "pipe", "pipe"],
+                    windowsHide: true
+                });
 
-                    this.childProcess.on("error", (error: unknown) => {
-                        const err = error instanceof Error ? error : new Error(String(error));
-                        if (!resolved) {
-                            reject(err);
-                        } else if (this.onerror) {
-                            this.onerror(err);
-                        }
-                    });
+                let resolved = false;
 
-                    if (this.childProcess.pid) {
-                        resolved = true;
-                        resolve();
+                this.childProcess.on("error", (error: unknown) => {
+                    const err = error instanceof Error ? error : new Error(String(error));
+                    if (!resolved) {
+                        reject(err);
+                    } else if (this.onerror) {
+                        this.onerror(err);
                     }
+                });
 
-                    this.childProcess.stdout.setEncoding('utf-8');
-                    this.childProcess.stdout.on("data", (chunk: string) => {
-                        this.buffer += chunk;
-                        let newlineIndex;
-                        while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
-                            const line = this.buffer.slice(0, newlineIndex);
-                            this.buffer = this.buffer.slice(newlineIndex + 1);
-                            const trimmed = line.trim();
-                            if (trimmed) {
-                                try {
-                                    const message = JSON.parse(trimmed) as JSONRPCMessage;
-                                    if (this.onmessage) this.onmessage(message);
-                                } catch {
-                                    if (this.onerror) this.onerror(new Error("Failed to parse MCP message: " + trimmed));
-                                }
-                            }
-                        }
-                    });
-
-                    this.childProcess.stderr.setEncoding('utf-8');
-                    this.childProcess.stderr.on("data", (chunk: string) => {
-                        const str = chunk.trim();
-                        if (str) {
-                            const lower = str.toLowerCase();
-                            if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
-                                logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else if (lower.includes('warn')) {
-                                logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else if (lower.includes('debug') || lower.includes('trace')) {
-                                logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
-                            } else {
-                                logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
-                            }
-                        }
-                    });
-
-                    this.childProcess.on("close", () => {
-                        if (this.onclose) this.onclose();
-                    });
-                } catch (e) {
-                    reject(e instanceof Error ? e : new Error(String(e)));
+                if (this.childProcess.pid) {
+                    resolved = true;
+                    resolve();
                 }
-            }).catch((err: unknown) => {
-                reject(err instanceof Error ? err : new Error(String(err)));
-            });
+
+                this.childProcess.stdout.setEncoding('utf-8');
+                this.childProcess.stdout.on("data", (chunk: string) => {
+                    this.buffer += chunk;
+                    let newlineIndex;
+                    while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
+                        const line = this.buffer.slice(0, newlineIndex);
+                        this.buffer = this.buffer.slice(newlineIndex + 1);
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            try {
+                                const message = JSON.parse(trimmed) as JSONRPCMessage;
+                                if (this.onmessage) this.onmessage(message);
+                            } catch {
+                                if (this.onerror) this.onerror(new Error("Failed to parse MCP message: " + trimmed));
+                            }
+                        }
+                    }
+                });
+
+                this.childProcess.stderr.setEncoding('utf-8');
+                this.childProcess.stderr.on("data", (chunk: string) => {
+                    const str = chunk.trim();
+                    if (str) {
+                        const lower = str.toLowerCase();
+                        if (lower.includes('error') || lower.includes('critical') || lower.includes('traceback') || lower.includes('exception')) {
+                            logger.error(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('warn')) {
+                            logger.warn(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else if (lower.includes('debug') || lower.includes('trace')) {
+                            logger.debug(`[MCP ${this.serverName} STDERR] ${str}`);
+                        } else {
+                            logger.info(`[MCP ${this.serverName} STDERR] ${str}`);
+                        }
+                    }
+                });
+
+                this.childProcess.on("close", () => {
+                    if (this.onclose) this.onclose();
+                });
+            } catch (e) {
+                reject(e instanceof Error ? e : new Error(String(e)));
+            }
         });
     }
 }
@@ -214,14 +214,17 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
             if (pid) {
                 try {
-                    // eslint-disable-next-line import/no-nodejs-modules -- required for desktop only process termination
-                    const cp = await import('child_process');
+                    // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-nodejs-modules -- required for desktop only process termination
+                    const cp = require('child_process') as { spawn: (command: string, args: string[]) => ChildProcessMinimal };
                     
                     const processLib = process as unknown as { kill: (pid: number) => void; platform: string; };
                     
                     if (processLib.platform === 'win32') {
                         const killer = cp.spawn('taskkill', ['/pid', String(pid), '/t', '/f']);
-                        killer.on('error', (err: Error) => logger.warn(`taskkill failed for MCP server ${pid}:`, err));
+                        killer.on('error', (error: unknown) => {
+                            const err = error instanceof Error ? error : new Error(String(error));
+                            logger.warn(`taskkill failed for MCP server ${pid}:`, err);
+                        });
                     } else {
                         const killer = cp.spawn('pkill', ['-P', String(pid)]);
                         killer.on('error', () => {
