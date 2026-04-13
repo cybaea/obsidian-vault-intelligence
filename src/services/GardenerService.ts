@@ -195,7 +195,7 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
         try {
             // 1. Gather context
             const excludedPaths = [
-                ...this.settings.excludedFolders.map(p => normalizePath(p)),
+                ...this.settings.gardenerExcludedFolders.map(p => normalizePath(p)),
                 normalizePath(this.settings.gardenerPlansPath),
                 normalizePath(this.settings.ontologyPath)
             ];

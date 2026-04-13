@@ -442,6 +442,12 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		const data = await this.loadData() as Partial<VaultIntelligenceSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
+		// Migration: Decouple gardener exclusions (v8.3.0)
+		if (data && data.excludedFolders && !data.gardenerExcludedFolders) {
+			this.settings.gardenerExcludedFolders = [...data.excludedFolders];
+			logger.info("[Migration] Migrated excludedFolders to gardenerExcludedFolders");
+		}
+
 		// Flag for auto-reindex if version is older than latest (v2 introduced field separation)
 		const loadedVersion = data?.indexVersion ?? 1;
 		if (loadedVersion < DEFAULT_SETTINGS.indexVersion) {
