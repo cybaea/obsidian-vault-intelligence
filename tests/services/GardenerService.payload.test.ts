@@ -76,6 +76,7 @@ describe('GardenerService Payload and Budgeting', () => {
         mockSettings = {
             excludedFolders: [],
             gardenerContextBudget: 1000,
+            gardenerExcludedFolders: [],
             gardenerModel: 'test-model',
             gardenerNoteLimit: 10,
             gardenerOrphanGracePeriodDays: 7,

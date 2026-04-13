@@ -43,7 +43,8 @@ describe('ToolRegistry Security', () => {
 
         mockSettings = {
             enableAgentWriteAccess: true,
-            excludedFolders: ['Secret', 'Private/Confidential', 'Secret/Financials.md'],
+            excludedFolders: [],
+            gardenerExcludedFolders: [],
             vaultSearchResultsLimit: 10,
         } as unknown as VaultIntelligenceSettings;
 
@@ -81,10 +82,10 @@ describe('ToolRegistry Security', () => {
         );
     });
 
-    it('should block path traversal bypass (Test Case 1)', async () => {
+    it('should block path traversal bypass into the internal data directory', async () => {
         const args = {
             content: 'hacked',
-            path: 'Allowed/../Secret/stolen.md',
+            path: 'Allowed/../.vault-intelligence/stolen.md',
         };
         const result = await toolRegistry.execute({
             args,
@@ -99,9 +100,9 @@ describe('ToolRegistry Security', () => {
         }
     });
 
-    it('should block rename destination bypass (Test Case 2)', async () => {
+    it('should block rename destination into the internal data directory', async () => {
         const args = {
-            newPath: 'Secret/note.md',
+            newPath: '.vault-intelligence/note.md',
             path: 'Public/note.md',
         };
         const result = await toolRegistry.execute({
@@ -117,10 +118,10 @@ describe('ToolRegistry Security', () => {
         }
     });
 
-    it('should block rename source bypass (Test Case 3)', async () => {
+    it('should block rename source from the internal data directory', async () => {
         const args = {
             newPath: 'Public/note.md',
-            path: 'Secret/note.md',
+            path: '.vault-intelligence/secret.md',
         };
         const result = await toolRegistry.execute({
             args,
@@ -135,8 +136,8 @@ describe('ToolRegistry Security', () => {
         }
     });
 
-    it('should block read bypass (Test Case 4)', async () => {
-        const args = { path: 'Secret/note.md' };
+    it('should block read access to the internal data directory', async () => {
+        const args = { path: '.vault-intelligence/secret.md' };
         const result = await toolRegistry.execute({
             args,
             createdFiles: new Set(),
@@ -150,8 +151,8 @@ describe('ToolRegistry Security', () => {
         }
     });
 
-    it('should block list bypass (Test Case 5)', async () => {
-        const args = { folderPath: 'Secret' };
+    it('should block listing the internal data directory', async () => {
+        const args = { folderPath: '.vault-intelligence' };
         const result = await toolRegistry.execute({
             args,
             createdFiles: new Set(),
@@ -165,12 +166,11 @@ describe('ToolRegistry Security', () => {
         }
     });
 
-    it('should block extension bypass (Test Case 6)', async () => {
-        // Excluded: 'Secret/Financials.md'
+    it('should block update note operations targeting the internal data directory without an explicit extension', async () => {
         const args = {
             content: 'update',
             mode: 'append',
-            path: 'Secret/Financials',
+            path: '.vault-intelligence/secret',
         };
         const result = await toolRegistry.execute({
             args,

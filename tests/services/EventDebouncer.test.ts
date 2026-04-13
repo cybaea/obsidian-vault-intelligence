@@ -113,12 +113,11 @@ describe('EventDebouncer', () => {
         expect(onChunkReady).toHaveBeenCalledTimes(2);
     });
 
-    it('should identify excluded paths', () => {
-        mockSettings.excludedFolders = ['excluded/'];
-        
-        expect(debouncer.isPathExcluded('excluded/file.md')).toBe(true);
+    it('should identify internal data directory paths as excluded', () => {
+        expect(debouncer.isPathExcluded('excluded/file.md')).toBe(false);
         expect(debouncer.isPathExcluded('safe/file.md')).toBe(false);
         expect(debouncer.isPathExcluded('.vault-intelligence/config.json')).toBe(true);
+        expect(debouncer.isPathExcluded('.vault-intelligence')).toBe(true);
     });
 
     it('should flush pending updates', async () => {
