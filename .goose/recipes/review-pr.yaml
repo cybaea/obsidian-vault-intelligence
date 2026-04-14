@@ -28,6 +28,9 @@ instructions: |
   - **Trust the Toolchain**: Assume `npm`, `gh`, and `git` are correctly configured and available in the PATH.
   - **Atomic Steps**: Group related shell commands into single execution blocks to maintain momentum.
   - **No Hallucinations**: If a command fails, report the exact error. Do not speculate about "Hermit" or other environment wrappers unless they appear in the stderr.
+  - **Script Integrity**: If using `Developer.execute`, treat TypeScript errors (e.g., `TS2339`) as bugs in your own script logic. Do NOT blame the environment for compilation failures.
+  - **Safe Types**: When writing scripts for `Developer.execute`, always initialize objects with explicit types (e.g., `const results: any = {}`) to avoid strict property checking failures during sandbox compilation.
+  - **Prefer `npm run` commands always**: Watch yourself and when you start using lower-level commands, e.g, `npx vitest run`, STOP AND THINK: it is probably your sandbox or terminal environment that is confused. Review your environment first.
 
   1. Check for uncommitted changes and switch to the PR branch
      Execute the following shell command to check out PR {{ pr_number }}:

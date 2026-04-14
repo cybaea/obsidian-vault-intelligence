@@ -41,8 +41,16 @@
         ".goose/**",
         ".tasks/**",
         ".agents/**",
+        ".hermit/**",
+        "**/releases/**",
         "releases",
+        "**/thoughts/**",
         "thoughts",
+        "**/docs/**",
+        "docs",
+        "**/tests/mocks/**",
+        "tests/mocks",
+        "**/cache/**",
         "cache"
     ]
 }
