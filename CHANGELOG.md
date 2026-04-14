@@ -11,6 +11,12 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+### Developer features
+
+## [9.2.6] - 2026-04-14
+
+### User features
+
 -   **Gardener-only exclusions**: `gardenerExcludedFolders` now isolates folder exclusions to the Gardener workflow only. Indexing and Researcher operations no longer apply these folder exclusions.
 
 ### Developer features
