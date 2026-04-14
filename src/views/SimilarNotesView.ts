@@ -92,14 +92,17 @@ export class SimilarNotesView extends ItemView {
             const finalResults = await this.graphService.getGraphEnhancedSimilar(file.path, limit);
             if (this.lastUpdateId !== currentUpdateId) return;
 
-            if (finalResults.length === 0) {
+            // Filter results by minimum similarity score
+            const filteredResults = finalResults.filter(doc => doc.score >= this.plugin.settings.minSimilarityScore);
+
+            if (filteredResults.length === 0) {
                 container.createEl("p", { text: "No connections found." });
             }
 
             const list = container.createEl("ul");
             list.addClass("similar-notes-list");
 
-            finalResults.forEach(doc => {
+            filteredResults.forEach(doc => {
                 const item = list.createEl("li");
                 item.addClass("similar-notes-item");
 

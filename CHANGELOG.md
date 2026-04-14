@@ -11,6 +11,8 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+-   **Fixed**: Minimum similarity score setting now properly filters results in the Similar Notes view.
+
 ### Developer features
 
 ## [9.2.6] - 2026-04-14
