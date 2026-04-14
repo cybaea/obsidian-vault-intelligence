@@ -1,6 +1,6 @@
 import { App, normalizePath, TFile, requestUrl } from "obsidian";
 
-import { AGENT_CONSTANTS, SEARCH_CONSTANTS, SANITIZATION_CONSTANTS, MCP_CONSTANTS } from "../constants";
+import { AGENT_CONSTANTS, SEARCH_CONSTANTS, SANITIZATION_CONSTANTS, MCP_CONSTANTS, GRAPH_CONSTANTS } from "../constants";
 import { ToolConfirmationModal } from "../modals/ToolConfirmationModal";
 import { ContextAssembler } from "../services/ContextAssembler";
 import { GraphService } from "../services/GraphService";
@@ -513,11 +513,12 @@ export class ToolRegistry {
         }
 
         const targetPath = normalizePath(processedPath).toLowerCase();
+        
+        // Add protection for internal data directory
+        if (targetPath.startsWith(GRAPH_CONSTANTS.VAULT_DATA_DIR.toLowerCase() + "/")) return true;
+        if (targetPath === GRAPH_CONSTANTS.VAULT_DATA_DIR.toLowerCase()) return true;
 
-        return this.settings.excludedFolders.some(folder => {
-            const normalizedFolder = folder.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "");
-            return targetPath.startsWith(normalizedFolder + "/") || targetPath === normalizedFolder;
-        });
+        return false;
     }
 
     private async executeListMcpResources() {
