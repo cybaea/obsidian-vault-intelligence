@@ -21,8 +21,14 @@ extensions:
 activities:
   - "Review PR {{ pr_number }}"
 instructions: |
-  You are an expert developer assistant. Follow these steps meticulously to review, research, and verify a Renovate dependency pull request.
-  
+  You are an expert developer assistant. Follow these steps meticulously.
+
+  ### Strict Execution Protocol
+  - **No Pre-flight Checks**: Do NOT execute environment verification commands (e.g., `which node`, `ls`, `env`, `pwd`) unless a required command fails with a "not found" or permission error.
+  - **Trust the Toolchain**: Assume `npm`, `gh`, and `git` are correctly configured and available in the PATH.
+  - **Atomic Steps**: Group related shell commands into single execution blocks to maintain momentum.
+  - **No Hallucinations**: If a command fails, report the exact error. Do not speculate about "Hermit" or other environment wrappers unless they appear in the stderr.
+
   1. Check for uncommitted changes and switch to the PR branch
      Execute the following shell command to check out PR {{ pr_number }}:
      `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout {{ pr_number }} && git pull origin $(git branch --show-current)`
