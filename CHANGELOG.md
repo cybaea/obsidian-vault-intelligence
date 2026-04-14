@@ -11,7 +11,14 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+-   **Gardener-only exclusions**: `gardenerExcludedFolders` now isolates folder exclusions to the Gardener workflow only. Indexing and Researcher operations no longer apply these folder exclusions.
+
 ### Developer features
+
+-   **Settings migration**: Added migration logic to copy legacy `excludedFolders` into `gardenerExcludedFolders` during plugin startup.
+-   **Gardener exclusion cleanup**: Updated `GardenerService` to build its excluded path list from `gardenerExcludedFolders` rather than the shared legacy setting.
+-   **Indexing cleanup**: Updated `EventDebouncer` so only internal `.vault-intelligence` paths are blocked from indexing, removing legacy folder exclusion logic.
+-   **Tool security alignment**: Updated `ToolRegistry` path validation to continue protecting `.vault-intelligence` while decoupling legacy excluded-folder behavior from agent write tool security.
 
 ## [9.2.5] - 2026-04-10
 

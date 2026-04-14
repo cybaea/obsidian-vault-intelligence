@@ -98,17 +98,6 @@ export class EventDebouncer {
      */
     public isPathExcluded(path: string): boolean {
         if (path.startsWith(GRAPH_CONSTANTS.VAULT_DATA_DIR)) return true;
-        
-        const settings = this.settings();
-        if (settings.excludedFolders && settings.excludedFolders.length > 0) {
-            const normalizedPath = path.toLowerCase();
-            for (const folder of settings.excludedFolders) {
-                const normalizedFolder = folder.toLowerCase().replace(/\/+$/, "");
-                if (normalizedPath === normalizedFolder || normalizedPath.startsWith(normalizedFolder + '/')) {
-                    return true;
-                }
-            }
-        }
         return false;
     }
 

@@ -225,10 +225,10 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     const excludedFoldersEl = containerEl.createDiv();
     const renderExcludedFolders = () => {
         excludedFoldersEl.empty();
-        if (plugin.settings.excludedFolders.length === 0) {
+        if (plugin.settings.gardenerExcludedFolders.length === 0) {
             excludedFoldersEl.createEl('i', { text: 'No folders excluded.' });
         }
-        plugin.settings.excludedFolders.forEach((folder, index) => {
+        plugin.settings.gardenerExcludedFolders.forEach((folder, index) => {
             new Setting(excludedFoldersEl)
                 .setName(folder)
                 .addExtraButton(btn => btn
@@ -238,7 +238,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     .setTooltip('Remove')
                     .onClick(() => {
                         void (async () => {
-                            plugin.settings.excludedFolders.splice(index, 1);
+                            plugin.settings.gardenerExcludedFolders.splice(index, 1);
                             await plugin.saveSettings();
                             renderExcludedFolders();
                         })();
@@ -259,8 +259,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 if (e.key === 'Enter') {
                     void (async () => {
                         const value = text.getValue().trim();
-                        if (value && !plugin.settings.excludedFolders.includes(value)) {
-                            plugin.settings.excludedFolders.push(value);
+                        if (value && !plugin.settings.gardenerExcludedFolders.includes(value)) {
+                            plugin.settings.gardenerExcludedFolders.push(value);
                             await plugin.saveSettings();
                             text.setValue('');
                             renderExcludedFolders();
@@ -274,8 +274,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             .onClick(() => {
                 void (async () => {
                     const value = addFolderText.getValue().trim();
-                    if (value && !plugin.settings.excludedFolders.includes(value)) {
-                        plugin.settings.excludedFolders.push(value);
+                    if (value && !plugin.settings.gardenerExcludedFolders.includes(value)) {
+                        plugin.settings.gardenerExcludedFolders.push(value);
                         await plugin.saveSettings();
                         addFolderText.setValue('');
                         renderExcludedFolders();

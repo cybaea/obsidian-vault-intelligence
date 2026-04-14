@@ -52,6 +52,7 @@ export interface VaultIntelligenceSettings {
     excludedFolders: string[];
     gardenerArchiveFolderPath: string;
     gardenerContextBudget: number;
+    gardenerExcludedFolders: string[];
     gardenerModel: string;
     gardenerNoteLimit: number;
     gardenerOrphanGracePeriodDays: number;
@@ -182,6 +183,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     excludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerArchiveFolderPath: 'Ontology/_Archive',
     gardenerContextBudget: 100000,
+    gardenerExcludedFolders: ['Ontology', 'Gardener/Plans'],
     gardenerModel: 'gemini-flash-latest',
     gardenerNoteLimit: 50,
     gardenerOrphanGracePeriodDays: 7,
