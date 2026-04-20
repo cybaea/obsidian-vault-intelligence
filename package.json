@@ -76,6 +76,7 @@
 		"events": "^3.3.0",
 		"graphology": "^0.26.0",
 		"graphology-layout-forceatlas2": "^0.10.1",
+		"sharp": "^0.34.5",
 		"sigma": "^3.0.2",
 		"zod": "^4.3.5",
 		"zod-to-json-schema": "^3.25.1"
@@ -87,6 +88,7 @@
 		"glob": "^13.0.0",
 		"katex": "0.16.45",
 		"flatted": "^3.4.2",
-		"smol-toml": "^1.6.1"
+		"smol-toml": "^1.6.1",
+		"sharp": "$sharp"
 	}
 }

@@ -103,6 +103,38 @@ async function validate() {
         console.log("OK: ModelRegistry contents verified.");
     }
 
+    // 3. Check for Sharp duplication (Architectural Guardrail)
+    console.log("Checking for sharp module duplication...");
+    try {
+        const { execSync } = require('child_process');
+        const lsOutput = execSync('npm ls sharp --json', { encoding: 'utf8', cwd: path.join(__dirname, '..') });
+        const lsData = JSON.parse(lsOutput);
+        
+        // Count occurrences of sharp in the dependency tree
+        const countSharp = (deps) => {
+            let count = 0;
+            if (!deps) return 0;
+            for (const name in deps) {
+                if (name === 'sharp') count++;
+                count += countSharp(deps[name].dependencies);
+            }
+            return count;
+        };
+
+        // This is a bit complex to parse from npm ls --json correctly, 
+        // a simpler way is to check if node_modules/@xenova/transformers/node_modules/sharp exists
+        const nestedSharpPath = path.join(__dirname, '../node_modules/@xenova/transformers/node_modules/sharp');
+        if (fs.existsSync(nestedSharpPath)) {
+            console.error("FAILED: Duplicate 'sharp' detected in @xenova/transformers! This will break tests. Ensure 'overrides' are working and run 'npm install'.");
+            allOk = false;
+        } else {
+            console.log("OK: No nested 'sharp' detected.");
+        }
+    } catch (e) {
+        // npm ls might fail if there are other issues, but we want to know about sharp
+        console.warn("WARNING: Could not verify sharp duplication via npm ls.");
+    }
+
     console.log("--- Validation Finished ---");
     if (!allOk) {
         process.exit(1);
