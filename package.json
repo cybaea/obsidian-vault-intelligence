@@ -91,6 +91,6 @@
 		"smol-toml": "^1.6.1",
 		"sharp": "$sharp",
 		"vite": "^6.4.2",
-		"protobufjs": "^7.5.5"
+		"protobufjs": "^8.0.0"
 	}
 }
