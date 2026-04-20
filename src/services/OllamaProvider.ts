@@ -529,12 +529,17 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         options.signal?.addEventListener("abort", abortHandler);
 
         const promise = new Promise<NodeResponse>((resolve, reject) => {
-            req.on("error", (err: Error) => {
+            req.on("error", (...args: unknown[]) => {
+                const err = args[0] as Error;
                 options.signal?.removeEventListener("abort", abortHandler);
                 reject(new ProviderError(err.message, "ollama"));
             });
-            req.on("response", (res: NodeResponse) => {
-                res.on("error", (err: Error) => reject(new ProviderError(err.message, "ollama")));
+            req.on("response", (...args: unknown[]) => {
+                const res = args[0] as NodeResponse;
+                res.on("error", (...args: unknown[]) => {
+                    const err = args[0] as Error;
+                    reject(new ProviderError(err.message, "ollama"));
+                });
                 resolve(res);
             });
         });

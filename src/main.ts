@@ -112,20 +112,20 @@ You are a Gardener for an Obsidian vault. Your goal is to suggest hygiene improv
  * and agentic reasoning (Researcher/Gardener).
  */
 export default class VaultIntelligencePlugin extends Plugin implements IVaultIntelligencePlugin {
-	settings: VaultIntelligenceSettings;
-	geminiService: GeminiProvider;
-	providerRegistry: ProviderRegistry;
-	embeddingService: IEmbeddingClient;
-	vaultManager: VaultManager;
-	graphService: GraphService;
-	persistenceManager: PersistenceManager;
-	metadataManager: MetadataManager;
-	ontologyService: OntologyService;
-	gardenerService: GardenerService;
-	gardenerStateService: GardenerStateService;
-	workerManager: WorkerManager;
-	graphSyncOrchestrator: GraphSyncOrchestrator;
-	mcpClientManager: McpClientManager;
+	settings!: VaultIntelligenceSettings;
+	geminiService!: GeminiProvider;
+	providerRegistry!: ProviderRegistry;
+	embeddingService!: IEmbeddingClient;
+	vaultManager!: VaultManager;
+	graphService!: GraphService;
+	persistenceManager!: PersistenceManager;
+	metadataManager!: MetadataManager;
+	ontologyService!: OntologyService;
+	gardenerService!: GardenerService;
+	gardenerStateService!: GardenerStateService;
+	workerManager!: WorkerManager;
+	graphSyncOrchestrator!: GraphSyncOrchestrator;
+	mcpClientManager!: McpClientManager;
 	private needsReindex = false;
 
 	private initDebouncedHandlers() {

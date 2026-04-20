@@ -844,7 +844,7 @@ const IndexerWorker: WorkerAPI = {
         return subgraph.export();
     },
 
-    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string, title: string) => Promise<{ vector: number[], tokenCount: number }>) {
+    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) {
         config = conf;
         graph = new Graph();
         if (typeof embedder === 'function') embedderProxy = embedder;

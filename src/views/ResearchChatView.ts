@@ -11,11 +11,11 @@ import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
-    plugin: VaultIntelligencePlugin;
-    providerRegistry: ProviderRegistry;
-    graphService: GraphService;
-    embeddingService: IEmbeddingClient;
-    agent: AgentService;
+    plugin!: VaultIntelligencePlugin;
+    providerRegistry!: ProviderRegistry;
+    graphService!: GraphService;
+    embeddingService!: IEmbeddingClient;
+    agent!: AgentService;
     private messages: ChatMessage[] = [];
     private isThinking = false;
     private currentAbortController: AbortController | null = null;
@@ -25,8 +25,8 @@ export class ResearchChatView extends ItemView {
     private stopButton: ButtonComponent | null = null;
     private messageComponents: Component[] = [];
 
-    chatContainer: HTMLElement;
-    inputComponent: TextAreaComponent;
+    chatContainer!: HTMLElement;
+    inputComponent!: TextAreaComponent;
     inputHistory: string[] = [];
     historyIndex = -1;
     private currentDraft = "";

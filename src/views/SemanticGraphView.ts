@@ -185,7 +185,8 @@ export class SemanticGraphView extends ItemView {
         this.visibilityObserver.observe(this.contentEl);
 
         this.registerEvent(
-            this.graphService.on("vault-intelligence:context-highlight", (paths: string[]) => {
+            this.graphService.on("vault-intelligence:context-highlight", (...args: unknown[]) => {
+                const paths = args[0] as string[];
                 this.contextPaths = new Set(paths);
                 this.sigmaInstance?.refresh();
             })
@@ -459,7 +460,11 @@ export class SemanticGraphView extends ItemView {
      * Updates the graph view for a specific file.
      * Includes debouncing, race protection, and smart panning.
      */
-    updateForFile = debounce((file: TFile | null, force = false, ignorePositions = false) => {
+    updateForFile = debounce((...args: unknown[]) => {
+        const file = args[0] as TFile | null;
+        const force = (args[1] ?? false) as boolean;
+        const ignorePositions = (args[2] ?? false) as boolean;
+
         if (!file || file.extension !== 'md') return;
 
         // Skip if same file unless forced
