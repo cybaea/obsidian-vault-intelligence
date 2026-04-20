@@ -89,6 +89,8 @@
 		"katex": "0.16.45",
 		"flatted": "^3.4.2",
 		"smol-toml": "^1.6.1",
-		"sharp": "$sharp"
+		"sharp": "$sharp",
+		"vite": "^6.4.2",
+		"protobufjs": "^7.5.5"
 	}
 }
