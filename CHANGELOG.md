@@ -13,6 +13,8 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **Dependency hardening**: Added a `sharp` override in `package.json` to force a single, correctly-installed version across all dependencies, resolving native binding issues with `@xenova/transformers`.
+
 ## [9.2.7] - 2026-04-14
 
 ### User features
