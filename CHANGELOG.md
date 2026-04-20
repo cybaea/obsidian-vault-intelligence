@@ -13,6 +13,10 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **Vite 8 Upgrade**: Successfully upgraded the documentation and test toolchain to Vite 8 (Rolldown).
+-   **VitePress Modernization**: Upgraded VitePress to `2.0.0-alpha.17` to ensure compatibility with Vite 8 and the new Rust-based bundler.
+-   **Build Resilience**: Integrated `oxc-minify` for high-performance documentation builds and explicitly added `graphology-types` to resolve peer dependency conflicts during the major toolchain upgrade.
+
 -   **Dependency hardening**: Added a `sharp` override in `package.json` to force a single, correctly-installed version across all dependencies, resolving native binding issues with `@xenova/transformers`.
 
 ## [9.2.7] - 2026-04-14
