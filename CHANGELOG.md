@@ -13,6 +13,8 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **ESLint v10 Upgrade**: Successfully upgraded the linting engine and related packages to version 10, ensuring compatibility with modern Node.js environments (v22.22.0) and fully adopting the mandatory flat configuration system.
+
 ## [9.2.8] - 2026-04-20
 
 ### User features
