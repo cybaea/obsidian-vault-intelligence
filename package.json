@@ -90,7 +90,7 @@
 		"flatted": "^3.4.2",
 		"smol-toml": "^1.6.1",
 		"sharp": "$sharp",
-		"vite": "^6.4.2",
+		"vite": "^8.0.0",
 		"protobufjs": "^8.0.0"
 	}
 }
