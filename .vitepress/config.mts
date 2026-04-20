@@ -70,11 +70,6 @@ export default withMermaid(defineConfig({
         build: {
             target: 'es2022',
             chunkSizeWarningLimit: 800
-        },
-        esbuild: {
-            supported: {
-                'destructuring': true
-            }
         }
     },
     themeConfig: {
