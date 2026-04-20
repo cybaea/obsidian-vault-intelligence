@@ -69,7 +69,7 @@ export class EventDebouncer {
             onDelete(path);
         });
 
-        this.vaultManager.onRename((oldPath, newPath) => {
+        this.vaultManager.onRename((oldPath: string, newPath: string) => {
             this.driftQuarantine.delete(oldPath);
             this.driftQuarantine.delete(newPath);
             onDelete(oldPath);
@@ -81,7 +81,9 @@ export class EventDebouncer {
         });
 
         // Drift bridge from Facade
-        this.eventBus.on('graph:drift-detected', (file: TFile) => {
+        this.eventBus.on('graph:drift-detected', (...args: unknown[]) => {
+            const file = args[0];
+            if (!(file instanceof TFile)) return;
             const retryCount = this.driftQuarantine.get(file.path) || 0;
             if (retryCount < 3) {
                 this.driftQuarantine.set(file.path, retryCount + 1);

@@ -7,7 +7,7 @@ export class ReleaseNotesModal extends Modal {
     version: string;
     markdownContent: string;
     sponsorUrl?: string;
-    private renderComponent: Component;
+    private renderComponent!: Component;
 
     constructor(app: App, plugin: Plugin, version: string, markdownContent: string, sponsorUrl?: string) {
         super(app);
