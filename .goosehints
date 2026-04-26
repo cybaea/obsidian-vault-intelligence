@@ -1,3 +1,9 @@
+# Environment Safety
+- **PATH Prioritization**: Upon initialization, check if `/usr/lib/Goose/resources/bin` is at the very start of your PATH. To prevent internal tool leakage into project builds:
+    1. Move the Goose resource path to the **end** of the PATH: `export PATH=$(echo $PATH | sed -e 's|/usr/lib/Goose/resources/bin:||'):/usr/lib/Goose/resources/bin`.
+    2. Verify `which node` now points to your system or version-managed Node.
+- **Verification**: This ensures that `npm run test` and `npm run lint`  use the project's intended environment while keeping Goose's internal binaries available as a fallback.
+
 # Agent Initialization
 1. Read `AGENTS.md` for core project architecture and standards.
 2. Read `.goose/vault-intelligence-rules.md` for Goose-specific research and planning protocols.
@@ -22,4 +28,6 @@
     3. `npm run test`
     4. `npm run docs:build`
     5. `npm ci`
-- Fix any errors before considering the work done. Make sure you **fix** the error: do not simply hide anything behind linter directives or similar and do not change the eslint configuration just to fix an error (unless that is an explicit part of your instructions).
+- **Zero-Trust Reporting**: Do not report a "Success" status if the tool produced output. You must read and address all linting errors, type mismatches, and warnings. 
+- Fix any errors before considering the work done. 
+- Make sure you **fix** the error: do not simply hide anything behind linter directives or similar and do not change the eslint configuration just to fix an error (unless that is an explicit part of your instructions).
