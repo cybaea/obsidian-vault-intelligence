@@ -21,7 +21,9 @@
 # Documentation
 - We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
 
-# Completion
+# Final completion
+And the end of your implementation phase:
+
 - Always ensure you run all of the commands below in this order and that each one pass without errors or warnings:
     1. `npm run lint`
     2. `npm run build`
