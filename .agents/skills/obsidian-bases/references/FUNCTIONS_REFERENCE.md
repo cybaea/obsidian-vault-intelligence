@@ -45,6 +45,7 @@
 When subtracting two dates, the result is a **Duration** type (not a number). Duration has its own properties and methods.
 
 **Duration Fields:**
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `duration.days` | Number | Total days in duration |

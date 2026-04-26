@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 
-import { resolveMcpSecrets } from "../../../src/services/mcp/utils";
+import { resolveSecrets } from "../../src/utils/secrets";
 
-describe("Mcp Transport Utils", () => {
-    describe("resolveMcpSecrets", () => {
+describe("Secrets Utils", () => {
+    describe("resolveSecrets", () => {
         let mockedGetSecretValue: Mock;
 
         beforeEach(() => {
@@ -11,14 +11,14 @@ describe("Mcp Transport Utils", () => {
         });
 
         it("should return an empty object if rawMap is undefined", () => {
-            expect(resolveMcpSecrets(undefined, mockedGetSecretValue)).toEqual({});
-            expect(resolveMcpSecrets(null, mockedGetSecretValue)).toEqual({});
-            expect(resolveMcpSecrets("", mockedGetSecretValue)).toEqual({});
+            expect(resolveSecrets(undefined, mockedGetSecretValue)).toEqual({});
+            expect(resolveSecrets(null, mockedGetSecretValue)).toEqual({});
+            expect(resolveSecrets("", mockedGetSecretValue)).toEqual({});
         });
 
         it("should parse normal JSON string without secrets", () => {
             const rawMap = JSON.stringify({ KEY: "value", NUMBER: "123" });
-            const result = resolveMcpSecrets(rawMap, mockedGetSecretValue);
+            const result = resolveSecrets(rawMap, mockedGetSecretValue);
             expect(result).toEqual({ KEY: "value", NUMBER: "123" });
             expect(mockedGetSecretValue).not.toHaveBeenCalled();
         });
@@ -33,7 +33,7 @@ describe("Mcp Transport Utils", () => {
                 return null;
             });
 
-            const result = resolveMcpSecrets(rawMap, mockedGetSecretValue);
+            const result = resolveSecrets(rawMap, mockedGetSecretValue);
             expect(result).toEqual({ 
                 API_KEY: "resolved-secret-value",
                 NORMAL: "text"
@@ -47,13 +47,13 @@ describe("Mcp Transport Utils", () => {
             });
             mockedGetSecretValue.mockReturnValue(null);
 
-            expect(() => resolveMcpSecrets(rawMap, mockedGetSecretValue)).toThrow(
+            expect(() => resolveSecrets(rawMap, mockedGetSecretValue)).toThrow(
                 "Missing secret for API_KEY. Please re-enter it in settings."
             );
         });
 
         it("should throw an error with invalid JSON representation", () => {
-            expect(() => resolveMcpSecrets("not valid json", mockedGetSecretValue)).toThrow(
+            expect(() => resolveSecrets("not valid json", mockedGetSecretValue)).toThrow(
                 /Invalid JSON format in configuration/
             );
         });

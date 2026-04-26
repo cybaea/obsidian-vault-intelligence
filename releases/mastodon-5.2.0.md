@@ -2,9 +2,9 @@
 
 Vault Intelligence brings AI-powered research agents directly to #Obsidian. We've just released v5.2.0, focusing on the friction of latency and the need for rock-solid stability in large vaults.
 
-Check it out: https://github.com/cybaea/obsidian-vault-intelligence
+Check it out: <https://github.com/cybaea/obsidian-vault-intelligence>
 
-@obsidian@mas.to #Obsidian #PKM #AI
+@<obsidian@mas.to> #Obsidian #PKM #AI
 
 ---
 
@@ -21,6 +21,7 @@ We're moving beyond keywords. Our new "Graph-Enhanced Intelligence" prioritises 
 ---
 
 We also added:
+
 - Intelligent stopword support for 30+ languages.
 - Preset chunk sizes for per-model optimization.
 - Settings UI refinements for a more native feel.
@@ -33,4 +34,4 @@ Gratitude to our testers and users for the feedback that shaped this release. Yo
 
 Happy researching!
 
-#ObsidianMD #LocalFirst #GeminiAI
+# ObsidianMD #LocalFirst #GeminiAI

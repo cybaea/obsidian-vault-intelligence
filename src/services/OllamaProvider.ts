@@ -16,6 +16,7 @@ import { OLLAMA_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { ProviderError } from "../types/providers";
 import { logger } from "../utils/logger";
+import { resolveSecrets } from "../utils/secrets";
 import { isExternalUrl } from "../utils/url";
 import { ModelRegistry } from "./ModelRegistry";
 
@@ -144,6 +145,44 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
     constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
 
+    private getHeaders(): Record<string, string> {
+        const headers: Record<string, string> = {};
+        
+        // Extract Basic Auth from URL if present
+        try {
+            const url = new URL(this.settings.ollamaEndpoint);
+            if (url.username || url.password) {
+                const auth = btoa(`${url.username}:${url.password}`);
+                headers["Authorization"] = `Basic ${auth}`;
+            }
+        } catch {
+            // Ignore invalid URL
+        }
+
+        const resolveSecret = (key: string) => {
+            try {
+                const storage = this._app.secretStorage as unknown as { getSecret: (k: string) => string | null };
+                if (storage && storage.getSecret) {
+                    return storage.getSecret(key);
+                }
+            } catch (e) {
+                logger.error(`[Ollama] Failed to read secret ${key}`, e);
+            }
+            return null;
+        };
+        
+        if (this.settings.ollamaHeaders) {
+            try {
+                const resolved = resolveSecrets(this.settings.ollamaHeaders, resolveSecret);
+                Object.assign(headers, resolved);
+            } catch (e) {
+                logger.error(`[Ollama] Error resolving Ollama headers:`, e);
+            }
+        }
+
+        return headers;
+    }
+
     // --- IEmbeddingClient Implementation ---
 
     public get modelName(): string {
@@ -172,7 +211,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             model: pureModelStr,
                             truncate: true
                         }),
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json", ...this.getHeaders() },
                         method: "POST",
                         url: `${endpoint}/api/embed`
                     });
@@ -228,7 +267,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             model: pureModelStr,
                             truncate: true
                         }),
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json", ...this.getHeaders() },
                         method: "POST",
                         url: `${endpoint}/api/embed`
                     });
@@ -353,7 +392,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...this.getHeaders() },
                 method: "POST",
                 throw: true,
                 url: `${endpoint}/api/chat`
@@ -397,7 +436,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...this.getHeaders() },
                 method: "POST",
                 signal: options.signal
             }) as { body: { getReader: () => StreamReader }, ok: boolean, status: number, text: () => Promise<string> };
@@ -471,6 +510,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 // We use fetch since requestUrl doesn't guarantee fire-and-forget strictly on teardown
                 await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                     body: JSON.stringify({ keep_alive: 0, messages: [], model }),
+                    headers: this.getHeaders(),
                     keepalive: true,
                     method: "POST"
                 });
@@ -484,7 +524,11 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     private async checkOllamaVersion(endpoint: string): Promise<boolean> {
         if (this.supportsJsonSchema !== null) return this.supportsJsonSchema;
         try {
-            const response = await requestUrl({ method: "GET", url: `${endpoint}/api/version` });
+            const response = await requestUrl({ 
+                headers: this.getHeaders(),
+                method: "GET", 
+                url: `${endpoint}/api/version` 
+            });
             if (response.status === 200) {
                 const data = response.json as OllamaVersionResponse;
                 if (data.version) {
@@ -509,9 +553,8 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const url = new URL(`${endpoint}/api/chat`);
         
         const reqOptions = {
-            ...(url.username || url.password ? { auth: `${url.username}:${url.password}` } : {}),
             body: JSON.stringify(body),
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...this.getHeaders() },
             hostname: url.hostname,
             method: "POST",
             path: url.pathname + url.search,
@@ -620,7 +663,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...this.getHeaders() },
                 method: "POST",
                 throw: true,
                 url: `${endpoint}/api/chat`
@@ -754,7 +797,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         const modelId = options.modelId || this.settings.chatModel;
         
         // JIT Fetch Model Details (Context Length / Dimensions)
-        const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId);
+        const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId, this.getHeaders());
 
         // Map UnifiedMessage roles/content to Ollama format
         const useNativeTools = details?.supportedMethods?.includes("nativeTools");

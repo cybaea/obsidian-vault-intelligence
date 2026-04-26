@@ -6,8 +6,8 @@ import { Platform } from "obsidian";
 
 import { MCPServerConfig } from "../../settings/types";
 import { logger } from "../../utils/logger";
+import { resolveSecrets } from "../../utils/secrets";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
-import { resolveMcpSecrets } from "./utils";
 
 interface ChildProcessMinimal {
     kill: () => void;
@@ -191,7 +191,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
         if (server.env) {
             try {
-                const customEnv = resolveMcpSecrets(server.env, resolveSecret);
+                const customEnv = resolveSecrets(server.env, resolveSecret);
                 for (const [k, v] of Object.entries(customEnv)) {
                     mergedEnv[k] = v;
                 }

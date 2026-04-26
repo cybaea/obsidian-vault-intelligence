@@ -2,7 +2,7 @@ Vault Intelligence brings agentic AI and semantic intelligence to #Obsidian, hel
 
 After the giant leap of version 5.0, we found that power can sometimes bring clutter. Version 5.1.0 is about refinement, clarity, and mastering the engine.
 
-https://github.com/cybaea/obsidian-vault-intelligence @obsidian@mas.to #Obsidian #PKM
+<https://github.com/cybaea/obsidian-vault-intelligence> @<obsidian@mas.to> #Obsidian #PKM
 
 ---
 
@@ -26,4 +26,4 @@ We've overhauled the layout and spacing of the Advanced tab. It’s now easier t
 
 Gratitude to our early adopters who helped us identify these legacy edges after the 5.0 release! Your feedback is what makes Vault Intelligence smarter every day.
 
-Install the latest version via BRAT: https://github.com/cybaea/obsidian-vault-intelligence #AI #Productivity
+Install the latest version via BRAT: <https://github.com/cybaea/obsidian-vault-intelligence> #AI #Productivity

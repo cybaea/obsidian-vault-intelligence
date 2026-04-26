@@ -1,6 +1,6 @@
 # Vault Intelligence 5.1.0
 
-The "Refinement & Clarity" update is here! 
+The "Refinement & Clarity" update is here!
 
 Vault Intelligence brings agentic semantic intelligence to your Obsidian vault, allowing you to research, explore, and organize your knowledge with the power of Google Gemini.
 

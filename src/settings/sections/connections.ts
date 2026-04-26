@@ -2,6 +2,8 @@ import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsi
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { resolveSecrets } from "../../utils/secrets";
+import { renderKeyValueEditor } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import "../components"; // Ensure prototype extensions load
 import { BANNER_BASE64 } from "./banner-data";
@@ -103,7 +105,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
                 if (actualKey && actualKey.startsWith('AIza')) {
                     try {
-                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0);
+                        const app = plugin.app as unknown as InternalApp;
+                        const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                        const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret) : {};
+                        
+                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders);
                         new Notice("API key valid. Models loaded.");
                     } catch {
                         if (actualKey.length > 30) new Notice("Failed to load models.");
@@ -164,6 +170,24 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 btn.setButtonText("Test connection");
             }));
 
+    renderKeyValueEditor({
+        container: containerEl,
+        currentJson: plugin.settings.ollamaHeaders,
+        description: "Optional HTTP headers for authentication or proxy configuration. Use 'Secret' to securely store tokens in the device keychain.",
+        onChange: (value: string) => {
+            plugin.settings.ollamaHeaders = value;
+            void plugin.saveSettings();
+        },
+        onSaveSecret: (key: string, value: string) => {
+            const storage = plugin.app.secretStorage as unknown as { setSecret?: (k:string, v:string)=>void };
+            if (storage && storage.setSecret) {
+                storage.setSecret(key, value);
+            }
+        },
+        secretKeyPrefix: `ollama-headers-`,
+        title: "Ollama HTTP headers"
+    });
+
     // --- 3. Model List Management ---
     new Setting(containerEl)
         .setName('Model management')
@@ -183,7 +207,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     const apiKey = await plugin.geminiService.getApiKey();
                     if (!apiKey) throw new Error("API key not found.");
 
-                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true);
+                    const app = plugin.app as unknown as InternalApp;
+                    const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                    const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret) : {};
+
+                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders);
                     new Notice("Model list refreshed");
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);

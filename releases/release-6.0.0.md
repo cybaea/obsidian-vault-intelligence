@@ -26,9 +26,9 @@ You can now switch exclusively between different embedding models (eg Local vs G
 
 ### Quality of life improvements
 
--   **Context awareness**: The Researcher assistant now uses exact token tracking for its context window across all models.
--   **Storage management**: A new "Storage" tab in Advanced settings allows you to view disk usage, prune inactive shards, or reset plugin data.
--   **Persistence**: Improved data safety during unexpected exits or heavy re-indexing operations.
--   **Model selection**: Updated model labels in settings to clearly distinguish between Gemini versions and local models.
--   **Relationship insights**: The "Similar notes" view now separates graph relationship metadata from note snippets for better readability.
--   **Startup stability**: Fixed a race condition that could cause a crash on startup.
+- **Context awareness**: The Researcher assistant now uses exact token tracking for its context window across all models.
+- **Storage management**: A new "Storage" tab in Advanced settings allows you to view disk usage, prune inactive shards, or reset plugin data.
+- **Persistence**: Improved data safety during unexpected exits or heavy re-indexing operations.
+- **Model selection**: Updated model labels in settings to clearly distinguish between Gemini versions and local models.
+- **Relationship insights**: The "Similar notes" view now separates graph relationship metadata from note snippets for better readability.
+- **Startup stability**: Fixed a race condition that could cause a crash on startup.

@@ -6,9 +6,9 @@ In 2026, the Obsidian AI plugin ecosystem is crowded, but largely homogenous. Pl
 
 However, they share fundamental limitations:
 
--   **Passive Interaction**: They wait for the user to ask a question. They search the vault, but they don't _maintain_ the vault.
--   **Flat Retrieval (Standard RAG)**: They rely heavily on standard Vector Similarity (occasionally paired with BM25 keyword search). This treats knowledge as a flat collection of disconnected chunks, ignoring the very reason users choose Obsidian: **The Graph**.
--   **The "Ghost" Problem**: Visual notes (Canvas/Excalidraw) and complex metadata often poison standard vector indexes with high-entropy JSON or XML noise.
+- **Passive Interaction**: They wait for the user to ask a question. They search the vault, but they don't _maintain_ the vault.
+- **Flat Retrieval (Standard RAG)**: They rely heavily on standard Vector Similarity (occasionally paired with BM25 keyword search). This treats knowledge as a flat collection of disconnected chunks, ignoring the very reason users choose Obsidian: **The Graph**.
+- **The "Ghost" Problem**: Visual notes (Canvas/Excalidraw) and complex metadata often poison standard vector indexes with high-entropy JSON or XML noise.
 
 ## How Vault Intelligence Stands Out
 
@@ -26,8 +26,8 @@ This is our strongest unique selling proposition (USP). Every other AI plugin is
 
 Users shouldn't have to choose between extreme privacy or high-intelligence cloud lock-in. Vault Intelligence offers a true Service-Oriented Architecture (SOA) that supports both paradigms natively:
 
--   **Instant Local Reflex (<100ms)**: Fast, sharded local indexing and embedding out of the box (Orama + IndexedDB sharding).
--   **Deep Reasoning**: When complex analysis is needed, you can seamlessly escalate to frontier cloud models (Gemini 3/Flash) OR seamlessly operate 100% offline via our native local Ollama integration.
+- **Instant Local Reflex (<100ms)**: Fast, sharded local indexing and embedding out of the box (Orama + IndexedDB sharding).
+- **Deep Reasoning**: When complex analysis is needed, you can seamlessly escalate to frontier cloud models (Gemini 3/Flash) OR seamlessly operate 100% offline via our native local Ollama integration.
 
 ### 4. Integrated Knowledge: Web Grounding meets Vault Context
 
@@ -43,6 +43,6 @@ When communicating with our audience (Obsidian power users, researchers, and sys
 
 **"Don't just chat with your vault. Nurture it."**
 
--   **Focus on the Graph**: "The only AI built for the Graph. We don't just read your notes; we understand how they connect using proprietary Graph-Augmented relevance."
--   **Focus on Maintenance**: "Stop worrying about vault hygiene. The Gardener Agent proactively organizes your ontology so you can focus on writing."
--   **Focus on Choice**: "Local-first speed for your privacy. Frontier-model intelligence for deep research, or 100% offline operation via Ollama. With native Web Grounding to bridge your internal knowledge with the outside world."
+- **Focus on the Graph**: "The only AI built for the Graph. We don't just read your notes; we understand how they connect using proprietary Graph-Augmented relevance."
+- **Focus on Maintenance**: "Stop worrying about vault hygiene. The Gardener Agent proactively organizes your ontology so you can focus on writing."
+- **Focus on Choice**: "Local-first speed for your privacy. Frontier-model intelligence for deep research, or 100% offline operation via Ollama. With native Web Grounding to bridge your internal knowledge with the outside world."

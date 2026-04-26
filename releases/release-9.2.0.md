@@ -16,17 +16,17 @@ Knowledge bases naturally accumulate cruft over time. The Gardener now mathemati
 
 This update includes major refactoring under the hood to ensure Vault Intelligence remains rock solid as you scale your knowledge base:
 
--   **Memory leak mitigation**: Resolved multiple memory leaks in the local embedding service and Model Context Protocol (MCP) clients, preventing slowdowns during extended sessions.
--   **Server-Side Request Forgery (SSRF) protection**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding, ensuring external requests are strictly enforced over HTTPS.
--   **Command injection prevention**: Fixed a critical vulnerability in the MCP client manager, replacing shell-based process execution with safe argument-array process spawning.
--   **Worker back-pressure handling**: Implemented a robust mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
--   **GraphSyncOrchestrator refactoring**: Decomposed the monolithic orchestrator into specialized services to dramatically improve maintainability.
+- **Memory leak mitigation**: Resolved multiple memory leaks in the local embedding service and Model Context Protocol (MCP) clients, preventing slowdowns during extended sessions.
+- **Server-Side Request Forgery (SSRF) protection**: Hardened the URL utility against SSRF attacks leveraging DNS rebinding, ensuring external requests are strictly enforced over HTTPS.
+- **Command injection prevention**: Fixed a critical vulnerability in the MCP client manager, replacing shell-based process execution with safe argument-array process spawning.
+- **Worker back-pressure handling**: Implemented a robust mechanic in the indexing pipeline to safely buffer vault events during worker restarts, ensuring zero data loss during configuration changes.
+- **GraphSyncOrchestrator refactoring**: Decomposed the monolithic orchestrator into specialized services to dramatically improve maintainability.
 
 ## Polish and Quality of Life
 
--   **Ollama streaming reliability**: Fixed a critical bug where native Ollama tool calls spanning across chunk boundaries would fail to parse.
--   **Regex ReDoS prevention**: Hardened the mention extraction regex against catastrophic backtracking vulnerabilities.
--   **Settings expansion**: Exposed powerful settings including Dual-Loop Search controls, Orphan Management logic, and Search Centrality logic.
--   **Configuration documentation**: Completely overhauled the configuration documentation with outcome-oriented explanations, deep troubleshooting links, and standardized terminology.
+- **Ollama streaming reliability**: Fixed a critical bug where native Ollama tool calls spanning across chunk boundaries would fail to parse.
+- **Regex ReDoS prevention**: Hardened the mention extraction regex against catastrophic backtracking vulnerabilities.
+- **Settings expansion**: Exposed powerful settings including Dual-Loop Search controls, Orphan Management logic, and Search Centrality logic.
+- **Configuration documentation**: Completely overhauled the configuration documentation with outcome-oriented explanations, deep troubleshooting links, and standardized terminology.
 
 _Note: This release will trigger a full re-indexing of your vault on the next workspace load, which may consume AI tokens if you are using a cloud-based embedding model._

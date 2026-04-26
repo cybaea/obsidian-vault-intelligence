@@ -9,5 +9,5 @@ This update brings a beautiful new interactive graph view for visualising your n
 * **Secure API Storage**: Your Google Gemini API keys are now safely encrypted in your operating system's native keychain, keeping them out of plain text files.
 * **Model Dropdown Fix**: Newly released Gemini 3.1 Pro models now correctly appear in the model selection dropdown when you refresh the list in the settings.
 
-Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence
+Install via BRAT: <https://github.com/cybaea/obsidian-vault-intelligence>
 MIT Licensed.

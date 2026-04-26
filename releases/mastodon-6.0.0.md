@@ -4,9 +4,9 @@ We found performance issues with vaults over 5,000 notes.
 
 Version 6.0.0 is our answer. It's an architectural update. We rebuilt the engine to separate "memory" from "storage", allowing the agent to handle 10,000+ notes effectively.
 
-https://github.com/cybaea/obsidian-vault-intelligence
+<https://github.com/cybaea/obsidian-vault-intelligence>
 
-@obsidian@mas.to #PKM #AI
+@<obsidian@mas.to> #PKM #AI
 
 ---
 
@@ -50,8 +50,8 @@ Thanks to everyone who tested the beta builds.
 
 Get the update now via BRAT.
 
-https://github.com/cybaea/obsidian-vault-intelligence
+<https://github.com/cybaea/obsidian-vault-intelligence>
 
 NOTE: Requires re-indexing your vault.
 
-#Obsidian #KnowledgeManagement #Gemini
+# Obsidian #KnowledgeManagement #Gemini
