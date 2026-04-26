@@ -4,9 +4,12 @@
     2. Verify `which node` now points to your system or version-managed Node.
 - **Verification**: This ensures that `npm run test` and `npm run lint`  use the project's intended environment while keeping Goose's internal binaries available as a fallback.
 
+Before writing any code, you must read `eslint.config.mts` and `AGENTS.md`. Treat these not as suggestions, but as hard technical constraints that define the 'Success Criteria' for this task. If you are about to use any, STOP and define a strict interface instead, as required by the 'Strict type safety' rule.
+
 # Agent Initialization
 1. Read `AGENTS.md` for core project architecture and standards.
 2. Read `.goose/vault-intelligence-rules.md` for Goose-specific research and planning protocols.
+3. Before writing any code, you must read `eslint.config.mts`. Treat it not as suggestions, but as hard technical constraints that define the 'Success Criteria' for this task. If you are about to use `any` type, STOP and define a strict interface instead, as required by the 'Strict type safety' rule. Note the perfectionist rules.
 
 # Research Protocol
 - Use the `Analyze` extension to understand service/view relationships.
