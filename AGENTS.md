@@ -102,14 +102,17 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 
 - We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
 
+## Success Criteria
+
+**Automated** (all must pass):
+- `npm run lint` (zero warnings without changing the lint configuration unless **explicitly** instructed and without hiding any errors behind linter directives; STOP and inform the user if you cannot achieve this)
+- `npm run build` (TypeScript compiles)
+- `npm run test` (all tests pass, >90% coverage on new code)
+- `npm run docs:build` (documentation builds)
+- `npm ci` (clean install works)
+
 ## Completion
 
-- Always ensure you run all of the commands below in this order and that each one pass without errors or warnings:
-    1. `npm run lint`
-    2. `npm run build`
-    3. `npm run test`
-    4. `npm run docs:build`
-    5. `npm ci`
 - Fix any errors before considering the work done. Make sure you **fix** the error: do not simply hide anything behind linter directives or similar and **do not change the lint configuration** just to fix an error (unless that is an explicit part of your instructions); instead, fix the errors in the code and markdown files.
 
 ## Key Style Guidelines
