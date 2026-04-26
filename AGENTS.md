@@ -25,6 +25,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
 - **Deep Architecture**: The file `devs/ARCHITECTURE.md` contains the comprehensive system design (Data Flows, Indexing pipelines, Shadow Graph). **Do not read this file by default.** Only read it autonomously if your specific task requires a deep understanding of core internal systems.
 
 ### Research Map: Where to Look
+
 - **Search Logic**: `src/services/SearchOrchestrator.ts` (Hybrid/Dual-Loop logic).
 - **Graph & Vector Ops**: `src/services/GraphService.ts` (Worker facade) and `src/services/WorkerManager.ts`.
 - **AI Providers**: `src/services/GeminiProvider.ts` (Unified SDK) and `src/services/ProviderRegistry.ts`.
@@ -32,6 +33,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
 - **Background Tasks**: `src/workers/indexer.worker.ts` (Vector/Graph syncing).
 
 ### Standards & Guidelines
+
 - **Primary Sources**: Read `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/maintainability.md`.
 - **Security Check**: Read `devs/security-and-robustness.md` (SSRF, Path Traversal, Confused Deputy protection).
 - **Quality Gate**: Always run `npm run lint`, `npm run build`, and `npm run test` before finishing.
@@ -39,6 +41,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
 ## Critical Architectural Constraints
 
 ### 1. Cross-Platform Patterns (Mobile Compatibility)
+
 Obsidian runs in a Webview/Capacitor on mobile. **Node.js APIs are not available natively on mobile.**
 - **Pattern**: Use a platform check and dynamic import for Node-only modules.
   ```typescript
@@ -50,40 +53,69 @@ Obsidian runs in a Webview/Capacitor on mobile. **Node.js APIs are not available
 - **Restriction**: Never use top-level Node.js imports (e.g., `import fs from 'fs'`) in cross-platform service code.
 
 ### 2. Data Persistence (Slim-Sync)
+
 To protect user sync quotas and prevent merge conflicts, we use a **Split-Brain** storage model:
 - **Hot Store (IndexedDB)**: Full vector index and text snippets. Local-only, high speed.
 - **Cold Store (MessagePack/sync)**: "Slim" copy (vectors + graph edges only). Synced across devices.
 - **Hydration**: On new devices, the plugin reconstructs the Hot Store by reading text from the vault on-demand.
 
 ### 3. Dual-Loop Search
+
 - **Loop 1 (Reflex)**: Fast, local keyword (Orama) + vector search.
 - **Loop 2 (Analyst)**: Deep RAG re-ranking using an LLM.
 
 ## Operational Protocols
 
 ### 1. Search Grounding (Mandatory)
+
 If the user asks for "modern AI features" or "latest Obsidian API":
+
 1. **Acknowledgement**: Explicitly state: "Checking latest documentation..."
 2. **Tool Use**: Use web search/grounding tools to fetch current best practices.
 3. **Fallback**: If search tools are unavailable, rely on the latest internal patterns in `devs/REFERENCE_LINKS.md`.
 4. **Synthesis**: Combine findings with existing `project` patterns before proposing code.
 
 ### 2. Task Management
+
 - **Directory**: Use the git-ignored `.tasks/` directory for planning.
 - **Naming**: Use highly specific filenames (e.g., `.tasks/plan-pdf-indexing.md`) to avoid collisions.
 - **Checkpoints**: Write the technical approach and **STOP** for user approval before modifying code.
 
 ### 3. Debugging Protocol
+
 - **Reproduce First**: Execute the exact command provided by the user.
 - **Read Errors**: Let the actual error trace dictate your research.
 - **No Guessing**: Do not modify code based on assumptions about the error's cause.
 
 ### 4. Rules & Skills Utilization
+
 - **Rules (Passive)**: Before editing specific file types, check `.agents/rules/` for applicable formatting constraints.
 - **Skills (Active)**: If you need to understand specific APIs or complex workflows, load the relevant `SKILL.md` from `.agents/skills/`.
 
+## Tests
+
+- The `tests/` directory contains the project test scripts.
+- Always consider the impact of any changes to the existing tests. Propose or implement updates as needed.
+- Always consider if changes should have new test scripts built for them. Incorporate them into the `npm run test` process.
+
+## Documentation
+
+- We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
+
+## Completion
+
+- Always ensure you run all of the commands below in this order and that each one pass without errors or warnings:
+    1. `npm run lint`
+    2. `npm run build`
+    3. `npm run test`
+    4. `npm run docs:build`
+    5. `npm ci`
+- Fix any errors before considering the work done. Make sure you **fix** the error: do not simply hide anything behind linter directives or similar and **do not change the lint configuration** just to fix an error (unless that is an explicit part of your instructions); instead, fix the errors in the code and markdown files.
+
 ## Key Style Guidelines
+
 - **API**: Use `SecretStorage` for keys and `SettingGroup` for UI organization.
 - **CSS**: Use Obsidian CSS variables (e.g., `--color-red`).
 - **Writing**: Prefer sentence case, avoid bold text in headers, and use "and" over "&".
 - **Changelog**: Add new entries to the `[Unreleased]` section.
+- **Strict type safety**: Use strict Typescript type safety. Prepare for a strict lint configuration which you must pass. Note especially that the `any` type is never allowed anywhere.
