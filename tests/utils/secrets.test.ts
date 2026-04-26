@@ -10,50 +10,51 @@ describe("Secrets Utils", () => {
             mockedGetSecretValue = vi.fn();
         });
 
-        it("should return an empty object if rawMap is undefined", () => {
-            expect(resolveSecrets(undefined, mockedGetSecretValue)).toEqual({});
-            expect(resolveSecrets(null, mockedGetSecretValue)).toEqual({});
-            expect(resolveSecrets("", mockedGetSecretValue)).toEqual({});
+        it("should return an empty object if rawMap is undefined", async () => {
+            expect(await resolveSecrets(undefined, mockedGetSecretValue, "p-")).toEqual({});
+            expect(await resolveSecrets(null, mockedGetSecretValue, "p-")).toEqual({});
+            expect(await resolveSecrets("", mockedGetSecretValue, "p-")).toEqual({});
         });
 
-        it("should parse normal JSON string without secrets", () => {
+        it("should parse normal JSON string without secrets", async () => {
             const rawMap = JSON.stringify({ KEY: "value", NUMBER: "123" });
-            const result = resolveSecrets(rawMap, mockedGetSecretValue);
+            const result = await resolveSecrets(rawMap, mockedGetSecretValue, "p-");
             expect(result).toEqual({ KEY: "value", NUMBER: "123" });
             expect(mockedGetSecretValue).not.toHaveBeenCalled();
         });
 
-        it("should substitute secrets starting with vi-secret:", () => {
+        it("should substitute secrets starting with vi-secret: using prefix", async () => {
             const rawMap = JSON.stringify({ 
                 API_KEY: "vi-secret:my-api-key",
                 NORMAL: "text"
             });
-            mockedGetSecretValue.mockImplementation((key: string) => {
-                if (key === "my-api-key") return "resolved-secret-value";
+            mockedGetSecretValue.mockImplementation(async (key: string) => {
+                await Promise.resolve();
+                if (key === "p-my-api-key") return "resolved-secret-value";
                 return null;
             });
 
-            const result = resolveSecrets(rawMap, mockedGetSecretValue);
+            const result = await resolveSecrets(rawMap, mockedGetSecretValue, "p-");
             expect(result).toEqual({ 
                 API_KEY: "resolved-secret-value",
                 NORMAL: "text"
             });
-            expect(mockedGetSecretValue).toHaveBeenCalledWith("my-api-key");
+            expect(mockedGetSecretValue).toHaveBeenCalledWith("p-my-api-key");
         });
 
-        it("should throw an error if a secret is missing", () => {
+        it("should throw an error if a secret is missing", async () => {
             const rawMap = JSON.stringify({ 
                 API_KEY: "vi-secret:missing-api-key"
             });
-            mockedGetSecretValue.mockReturnValue(null);
+            mockedGetSecretValue.mockResolvedValue(null);
 
-            expect(() => resolveSecrets(rawMap, mockedGetSecretValue)).toThrow(
+            await expect(resolveSecrets(rawMap, mockedGetSecretValue, "p-")).rejects.toThrow(
                 "Missing secret for API_KEY. Please re-enter it in settings."
             );
         });
 
-        it("should throw an error with invalid JSON representation", () => {
-            expect(() => resolveSecrets("not valid json", mockedGetSecretValue)).toThrow(
+        it("should throw an error with invalid JSON representation", async () => {
+            await expect(resolveSecrets("not valid json", mockedGetSecretValue, "p-")).rejects.toThrow(
                 /Invalid JSON format in configuration/
             );
         });

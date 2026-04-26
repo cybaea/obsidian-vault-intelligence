@@ -15,13 +15,13 @@ import type {
 import { OLLAMA_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { ProviderError } from "../types/providers";
+import { sanitizeHeaders } from "../utils/headers";
 import { logger } from "../utils/logger";
 import { resolveSecrets } from "../utils/secrets";
 import { isExternalUrl } from "../utils/url";
 import { ModelRegistry } from "./ModelRegistry";
-
 /**
- * Minimal interface for Node.js http/https response object.
+ *   Minimal interface for Node.js http/https response object.
  */
 interface NodeResponse extends AsyncIterable<Uint8Array> {
     destroy(): void;
@@ -29,7 +29,7 @@ interface NodeResponse extends AsyncIterable<Uint8Array> {
 }
 
 /**
- * Minimal interface for WHATWG stream reader.
+ *   Minimal interface for WHATWG stream reader.
  */
 interface StreamReader {
     read(): Promise<{ done: boolean; value?: Uint8Array }>;
@@ -37,7 +37,7 @@ interface StreamReader {
 }
 
 /**
- * Minimal interface for Node.js http/https request object.
+ *   Minimal interface for Node.js http/https request object.
  */
 interface NodeRequest {
     destroy(error?: Error): void;
@@ -48,14 +48,14 @@ interface NodeRequest {
 }
 
 /**
- * Local helper to bypass top-level builtin restrictions.
+ *   Local helper to bypass top-level builtin restrictions.
  */
 interface NodeSystem {
     require: (m: string) => unknown;
 }
 
 /**
- * Interface for Ollama API chat request.
+ *   Interface for Ollama API chat request.
  */
 interface OllamaChatRequest {
     format?: string | Record<string, unknown>;
@@ -70,7 +70,7 @@ interface OllamaChatRequest {
 }
 
 /**
- * Interface for Ollama message format.
+ *   Interface for Ollama message format.
  */
 interface OllamaMessage {
     content: string;
@@ -87,7 +87,7 @@ interface OllamaMessage {
 }
 
 /**
- * Interface for Ollama tool definition.
+ *   Interface for Ollama tool definition.
  */
 interface OllamaTool {
     function: {
@@ -99,7 +99,7 @@ interface OllamaTool {
 }
 
 /**
- * Interface for Ollama API response chunks (NDJSON)
+ *   Interface for Ollama API response chunks (NDJSON)
  */
 interface OllamaChatChunk {
     created_at: string;
@@ -135,17 +135,27 @@ interface NdjsonStreamState {
 }
 
 /**
- * Provider for local models via Ollama.
- * Uses Obsidian's requestUrl to bypass CORS and implement SSRF protection.
+ *   Provider for local models via Ollama.
+ *   Uses Obsidian's requestUrl to bypass CORS and implement SSRF protection.
  */
 export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbeddingClient {
+    private cachedOllamaHeaders: Record<string, string> | null = null;
+    private cacheTimestamp: number = 0;
+    private readonly HEADER_CACHE_TTL = 100; // milliseconds (single request window)
     private supportsJsonSchema: boolean | null = null;
     private embeddingQueue: Promise<void> = Promise.resolve();
     private activeModels: Set<string> = new Set();
 
     constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
 
-    private getHeaders(): Record<string, string> {
+    private async getOllamaHeaders(): Promise<Record<string, string>> {
+        const now = Date.now();
+        
+        // Return cached if within TTL
+        if (this.cachedOllamaHeaders && (now - this.cacheTimestamp) < this.HEADER_CACHE_TTL) {
+            return this.cachedOllamaHeaders;
+        }
+
         const headers: Record<string, string> = {};
         
         // Extract Basic Auth from URL if present
@@ -159,7 +169,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             // Ignore invalid URL
         }
 
-        const resolveSecret = (key: string) => {
+        const resolveSecret = (key: string): string | null => {
             try {
                 const storage = this._app.secretStorage as unknown as { getSecret: (k: string) => string | null };
                 if (storage && storage.getSecret) {
@@ -173,13 +183,17 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         
         if (this.settings.ollamaHeaders) {
             try {
-                const resolved = resolveSecrets(this.settings.ollamaHeaders, resolveSecret);
-                Object.assign(headers, resolved);
+                const resolved = await resolveSecrets(this.settings.ollamaHeaders, resolveSecret, 'ollama-headers-');
+                // Sanitize and merge
+                const sanitized = sanitizeHeaders(resolved, logger);
+                Object.assign(headers, sanitized);
             } catch (e) {
                 logger.error(`[Ollama] Error resolving Ollama headers:`, e);
             }
         }
 
+        this.cachedOllamaHeaders = headers;
+        this.cacheTimestamp = now;
         return headers;
     }
 
@@ -211,7 +225,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             model: pureModelStr,
                             truncate: true
                         }),
-                        headers: { "Content-Type": "application/json", ...this.getHeaders() },
+                        headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                         method: "POST",
                         url: `${endpoint}/api/embed`
                     });
@@ -267,7 +281,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                             model: pureModelStr,
                             truncate: true
                         }),
-                        headers: { "Content-Type": "application/json", ...this.getHeaders() },
+                        headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                         method: "POST",
                         url: `${endpoint}/api/embed`
                     });
@@ -383,7 +397,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Non-streaming chat generation.
+     *   Non-streaming chat generation.
      */
     async generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage> {
         const body = await this.prepareRequestBody(messages, options, false);
@@ -392,7 +406,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json", ...this.getHeaders() },
+                headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                 method: "POST",
                 throw: true,
                 url: `${endpoint}/api/chat`
@@ -417,9 +431,9 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Streaming chat generation using NDJSON.
+     *   Streaming chat generation using NDJSON.
      */
-    async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
+    async*generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
         const body = await this.prepareRequestBody(messages, options, true);
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
 
@@ -436,7 +450,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json", ...this.getHeaders() },
+                headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                 method: "POST",
                 signal: options.signal
             }) as { body: { getReader: () => StreamReader }, ok: boolean, status: number, text: () => Promise<string> };
@@ -499,7 +513,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Terminate provider - clear used VRAM immediately.
+     *   Terminate provider - clear used VRAM immediately.
      */
     async terminate(): Promise<void> {
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
@@ -510,7 +524,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 // We use fetch since requestUrl doesn't guarantee fire-and-forget strictly on teardown
                 await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                     body: JSON.stringify({ keep_alive: 0, messages: [], model }),
-                    headers: this.getHeaders(),
+                    headers: await this.getOllamaHeaders(),
                     keepalive: true,
                     method: "POST"
                 });
@@ -525,7 +539,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         if (this.supportsJsonSchema !== null) return this.supportsJsonSchema;
         try {
             const response = await requestUrl({ 
-                headers: this.getHeaders(),
+                headers: await this.getOllamaHeaders(),
                 method: "GET", 
                 url: `${endpoint}/api/version` 
             });
@@ -547,14 +561,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         return this.supportsJsonSchema || false;
     }
 
-    private async *generateNodeStream(endpoint: string, body: OllamaChatRequest, options: ChatOptions): AsyncIterableIterator<StreamChunk> {
+    private async*generateNodeStream(endpoint: string, body: OllamaChatRequest, options: ChatOptions): AsyncIterableIterator<StreamChunk> {
         const nodeRequire = (globalThis as unknown as NodeSystem).require;
         const httpProvider = (endpoint.startsWith("https") ? nodeRequire("https") : nodeRequire("http")) as { request: (opts: unknown) => NodeRequest };
         const url = new URL(`${endpoint}/api/chat`);
         
         const reqOptions = {
             body: JSON.stringify(body),
-            headers: { "Content-Type": "application/json", ...this.getHeaders() },
+            headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
             hostname: url.hostname,
             method: "POST",
             path: url.pathname + url.search,
@@ -637,7 +651,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Structured output using Ollama's JSON mode.
+     *   Structured output using Ollama's JSON mode.
      */
     async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
@@ -663,7 +677,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),
-                headers: { "Content-Type": "application/json", ...this.getHeaders() },
+                headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                 method: "POST",
                 throw: true,
                 url: `${endpoint}/api/chat`
@@ -692,21 +706,21 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Web search is not supported for local models.
+     *   Web search is not supported for local models.
      */
     searchWithGrounding(): Promise<{ text: string }> {
         return Promise.reject(new ProviderError("Web grounding is not supported for local Ollama models.", "ollama"));
     }
 
     /**
-     * Native code execution is not supported for local models.
+     *   Native code execution execution is not supported for local models.
      */
     solveWithCode(): Promise<{ text: string }> {
         return Promise.reject(new ProviderError("Native code execution is not supported for local Ollama models.", "ollama"));
     }
     /**
-     * Helper to extract standard JSON tool calls (like React or general instruction-tuned fallback)
-     * AND scrub them from the yielded text to avoid polluting conversation history context.
+     *   Helper to extract standard JSON tool calls (like React or general instruction-tuned fallback)
+     *   AND scrub them from the yielded text to avoid polluting conversation history context.
      */
     private extractFallbackToolCalls(text: string): { scrubbedText: string; toolCalls: ToolCall[] } {
         const toolCalls: ToolCall[] = [];
@@ -790,14 +804,14 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     /**
-     * Shared logic to prepare Ollama request body.
+     *   Shared logic to prepare Ollama request body.
      */
     private async prepareRequestBody(messages: UnifiedMessage[], options: ChatOptions, stream: boolean): Promise<OllamaChatRequest> {
         const endpoint = this.settings.ollamaEndpoint.replace(/\/+$/, "");
         const modelId = options.modelId || this.settings.chatModel;
         
         // JIT Fetch Model Details (Context Length / Dimensions)
-        const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId, this.getHeaders());
+        const details = await ModelRegistry.fetchOllamaModelDetails(endpoint, modelId, await this.getOllamaHeaders());
 
         // Map UnifiedMessage roles/content to Ollama format
         const useNativeTools = details?.supportedMethods?.includes("nativeTools");

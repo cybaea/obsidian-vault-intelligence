@@ -191,7 +191,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
         if (server.env) {
             try {
-                const customEnv = resolveSecrets(server.env, resolveSecret);
+                const customEnv = await resolveSecrets(server.env, resolveSecret, `mcp-${server.id}-env-`);
                 for (const [k, v] of Object.entries(customEnv)) {
                     mergedEnv[k] = v;
                 }

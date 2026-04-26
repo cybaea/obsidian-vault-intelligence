@@ -11,6 +11,8 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+-   **Custom Headers for Ollama:** Users can now configure custom HTTP headers (e.g., authentication tokens, proxy headers) for Ollama requests. 
+
 ### Developer features
 
 -   **Typescript v6 Upgrade**: Successfully upgraded the Typescript compiler to version 6.

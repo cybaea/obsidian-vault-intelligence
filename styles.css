@@ -982,3 +982,9 @@ a.similar-notes-link:hover {
     margin-bottom: var(--size-4-2);
     border-radius: var(--radius-s);
 }
+
+/* Key-Value Editor Validation */
+.vi-kv-row input.is-invalid {
+    border-color: var(--text-error) !important;
+    box-shadow: 0 0 0 1px var(--text-error) !important;
+}

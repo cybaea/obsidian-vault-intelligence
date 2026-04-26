@@ -124,23 +124,29 @@ export function renderModelDropdown(
     dropdown.onChange(onSelect);
 }
 
+export interface KeyValueEditorConfig {
+    container: HTMLElement;
+    currentJson: string | undefined;
+    description: string;
+    onChange: (newJson: string) => void;
+    onError?: (error: string) => void;
+    onSaveSecret: (key: string, value: string) => void;
+    secretKeyPrefix: string;
+    title: string;
+    validateKey?: (key: string) => { error?: string; valid: boolean };
+}
+
 export function renderKeyValueEditor({
     container,
     currentJson,
     description,
     onChange,
+    onError,
     onSaveSecret,
     secretKeyPrefix,
-    title
-}: {
-    container: HTMLElement,
-    title: string,
-    description: string,
-    currentJson: string | undefined,
-    onChange: (newJson: string) => void,
-    onSaveSecret: (key: string, value: string) => void,
-    secretKeyPrefix: string
-}) {
+    title,
+    validateKey
+}: KeyValueEditorConfig) {
     const wrapper = container.createDiv();
     wrapper.setCssProps({ borderTop: "1px solid var(--background-modifier-border)", padding: "1em 0" });
     wrapper.createEl("div", { cls: "setting-item-name", text: title });
@@ -164,6 +170,14 @@ export function renderKeyValueEditor({
         const result: Record<string, string> = {};
         for (const p of pairs) {
             if (!p.key) continue;
+            
+            if (validateKey) {
+                const validation = validateKey(p.key);
+                if (!validation.valid) {
+                    continue; // Skip invalid keys during save
+                }
+            }
+
             if (p.isSecret) {
                 const secretKey = `${secretKeyPrefix}${p.key}`;
                 if (p.value !== '********') {
@@ -176,7 +190,6 @@ export function renderKeyValueEditor({
             }
         }
         onChange(JSON.stringify(result));
-        renderTable();
     };
 
     const renderTable = () => {
@@ -188,16 +201,39 @@ export function renderKeyValueEditor({
         pairs.forEach((pair, idx) => {
             const row = wrapper.createDiv("vi-kv-row");
             row.setCssProps({ alignItems: "center", display: "flex", gap: "0.5em", marginBottom: "0.5em" });
-            
-            new Obsidian.TextComponent(row)
+
+            const keyComp = new Obsidian.TextComponent(row)
                 .setPlaceholder("Key")
                 .setValue(pair.key)
-                .onChange(v => { pair.key = v; void savePairs(); });
+                .onChange(v => {
+                    if (validateKey) {
+                        const validation = validateKey(v);
+                        if (!validation.valid) {
+                            if (onError) onError(validation.error || 'Invalid key');
+                            keyComp.inputEl.addClass('is-invalid');
+                            keyComp.inputEl.title = validation.error || 'Invalid key';
+                            return;
+                        }
+                    }
+                    keyComp.inputEl.removeClass('is-invalid');
+                    keyComp.inputEl.title = '';
+                    pair.key = v;
+                    savePairs();
+                });
+
+            // Initial validation for loaded values
+            if (pair.key && validateKey) {
+                const validation = validateKey(pair.key);
+                if (!validation.valid) {
+                    keyComp.inputEl.addClass('is-invalid');
+                    keyComp.inputEl.title = validation.error || 'Invalid key';
+                }
+            }
 
             const valComp = new Obsidian.TextComponent(row)
                 .setPlaceholder("Value")
                 .setValue(pair.value)
-                .onChange(v => { pair.value = v; void savePairs(); });
+                .onChange(v => { pair.value = v; savePairs(); });
             if (pair.isSecret) {
                 valComp.setPassword();
             }
@@ -209,12 +245,21 @@ export function renderKeyValueEditor({
             secretToggle.onchange = (e) => { 
                 pair.isSecret = (e.target as HTMLInputElement).checked; 
                 if (!pair.isSecret) pair.value = ""; // Clear password if un-secreting
-                void savePairs(); 
+                savePairs(); 
+                renderTable(); // Re-render to update password field
             };
             secretToggleLabel.appendText("Secret");
 
             const delBtn = row.createEl("button", { text: "X" });
-            delBtn.onclick = () => { pairs.splice(idx, 1); void savePairs(); };
+            delBtn.onclick = () => {
+                /* eslint-disable-next-line no-alert -- User confirmation required for deletion of sensitive configuration */
+                if (pair.key && !confirm(`Are you sure you want to delete the header "${pair.key}"?`)) {
+                    return;
+                }
+                pairs.splice(idx, 1);
+                savePairs();
+                renderTable();
+            };
         });
 
         const addBtn = wrapper.createEl("button", { cls: "vi-kv-add", text: "Add row" });

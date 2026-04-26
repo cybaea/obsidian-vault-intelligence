@@ -1,15 +1,16 @@
 /**
- * Resolves a dictionary of configuration strings (such as environment variables or headers)
- * by substituting placeholders in the format "vi-secret:SECRET_KEY" with the actual secret values.
+ * Resolve secret placeholders in a JSON-stringified key-value map.
  * 
- * @param rawMap The JSON-stringified map or raw object. If stringified format is invalid, throws an error.
- * @param getSecretValue Callback to resolve actual secret values by key.
- * @returns A safe map with secrets substituted.
+ * @param rawMap - JSON-stringified map with potential `vi-secret:${key}` placeholders
+ * @param getSecretValue - Callback to retrieve actual secret values from keychain
+ * @param secretKeyPrefix - Prefix for secret storage (e.g., "ollama-headers-", "mcp-env-")
+ * @returns Resolved map with actual values
  */
-export function resolveSecrets(
+export async function resolveSecrets(
     rawMap: string | undefined | null,
-    getSecretValue: (key: string) => string | null
-): Record<string, string> {
+    getSecretValue: (key: string) => string | null | Promise<string | null>,
+    secretKeyPrefix: string
+): Promise<Record<string, string>> {
     if (!rawMap) return {};
     
     let parsed: Record<string, string>;
@@ -23,7 +24,10 @@ export function resolveSecrets(
     for (const [k, v] of Object.entries(parsed)) {
         if (typeof v === 'string' && v.startsWith('vi-secret:')) {
             const secretKey = v.substring(10);
-            const secretVal = getSecretValue(secretKey);
+            // Ensure we use the correct key with prefix for the storage lookup
+            const fullSecretKey = `${secretKeyPrefix}${secretKey}`;
+            const secretVal = await getSecretValue(fullSecretKey);
+            
             if (secretVal === null) {
                 // Return an error message but never log the secret key broadly.
                 throw new Error(`Missing secret for ${k}. Please re-enter it in settings.`);

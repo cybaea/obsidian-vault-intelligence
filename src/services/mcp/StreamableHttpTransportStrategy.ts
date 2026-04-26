@@ -23,7 +23,7 @@ export class StreamableHttpTransportStrategy implements IMcpTransportStrategy {
         let headers: Record<string, string> = {};
         if (server.remoteHeaders) {
             try {
-                headers = resolveSecrets(server.remoteHeaders, resolveSecret);
+                headers = await resolveSecrets(server.remoteHeaders, resolveSecret, `mcp-${server.id}-headers-`);
             } catch (e) {
                 throw new Error(`Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`);
             }

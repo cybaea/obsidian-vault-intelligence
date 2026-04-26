@@ -2,6 +2,7 @@ import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsi
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { validateHeaderKey } from "../../utils/headers";
 import { resolveSecrets } from "../../utils/secrets";
 import { renderKeyValueEditor } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -107,7 +108,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     try {
                         const app = plugin.app as unknown as InternalApp;
                         const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
-                        const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret) : {};
+                        const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
                         
                         await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders);
                         new Notice("API key valid. Models loaded.");
@@ -178,6 +179,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             plugin.settings.ollamaHeaders = value;
             void plugin.saveSettings();
         },
+        onError: (error: string) => new Notice(error),
         onSaveSecret: (key: string, value: string) => {
             const storage = plugin.app.secretStorage as unknown as { setSecret?: (k:string, v:string)=>void };
             if (storage && storage.setSecret) {
@@ -185,7 +187,8 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             }
         },
         secretKeyPrefix: `ollama-headers-`,
-        title: "Ollama HTTP headers"
+        title: "Ollama HTTP headers",
+        validateKey: (key: string) => validateHeaderKey(key)
     });
 
     // --- 3. Model List Management ---
@@ -209,7 +212,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
                     const app = plugin.app as unknown as InternalApp;
                     const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
-                    const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret) : {};
+                    const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
 
                     await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders);
                     new Notice("Model list refreshed");
