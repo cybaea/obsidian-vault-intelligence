@@ -36,7 +36,7 @@ Strictly follow the **Service-Oriented Architecture (SOA)**. Logic must reside i
 
 - **Primary Sources**: Read `devs/ARCHITECTURE_AND_STANDARDS.md` and `devs/maintainability.md`.
 - **Security Check**: Read `devs/security-and-robustness.md` (SSRF, Path Traversal, Confused Deputy protection).
-- **Quality Gate**: Always run `npm run lint`, `npm run build`, and `npm run test` before finishing.
+- **Quality Gate**: Always run `npm run lint`, `npm run build`, `npm run test`, `npm run docs:build`, and `npm ci` before finishing.
 
 ## Critical Architectural Constraints
 
