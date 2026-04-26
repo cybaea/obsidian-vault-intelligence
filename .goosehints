@@ -6,3 +6,11 @@
 - Use the `Analyze` extension to understand service/view relationships.
 - Use the `Summarize` extension for deep dives into core logic files.
 - Always use `grep` (shell) to verify SDK signatures and service anchors.
+
+# Tests
+- The `tests/` directory contains the project test scripts.
+- Always consider the impact of any changes on the existing tests.
+- Always consider if changes should have new test scripts built for them.
+
+# Documentation
+- We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
