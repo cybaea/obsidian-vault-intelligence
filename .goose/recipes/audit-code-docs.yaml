@@ -10,12 +10,13 @@ instructions: |
   ### 2. PHASE 1: RESEARCH & PERSISTENCE SETUP
   1. Research modern (2026) best practices for Obsidian/Electron/Node.js.
   2. Generate an architectural checklist based on research.
-  3. **Create the Review File**: Initialize a new file in `.goose/tasks/` named `review-architecture-[TIMESTAMP].md`.
+  3. Present the architectural checklist to the user for approval or refinement before beginning the evaluation.
 
   ### 3. PHASE 2: SYSTEMATIC AUDIT OF CODEBASE
-  1. Evaluate the codebase against your checklist and document results in the Review File. Remember: do not change the codebase, only audit and document.
-  2. Audit for anti-patterns: `any` abuse, God Objects, Arrow Code, and fragile Regex.
-  3. **Implementation Plan**: For every issue found, write a specific implementation plan in the Review File to guide a future RPI workflow.
+  1. **Create the Review File**: Initialize a new file in `.tasks/` named `review-architecture-[TIMESTAMP].md`.
+  2. Evaluate the codebase against your checklist and document results in the Review File. Remember: do not change the codebase, only audit and document.
+  3. Audit for anti-patterns: `any` abuse, God Objects, Arrow Code, and fragile Regex.
+  4. **Implementation Plan**: For every issue found, write a specific implementation plan in the Review File to guide a future RPI workflow.
 
   ### 4. PHASE 3: DOCUMENTATION & VISUALS
   1. Analyze code and update `devs/ARCHITECTURE.md` as a detailed reference, cross-referencing architecture decisions in `devs/adr/`.
@@ -31,4 +32,4 @@ instructions: |
   ### 6. FINAL QUALITY GATE
   1. **Historical Integrity**: Do not truncate `CHANGELOG.md` or drop entries.
   2. **Automated Verification**: Run `npm run lint`, `npm run build`, `npm run test`, and `npm run docs:build`.
-  3. **Final Report**: Ensure the Review File in `.goose/tasks/` is complete and formatted per `.goose/rules/Markdown.md`.
+  3. **Final Report**: Ensure the Review File in `.tasks/` is complete and formatted per `.goose/rules/Markdown.md`.
