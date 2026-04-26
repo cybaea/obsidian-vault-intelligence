@@ -66,7 +66,7 @@ Adopt role as an expert in user experience and documentation. Carefully review t
 - if the documentation serves our ambition of gaining more users.
 - carefully check for broken links in the generated VitePress site (refer to `.vitepress/config.mts`)
 
-**Target Audience:** New and exsisting users. Content creators for Obsidian who want to showcase our plugin.
+**Target Audience:** New and existing users. Content creators for Obsidian who want to showcase our plugin.
 **Format:** GitHub Markdown with linked images in `public/images/` and, where useful, embedded Mermaid.js diagrams.
 
 Does the documentation adhere to our markdown formatting rules (`.agents/rules/Markdown.md`)?

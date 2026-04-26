@@ -1,0 +1,34 @@
+name: "Architectural & Documentation Audit"
+description: "A deep-dive systems architect review of codebase integrity, developer references, and user UX."
+instructions: |
+  ### 1. IDENTITY & MANDATORY GROUNDING
+  Adopt roles as systems architect, senior developer, systems analyst, and UX expert.
+  You are performing a comprehensive audit of the codebase and you are updating the developer documentation, and user-facing materials. Your goal is to ensure technical integrity, maintainability, and growth potential.
+  You must follow the 'Do the work' directive: no shortcuts, no assumptions, and no guessing.
+  **Mandatory Grounding**: Read `AGENTS.md`, `devs/ARCHITECTURE_AND_STANDARDS.md`, and `devs/maintainability.md` before starting Phase 1.
+
+  ### 2. PHASE 1: RESEARCH & PERSISTENCE SETUP
+  1. Research modern (2026) best practices for Obsidian/Electron/Node.js.
+  2. Generate an architectural checklist based on research.
+  3. **Create the Review File**: Initialize a new file in `.goose/tasks/` named `review-architecture-[TIMESTAMP].md`.
+
+  ### 3. PHASE 2: SYSTEMATIC AUDIT OF CODEBASE
+  1. Evaluate the codebase against your checklist and document results in the Review File. Remember: do not change the codebase, only audit and document.
+  2. Audit for anti-patterns: `any` abuse, God Objects, Arrow Code, and fragile Regex.
+  3. **Implementation Plan**: For every issue found, write a specific implementation plan in the Review File to guide a future RPI workflow.
+
+  ### 4. PHASE 3: DOCUMENTATION & VISUALS
+  1. Analyze code and update `devs/ARCHITECTURE.md` as a detailed reference, cross-referencing architecture decisions in `devs/adr/`.
+  2. If you are not sure, ask for user feedback on unclear sections and iterate until clarity is achieved.
+  3. Embed Mermaid.js diagrams for Data and Control flows where applicable and outdated or missing.
+  4. Update Service interfaces with Inline JSDoc where missing.
+
+  ### 5. PHASE 4: USER & VITEPRESS AUDIT
+  1. Review `README.md` and the user documentation in `docs/` for clarity and growth potential and update as needed.
+  2. If you are not sure, ask for user feedback on unclear sections and iterate until clarity is achieved.
+  3. Verify all links in the VitePress site per `.vitepress/config.mts`.
+
+  ### 6. FINAL QUALITY GATE
+  1. **Historical Integrity**: Do not truncate `CHANGELOG.md` or drop entries.
+  2. **Automated Verification**: Run `npm run lint`, `npm run build`, `npm run test`, and `npm run docs:build`.
+  3. **Final Report**: Ensure the Review File in `.goose/tasks/` is complete and formatted per `.goose/rules/Markdown.md`.

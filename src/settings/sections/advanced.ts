@@ -4,9 +4,9 @@ import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { IEmbeddingClient } from "../../types/providers";
 import { LogLevel } from "../../utils/logger";
+import { resolveSecrets } from "../../utils/secrets";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
-
 export function renderAdvancedSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
     const gemini = "Gemini";
@@ -346,7 +346,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .setIcon('terminal')
             .onClick(async () => {
                 const apiKey = await plugin.geminiService.getApiKey();
-                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true);
+                const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
+                const ollamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true, false, false, ollamaHeaders);
                 
                 const raw = ModelRegistry.getRawResponse();
                 const rawOllama = ModelRegistry.getRawOllamaResponse();
