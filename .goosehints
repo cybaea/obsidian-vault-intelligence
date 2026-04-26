@@ -19,7 +19,7 @@
 - Always consider if changes should have new test scripts built for them. Incorporate them into the `npm run test` process.
 
 # Documentation
-- We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
+- We document all code changes in `CHANGELOG.md`; make sure you update it if needed. Do not delete existing entries but add yours to the 'Unreleased' section.
 
 # Final completion
 And the end of your implementation phase:
