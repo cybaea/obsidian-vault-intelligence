@@ -9,8 +9,17 @@
 
 # Tests
 - The `tests/` directory contains the project test scripts.
-- Always consider the impact of any changes on the existing tests.
-- Always consider if changes should have new test scripts built for them.
+- Always consider the impact of any changes to the existing tests. Propose or implement updates as needed.
+- Always consider if changes should have new test scripts built for them. Incorporate them into the `npm run test` process.
 
 # Documentation
 - We document all code changes in `CHANGELOG.md`; make sure you update it if needed.
+
+# Completion
+- Always ensure you run all of the commands below in this order and that each one pass without errors or warnings:
+    1. `npm run lint`
+    2. `npm run build`
+    3. `npm run test`
+    4. `npm run docs:build`
+    5. `npm ci`
+- Fix any errors before considering the work done. Make sure you **fix** the error: do not simply hide anything behind linter directives or similar and do not change the eslint configuration just to fix an error (unless that is an explicit part of your instructions).
