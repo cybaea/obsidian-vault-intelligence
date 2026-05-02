@@ -61,6 +61,7 @@ instructions: |
      
      a. Write your detailed findings to a temporary file named `pr_summary.txt`. 
         Include a section: "**Manual Verification**: Please manually load the plugin in Obsidian to check for UI regressions, as automated tests cannot cover this."
+        If this is a security fix, include a section: "**Changelog Entry**: Provide the entry for the `### Security` section, including the CVE/GHSA ID."
      b. Execute the following to post the comment and clean up:
         `gh pr comment {{ pr_number }} --body-file pr_summary.txt && rm pr_summary.txt`
         
