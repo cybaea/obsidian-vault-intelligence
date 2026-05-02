@@ -20,9 +20,9 @@ export class EventDebouncer {
 
     // Batching state
     private pendingBackgroundUpdates: Map<string, TFile> = new Map();
-    private backgroundBatchTimer: ReturnType<typeof setTimeout> | null = null;
+    private backgroundBatchTimer: number | null = null;
     private pendingActiveUpdate: { path: string, file: TFile } | null = null;
-    private activeFileTimer: ReturnType<typeof setTimeout> | null = null;
+    private activeFileTimer: number | null = null;
 
     // Drift Quarantine (cap at 3 retries per session)
     private driftQuarantine: Map<string, number> = new Map();

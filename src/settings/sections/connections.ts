@@ -238,14 +238,14 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
  */
 function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
-    const fragment = activeDocument.createFragment();
+    const fragment = activeDocument.createDocumentFragment();
 
     const google = "Google";
     const gemini = "Gemini";
 
     fragment.append(`Enter your ${google} ${gemini} API key.`);
 
-    fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
+    fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div: HTMLDivElement) => {
         const iconSpan = div.createSpan();
         setIcon(iconSpan, 'lucide-info');
         div.createSpan({}, (textSpan) => {
@@ -259,14 +259,14 @@ function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => vo
     });
 
     if (storeFailure) {
-        fragment.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        fragment.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
             const iconSpan = div.createSpan();
             setIcon(iconSpan, 'lucide-alert-triangle');
             div.createSpan({}, (textSpan) => {
                 textSpan.createEl('strong', { text: 'Security note: ' });
                 textSpan.append(`Secure storage is unavailable on this system. Key is stored in plain text in ${configDir}/ folder.`);
             });
-            div.createEl('button', { cls: 'mod-cta', text: 'Retry secure storage' }, (btn) => {
+            div.createEl('button', { cls: 'mod-cta', text: 'Retry secure storage' }, (btn: HTMLButtonElement) => {
                 btn.onclick = () => {
                     void onRetry();
                 };

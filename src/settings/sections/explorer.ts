@@ -15,7 +15,7 @@ import { logger } from "../../utils/logger";
 export function renderExplorerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
 
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
@@ -31,9 +31,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const loop = "Loop";
 
 
-    const providerDesc = activeDocument.createFragment();
+    const providerDesc = activeDocument.createDocumentFragment();
     providerDesc.appendText('Choose where your document vectors are calculated.');
-    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
     });
@@ -132,9 +132,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        const dimensionDesc = activeDocument.createFragment();
+        const dimensionDesc = activeDocument.createDocumentFragment();
         dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
-        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
             setIcon(div.createSpan(), 'lucide-alert-triangle');
             div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
         });
@@ -411,7 +411,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 await plugin.saveSettings();
             }));
 
-    const folderSemDesc = activeDocument.createFragment();
+    const folderSemDesc = activeDocument.createDocumentFragment();
     folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
     folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
     const ul = folderSemDesc.createEl('ul', { cls: 'vault-intelligence-settings-list' });
@@ -419,7 +419,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     ul.createEl('li', { text: 'Ontology: match existing ontology notes.' });
     ul.createEl('li', { text: 'All: every folder is a semantic topic.' });
 
-    folderSemDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    folderSemDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-scan on exit.' });
     });

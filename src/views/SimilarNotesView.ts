@@ -29,7 +29,7 @@ export class SimilarNotesView extends ItemView {
         );
 
         // Refresh instantly when a background update finishes (Debounced & Memory-safe)
-        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        let refreshTimer: number | null = null;
         this.registerEvent(
             this.plugin.graphService.on('graph:index-updated', () => {
                 if (refreshTimer) activeWindow.clearTimeout(refreshTimer);

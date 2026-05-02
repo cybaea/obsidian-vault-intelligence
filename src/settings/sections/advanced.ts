@@ -13,14 +13,14 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     const api = "API";
     const local = "Local";
 
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
         div.setText('Technical tuning and system-level configurations.');
     });
 
     // --- 1. Indexing Performance ---
-    const performanceHeading = activeDocument.createFragment();
+    const performanceHeading = activeDocument.createDocumentFragment();
     performanceHeading.appendText('Performance');
-    performanceHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    performanceHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Technical tuning for background indexing. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -61,9 +61,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    const chunkDesc = activeDocument.createFragment();
+    const chunkDesc = activeDocument.createDocumentFragment();
     chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
-    chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
     });
@@ -115,9 +115,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     }
 
     // --- 2. System and API ---
-    const systemHeading = activeDocument.createFragment();
+    const systemHeading = activeDocument.createDocumentFragment();
     systemHeading.appendText(`System and ${api}`);
-    systemHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    systemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'System-level settings and API connection tuning. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -159,9 +159,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 3. Search and Context Tuning ---
-    const tuningHeading = activeDocument.createFragment();
+    const tuningHeading = activeDocument.createDocumentFragment();
     tuningHeading.appendText('Search and context tuning');
-    tuningHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    tuningHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
@@ -312,9 +312,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 4. Developer and Debugging ---
-    const devHeading = activeDocument.createFragment();
+    const devHeading = activeDocument.createDocumentFragment();
     devHeading.appendText('Developer');
-    devHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    devHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -365,9 +365,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 5. Security (Proactive SSRF Protection) ---
-    const secHeading = activeDocument.createFragment();
+    const secHeading = activeDocument.createDocumentFragment();
     secHeading.appendText('Security');
-    secHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    secHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.appendText('Allows the agent to access localhost and private network IPs. ');
         div.createDiv({ cls: 'vault-intelligence-settings-warning' }, (warnDiv) => {
             setIcon(warnDiv.createSpan(), 'lucide-alert-triangle');
@@ -389,9 +389,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 6. Model filtering ---
-    const filterHeading = activeDocument.createFragment();
+    const filterHeading = activeDocument.createDocumentFragment();
     filterHeading.appendText('Model filtering');
-    filterHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    filterHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
     });
     const filterGroup = new SettingGroup(containerEl).setHeading(filterHeading);

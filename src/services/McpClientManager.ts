@@ -273,7 +273,7 @@ export class McpClientManager implements IProvider {
             }
         }
 
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let timeoutId: number | undefined;
         let onAbort: (() => void) | undefined;
 
         try {

@@ -26,7 +26,6 @@ export default tseslint.config(
 	},
 	// Include TypeScript ESLint recommended configs to register the plugin
 	...tseslint.configs.recommended,
-	// @ts-expect-error -- Type mismatch in plugin config export
 	...obsidianmd.configs.recommended,
 	// Add eslint-comments plugin and our strict rules ONLY for TypeScript files
 	{
