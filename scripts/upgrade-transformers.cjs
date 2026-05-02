@@ -31,7 +31,9 @@ async function run() {
 
     try {
         console.log("Fetching latest version from NPM...");
-        const latest = await getLatestVersion();
+        let latest = await getLatestVersion();
+        // Sanitize version string
+        latest = latest.replace(/[^0-9.]/g, '');
         const current = getPackageVersion();
 
         console.log(`Current pinned version: ${current}`);
@@ -86,7 +88,7 @@ async function run() {
         console.log("Please review the changes and commit.");
 
     } catch (error) {
-        console.error(`\nFAILED: ${error.message}`);
+        console.error(`\nFAILED: ${error.message.replace(/[\r\n]/g, '')}`);
         process.exit(1);
     }
 }

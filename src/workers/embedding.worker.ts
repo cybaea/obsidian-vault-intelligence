@@ -376,12 +376,14 @@ const ctx = self as unknown as Worker;
 
 function isEmbedMessage(data: unknown): data is EmbedMessage {
     return (
-        typeof data === 'object' && data !== null &&
+        data !== null && typeof data === 'object' &&
         'type' in data && (data as { type: string }).type === 'embed'
     );
 }
 
 ctx.addEventListener('message', (event: MessageEvent) => {
+    // Security: Verify message source if origin is available (Web Workers normally have empty origin)
+    if (event.origin && event.origin !== 'null' && !self.location.origin.startsWith(event.origin)) return;
     void (async () => {
         const data = event.data as unknown;
         if (!data || typeof data !== 'object') return;

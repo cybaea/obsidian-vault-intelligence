@@ -15,7 +15,15 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Fixed a potential runtime exception in `LocalEmbeddingService` during worker initialization.
+-   Updated documentation workflow to use `npm ci` for deterministic builds.
+
 ### Security
+
+-   Implemented command injection protection in build and release scripts (CWE-078, CWE-088).
+-   Added log injection sanitization in debug and logging scripts (CWE-117).
+-   Implemented origin verification for worker message handlers (CWE-940, CWE-020).
+-   Added input validation for dependency and upgrade scripts (CWE-434, CWE-912, CWE-200).
 
 ## [9.3.2] - 2026-05-02
 
