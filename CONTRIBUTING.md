@@ -73,6 +73,10 @@ npm run test:ui
     -   **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
 -   **`manifest.json`**: Plugin metadata.
 
+## Merge process
+
+All changes should be done on branches and then a pull request **must** be raised to merge the changes into the main branch. The pull request should be reviewed by at least one other developer and should be updated to address any feedback from the reviewer. Merging to main branch is disabled in GitHub and must be done using the release process.
+
 ## Release process
 
 We use a "Zero Memory" automated workflow. **Do not manually tag releases.**
