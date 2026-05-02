@@ -4,6 +4,13 @@ Thanks for your interest in contributing to this Obsidian plugin. This project r
 
 To view or raise a bug or feature request, please use the [GitHub Issues](https://github.com/cybaea/obsidian-vault-intelligence/issues) page.
 
+## Iterative development
+
+We follow an **Open Development** model. All development work is conducted iteratively in public feature branches. This means:
+- We push "interim" work as it happens (granular commits), rather than giant monolithic dumps.
+- All code is available for collaborative review throughout the development cycle, not just at release time.
+- This approach ensures maximum transparency and security auditing.
+
 ## Getting started
 
 ### Prerequisites
@@ -72,12 +79,27 @@ npm run test:ui
 -   **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
 -   **`devs/`**: Developer documentation and guides.
     -   **`devs/adr/`**: **Architecture Decision Records**. Please review these to understand key design choices.
-    -   **`devs/RELEASE_WORKFLOW.md`**: Details on our automated release process.
+    -   **`devs/RELEASE_WORKFLOW.md/`**: Details on our automated release process.
 -   **`manifest.json`**: Plugin metadata.
 
-## Merge process
+## Publishing changes
 
-All changes should be done on branches and then a pull request **must** be raised to merge the changes into the main branch. The pull request should be reviewed by at least one other developer and should be updated to address any feedback from the reviewer. Merging to main branch is disabled in GitHub and must be done using the release process.
+All changes **must** be submitted via Pull Request. Direct pushes to the `main` branch are disabled by branch protection rules.
+
+1. Create a feature branch for your work.
+2. Push your branch frequently to allow for "interim" feedback.
+3. When ready, use our automation script to publish your PR:
+   ```bash
+   npm run publish-pr
+   ```
+   *This script handles CI verification and follows the project's security policies.*
+
+### Code review
+
+All PRs must be reviewed by at least one maintainer. We look for:
+- Adherence to [Architecture and Standards](devs/ARCHITECTURE_AND_STANDARDS.md).
+- Passing CI checks (Lint, Build, Test).
+- Meaningful commit messages and signed commits (where possible).
 
 ## Release process
 
@@ -91,14 +113,9 @@ npm run release:prep <patch|minor|major>
 
 See [devs/RELEASE_WORKFLOW.md](devs/RELEASE_WORKFLOW.md) for the complete guide.
 
-## Agentic architecture
-
-This plugin uses sophisticated agent patterns. If you are modifying the agents (Gardener, Researcher, etc.), please refer to:
-
--   `AGENTS.md` (Root)
--   `devs/ARCHITECTURE.md`
-
 ## Security and privacy
+
+We take security seriously. Please refer to our [SECURITY.md](SECURITY.md) for our full security policy and instructions on how to report a vulnerability.
 
 -   **Local first**: The plugin must function offline.
 -   **Consent**: No network calls without explicit user action.
