@@ -12,6 +12,7 @@ New features are added in the "[Unreleased]" section.
 ### User features
 
 ### Developer features
+
 -   **Security Hardening & OpenSSF Scorecard**: Significantly improved the project's security posture to satisfy OpenSSF Scorecard benchmarks.
     -   Implemented a formal **Security Policy** (`SECURITY.md`) and **CODEOWNERS**.
     -   Hardened GitHub Actions workflows with top-level `permissions: read-all` to adhere to the principle of least privilege.
