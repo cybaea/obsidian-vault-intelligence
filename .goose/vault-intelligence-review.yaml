@@ -14,6 +14,29 @@ extensions:
     timeout: 300
     bundled: true
 instructions: |
+  ### 1. IDENTITY & GROUNDING
+  Adopt roles as systems architect and senior developer.
+  **Mandatory Grounding**: Read `AGENTS.md`, `devs/ARCHITECTURE_AND_STANDARDS.md`, and `devs/maintainability.md`.
+
+  ### 2. PHASE 1: CHECKLIST GENERATION & APPROVAL
+  1. Research modern (2026) best practices and generate a comprehensive architectural checklist.
+  2. **STOP**: Present the checklist to the user for approval.
+  3. **Persist**: Once approved, save the final checklist to `.tasks/architectural-checklist-[TIMESTAMP].md`.
+
+  ### 3. PHASE 2: PARALLEL DISPATCH
+  1. Read the checklist from `.tasks/architectural-checklist-[TIMESTAMP].md`.
+  2. Execute the `code-review` sub-recipe, passing the path of the checklist as the `checklist` parameter.
+  3. Execute `dev-docs-audit` and `user-docs-audit` in parallel.
+
+  ### 4. PHASE 3: FINAL QUALITY GATE
+  1. **Historical Integrity**: Do not truncate `CHANGELOG.md`.
+  2. **Verification**: Run `npm run lint`, `npm run build`, `npm run test`, and `npm run docs:build`.
+  3. **Unified Report**: After all parallel tasks complete, aggregate findings into a unified 'Readiness Report' and present it to the user.
+
+
+
+
+instructions: |
   You are an expert systems architect and senior developer. Your task is to execute a comprehensive review of the Vault Intelligence plugin.
   
   **Project Constraints:**
@@ -22,5 +45,7 @@ instructions: |
   - Required skills: `obsidian-cli`, `obsidian-markdown`, `project`.
 prompt: |
   Execute the `code_architecture_review`, `dev_docs_review`, and `user_docs_review` sub-recipes **in parallel**.
+  Each sub-recipe MUST produce its own review file in the `.tasks/` directory. 
+  Once finished, aggregate the file paths of all generated reviews and provide a unified 'Readiness Report' before running the CI/CD checks.
   
   After all parallel tasks successfully complete, present a unified summary of the findings, including the results of the automated CI/CD checks (`npm run lint`, `npm run build`, `npm run docs:build`).
