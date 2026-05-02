@@ -57,7 +57,7 @@ All code must adhere to the latest Obsidian API standards.
 
 ### 3.3 UI/UX standards
 
-*   **Style**: Strongly prefer Obsidian CSS variables (eg `--color-red`); use custom variables only when necessary and with proper justification.
+*   **Style**: Strictly forbid static style assignments via `el.style` or `el.setCssProps` for non-dynamic properties. Always prefer CSS classes defined in `styles.css`. Use Obsidian CSS variables (e.g., `--color-red`) for consistent theming. Custom variables are only permitted with proper architectural justification.
 *   **Copy**: Use sentence case for all UI strings.
 *   **Responsiveness**: Ensure views work on mobile (touch targets, layout shifts).
 

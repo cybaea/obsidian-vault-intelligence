@@ -17,6 +17,7 @@ New features are added in the "[Unreleased]" section.
 
 -   **Typescript v6 Upgrade**: Successfully upgraded the Typescript compiler to version 6.
 -   **ESLint v10 Upgrade**: Successfully upgraded the linting engine and related packages to version 10, ensuring compatibility with modern Node.js environments (v22.22.0) and fully adopting the mandatory flat configuration system.
+-   **Obsidian Linter**: Updated to latest version and resolved linting errors.
 
 ## [9.2.8] - 2026-04-20
 

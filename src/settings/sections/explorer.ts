@@ -5,10 +5,10 @@ import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { isComplexLanguage } from "../../utils/language-utils";
+import { logger } from "../../utils/logger";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
-import { logger } from "../../utils/logger";
 
 
 
@@ -159,9 +159,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         dropdown.addOption('64', `64 (${name})`);
                     }
                 } else {
-                    dropdown.addOption('768', '768 (flash / standard)')
-                        .addOption('1536', '1536 (balanced)')
-                        .addOption('3072', '3072 (max / v4 default)');
+                    dropdown.addOption('768', '768 (Flash / standard)')
+                        .addOption('1536', '1536 (Balanced)')
+                        .addOption('3072', '3072 (Max / v4 default)');
                 }
 
                 dropdown.setValue(String(plugin.settings.embeddingDimension))

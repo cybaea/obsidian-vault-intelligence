@@ -273,10 +273,10 @@ function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => vo
             });
         });
     } else {
-        fragment.createDiv({ cls: 'vault-intelligence-settings-success' }, (div) => {
+        fragment.createDiv({ cls: 'vault-intelligence-settings-success' }, (div: HTMLDivElement) => {
             const iconSpan = div.createSpan();
             setIcon(iconSpan, 'lucide-lock');
-            div.createSpan({}, (textSpan) => {
+            div.createSpan({}, (textSpan: HTMLSpanElement) => {
                 textSpan.append('Secure storage is active. Credentials are encrypted by the OS keychain.');
             });
         });

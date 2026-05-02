@@ -8,8 +8,8 @@ import { ModelRegistry } from "../services/ModelRegistry";
 import { ProviderRegistry } from "../services/ProviderRegistry";
 import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
-import { FileSuggest } from "./FileSuggest";
 import { logger } from "../utils/logger";
+import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
     plugin!: VaultIntelligencePlugin;
@@ -159,7 +159,7 @@ export class ResearchChatView extends ItemView {
         const inputContainer = container.createDiv({ cls: "input-container" });
         this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
-        this.inputComponent.setPlaceholder("Ask your vault... (use @ to link notes)");
+        this.inputComponent.setPlaceholder("Ask your vault... (Use @ to link notes)");
 
         this.inputComponent.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) {

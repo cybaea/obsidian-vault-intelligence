@@ -448,7 +448,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
         }
 
         try {
-            const response = await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
+            const response = await (activeDocument.win as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                 body: JSON.stringify(body),
                 headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                 method: "POST",
@@ -522,7 +522,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             try {
                 // Unload only models we actively used from VRAM using keepalive 
                 // We use fetch since requestUrl doesn't guarantee fire-and-forget strictly on teardown
-                await (globalThis as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
+                await (activeDocument.win as unknown as { fetch: typeof fetch }).fetch(`${endpoint}/api/chat`, {
                     body: JSON.stringify({ keep_alive: 0, messages: [], model }),
                     headers: await this.getOllamaHeaders(),
                     keepalive: true,
@@ -562,7 +562,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
     }
 
     private async*generateNodeStream(endpoint: string, body: OllamaChatRequest, options: ChatOptions): AsyncIterableIterator<StreamChunk> {
-        const nodeRequire = (globalThis as unknown as NodeSystem).require;
+        const nodeRequire = (activeDocument.win as unknown as NodeSystem).require;
         const httpProvider = (endpoint.startsWith("https") ? nodeRequire("https") : nodeRequire("http")) as { request: (opts: unknown) => NodeRequest };
         const url = new URL(`${endpoint}/api/chat`);
         

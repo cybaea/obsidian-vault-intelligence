@@ -988,3 +988,109 @@ a.similar-notes-link:hover {
     border-color: var(--text-error) !important;
     box-shadow: 0 0 0 1px var(--text-error) !important;
 }
+
+/* Password Component Styles */
+.vi-password-wrapper {
+    position: relative;
+}
+
+.vi-password-input {
+    padding-right: 30px !important;
+}
+
+.vi-password-toggle {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+/* Key-Value Editor Styles */
+.vi-kv-editor-wrapper {
+    border-top: 1px solid var(--background-modifier-border);
+    padding: 1em 0;
+}
+
+.vi-kv-description {
+    margin-bottom: 1em;
+}
+
+.vi-kv-row {
+    align-items: center;
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.vi-kv-secret-label {
+    align-items: center;
+    color: var(--text-muted);
+    display: flex;
+    font-size: 0.8em;
+    gap: 0.2em;
+}
+
+.vi-kv-add {
+    margin-top: 0.5em;
+}
+
+/* MCP Settings Styles */
+.mcp-server-list-container {
+    margin-bottom: 2em;
+}
+
+.mcp-server-item {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    margin-bottom: 1em;
+    padding: 1em;
+}
+
+.mcp-server-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5em;
+}
+
+.mcp-server-header h4 {
+    margin: 0;
+}
+
+.mcp-status {
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-left: 10px;
+    padding: 2px 6px;
+    background-color: var(--background-modifier-border);
+}
+
+.mcp-status.is-connected {
+    background-color: var(--interactive-success);
+}
+
+.mcp-status.is-error,
+.mcp-status.is-untrusted {
+    background-color: var(--interactive-error);
+}
+
+.mcp-server-actions {
+    display: flex;
+    gap: 0.5em;
+    margin-top: 1em;
+}
+
+.mcp-server-actions-inline {
+    display: flex;
+    gap: 1em;
+    margin-top: 2em;
+}
+
+.vi-text-error {
+    color: var(--text-error);
+}
+
+.vi-text-warning {
+    color: var(--text-warning);
+}

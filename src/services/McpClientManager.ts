@@ -97,7 +97,7 @@ export class McpClientManager implements IProvider {
         return hashHex;
     }
 
-    public checkTrustState(config: MCPServerConfig): { trusted: boolean; hash: string } {
+    public checkTrustState(_config: MCPServerConfig): { trusted: boolean; hash: string } {
         // Obsolete synchronous check, actual check moved to connectServer.
         // Returning untrusted to be safe if a legacy caller uses it.
         return { hash: '', trusted: false };

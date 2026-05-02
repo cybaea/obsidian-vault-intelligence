@@ -26,7 +26,7 @@ function extractFolders(path: string) {
 }
 
 // Mock of updateGraphEdges specifically for testing the implicit folder semantics edge injection logic
-function mockUpdateGraphEdges(graph: Graph, path: string, dir: string, aliasMap: Map<string, string>, config: { implicitFolderSemantics?: string, ontologyPath?: string }) {
+function mockUpdateGraphEdges(graph: Graph, path: string, _dir: string, aliasMap: Map<string, string>, config: { implicitFolderSemantics?: string, ontologyPath?: string }) {
     if (config.implicitFolderSemantics && config.implicitFolderSemantics !== 'none') {
         const folders = path.split('/').filter(Boolean).slice(0, -1);
         const ontologyRoot = (config.ontologyPath || 'Ontology').toLowerCase();

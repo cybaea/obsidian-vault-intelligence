@@ -72,13 +72,12 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         setting.setName('Embedding chunk size')
         .setDesc(chunkDesc)
         .addDropdown(dropdown => dropdown
-            .addOption('256', `256 (granular / ${local.toLowerCase()} models)`)
-            .addOption('512', '512 (standard / cjk max)')
-            .addOption('1024', '1024 (high context / code max)')
+            .addOption('512', '512 (Standard / cjk max)')
+            .addOption('1024', '1024 (High context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
-            .addOption('4096', `4096 (large context)`)
-            .addOption('8192', `8192 (document scale)`)
+            .addOption('4096', `4096 (Large context)`)
+            .addOption('8192', `8192 (Document scale)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
                 const suggested = parseInt(value);

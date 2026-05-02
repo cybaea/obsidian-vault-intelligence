@@ -17,17 +17,11 @@ if (Obsidian.TextComponent && (Obsidian.TextComponent as unknown as { prototype:
 
         const wrapper = this.inputEl.parentElement;
         if (wrapper) {
-            wrapper.setCssProps({ "position": "relative" });
-            this.inputEl.setCssProps({ "padding-right": "30px" });
+            wrapper.addClass("vi-password-wrapper");
+            this.inputEl.addClass("vi-password-input");
             
             const toggleBtn = wrapper.createSpan({ cls: 'clickable-icon vi-password-toggle' });
-            toggleBtn.setCssProps({
-                "position": "absolute",
-                "right": "5px",
-                "top": "50%",
-                "transform": "translateY(-50%)",
-                "z-index": "10"
-            });
+            // Styles moved to .vi-password-toggle
             setIcon(toggleBtn, 'eye');
 
             toggleBtn.addEventListener('click', () => {
@@ -147,10 +141,9 @@ export function renderKeyValueEditor({
     title,
     validateKey
 }: KeyValueEditorConfig) {
-    const wrapper = container.createDiv();
-    wrapper.setCssProps({ borderTop: "1px solid var(--background-modifier-border)", padding: "1em 0" });
+    const wrapper = container.createDiv("vi-kv-editor-wrapper");
     wrapper.createDiv({ cls: "setting-item-name", text: title });
-    wrapper.createDiv({ cls: "setting-item-description", text: description }).setCssProps({ marginBottom: "1em" });
+    wrapper.createDiv({ cls: "vi-kv-description", text: description });
     
     let pairs: { key: string; value: string; isSecret: boolean }[] = [];
     try {
@@ -200,7 +193,6 @@ export function renderKeyValueEditor({
 
         pairs.forEach((pair, idx) => {
             const row = wrapper.createDiv("vi-kv-row");
-            row.setCssProps({ alignItems: "center", display: "flex", gap: "0.5em", marginBottom: "0.5em" });
 
             const keyComp = new Obsidian.TextComponent(row)
                 .setPlaceholder("Key")
@@ -238,8 +230,7 @@ export function renderKeyValueEditor({
                 valComp.setPassword();
             }
 
-            const secretToggleLabel = row.createEl("label");
-            secretToggleLabel.setCssProps({ alignItems: "center", color: "var(--text-muted)", display: "flex", fontSize: "0.8em", gap: "0.2em" });
+            const secretToggleLabel = row.createEl("label", { cls: "vi-kv-secret-label" });
             const secretToggle = secretToggleLabel.createEl("input", { type: "checkbox" });
             secretToggle.checked = pair.isSecret;
             secretToggle.onchange = (e) => { 
@@ -263,7 +254,6 @@ export function renderKeyValueEditor({
         });
 
         const addBtn = wrapper.createEl("button", { cls: "vi-kv-add", text: "Add row" });
-        addBtn.setCssProps({ marginTop: "0.5em" });
         addBtn.onclick = () => { pairs.push({ isSecret: false, key: "", value: "" }); renderTable(); };
     };
 

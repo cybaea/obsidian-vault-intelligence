@@ -67,7 +67,7 @@ class NativeStdioTransport implements Transport {
                 // while remaining strictly typed to satisfy ESLint
                 const req = (typeof window !== "undefined" && "require" in window)
                     ? (window as unknown as { require: (id: string) => unknown }).require
-                    : (globalThis as unknown as { require?: (id: string) => unknown }).require;
+                    : (activeDocument.win as unknown as { require?: (id: string) => unknown }).require;
 
                 if (typeof req !== "function") {
                     throw new Error("Native require is not available in this environment");
@@ -233,7 +233,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                 try {
                     const req = (typeof window !== "undefined" && "require" in window)
                         ? (window as unknown as { require: (id: string) => unknown }).require
-                        : (globalThis as unknown as { require?: (id: string) => unknown }).require;
+                        : (activeDocument.win as unknown as { require?: (id: string) => unknown }).require;
 
                     if (typeof req !== "function") {
                         logger.warn("Native require is not available for process cleanup");
@@ -263,7 +263,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                         killer.on('close', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
-                        activeWindow.setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
+                        activeDocument.win.setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
                     }
                 } catch (e) {
                     logger.warn(`Failed to kill process tree for MCP pid ${pid}:`, e);

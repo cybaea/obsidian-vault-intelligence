@@ -50,6 +50,13 @@ export default tseslint.config(
 			"perfectionist/sort-imports": "error",
 			"perfectionist/sort-interfaces": "error",
 			"perfectionist/sort-objects": "error",
+			"obsidianmd/prefer-create-el": "off", // Conflicts with standard TypeScript Document types
+		}
+	},
+	{
+		files: ['src/workers/**/*.ts', 'tests/**/*.ts'],
+		rules: {
+			"obsidianmd/prefer-active-doc": "off", // Workers and tests do not have a DOM/activeDocument
 		}
 	},
 	globalIgnores([

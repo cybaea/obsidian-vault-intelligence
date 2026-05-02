@@ -86,7 +86,7 @@ describe('MetadataManager - Merge Normalization', () => {
                     "[[Ontology/Concepts/Cloud Computing|Cloud Infrastructure]]"
                 ] as string[]
             };
-            mockApp.fileManager.processFrontMatter.mockImplementation((file: TFile, cb: (fm: Record<string, unknown>) => void) => {
+            mockApp.fileManager.processFrontMatter.mockImplementation((_file: TFile, cb: (fm: Record<string, unknown>) => void) => {
                 cb(frontmatter);
             });
 
@@ -124,7 +124,7 @@ describe('MetadataManager - Merge Normalization', () => {
             });
 
             const frontmatter = { topics: ["[[Old]]", "[[New]]"] as string[] };
-            mockApp.fileManager.processFrontMatter.mockImplementation((file: TFile, cb: (fm: Record<string, unknown>) => void) => {
+            mockApp.fileManager.processFrontMatter.mockImplementation((_file: TFile, cb: (fm: Record<string, unknown>) => void) => {
                 cb(frontmatter);
             });
 

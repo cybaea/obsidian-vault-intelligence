@@ -3,10 +3,10 @@ import { Events, App } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult, GraphNodeData, SerializableGraphSearchResult, SynonymCandidate } from "../types/graph";
+import { logger } from "../utils/logger";
 import { ResultHydrator } from './ResultHydrator';
 import { VaultManager } from "./VaultManager";
 import { WorkerManager } from './WorkerManager';
-import { logger } from "../utils/logger";
 
 export interface GraphState {
     graph?: {

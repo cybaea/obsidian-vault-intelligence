@@ -15,7 +15,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
     new SettingGroup(containerEl).setHeading(mcpHeading);
 
     const listContainer = containerEl.createDiv("mcp-server-list");
-    listContainer.setCssProps({ "margin-bottom": "2em" });
+    listContainer.addClass("mcp-server-list-container");
     
     const renderList = () => {
         listContainer.empty();
@@ -26,13 +26,13 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
         } else {
             servers.forEach((server, index) => {
                 const serverDiv = listContainer.createDiv("mcp-server-item");
-                serverDiv.setCssProps({ "border": "1px solid var(--background-modifier-border)", "border-radius": "8px", "margin-bottom": "1em", "padding": "1em" });
+                serverDiv.addClass("mcp-server-item");
                 
                 const headerRow = serverDiv.createDiv("mcp-server-header");
-                headerRow.setCssProps({ "align-items": "center", "display": "flex", "justify-content": "space-between", "margin-bottom": "0.5em" });
+                headerRow.addClass("mcp-server-header");
                 
-                const title = headerRow.createEl("h4", { text: server.name || "Unnamed Server" });
-                title.setCssProps({ "margin": "0" });
+                const _title = headerRow.createEl("h4", { text: server.name || "Unnamed Server" });
+                // Style moved to .mcp-server-header h4
                 
                 // Status indicator
                 const mcpManager = plugin.mcpClientManager as { connections?: Map<string, { status: string }> };
@@ -43,10 +43,10 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 
                 const statusBadge = headerRow.createSpan("mcp-status");
                 statusBadge.textContent = status.toUpperCase();
-                statusBadge.setCssProps({ "border-radius": "4px", "font-size": "0.8em", "margin-left": "10px", "padding": "2px 6px" });
-                if (status === 'connected') statusBadge.setCssProps({ "background-color": "var(--interactive-success)" });
-                else if (status === 'error' || status === 'untrusted') statusBadge.setCssProps({ "background-color": "var(--interactive-error)" });
-                else statusBadge.setCssProps({ "background-color": "var(--background-modifier-border)" });
+                statusBadge.addClass("mcp-status");
+                if (status === 'connected') statusBadge.addClass("is-connected");
+                else if (status === 'error' || status === 'untrusted') statusBadge.addClass(status === 'error' ? "is-error" : "is-untrusted");
+                // Default style handled by .mcp-status
                 
                 new ToggleComponent(headerRow)
                     .setValue(server.enabled)
@@ -66,11 +66,11 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 const errMessage = (connection as { errorMessage?: string })?.errorMessage;
                 if (status === 'error' && errMessage) {
                     const err = detailsRow.createEl("p", { cls: "setting-item-description", text: `Error: ${errMessage}` });
-                    err.setCssProps({ "color": "var(--text-error)" });
+                    err.addClass("vi-text-error");
                 }
                 
                 const btnRow = serverDiv.createDiv("mcp-server-actions");
-                btnRow.setCssProps({ "display": "flex", "gap": "0.5em", "margin-top": "1em" });
+                btnRow.addClass("mcp-server-actions");
                 
                 if (status === 'untrusted') {
                     new ButtonComponent(btnRow)
@@ -158,7 +158,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     .onChange(v => currentConfig.command = v)
                 );
                 // Highlight warning
-                setting.descEl.setCssProps({ "color": "var(--text-warning)" });
+                setting.descEl.addClass("vi-text-warning");
             });
 
             editorGroup.addSetting(setting => {
@@ -224,7 +224,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
         });
 
         const btnRow = containerEl.createDiv();
-        btnRow.setCssProps({ "display": "flex", "gap": "1em", "margin-top": "2em" });
+        btnRow.addClass("mcp-server-actions-inline");
 
         new ButtonComponent(btnRow)
             .setButtonText("Cancel")
