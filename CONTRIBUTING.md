@@ -74,6 +74,13 @@ npm test
 npm run test:ui
 ```
 
+## Testing policy
+
+We follow a strict **Test-Driven Development (TDD) friendly** policy:
+- **New Functionality**: All major new features **must** be accompanied by automated tests in the `tests/` directory.
+- **Bug Fixes**: Every bug fix should include a regression test to ensure the issue does not return.
+- **Continuous Verification**: All tests must pass before a Pull Request is merged. Our CI pipeline enforces this automatically.
+
 ## Project structure
 
 -   **`src/`**: Source code (modularized, avoiding a monolithic `main.ts`).
