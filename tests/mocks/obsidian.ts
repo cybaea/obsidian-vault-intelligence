@@ -1,6 +1,7 @@
 /* eslint-disable eslint-comments/disable-enable-pair -- Mock file does not require enable pairs */
 /* eslint-disable eslint-comments/require-description -- Descriptions not required for comprehensive mock disable */
 /* eslint-disable */
+import { vi } from 'vitest';
 /**
  * Mock implementation of Obsidian API for Node.js test environment.
  * This file is aliased in vitest.config.mts.
@@ -107,8 +108,16 @@ export class Events {
     trigger(_event: string, ..._args: any[]): void { }
 }
 
+export class Menu {
+    addItem = vi.fn().mockReturnThis();
+    addSeparator = vi.fn().mockReturnThis();
+    showAtMouseEvent = vi.fn().mockReturnThis();
+    showAtPosition = vi.fn().mockReturnThis();
+}
+
 export const Platform = {
-    isMobile: false
+    isMobile: false,
+    isDesktopApp: true
 };
 
 // Global mocks for Node environment
@@ -122,15 +131,42 @@ if (g) {
         terminate = () => { };
     };
 
-    (g as any).window = {
-        cancelAnimationFrame: (id: number) => clearTimeout(id),
-        requestAnimationFrame: (cb: FrameRequestCallback) => setTimeout(cb, 0)
+    const mockEl = () => ({
+        addClass: () => {},
+        appendChild: () => {},
+        createDiv: mockEl,
+        createEl: mockEl,
+        createSpan: mockEl,
+        remove: () => {},
+        setAttribute: () => {},
+        style: {}
+    });
+
+    (g as any).window = g;
+    (g as any).document = {
+        body: mockEl(),
+        createDiv: mockEl,
+        createEl: mockEl,
+        createSpan: mockEl,
+        createElement: mockEl,
+        createDocumentFragment: () => ({
+            appendChild: () => {},
+            createDiv: mockEl,
+            createEl: mockEl,
+            createSpan: mockEl
+        })
     };
 
-    (g as any).document = {
-        createElement: (tag: string) => ({})
-    };
-    
-    (g as any).WebGL2RenderingContext = class {};
-    (g as any).WebGLRenderingContext = class {};
+    (g as any).activeDocument = (g as any).document;
+    (g as any).activeWindow = g;
+    (g as any).activeDocument.win = g;
+
+    // Mock getComputedStyle for theme resolution tests
+    (g as any).getComputedStyle = () => ({
+        getPropertyValue: () => "",
+        color: "rgb(0, 0, 0)"
+    });
+
+    (g as any).WebGL2RenderingContext = class { };
+    (g as any).WebGLRenderingContext = class { };
 }
