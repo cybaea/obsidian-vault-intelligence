@@ -21,6 +21,9 @@ jobs:
       contents: read
       security-events: write
 
+    env:
+      CODEQL_ACTION_FILE_COVERAGE_ON_PRS: true
+
     strategy:
       fail-fast: false
       matrix:
