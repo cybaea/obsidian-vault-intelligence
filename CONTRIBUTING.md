@@ -21,6 +21,8 @@ npm ci
 
 ## Development
 
+Read [devs/ARCHITECTURE_AND_STANDARDS.md](devs/ARCHITECTURE_AND_STANDARDS.md) FIRST before doing any work on the plugin: it contains detailed information on the development process and architecture.
+
 ### Running locally
 
 To start the development build in watch mode:
