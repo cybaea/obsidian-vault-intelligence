@@ -6,10 +6,26 @@
 set -e
 
 DRY_RUN=false
-if [ "$1" == "--dry-run" ]; then
-    DRY_RUN=true
-    echo "🔍 Running in DRY RUN mode. No changes will be pushed or merged."
-fi
+AUTO_MERGE=""
+ADMIN_MERGE=""
+
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            echo "🔍 Running in DRY RUN mode. No changes will be pushed or merged."
+            shift
+            ;;
+        --auto)
+            AUTO_MERGE="--auto"
+            shift
+            ;;
+        --admin)
+            ADMIN_MERGE="--admin"
+            shift
+            ;;
+    esac
+done
 
 # Cleanup trap to ensure we return to the original branch if interrupted
 ORIGINAL_BRANCH=$(git branch --show-current)
@@ -94,7 +110,7 @@ fi
 # 4. Merge Synchronously
 echo "🔀 Merging pull request..."
 if [ "$DRY_RUN" = false ]; then
-    gh pr merge --squash --delete-branch
+    gh pr merge --squash --delete-branch $AUTO_MERGE $ADMIN_MERGE
 else
     echo "[DRY RUN] gh pr merge --squash --delete-branch"
 fi

@@ -7,6 +7,8 @@ on:
     paths:
       - 'package.json' # Only runs when the version file changes
 
+permissions: read-all
+
 jobs:
   tag:
     runs-on: ubuntu-latest

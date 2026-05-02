@@ -87,6 +87,7 @@ export default withMermaid(defineConfig({
                     items: [
                         { text: 'Home', link: '/' },
                         { text: 'Getting Started', link: '/docs/tutorials/getting-started' },
+                        { text: 'Security Policy', link: '/SECURITY' },
                         { text: 'Roadmap', link: '/ROADMAP' },
                         { text: 'Changelog', link: '/CHANGELOG' }
                     ]
@@ -157,6 +158,7 @@ export default withMermaid(defineConfig({
                         { text: 'Release Workflow', link: '/devs/RELEASE_WORKFLOW' },
                         { text: 'Documentation Standards', link: '/devs/documentation-standards' },
                         { text: 'Codebase Review', link: '/devs/codebase_review' },
+                        { text: 'Security Policy', link: '/SECURITY' },
                         { text: 'Review Checklist', link: '/devs/review_checklist' },
                         { text: 'Security and Robustness', link: '/devs/security-and-robustness' },
                         { text: 'Language and Prompts', link: '/devs/technical/language-and-prompts' },

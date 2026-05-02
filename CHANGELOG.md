@@ -13,6 +13,16 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **CI/CD Optimization**: Fixed duplicate CI triggers in GitHub Actions by restricting `push` events to the `main` branch.
+-   **Script Enhancement**: Updated `publish-pr.sh` to support `--auto` and `--admin` flags, allowing merges to bypass or schedule according to hardened branch protection policies.
+-   **Security Hardening & OpenSSF Scorecard**: Significantly improved the project's security posture to satisfy OpenSSF Scorecard benchmarks.
+    -   Implemented a formal **Security Policy** (`SECURITY.md`) and **CODEOWNERS**.
+    -   Hardened GitHub Actions workflows with top-level `permissions: read-all` to adhere to the principle of least privilege.
+    -   Remediated a moderate-severity vulnerability (GHSA-w5hq-g745-h8pq) in `uuid` via dependency overrides in `package.json`.
+    -   Integrated automated testing (`npm run test`) into the CI pipeline as a mandatory status check for branch protection.
+    -   Updated documentation and the VitePress site to include security transparency sections and supply chain integrity details (SLSA).
+    -   Implemented signed commits using SSH keys and integrated GPG signing into the release pipeline.
+
 ## [9.3.0] - 2026-05-02
 
 ### User features
