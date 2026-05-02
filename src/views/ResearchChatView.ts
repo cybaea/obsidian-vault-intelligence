@@ -9,6 +9,7 @@ import { ProviderRegistry } from "../services/ProviderRegistry";
 import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { FileSuggest } from "./FileSuggest";
+import { logger } from "../utils/logger";
 
 export class ResearchChatView extends ItemView {
     plugin!: VaultIntelligencePlugin;
@@ -224,7 +225,7 @@ export class ResearchChatView extends ItemView {
                 this.addMessage("system", "", undefined, undefined, undefined, reflexResults);
             }
         } catch (e) {
-            console.error("Spotlight Reflex failed", e);
+            logger.error("Spotlight Reflex failed", e);
         }
 
         try {

@@ -8,6 +8,7 @@ import { isComplexLanguage } from "../../utils/language-utils";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
+import { logger } from "../../utils/logger";
 
 
 
@@ -462,7 +463,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         } catch (e) {
                             const message = e instanceof Error ? e.message : String(e);
                             new Notice(`Re-indexing failed: ${message}`);
-                            console.error(e);
+                            logger.error("Re-indexing failed", e);
                         } finally {
                             btn.setButtonText('Re-index vault');
                             btn.buttonEl.classList.remove('mod-warning');

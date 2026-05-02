@@ -3,7 +3,7 @@ import { SettingGroup, setIcon } from "obsidian";
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { IEmbeddingClient } from "../../types/providers";
-import { LogLevel } from "../../utils/logger";
+import { LogLevel, logger } from "../../utils/logger";
 import { resolveSecrets } from "../../utils/secrets";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
@@ -353,12 +353,12 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 const raw = ModelRegistry.getRawResponse();
                 const rawOllama = ModelRegistry.getRawOllamaResponse();
                 if (raw) {
-                    console.debug("[VaultIntelligence] Raw Gemini models:", raw);
+                    logger.debug("[VaultIntelligence] Raw Gemini models:", raw);
                 }
                 if (rawOllama) {
-                    console.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
+                    logger.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
                 } else if (plugin.settings.ollamaEndpoint) {
-                    console.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
+                    logger.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
                 }
             })
         );

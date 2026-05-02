@@ -108,9 +108,13 @@ interface SerializedIndexState {
 }
 
 const workerLogger = {
+    // eslint-disable-next-line no-console
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console
     error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console
     info: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console
     warn: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
 };
 
