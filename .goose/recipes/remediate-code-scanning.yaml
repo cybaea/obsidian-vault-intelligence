@@ -1,0 +1,34 @@
+version: 1.0.0
+title: "Remediate Code Scanning Alerts"
+description: "Batch process open CodeQL and security alerts, apply fixes, and update documentation."
+prompt: "Audit and remediate open code scanning alerts"
+extensions:
+  - type: builtin
+    name: developer
+activities:
+  - "Security Hardening and Remediation"
+instructions: |
+  Perform a comprehensive security and quality audit by resolving open CodeQL alerts.
+
+  1. **Enumerate Open Alerts**
+     Fetch all open code scanning alerts using the GitHub API:
+     `gh api -H "Accept: application/vnd.github+json" /repos/:owner/:repo/code-scanning/alerts?state=open`
+
+  2. **Categorize and Prioritize**
+     Identify high-priority alerts (Command Injection, Log Injection, etc.) and group them by file or category.
+
+  3. **Batch Remediation**
+     For each category of alerts:
+     - Read the affected code.
+     - Implement security hardening (sanitization, origin checks, type safety).
+     - **Verification**: Run `npm run lint && npm run build && npm run test` after each batch of fixes.
+
+  4. **Documentation (Historical Integrity)**
+     Update `CHANGELOG.md` following these strict rules:
+     - **Section**: Use `### Security` for vulnerability fixes and `### Developer features` for quality/CI improvements.
+     - **References**: Include CWE identifiers (e.g., CWE-078) where applicable.
+     - **Integrity**: Always use `Developer.edit` for `CHANGELOG.md`. Verify line counts before and after to ensure no data is truncated.
+
+  5. **Final Validation**
+     Ensure all mandatory checks pass:
+     `npm run lint && npm run build && npm run test && npm run docs:build`

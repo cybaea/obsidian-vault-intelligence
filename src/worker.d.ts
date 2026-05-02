@@ -1,7 +1,7 @@
-// Match imports ending in ".worker" (extensionless)
+// Type definitions for inline workers (esbuild-plugin-inline-worker)
 declare module "*.worker" {
-    class WebpackWorker extends Worker {
-        constructor();
+    class InlineWorker extends Worker {
+        constructor(options?: WorkerOptions);
     }
-    export default WebpackWorker;
+    export default InlineWorker;
 }
