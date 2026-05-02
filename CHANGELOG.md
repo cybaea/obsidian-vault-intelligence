@@ -17,6 +17,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   Fixed a potential runtime exception in `LocalEmbeddingService` during worker initialization.
 -   Updated documentation workflow to use `npm ci` for deterministic builds.
+-   Added a local security linter (`scripts/lint-security.mjs`) to detect dangerous patterns and security vulnerabilities pre-commit.
+-   Consolidated and improved TypeScript definitions for inline workers.
 
 ### Security
 
