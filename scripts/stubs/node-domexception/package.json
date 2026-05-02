@@ -1,0 +1,7 @@
+{
+  "name": "node-domexception",
+  "version": "1.0.0",
+  "description": "Stub to resolve deprecated node-domexception to native DOMException",
+  "main": "index.js",
+  "type": "module"
+}
