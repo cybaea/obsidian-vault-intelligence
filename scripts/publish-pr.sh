@@ -110,7 +110,7 @@ fi
 # 4. Merge Synchronously
 echo "🔀 Merging pull request..."
 if [ "$DRY_RUN" = false ]; then
-    gh pr merge --squash --delete-branch $AUTO_MERGE $ADMIN_MERGE
+    gh pr merge "$CURRENT_BRANCH" --squash --delete-branch $AUTO_MERGE $ADMIN_MERGE
 else
     echo "[DRY RUN] gh pr merge --squash --delete-branch"
 fi
