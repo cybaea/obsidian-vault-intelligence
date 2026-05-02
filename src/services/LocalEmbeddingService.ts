@@ -112,7 +112,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
 
         try {
             // MAGIC LINE: Just instantiate it like a class
-            const instance = new EmbeddingWorker({ name: 'VaultIntelligenceWorker' });
+            const instance = new (EmbeddingWorker as unknown as { new(o?: WorkerOptions): Worker })({ name: 'VaultIntelligenceWorker' });
             this.worker = instance;
 
             this.worker.onmessage = (e: MessageEvent) => this._onMessage(e);

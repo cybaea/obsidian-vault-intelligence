@@ -82,6 +82,7 @@ async function validate() {
                 console.log(`OK: WASM_CDN_URL version matches.`);
 
                 console.log(`Checking CDN reachability: ${url}...`);
+                if (!url.startsWith('https://')) throw new Error('Invalid CDN URL');
                 const res = await checkUrl(url + 'ort-wasm.wasm');
                 if (res.status !== 'OK') {
                     console.error(`FAILED: CDN asset not reachable: ${res.url} (Code: ${res.code || res.message})`);
@@ -108,7 +109,7 @@ async function validate() {
     try {
         const { execSync } = require('child_process');
         const lsOutput = execSync('npm ls sharp --json', { encoding: 'utf8', cwd: path.join(__dirname, '..') });
-        const lsData = JSON.parse(lsOutput);
+        // const lsData = JSON.parse(lsOutput);
         
         // Count occurrences of sharp in the dependency tree
         const countSharp = (deps) => {

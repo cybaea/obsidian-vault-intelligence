@@ -169,8 +169,6 @@ const mockPlugin = {
     settings: { chatModel: 'gemini-pro', enableCodeExecution: true }
 } as any;
 
-const mockReasoningClient = {} as any;
-const mockProvider = {} as any;
 const mockGraphService = {
     off: vi.fn(),
     on: vi.fn(),

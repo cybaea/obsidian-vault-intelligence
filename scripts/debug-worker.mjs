@@ -26,8 +26,8 @@ async function connectToDebugger() {
         ws.on('message', (data) => {
             const message = JSON.parse(data);
             if (message.method === "Runtime.consoleAPICalled") {
-                const args = message.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ');
-                console.log(`[Worker Console] ${args}`);
+                const args = message.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ').replace(/[\r\n]/g, ' ');
+                console.log(`[Worker Console] ${args.replace(/[\r\n]/g, '')}`);
             }
         });
 

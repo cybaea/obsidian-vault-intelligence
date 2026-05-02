@@ -30,7 +30,7 @@ try {
     }
 
     // 2. SAFETY CHECK: Ensure we are on a valid branch (optional, but good practice)
-    const currentBranch = run('git branch --show-current');
+    // const currentBranch = run('git branch --show-current');
     // If you strictly only want to release from main, uncomment the next lines:
     /*
     if (currentBranch !== 'main') {

@@ -26,7 +26,7 @@ async function captureLogs() {
             ws.on('message', (data) => {
                 const msg = JSON.parse(data);
                 if (msg.method === "Runtime.consoleAPICalled") {
-                    const text = msg.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ');
+                    const text = msg.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ').replace(/[\r\n]/g, ' ');
                     fs.appendFileSync(LOG_FILE, `[Worker ${index}] ${text}\n`);
                 }
             });
