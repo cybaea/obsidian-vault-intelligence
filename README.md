@@ -1,6 +1,8 @@
 # Obsidian Vault Intelligence
 
-![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![100% Free & Open Source](https://img.shields.io/badge/100%25_Free_%26_Open_Source-blue) ![Local LLM Support](https://img.shields.io/badge/Local_LLM_Support-green) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github) 
+![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![100% Free & Open Source](https://img.shields.io/badge/100%25_Free_%26_Open_Source-blue) ![Local LLM Support](https://img.shields.io/badge/Local_LLM_Support-green) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) 
+
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github) 
 
 ![Obsidian Vault Intelligence Social Preview](./public/images/vault-intelligence-social.webp)
 
