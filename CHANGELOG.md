@@ -19,6 +19,7 @@ New features are added in the "[Unreleased]" section.
     -   Remediated a moderate-severity vulnerability (GHSA-w5hq-g745-h8pq) in `uuid` via dependency overrides in `package.json`.
     -   Integrated automated testing (`npm run test`) into the CI pipeline as a mandatory status check for branch protection.
     -   Updated documentation and the VitePress site to include security transparency sections and supply chain integrity details (SLSA).
+    -   Implemented signed commits using SSH keys and integrated GPG signing into the release pipeline.
 
 ## [9.3.0] - 2026-05-02
 
