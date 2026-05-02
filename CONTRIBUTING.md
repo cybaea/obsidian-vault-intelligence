@@ -7,9 +7,10 @@ To view or raise a bug or feature request, please use the [GitHub Issues](https:
 ## Iterative development
 
 We follow an **Open Development** model. All development work is conducted iteratively in public feature branches. This means:
-- We push "interim" work as it happens (granular commits), rather than giant monolithic dumps.
-- All code is available for collaborative review throughout the development cycle, not just at release time.
-- This approach ensures maximum transparency and security auditing.
+
+-   We push "interim" work as it happens (granular commits), rather than giant monolithic dumps.
+-   All code is available for collaborative review throughout the development cycle, not just at release time.
+-   This approach ensures maximum transparency and security auditing.
 
 ## Getting started
 
@@ -38,7 +39,7 @@ To start the development build in watch mode:
 npm run dev
 ```
 
-*This uses `esbuild` to compile changes instantly._
+_This uses `esbuild` to compile changes instantly._
 
 ### Hot reload (recommended)
 
@@ -60,7 +61,7 @@ We use **ESLint** with a flat config (`eslint.config.mts`).
 npm run lint
 ```
 
-*Fixes can often be applied automatically with `--fix`._
+_Fixes can often be applied automatically with `--fix`._
 
 ### Testing
 
@@ -77,9 +78,10 @@ npm run test:ui
 ## Testing policy
 
 We follow a strict **Test-Driven Development (TDD) friendly** policy:
-- **New Functionality**: All major new features **must** be accompanied by automated tests in the `tests/` directory.
-- **Bug Fixes**: Every bug fix should include a regression test to ensure the issue does not return.
-- **Continuous Verification**: All tests must pass before a Pull Request is merged. Our CI pipeline enforces this automatically.
+
+-   **New Functionality**: All major new features **must** be accompanied by automated tests in the `tests/` directory.
+-   **Bug Fixes**: Every bug fix should include a regression test to ensure the issue does not return.
+-   **Continuous Verification**: All tests must pass before a Pull Request is merged. Our CI pipeline enforces this automatically.
 
 ## Project structure
 
@@ -96,21 +98,24 @@ All changes **must** be submitted via Pull Request. Direct pushes to the `main` 
 1. Create a feature branch for your work.
 2. Push your branch frequently to allow for "interim" feedback.
 3. When ready, use our automation script to publish your PR:
-   ```bash
-   npm run publish-pr
-   ```
-   *This script handles CI verification and follows the project's security policies.*
+
+    ```bash
+    npm run publish-pr
+    ```
+
+    _This script handles CI verification and follows the project's security policies._
 
 ### Code review
 
 All PRs must be reviewed by at least one maintainer. We look for:
-- Adherence to [Architecture and Standards](devs/ARCHITECTURE_AND_STANDARDS.md).
-- Passing CI checks (Lint, Build, Test).
-- Meaningful commit messages and signed commits (where possible).
+
+-   Adherence to [Architecture and Standards](devs/ARCHITECTURE_AND_STANDARDS.md).
+-   Passing CI checks (Lint, Build, Test).
+-   Meaningful commit messages and signed commits (where possible).
 
 ## Release process
 
-We use a "Zero Memory" automated workflow. **Do not manually tag releases.**
+We use a \"Zero Memory\" automated workflow. **Do not manually tag releases.**
 
 To prepare a release:
 
