@@ -30,8 +30,8 @@ jobs:
           npm ci
           npm run build
 
-      - name: Generate artifact attestations
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      - name: Generate build provenance
+        uses: actions/attest-build-provenance@bdbd9890f507b5b5c96041c3a647d6d3701d4a0a # v2.2.0
         with:
           subject-path: |
             main.js
