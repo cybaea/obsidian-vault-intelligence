@@ -47,9 +47,12 @@ describe('ModelRegistry', () => {
 
             // Use any cast locally for private static method access
             const modelRegistry = ModelRegistry as any;
-            const result = await modelRegistry.fetchOllamaModels(mockSettings.ollamaEndpoint);
+            const result = await modelRegistry.fetchOllamaModels(mockSettings.ollamaEndpoint, { 'X-Custom': 'header' });
             const models = result.models;
             
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
+                headers: expect.objectContaining({ 'X-Custom': 'header' })
+            }));
             expect(models).toHaveLength(2);
             
             const llama = models.find((m: any) => m.id === 'ollama/llama3:latest');
@@ -83,8 +86,11 @@ describe('ModelRegistry', () => {
             const modelRegistry = ModelRegistry as any;
             modelRegistry.getModelById = vi.fn().mockReturnValue(mockModel);
 
-            const details = await ModelRegistry.fetchOllamaModelDetails(mockSettings.ollamaEndpoint, 'ollama/llama3');
+            const details = await ModelRegistry.fetchOllamaModelDetails(mockSettings.ollamaEndpoint, 'ollama/llama3', { 'Authorization': 'Bearer test' });
             
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
+                headers: expect.objectContaining({ 'Authorization': 'Bearer test' })
+            }));
             expect(details?.inputTokenLimit).toBe(8192);
         });
     });

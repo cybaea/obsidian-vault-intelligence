@@ -6,7 +6,7 @@ We realized that to truly bring agentic AI to your personal knowledge base, we n
 
 So we rebuilt it.
 
-https://github.com/cybaea/obsidian-vault-intelligence @obsidian@mas.to #Obsidian #PKM
+<https://github.com/cybaea/obsidian-vault-intelligence> @<obsidian@mas.to> #Obsidian #PKM
 
 ---
 
@@ -35,9 +35,10 @@ It means the plugin scales effortless to 10k, 20k, or 50k notes.
 ---
 
 This release also brings a host of polish items:
-*   Fixed "Similar Notes" race conditions
-*   Hardened prompt injection defenses
-*   Smarter timeout management for large models
+
+* Fixed "Similar Notes" race conditions
+* Hardened prompt injection defenses
+* Smarter timeout management for large models
 
 It's the most stable version of Vault Intelligence ever.
 

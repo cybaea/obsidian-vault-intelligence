@@ -77,6 +77,7 @@ export interface VaultIntelligenceSettings {
     modelContextOverrides: Record<string, number>;
     ollamaEmbeddingArchitectures: string[] | null;
     ollamaEndpoint: string;
+    ollamaHeaders?: string;
     ontologyPath: string;
     plansRetentionDays: number;
     previousVersion: string;
@@ -208,6 +209,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     modelContextOverrides: {},
     ollamaEmbeddingArchitectures: null,
     ollamaEndpoint: 'http://localhost:11434',
+    ollamaHeaders: undefined,
     ontologyPath: 'Ontology',
     plansRetentionDays: 7,
     previousVersion: '0.0.0',

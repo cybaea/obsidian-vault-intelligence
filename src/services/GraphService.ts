@@ -3,6 +3,7 @@ import { Events, App } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult, GraphNodeData, SerializableGraphSearchResult, SynonymCandidate } from "../types/graph";
+import { logger } from "../utils/logger";
 import { ResultHydrator } from './ResultHydrator';
 import { VaultManager } from "./VaultManager";
 import { WorkerManager } from './WorkerManager';
@@ -189,7 +190,7 @@ export class GraphService extends Events {
 
             return sub;
         } catch (e) {
-            console.error(`[GraphService] Failed to get semantic subgraph for ${path}`, e);
+            logger.error(`[GraphService] Failed to get semantic subgraph for ${path}`, e);
             return null;
         }
     }
@@ -223,7 +224,7 @@ export class GraphService extends Events {
         try {
             return await this.workerManager.executeQuery(api => api.findOntologySynonyms(semanticThreshold));
         } catch (e) {
-            console.error(`[GraphService] Failed to get ontology synonyms`, e);
+            logger.error(`[GraphService] Failed to get ontology synonyms`, e);
             return [];
         }
     }
@@ -235,7 +236,7 @@ export class GraphService extends Events {
         try {
             return await this.workerManager.executeQuery(api => api.findOrphanCandidates(ontologyRoot, gracePeriodMs));
         } catch (e) {
-            console.error(`[GraphService] Failed to get orphan candidates`, e);
+            logger.error(`[GraphService] Failed to get orphan candidates`, e);
             return [];
         }
     }

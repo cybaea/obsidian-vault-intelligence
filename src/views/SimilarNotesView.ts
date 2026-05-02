@@ -29,11 +29,11 @@ export class SimilarNotesView extends ItemView {
         );
 
         // Refresh instantly when a background update finishes (Debounced & Memory-safe)
-        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        let refreshTimer: number | null = null;
         this.registerEvent(
             this.plugin.graphService.on('graph:index-updated', () => {
-                if (refreshTimer) clearTimeout(refreshTimer);
-                refreshTimer = setTimeout(() => {
+                if (refreshTimer) activeWindow.clearTimeout(refreshTimer);
+                refreshTimer = activeWindow.setTimeout(() => {
                     const file = this.plugin.app.workspace.getActiveFile();
                     void this.updateForFile(file, true); // Force refresh
                 }, 2000); // Debounce UI refresh by 1s to stop flicker

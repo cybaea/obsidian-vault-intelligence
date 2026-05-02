@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkerLifecycleManager } from '../../src/services/WorkerLifecycleManager';
 
 if (typeof globalThis.requestIdleCallback === 'undefined') {
-    (globalThis as any).requestIdleCallback = (cb: () => void) => setTimeout(() => cb(), 1);
-    (globalThis as any).cancelIdleCallback = (id: number) => clearTimeout(id);
+    (globalThis as any).requestIdleCallback = (cb: () => void) => activeWindow.setTimeout(() => cb(), 1);
+    (globalThis as any).cancelIdleCallback = (id: number) => activeWindow.clearTimeout(id);
 }
 
 describe('WorkerLifecycleManager', () => {

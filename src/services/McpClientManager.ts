@@ -97,7 +97,7 @@ export class McpClientManager implements IProvider {
         return hashHex;
     }
 
-    public checkTrustState(config: MCPServerConfig): { trusted: boolean; hash: string } {
+    public checkTrustState(_config: MCPServerConfig): { trusted: boolean; hash: string } {
         // Obsolete synchronous check, actual check moved to connectServer.
         // Returning untrusted to be safe if a legacy caller uses it.
         return { hash: '', trusted: false };
@@ -273,13 +273,13 @@ export class McpClientManager implements IProvider {
             }
         }
 
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let timeoutId: number | undefined;
         let onAbort: (() => void) | undefined;
 
         try {
             // Include strict timeout
             const timeoutPromise = new Promise<never>((_, reject) => {
-                timeoutId = setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
+                timeoutId = activeWindow.setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
             });
             
             const abortPromises: Promise<never>[] = [];
@@ -334,7 +334,7 @@ export class McpClientManager implements IProvider {
             }
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
         } finally {
-            if (timeoutId) clearTimeout(timeoutId);
+            if (timeoutId) activeWindow.clearTimeout(timeoutId);
             if (signal && onAbort) signal.removeEventListener('abort', onAbort);
         }
     }

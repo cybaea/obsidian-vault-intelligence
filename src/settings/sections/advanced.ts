@@ -3,24 +3,24 @@ import { SettingGroup, setIcon } from "obsidian";
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { IEmbeddingClient } from "../../types/providers";
-import { LogLevel } from "../../utils/logger";
+import { LogLevel, logger } from "../../utils/logger";
+import { resolveSecrets } from "../../utils/secrets";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
-
 export function renderAdvancedSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
     const gemini = "Gemini";
     const api = "API";
     const local = "Local";
 
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
         div.setText('Technical tuning and system-level configurations.');
     });
 
     // --- 1. Indexing Performance ---
-    const performanceHeading = document.createDocumentFragment();
+    const performanceHeading = activeDocument.createDocumentFragment();
     performanceHeading.appendText('Performance');
-    performanceHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    performanceHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Technical tuning for background indexing. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -61,9 +61,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    const chunkDesc = document.createDocumentFragment();
+    const chunkDesc = activeDocument.createDocumentFragment();
     chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
-    chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
     });
@@ -72,13 +72,12 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         setting.setName('Embedding chunk size')
         .setDesc(chunkDesc)
         .addDropdown(dropdown => dropdown
-            .addOption('256', `256 (granular / ${local.toLowerCase()} models)`)
-            .addOption('512', '512 (standard / cjk max)')
-            .addOption('1024', '1024 (high context / code max)')
+            .addOption('512', '512 (Standard / cjk max)')
+            .addOption('1024', '1024 (High context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
-            .addOption('4096', `4096 (large context)`)
-            .addOption('8192', `8192 (document scale)`)
+            .addOption('4096', `4096 (Large context)`)
+            .addOption('8192', `8192 (Document scale)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
                 const suggested = parseInt(value);
@@ -115,9 +114,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     }
 
     // --- 2. System and API ---
-    const systemHeading = document.createDocumentFragment();
+    const systemHeading = activeDocument.createDocumentFragment();
     systemHeading.appendText(`System and ${api}`);
-    systemHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    systemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'System-level settings and API connection tuning. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -159,9 +158,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 3. Search and Context Tuning ---
-    const tuningHeading = document.createDocumentFragment();
+    const tuningHeading = activeDocument.createDocumentFragment();
     tuningHeading.appendText('Search and context tuning');
-    tuningHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    tuningHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
@@ -312,9 +311,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 4. Developer and Debugging ---
-    const devHeading = document.createDocumentFragment();
+    const devHeading = activeDocument.createDocumentFragment();
     devHeading.appendText('Developer');
-    devHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    devHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
@@ -346,26 +345,28 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .setIcon('terminal')
             .onClick(async () => {
                 const apiKey = await plugin.geminiService.getApiKey();
-                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true);
+                const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
+                const ollamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true, false, false, ollamaHeaders);
                 
                 const raw = ModelRegistry.getRawResponse();
                 const rawOllama = ModelRegistry.getRawOllamaResponse();
                 if (raw) {
-                    console.debug("[VaultIntelligence] Raw Gemini models:", raw);
+                    logger.debug("[VaultIntelligence] Raw Gemini models:", raw);
                 }
                 if (rawOllama) {
-                    console.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
+                    logger.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
                 } else if (plugin.settings.ollamaEndpoint) {
-                    console.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
+                    logger.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
                 }
             })
         );
     });
 
     // --- 5. Security (Proactive SSRF Protection) ---
-    const secHeading = document.createDocumentFragment();
+    const secHeading = activeDocument.createDocumentFragment();
     secHeading.appendText('Security');
-    secHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    secHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.appendText('Allows the agent to access localhost and private network IPs. ');
         div.createDiv({ cls: 'vault-intelligence-settings-warning' }, (warnDiv) => {
             setIcon(warnDiv.createSpan(), 'lucide-alert-triangle');
@@ -387,9 +388,9 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 6. Model filtering ---
-    const filterHeading = document.createDocumentFragment();
+    const filterHeading = activeDocument.createDocumentFragment();
     filterHeading.appendText('Model filtering');
-    filterHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
+    filterHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
     });
     const filterGroup = new SettingGroup(containerEl).setHeading(filterHeading);

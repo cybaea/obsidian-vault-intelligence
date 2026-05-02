@@ -6,29 +6,17 @@ extensions:
     name: developer
     timeout: 300
     bundled: true
+parameters:
+  - name: "checklist"
+    description: "Path to the approved architectural checklist from the orchestrator."
+    required: true
 instructions: |
-  Adopt roles as systems architect and senior developer. Review the Vault Intelligence codebase.
-  
-  **Phase 1: Research & Planning**
-  - Research good architectural code practices for Node.js, Electron, and Obsidian plugins.
-  - Create a custom checklist based on your research.
-  - Evaluate the codebase against this checklist.
-  
-  **Phase 2: Specific Anti-Pattern Evaluations**
-  Scan and flag the following:
-  - Over-complication of logic.
-  - Insufficient test coverage (especially edge cases).
-  - Disabled lint checks.
-  - DRY principle violations.
-  - Magic numbers/strings (migrate to `src/constants.ts` or `src/settings/`).
-  - Fragile regular expressions (suggest robust parsers).
-  - TypeScript `any` abuse (enforce interfaces or `unknown`).
-  - Bang (!) operator overuse (suggest `?.` or `??`).
-  - The God Object (violating Single Responsibility).
-  - Primitive obsession (suggest Branded Types).
-  - Arrow Code / Nested Ifs (suggest Guard Clauses).
-  - Promise Hell (enforce `async/await`).
-  - Unnecessary abstractions.
-  
-  **Phase 3: Validation**
-  Run `npm run lint`, `npm run build`, and `npm run test`. Fix any warnings or errors.
+  ### 1. AUDIT PREPARATION
+  1. **Review File**: Initialize `.tasks/code-review-[TIMESTAMP].md`.
+  2. **Checklist Grounding**: Read the architectural checklist from the file with the path provided in the `checklist` parameter and use it as the foundation for your audit.
+
+  ### 2. EXECUTION
+  1. Evaluate the codebase against every item in the provided checklist.
+  2. **Specific Scan**: Audit for `any` abuse, God Objects, Arrow Code, and fragile Regex.
+  3. **RPI Handoff**: Document every finding with a specific implementation plan in the Review File.
+  4. **Strict Safety**: The use of `any` is an automatic Architectural Failure.

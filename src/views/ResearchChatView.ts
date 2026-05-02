@@ -8,6 +8,7 @@ import { ModelRegistry } from "../services/ModelRegistry";
 import { ProviderRegistry } from "../services/ProviderRegistry";
 import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
+import { logger } from "../utils/logger";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
@@ -158,7 +159,7 @@ export class ResearchChatView extends ItemView {
         const inputContainer = container.createDiv({ cls: "input-container" });
         this.inputComponent = new TextAreaComponent(inputContainer);
         this.inputComponent.inputEl.addClass("chat-input");
-        this.inputComponent.setPlaceholder("Ask your vault... (use @ to link notes)");
+        this.inputComponent.setPlaceholder("Ask your vault... (Use @ to link notes)");
 
         this.inputComponent.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -224,7 +225,7 @@ export class ResearchChatView extends ItemView {
                 this.addMessage("system", "", undefined, undefined, undefined, reflexResults);
             }
         } catch (e) {
-            console.error("Spotlight Reflex failed", e);
+            logger.error("Spotlight Reflex failed", e);
         }
 
         try {
@@ -285,7 +286,7 @@ export class ResearchChatView extends ItemView {
                     streamingComponent = new Component();
                     streamingComponent.load();
 
-                    const tempEl = document.createElement('div');
+                    const tempEl = activeDocument.createDiv();
                     
                     // 3. Render into the temporary component, NOT `this`
                     await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
@@ -297,7 +298,7 @@ export class ResearchChatView extends ItemView {
                         const getOffset = (node: Node | null, offset: number) => {
                             if (!node) return 0;
                             let totalOffset = offset;
-                            const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                            const walker = activeDocument.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
                             let currentNode: Node | null = walker.nextNode();
                             while (currentNode && currentNode !== node) {
                                 totalOffset += currentNode.textContent?.length || 0;
@@ -318,7 +319,7 @@ export class ResearchChatView extends ItemView {
                         
                         if (savedSelection && selection) {
                             const findNodeAndOffset = (targetOffset: number) => {
-                                const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                                const walker = activeDocument.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
                                 let currentNode: Node | null = walker.nextNode();
                                 let currentOffset = 0;
                                 let lastTextNode: Node | null = null;

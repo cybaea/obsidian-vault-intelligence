@@ -2,7 +2,7 @@
 
 Vault Intelligence is a different AI plugin for Obsidian. It transforms your vault into a dynamic, self-maintaining knowledge system. It goes beyond simple Q&A by introducing agents that maintain your vault's structure, retrieve information based on your explicit connections, and ground your knowledge in the real world.
 
-With 9.1, we are doubling down on our core differentiator: **The Gardener**. 
+With 9.1, we are doubling down on our core differentiator: **The Gardener**.
 
 This release introduces significant optimizations for vault hygiene, respects how you physically organise your data, and deepens our native external search grounding.
 
@@ -26,6 +26,6 @@ Vault Intelligence has always merged internal vault context with external web gr
 
 An active agent that shapes your vault must be bulletproof. We've deployed crucial reliability improvements to the underpinning architecture:
 
--   **Agent Write-Access**: Fortified the strict cryptographic boundaries protecting file modifications.
--   **Context Injection**: Improved the stability of the "Accordion" context assembly, ensuring the AI never hallucinates due to context overload.
--   **Streaming Cancellation**: Fixed UI lockups during long-running agent generations.
+- **Agent Write-Access**: Fortified the strict cryptographic boundaries protecting file modifications.
+- **Context Injection**: Improved the stability of the "Accordion" context assembly, ensuring the AI never hallucinates due to context overload.
+- **Streaming Cancellation**: Fixed UI lockups during long-running agent generations.

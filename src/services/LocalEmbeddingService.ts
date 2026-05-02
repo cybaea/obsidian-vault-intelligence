@@ -380,7 +380,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             totalTokens += tokenCount;
 
             // Explicitly yield to main thread event loop between chunks
-            await new Promise(resolve => setTimeout(resolve, 0));
+            await new Promise(resolve => activeWindow.setTimeout(resolve, 0));
         }
         return {
             tokenCount: totalTokens,
@@ -403,9 +403,9 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             }
 
             // 2-minute safety timeout for metadata/weights fetching
-            let timeoutId: ReturnType<typeof setTimeout> | undefined;
+            let timeoutId: number | undefined;
             const timeoutPromise = new Promise<never>((_, reject) => 
-                timeoutId = setTimeout(() => reject(new Error(`Proxy request timed out after ${WORKER_CONSTANTS.PROXY_TIMEOUT_MS}ms: ${data.url}`)), WORKER_CONSTANTS.PROXY_TIMEOUT_MS)
+                timeoutId = activeWindow.setTimeout(() => reject(new Error(`Proxy request timed out after ${WORKER_CONSTANTS.PROXY_TIMEOUT_MS}ms: ${data.url}`)), WORKER_CONSTANTS.PROXY_TIMEOUT_MS)
             );
 
             try {
@@ -432,7 +432,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
                     type: 'fetch_response',
                 }, [response.arrayBuffer]); // Use transferrable
             } finally {
-                if (timeoutId) clearTimeout(timeoutId);
+                if (timeoutId) activeWindow.clearTimeout(timeoutId);
             }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);

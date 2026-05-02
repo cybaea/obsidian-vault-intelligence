@@ -1,22 +1,44 @@
 version: "1.0.0"
 title: "Developer Documentation Review"
-description: "Analyzes code to update system architecture documentation."
+description: "Intent-based architectural discovery and documentation update."
 extensions:
   - type: builtin
     name: developer
-    timeout: 300
+    timeout: 600
     bundled: true
 instructions: |
   Adopt roles as systems architect and systems analyst.
-  
-  **Tasks:**
-  1. Analyze the code to update `devs/ARCHITECTURE.md` as a detailed reference (complemented by `devs/adr/`).
-  2. Ensure documentation targets Developers, Collaborators, Systems Analysts, and Maintainers.
-  3. Generate and embed Mermaid.js diagrams for:
-     - Data Flows.
-     - Control Flows and interfaces.
-  4. Ensure strict documentation on all Service interfaces. Add Inline JSDoc where missing.
-  5. Check adherence to markdown formatting rules in `.agents/rules/Markdown.md`.
-  
-  **Validation:**
-  Run `npm run lint` and `npm run docs:build`. Fix any issues.
+  **Mandatory Grounding**: Read AGENTS.md, security-and-robustness.md, and ARCHITECTURE.md.
+
+  ### PHASE 1: DYNAMIC ARCHITECTURAL DISCOVERY
+  Identify and trace the following functional paths in the current codebase:
+
+  1. **Service Topology**: 
+     - Map all singleton services instantiated in the main entry point. 
+     - Document their primary responsibilities and how they adhere to the SOA 'Golden Rules'.
+  2. **The Indexing Flow**: 
+     - Trace the path from a 'vault mutation' event to the final persistence of vector/graph data. 
+     - Identify where batching, debouncing, and worker-offloading occur.
+  3. **The Retrieval Flow**: 
+     - Trace a 'user query' from the UI through the various loops of search and ranking. 
+     - Identify where 'hollow' results are generated and where they are 'hydrated' with vault content.
+  4. **The Persistence Strategy**: 
+     - Map how the system handles 'Slim-Sync': find the logic that separates local-only high-speed storage (Hot Store) from vault-synced data (Cold Store).
+  5. **The Trust Boundary**: 
+     - Identify the security protocols governing the communication between the Main Thread, Web Workers, and any external subprocesses or APIs.
+
+  ### PHASE 2: DOCUMENTATION UPDATE
+  1. **Source of Truth**: Update `devs/ARCHITECTURE.md` as a detailed reference for the current version, mapping your discovered paths to the high-level design.
+  2. **Mermaid Diagrams**: Generate or update diagrams in `devs/ARCHITECTURE.md` as needed for:
+     - **Data Flow**: The discovered Indexing/Vectorization pipeline.
+     - **Control Flow**: The Agent's multi-turn tool execution logic.
+     - **Trust Boundaries**: The security isolation between the vault, workers, and external MCP/API entities.
+     - Any other diagrams that would aid in developer understanding and onboarding.
+  3. **ADR Cross-Reference**: For every architectural decision, cross-reference it with any related Architectural Decision Records in `devs/adr/`. 
+      - **Missing ADRs**: If you find decisions that are not yet documented as ADRs, create new ones with detailed context and rationale.
+      - **Outdated ADRs**: If you find ADRs that are outdated or no longer relevant, flag them for review but do not delete or modify them.
+  4. **Interface Audit**: Ensure all discovered Service interfaces are documented with strict Inline JSDoc.
+
+  ### PHASE 3: VALIDATION
+  1. **Build Quality**: Run `npm run lint` and `npm run docs:build`.
+  2. **Markdown Integrity**: Adhere to `.agents/rules/Markdown.md

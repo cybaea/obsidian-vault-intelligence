@@ -175,7 +175,17 @@ export class ModelRegistry {
      * @param apiKey - The Google Gemini API key.
      * @param cacheDurationDays - How many days to cache the results for.
      */
-    public static async fetchModels(app: App, pluginDir: string, settings: VaultIntelligenceSettings, apiKey: string, cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, forceUpdate: boolean = false, throwOnError: boolean = false, skipOllamaFetch: boolean = false): Promise<void> {
+    public static async fetchModels(
+        app: App, 
+        pluginDir: string, 
+        settings: VaultIntelligenceSettings, 
+        apiKey: string, 
+        cacheDurationDays: number = MODEL_REGISTRY_CONSTANTS.DEFAULT_CACHE_DURATION_DAYS, 
+        forceUpdate: boolean = false, 
+        throwOnError: boolean = false, 
+        skipOllamaFetch: boolean = false,
+        ollamaHeaders: Record<string, string> = {}
+    ): Promise<void> {
         if (this.isFetching) return;
 
         this.ollamaDetailsCache.clear();
@@ -271,7 +281,7 @@ export class ModelRegistry {
                     }
                 } else {
                     tasks.push(
-                        this.fetchOllamaModels(settings.ollamaEndpoint)
+                        this.fetchOllamaModels(settings.ollamaEndpoint, ollamaHeaders)
                             .then(res => {
                                 if (res.success) {
                                     ollamaModels = res.models;
@@ -361,11 +371,12 @@ export class ModelRegistry {
         return { models, rawResponse: data };
     }
 
-    private static async fetchOllamaModels(endpoint: string): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null, success: boolean }> {
+    private static async fetchOllamaModels(endpoint: string, headers: Record<string, string> = {}): Promise<{ models: ModelDefinition[], rawResponse: OllamaTagsResponse | null, success: boolean }> {
         if (!endpoint) return { models: [], rawResponse: null, success: false };
 
         try {
             const response = await requestUrl({
+                headers,
                 method: 'GET',
                 url: `${endpoint}/api/tags`
             });
@@ -595,7 +606,7 @@ export class ModelRegistry {
      * Fetches details for a specific Ollama model JIT.
      * Extracts context length for reasoning models and embedding dimensions for embedding models.
      */
-    public static async fetchOllamaModelDetails(endpoint: string, modelId: string): Promise<ModelDefinition | undefined> {
+    public static async fetchOllamaModelDetails(endpoint: string, modelId: string, headers: Record<string, string> = {}): Promise<ModelDefinition | undefined> {
         const model = this.getModelById(modelId);
         if (!model) return undefined;
 
@@ -607,6 +618,7 @@ export class ModelRegistry {
         try {
             const response = await requestUrl({
                 body: JSON.stringify({ name: cleanId }),
+                headers,
                 method: 'POST',
                 url: `${endpoint}/api/show`
             });

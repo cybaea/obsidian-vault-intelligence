@@ -26,7 +26,6 @@ export default tseslint.config(
 	},
 	// Include TypeScript ESLint recommended configs to register the plugin
 	...tseslint.configs.recommended,
-	// @ts-expect-error -- Type mismatch in plugin config export
 	...obsidianmd.configs.recommended,
 	// Add eslint-comments plugin and our strict rules ONLY for TypeScript files
 	{
@@ -51,9 +50,17 @@ export default tseslint.config(
 			"perfectionist/sort-imports": "error",
 			"perfectionist/sort-interfaces": "error",
 			"perfectionist/sort-objects": "error",
+			"obsidianmd/prefer-create-el": "off", // Conflicts with standard TypeScript Document types
+		}
+	},
+	{
+		files: ['src/workers/**/*.ts', 'tests/**/*.ts'],
+		rules: {
+			"obsidianmd/prefer-active-doc": "off", // Workers and tests do not have a DOM/activeDocument
 		}
 	},
 	globalIgnores([
+		".tmp",
 		"node_modules",
 		"dist",
 		".vitepress",

@@ -8,7 +8,7 @@ export class FileSuggest extends AbstractInputSuggest<TAbstractFile> {
         this.inputEl = inputEl;
     }
 
-    getSuggestions(query: string): TAbstractFile[] {
+    getSuggestions(_query: string): TAbstractFile[] {
         const cursorPosition = this.inputEl.selectionStart;
         const textBeforeCursor = this.inputEl.value.substring(0, cursorPosition);
         const lastAtIndex = textBeforeCursor.lastIndexOf("@");

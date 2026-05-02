@@ -2,7 +2,7 @@ I got tired of manually copying text from the chat window into my notes. It brea
 
 So for v4.3.1, I added file system capabilities to the researcher. It can now create notes, update trackers, or refactor content directly from the chat.
 
-https://github.com/cybaea/obsidian-vault-intelligence
+<https://github.com/cybaea/obsidian-vault-intelligence>
 
 `@obsidian@mas.to`
 \#Obsidian \#PKM

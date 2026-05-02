@@ -49,7 +49,7 @@ describe('FileTools Atomic Update', () => {
         const newBodyContent = 'New appended content';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });
@@ -68,7 +68,7 @@ describe('FileTools Atomic Update', () => {
         const newBodyContent = 'Overwrite everything';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });
@@ -85,7 +85,7 @@ describe('FileTools Atomic Update', () => {
         const newBodyContent = 'Appended';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });
@@ -102,7 +102,7 @@ describe('FileTools Atomic Update', () => {
         const newPart = 'New start';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });
@@ -118,7 +118,7 @@ describe('FileTools Atomic Update', () => {
         const newPart = 'Appended';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });
@@ -137,7 +137,7 @@ describe('FileTools Atomic Update', () => {
         const newPart = 'Prepended';
 
         let capturedResult: string = '';
-        (mockApp.vault.process as any).mockImplementation(async (file: TFile, callback: (content: string) => string) => {
+        (mockApp.vault.process as any).mockImplementation(async (_file: TFile, callback: (content: string) => string) => {
             capturedResult = callback(oldContent);
             return capturedResult;
         });

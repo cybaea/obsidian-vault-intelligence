@@ -2,6 +2,9 @@ import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsi
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { validateHeaderKey } from "../../utils/headers";
+import { resolveSecrets } from "../../utils/secrets";
+import { renderKeyValueEditor } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import "../components"; // Ensure prototype extensions load
 import { BANNER_BASE64 } from "./banner-data";
@@ -103,7 +106,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
                 if (actualKey && actualKey.startsWith('AIza')) {
                     try {
-                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0);
+                        const app = plugin.app as unknown as InternalApp;
+                        const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                        const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+                        
+                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders);
                         new Notice("API key valid. Models loaded.");
                     } catch {
                         if (actualKey.length > 30) new Notice("Failed to load models.");
@@ -111,7 +118,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 }
             }));
 
-        apiSetting.descEl.createEl('div', {
+        apiSetting.descEl.createDiv({
             cls: 'vi-settings-hint',
             text: `To use a new key, click "${"Link"}" to select or create a secret. Credentials are stored securely and not synced.`
         });
@@ -164,6 +171,26 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 btn.setButtonText("Test connection");
             }));
 
+    renderKeyValueEditor({
+        container: containerEl,
+        currentJson: plugin.settings.ollamaHeaders,
+        description: "Optional HTTP headers for authentication or proxy configuration. Use 'Secret' to securely store tokens in the device keychain.",
+        onChange: (value: string) => {
+            plugin.settings.ollamaHeaders = value;
+            void plugin.saveSettings();
+        },
+        onError: (error: string) => new Notice(error),
+        onSaveSecret: (key: string, value: string) => {
+            const storage = plugin.app.secretStorage as unknown as { setSecret?: (k:string, v:string)=>void };
+            if (storage && storage.setSecret) {
+                storage.setSecret(key, value);
+            }
+        },
+        secretKeyPrefix: `ollama-headers-`,
+        title: "Ollama HTTP headers",
+        validateKey: (key: string) => validateHeaderKey(key)
+    });
+
     // --- 3. Model List Management ---
     new Setting(containerEl)
         .setName('Model management')
@@ -183,7 +210,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     const apiKey = await plugin.geminiService.getApiKey();
                     if (!apiKey) throw new Error("API key not found.");
 
-                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true);
+                    const app = plugin.app as unknown as InternalApp;
+                    const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                    const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+
+                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders);
                     new Notice("Model list refreshed");
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);
@@ -207,14 +238,14 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
  */
 function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
-    const fragment = document.createDocumentFragment();
+    const fragment = activeDocument.createDocumentFragment();
 
     const google = "Google";
     const gemini = "Gemini";
 
     fragment.append(`Enter your ${google} ${gemini} API key.`);
 
-    fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div) => {
+    fragment.createDiv({ cls: 'vault-intelligence-settings-info' }, (div: HTMLDivElement) => {
         const iconSpan = div.createSpan();
         setIcon(iconSpan, 'lucide-info');
         div.createSpan({}, (textSpan) => {
@@ -228,24 +259,24 @@ function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => vo
     });
 
     if (storeFailure) {
-        fragment.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        fragment.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
             const iconSpan = div.createSpan();
             setIcon(iconSpan, 'lucide-alert-triangle');
             div.createSpan({}, (textSpan) => {
                 textSpan.createEl('strong', { text: 'Security note: ' });
                 textSpan.append(`Secure storage is unavailable on this system. Key is stored in plain text in ${configDir}/ folder.`);
             });
-            div.createEl('button', { cls: 'mod-cta', text: 'Retry secure storage' }, (btn) => {
+            div.createEl('button', { cls: 'mod-cta', text: 'Retry secure storage' }, (btn: HTMLButtonElement) => {
                 btn.onclick = () => {
                     void onRetry();
                 };
             });
         });
     } else {
-        fragment.createDiv({ cls: 'vault-intelligence-settings-success' }, (div) => {
+        fragment.createDiv({ cls: 'vault-intelligence-settings-success' }, (div: HTMLDivElement) => {
             const iconSpan = div.createSpan();
             setIcon(iconSpan, 'lucide-lock');
-            div.createSpan({}, (textSpan) => {
+            div.createSpan({}, (textSpan: HTMLSpanElement) => {
                 textSpan.append('Secure storage is active. Credentials are encrypted by the OS keychain.');
             });
         });

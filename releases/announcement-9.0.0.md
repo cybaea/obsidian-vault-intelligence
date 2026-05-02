@@ -8,7 +8,7 @@ This was genuinely painful to implement with all the security and robustness, bu
 
 **Testers wanted**: please let me have your comments.
 
-## Highlights:
+## Highlights
 
 - **Local Models (Ollama)**: Full, production-ready support for local AI, allowing you to keep your data entirely on your machine. The agent now handles complex JSON tool-calling reliably.
 - **Model Context Protocol (MCP)**: Safely interact with external databases, APIs, and local services using standard MCP servers. Execution is protected by mandatory Trust Hash verification.

@@ -4,15 +4,15 @@ description: Prepare the release notes and announcements
 
 **Role**: Product Lead & Developer Advocate (Vault Intelligence)
 
-**Context**: 
+**Context**:
 
 We are releasing a new version of Vault Intelligence.
 
 __Important_: The `npm run release:prep` command has run, so `package.json` and `CHANGELOG.md` are up to date.
 
 **Your Mission**:
- 
-Translate technical changes into compelling narratives. You are not just listing features; you are explaining _why_ this update improves the user's life. 
+
+Translate technical changes into compelling narratives. You are not just listing features; you are explaining _why_ this update improves the user's life.
 
 Tone of voice: That of the developer sharing his project; avoid corporate speak and excessive superlatives; keep adjectives to minimum and be factual. Use British English language and idioms with Oxford spelling throughout.
 
@@ -22,9 +22,9 @@ Tone of voice: That of the developer sharing his project; avoid corporate speak 
 
 _Before generating any files, analyze the `CHANGELOG.md`._
 
-1.  **Identify the Pillars**: What are the 1-3 headline features? (e.g., "Agentic Writing" AND "Multilingual Support").
-2.  **The "Soul"**: How do these pillars connect? (e.g., "This release is about _autonomy_ and _accessibility_").
-3.  **Categorize**: Separate the "Headline" features from the "Quality of Life" improvements.
+1. **Identify the Pillars**: What are the 1-3 headline features? (e.g., "Agentic Writing" AND "Multilingual Support").
+2. **The "Soul"**: How do these pillars connect? (e.g., "This release is about _autonomy_ and _accessibility_").
+3. **Categorize**: Separate the "Headline" features from the "Quality of Life" improvements.
 
 If needed for additional clarity then you can analyze the code, the user documentation (`docs/`) or the developer documentation (`devs/`).
 
@@ -37,13 +37,13 @@ If needed for additional clarity then you can analyze the code, the user documen
 
 **Guidelines**:
 
-*   **Header**: `# {VERSION} — {Thematic Title}`
-    *   _Create a title that captures the Pillars. Compound titles are fine. Keep it real and meaningful to the user._
-*   **The Narrative**: Start with a paragraph that weaves the **Pillars** into a coherent story. Why do they belong in the same update?
-*   **Feature Deep Dives**:
-    *   Use headers for each Pillar feature.
-    *   Focus on _utility_. Don't say "Added X"; say "You can now do X, which lets you Y."
-*   **The Polish**: Group smaller fixes/improvements at the end.
+* **Header**: `# {VERSION} — {Thematic Title}`
+  * _Create a title that captures the Pillars. Compound titles are fine. Keep it real and meaningful to the user._
+* **The Narrative**: Start with a paragraph that weaves the **Pillars** into a coherent story. Why do they belong in the same update?
+* **Feature Deep Dives**:
+  * Use headers for each Pillar feature.
+  * Focus on _utility_. Don't say "Added X"; say "You can now do X, which lets you Y."
+* **The Polish**: Group smaller fixes/improvements at the end.
 
 ---
 
@@ -55,11 +55,11 @@ If needed for additional clarity then you can analyze the code, the user documen
 
 **Guidelines**:
 
-*   **Header**: `# Vault Intelligence {VERSION}`
-*   **The Pitch**: One sentence that defines the plugin for a total stranger.
-*   **The Hook**: "This update brings..." (Summarize the Pillars)
-*   **The Highlights**: 3-4 bullet points covering the Pillars + 1 top "Delight" feature.
-*   **Call to Action**: "Install via BRAT: https://github.com/cybaea/obsidian-vault-intelligence "
+* **Header**: `# Vault Intelligence {VERSION}`
+* **The Pitch**: One sentence that defines the plugin for a total stranger.
+* **The Hook**: "This update brings..." (Summarize the Pillars)
+* **The Highlights**: 3-4 bullet points covering the Pillars + 1 top "Delight" feature.
+* **Call to Action**: "Install via BRAT: <https://github.com/cybaea/obsidian-vault-intelligence> "
 
 ---
 
@@ -70,35 +70,36 @@ If needed for additional clarity then you can analyze the code, the user documen
 
 **Guidelines**:
 
-*   **Format**: 3-6 posts separated by `---`. Max 450 chars/post.
-*   **Tone**: Authentic, transparent, "Quiet Confidence". Avoid marketing hype words ("game-changer", "unleashed"), avoid superlatives unless strictly factual, and minimise adjectives in favour of facts.
+* **Format**: 3-6 posts separated by `---`. Max 450 chars/post.
+* **Tone**: Authentic, transparent, "Quiet Confidence". Avoid marketing hype words ("game-changer", "unleashed"), avoid superlatives unless strictly factual, and minimise adjectives in favour of facts.
 
 **Structure**:
 
 **Post 1: The Context**
-*   **Requirement**: First sentence MUST define what the plugin is and what it is for.
-*   **The Hook**: Then transition to the frustration that motivated this update, linking it to the solution (pain-reliever or gain-creator) and the "Soul" of this release.
-*   _Mandatory_: Link to repo. Include `@obsidian@mas.to`, and hashtags `#Obsidian #PKM` if not already used in main text.
 
-1.  **Post 1 (The Friction)**: Start with the problem or frustration that motivated this update. Then summarise the soal of this release in that context.
-    *   Include at least some background to Vault Intelligence as context for readers who are not yet users.
-    *   _Mandatory_: Link to repo, `@obsidian@mas.to`, `#Obsidian #PKM`.
-2.  **Posts 2-4 (The Pillars)**: Dedicate one post to each "Pillar" feature.
-    *   Explain the solution or the capability. Focus on the value to the user. If there is genuine technical innovation in how we've implemented it you MAY mention that.
-    *   _If risky_ (e.g. write access): Explain safety guards.
-    *   _If complex_: Use a concrete example.
-3.  **Post X (The Polish)**: Briefly mention the "Delight" features (speed, UI).
-4.  **Final Post**: 
-    *   Gratitude: Pick ONE of {sponsors, users, testers, people who raised bug reports, people who submitted feature requests, people who starred our GitHub repository} and express gratitude. Keep it brief.
-    *   **Mandatory**: CTA to install via BRAT using https://github.com/cybaea/obsidian-vault-intelligence link.
-    *   Optional: up to five additional hashtags if relevant. Zero is fine.
+* **Requirement**: First sentence MUST define what the plugin is and what it is for.
+* **The Hook**: Then transition to the frustration that motivated this update, linking it to the solution (pain-reliever or gain-creator) and the "Soul" of this release.
+* _Mandatory_: Link to repo. Include `@obsidian@mas.to`, and hashtags `#Obsidian #PKM` if not already used in main text.
+
+1. **Post 1 (The Friction)**: Start with the problem or frustration that motivated this update. Then summarise the soal of this release in that context.
+    * Include at least some background to Vault Intelligence as context for readers who are not yet users.
+    * _Mandatory_: Link to repo, `@obsidian@mas.to`, `#Obsidian #PKM`.
+2. **Posts 2-4 (The Pillars)**: Dedicate one post to each "Pillar" feature.
+    * Explain the solution or the capability. Focus on the value to the user. If there is genuine technical innovation in how we've implemented it you MAY mention that.
+    * _If risky_ (e.g. write access): Explain safety guards.
+    * _If complex_: Use a concrete example.
+3. **Post X (The Polish)**: Briefly mention the "Delight" features (speed, UI).
+4. **Final Post**:
+    * Gratitude: Pick ONE of {sponsors, users, testers, people who raised bug reports, people who submitted feature requests, people who starred our GitHub repository} and express gratitude. Keep it brief.
+    * **Mandatory**: CTA to install via BRAT using <https://github.com/cybaea/obsidian-vault-intelligence> link.
+    * Optional: up to five additional hashtags if relevant. Zero is fine.
 
 ---
 
-**Action**: 
+**Action**:
 
-1.  Read `package.json` for the version.
-2.  Read `CHANGELOG.md`.
-3.  Apply your reasoning to find the Pillars.
-4.  Generate the three files.
-5.  Link the GitHub release notes in our VitePress documentation.
+1. Read `package.json` for the version.
+2. Read `CHANGELOG.md`.
+3. Apply your reasoning to find the Pillars.
+4. Generate the three files.
+5. Link the GitHub release notes in our VitePress documentation.

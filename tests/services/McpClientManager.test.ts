@@ -11,7 +11,7 @@ const mockSpawn = vi.fn().mockImplementation(() => ({
     pid: 12345,
     stderr: { on: vi.fn(), setEncoding: vi.fn() },
     stdin: { 
-        write: vi.fn((data: string, cb: (err?: Error) => void) => {
+        write: vi.fn((_data: string, cb: (err?: Error) => void) => {
             // Fail the handshake immediately to prevent the SDK's client.connect() from hanging
             if (typeof cb === 'function') cb(new Error("Mock write error to prevent hang"));
         })
@@ -245,7 +245,7 @@ describe('McpClientManager', () => {
 
         managerWithInternal.connections.set('test-server', {
             client: {
-                callTool: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 1000)))
+                callTool: vi.fn(() => new Promise((resolve) => activeWindow.setTimeout(resolve, 1000)))
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
             status: 'connected'

@@ -4,17 +4,17 @@ The Explorer view helps you rediscover forgotten notes and find hidden relations
 
 ## Opening the Explorer
 
-1.  Click the brain circuit icon in the left ribbon to open the Vault Intelligence menu.
-2.  Select **Explorer: view similar notes** to open the list view, or **Explorer: view semantic galaxy** to open the interactive graph.
-3.  Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer`.
+1. Click the brain circuit icon in the left ribbon to open the Vault Intelligence menu.
+2. Select **Explorer: view similar notes** to open the list view, or **Explorer: view semantic galaxy** to open the interactive graph.
+3. Alternatively, use the Command Palette (`Ctrl/Cmd + P`) and search for: `Explorer`.
 
 ## Finding Similar Notes
 
 The "Similar notes" view provides a prioritized list of related documents. It works automatically based on your current active note.
 
--   Automatic Updates: As you switch between notes, the Explorer list refreshes to show the most semantically similar content in your vault.
--   Semantic Matching: Unlike standard search, it finds notes that share the same meaning, even if they use different keywords.
--   Relevance Scores: Each suggestion includes a similarity percentage. High scores (eg 85%+) indicate very close conceptual matches.
+- Automatic Updates: As you switch between notes, the Explorer list refreshes to show the most semantically similar content in your vault.
+- Semantic Matching: Unlike standard search, it finds notes that share the same meaning, even if they use different keywords.
+- Relevance Scores: Each suggestion includes a similarity percentage. High scores (eg 85%+) indicate very close conceptual matches.
 
 ## The Semantic Galaxy
 
@@ -26,10 +26,10 @@ You can access the galaxy through the same ribbon menu or via the Command Palett
 
 ### Interaction and Controls
 
--   Visual RAG: When the Researcher agent mentions a note in its chat, the note will glow in the galaxy view, helping you "see" the AI's reasoning.
--   Attraction Slider: Use the sidebar slider to adjust the "gravity" of the layout. High attraction pulls related notes into tight clusters, while low attraction allows for a broader, flat view.
--   Reshuffle: Click the reshuffle button to instantly regenerate the layout if the nodes become tangled.
--   Smart Panning: Double-click nodes to navigate to them, or hover to see a native Obsidian preview.
+- Visual RAG: When the Researcher agent mentions a note in its chat, the note will glow in the galaxy view, helping you "see" the AI's reasoning.
+- Attraction Slider: Use the sidebar slider to adjust the "gravity" of the layout. High attraction pulls related notes into tight clusters, while low attraction allows for a broader, flat view.
+- Reshuffle: Click the reshuffle button to instantly regenerate the layout if the nodes become tangled.
+- Smart Panning: Double-click nodes to navigate to them, or hover to see a native Obsidian preview.
 
 ## Use Cases
 
@@ -49,9 +49,9 @@ If a note shows a 99% similarity to another note, you might have accidentally cr
 
 You can adjust how the Explorer calculates similarity in Settings > Explorer.
 
--   Minimum similarity: Increase this if you only want to see very strong matches.
--   Number of results: Limit this to keep your sidebar clean.
--   Semantic vs Structural: Adjust the weight of the galaxy layout to prioritise existing Wikilinks or hidden vector similarities.
+- Minimum similarity: Increase this if you only want to see very strong matches.
+- Number of results: Limit this to keep your sidebar clean.
+- Semantic vs Structural: Adjust the weight of the galaxy layout to prioritise existing Wikilinks or hidden vector similarities.
 
 ## Folders as semantic topics
 
@@ -69,8 +69,8 @@ There are three modes available:
 
 In this mode, the plugin only treats a folder as a semantic topic **if it perfectly matches an existing concept in your Knowledge Base / Ontology.** For example, if you have a folder named `/AI/` and a perfectly matching ontology note named `AI.md`:
 
--   The plugin will automatically link all notes inside the `/AI/` folder to the `AI.md` concept node.
--   If you have a generic storage folder like `/Archive/` or `/Drafts/` (with no matching ontology note), the plugin will **safely ignore them**. This prevents your graph from being ruined by massive, meaningless "black hole" hubs.
+- The plugin will automatically link all notes inside the `/AI/` folder to the `AI.md` concept node.
+- If you have a generic storage folder like `/Archive/` or `/Drafts/` (with no matching ontology note), the plugin will **safely ignore them**. This prevents your graph from being ruined by massive, meaningless "black hole" hubs.
 
 ### 2. All (aggressive)
 
@@ -78,9 +78,9 @@ In this mode, the plugin only treats a folder as a semantic topic **if it perfec
 
 In this mode, **every single folder** in your vault is treated as a unique semantic topic, regardless of whether a matching note exists.
 
--   The plugin will generate "Virtual Nodes" for folders behind the scenes.
--   A note at `/Books/Fantasy/Dune.md` will be strongly linked to the concepts of `Books` and `Fantasy`.
--   **Warning:** If you have generic folders like `/Attachments/` containing hundreds of images, they will form massive visual clusters in the semantic galaxy view.
+- The plugin will generate "Virtual Nodes" for folders behind the scenes.
+- A note at `/Books/Fantasy/Dune.md` will be strongly linked to the concepts of `Books` and `Fantasy`.
+- **Warning:** If you have generic folders like `/Attachments/` containing hundreds of images, they will form massive visual clusters in the semantic galaxy view.
 
 ### 3. None (disabled)
 

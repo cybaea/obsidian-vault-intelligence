@@ -24,6 +24,10 @@ import { ResearchChatView } from "./views/ResearchChatView";
 import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
 
+interface InternalOllamaProvider {
+	getHeaders(): Record<string, string>;
+}
+
 interface InternalSecretStorage {
 	setSecret(key: string, value: string): void;
 }
@@ -167,8 +171,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
+				const ollamaProvider = this.providerRegistry.getOllamaProvider() as unknown as InternalOllamaProvider;
+				const ollamaHeaders = ollamaProvider?.getHeaders ? ollamaProvider.getHeaders() : {};
 				// Pass skipOllamaFetch=true so we exclusively use the Ollama cache on startup to save costs
-				await ModelRegistry.fetchModels(this.app, this.manifest.dir || `${this.app.vault.configDir}/plugins/vault-intelligence`, this.settings, apiKey, this.settings.modelCacheDurationDays, false, false, true);
+				await ModelRegistry.fetchModels(this.app, this.manifest.dir || `${this.app.vault.configDir}/plugins/vault-intelligence`, this.settings, apiKey, this.settings.modelCacheDurationDays, false, false, true, ollamaHeaders);
 				// Re-sanitize after fetch completes in case dynamic limits are different
 				await this.sanitizeBudgets();
 			})();

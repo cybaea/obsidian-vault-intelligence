@@ -119,6 +119,6 @@ Technical tuning for performance and security.
 
 Vault Intelligence stores its search index and relationship graph in a specialised binary format inside the plugin's `data/` directory.
 
--   **Automated .gitignore**: The plugin automatically manages a `.gitignore` file for its data folder to prevent massive index files from bloating your Git repository or causing sync conflicts.
--   **Data Safety**: The index is a derived cache; it can be regenerated from your notes at any time by clicking **Re-index Vault** in the Explorer settings.
--   **Secure Storage**: On supported systems (macOS, Windows, Linux with `libsecret`), your API keys are stored in the OS keychain, never in plain text.
+- **Automated .gitignore**: The plugin automatically manages a `.gitignore` file for its data folder to prevent massive index files from bloating your Git repository or causing sync conflicts.
+- **Data Safety**: The index is a derived cache; it can be regenerated from your notes at any time by clicking **Re-index Vault** in the Explorer settings.
+- **Secure Storage**: On supported systems (macOS, Windows, Linux with `libsecret`), your API keys are stored in the OS keychain, never in plain text.

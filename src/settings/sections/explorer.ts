@@ -5,6 +5,7 @@ import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { isComplexLanguage } from "../../utils/language-utils";
+import { logger } from "../../utils/logger";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
@@ -14,7 +15,7 @@ import { DEFAULT_SETTINGS } from "../types";
 export function renderExplorerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
 
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
         div.createEl('a', {
             attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
@@ -30,9 +31,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const loop = "Loop";
 
 
-    const providerDesc = document.createDocumentFragment();
+    const providerDesc = activeDocument.createDocumentFragment();
     providerDesc.appendText('Choose where your document vectors are calculated.');
-    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
     });
@@ -131,9 +132,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        const dimensionDesc = document.createDocumentFragment();
+        const dimensionDesc = activeDocument.createDocumentFragment();
         dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
-        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
             setIcon(div.createSpan(), 'lucide-alert-triangle');
             div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
         });
@@ -158,9 +159,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         dropdown.addOption('64', `64 (${name})`);
                     }
                 } else {
-                    dropdown.addOption('768', '768 (flash / standard)')
-                        .addOption('1536', '1536 (balanced)')
-                        .addOption('3072', '3072 (max / v4 default)');
+                    dropdown.addOption('768', '768 (Flash / standard)')
+                        .addOption('1536', '1536 (Balanced)')
+                        .addOption('3072', '3072 (Max / v4 default)');
                 }
 
                 dropdown.setValue(String(plugin.settings.embeddingDimension))
@@ -410,7 +411,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 await plugin.saveSettings();
             }));
 
-    const folderSemDesc = document.createDocumentFragment();
+    const folderSemDesc = activeDocument.createDocumentFragment();
     folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
     folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
     const ul = folderSemDesc.createEl('ul', { cls: 'vault-intelligence-settings-list' });
@@ -418,7 +419,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     ul.createEl('li', { text: 'Ontology: match existing ontology notes.' });
     ul.createEl('li', { text: 'All: every folder is a semantic topic.' });
 
-    folderSemDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
+    folderSemDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-scan on exit.' });
     });
@@ -450,7 +451,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
                         btn.setWarning();
-                        setTimeout(() => {
+                        activeWindow.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
                                 btn.buttonEl.classList.remove('mod-warning');
@@ -462,7 +463,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         } catch (e) {
                             const message = e instanceof Error ? e.message : String(e);
                             new Notice(`Re-indexing failed: ${message}`);
-                            console.error(e);
+                            logger.error("Re-indexing failed", e);
                         } finally {
                             btn.setButtonText('Re-index vault');
                             btn.buttonEl.classList.remove('mod-warning');

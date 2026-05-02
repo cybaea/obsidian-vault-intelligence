@@ -108,9 +108,13 @@ interface SerializedIndexState {
 }
 
 const workerLogger = {
+    // eslint-disable-next-line no-console -- Worker-specific logging
     debug: (msg: string, ...args: unknown[]) => console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console -- Worker-specific logging
     error: (msg: string, ...args: unknown[]) => console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console -- Worker-specific logging
     info: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args),
+    // eslint-disable-next-line no-console -- Worker-specific logging
     warn: (msg: string, ...args: unknown[]) => console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
 };
 
@@ -844,7 +848,7 @@ const IndexerWorker: WorkerAPI = {
         return subgraph.export();
     },
 
-    async initialize(conf: WorkerConfig, fetcher?: unknown, embedder?: (text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) {
+    async initialize(conf: WorkerConfig, _fetcher?: unknown, embedder?: (text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) {
         config = conf;
         graph = new Graph();
         if (typeof embedder === 'function') embedderProxy = embedder;

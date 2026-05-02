@@ -6,9 +6,9 @@ This design gives you total control over the tradeoffs between privacy, capabili
 
 ## The Three Core Components
 
-1.  **Search & Graph (Always Local)**: The actual searching of your notes, vector database operations (using Orama), and graph traversals are always handled entirely within Obsidian on your local machine. 
-2.  **Embeddings**: The models that convert your markdown text into mathematical vectors (numbers) for the search engine to use. 
-3.  **Reasoning & Gardening**: The large language models (LLMs) that read retrieved contexts, answer your questions, execute tools, and proactively maintain your vault structure. 
+1. **Search & Graph (Always Local)**: The actual searching of your notes, vector database operations (using Orama), and graph traversals are always handled entirely within Obsidian on your local machine.
+2. **Embeddings**: The models that convert your markdown text into mathematical vectors (numbers) for the search engine to use.
+3. **Reasoning & Gardening**: The large language models (LLMs) that read retrieved contexts, answer your questions, execute tools, and proactively maintain your vault structure.
 
 ---
 
@@ -18,24 +18,24 @@ When Vault Intelligence indexes your vault, it must convert text to vectors. You
 
 ### Option A: Google Gemini (Cloud) - _Default & Recommended_
 
--   **Model**: `gemini-embedding-001`
--   **Pros**: Low cost, extremely high quality semantic matching, multilingual processing, zero local hardware requirements. Soon to feature multi-format support (not just markdown) with `gemini-embeddings-2`.
--   **Cons**: Requires an internet connection to index new notes, sends your note text to Google.
--   **Best for**: Almost everyone. It is the perfect balance of semantic quality and device efficiency, preserving your battery and RAM.
+- **Model**: `gemini-embedding-001`
+- **Pros**: Low cost, extremely high quality semantic matching, multilingual processing, zero local hardware requirements. Soon to feature multi-format support (not just markdown) with `gemini-embeddings-2`.
+- **Cons**: Requires an internet connection to index new notes, sends your note text to Google.
+- **Best for**: Almost everyone. It is the perfect balance of semantic quality and device efficiency, preserving your battery and RAM.
 
 ### Option B: Transformers.js (Local, In-App)
 
--   **How it works**: Runs a tiny neural network directly inside Obsidian using WebAssembly (WASM).
--   **Pros**: Complete privacy, instantaneous (zero network overhead), no extra software needed. Minimal RAM usage.
--   **Cons**: Limited to smaller context windows (e.g., ~400 words per chunk for `bge-small-en-v1.5`), strains laptop batteries.
--   **Best for**: Users who want absolute privacy without configuring an external server.
+- **How it works**: Runs a tiny neural network directly inside Obsidian using WebAssembly (WASM).
+- **Pros**: Complete privacy, instantaneous (zero network overhead), no extra software needed. Minimal RAM usage.
+- **Cons**: Limited to smaller context windows (e.g., ~400 words per chunk for `bge-small-en-v1.5`), strains laptop batteries.
+- **Best for**: Users who want absolute privacy without configuring an external server.
 
 ### Option C: Ollama (Local, External Server)
 
--   **How it works**: Sends text to the Ollama application running on your computer.
--   **Pros**: Full privacy, supports massive context windows (e.g., `nomic-embed-text` with 8192 tokens), allows for document-scale embedding.
--   **Cons**: Requires Ollama running in the background, consumes dedicated VRAM/RAM, initial setup overhead.
--   **Best for**: Power users who want to embed entire long-form documents at once instead of granular paragraphs.
+- **How it works**: Sends text to the Ollama application running on your computer.
+- **Pros**: Full privacy, supports massive context windows (e.g., `nomic-embed-text` with 8192 tokens), allows for document-scale embedding.
+- **Cons**: Requires Ollama running in the background, consumes dedicated VRAM/RAM, initial setup overhead.
+- **Best for**: Power users who want to embed entire long-form documents at once instead of granular paragraphs.
 
 ---
 

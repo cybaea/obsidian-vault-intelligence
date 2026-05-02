@@ -5,6 +5,7 @@ import Sigma from "sigma";
 import { UI_STRINGS, VIEW_TYPES } from "../constants";
 import { GraphService } from "../services/GraphService";
 import { IVaultIntelligencePlugin } from "../settings/types";
+import { logger } from "../utils/logger";
 
 interface SigmaHoverData {
     color: string;
@@ -303,10 +304,10 @@ export class SemanticGraphView extends ItemView {
     private resolveThemeColors() {
         // Robust color resolution
         const getComputedColor = (cssVar: string, fallback: string) => {
-            const tempEl = document.body.createDiv();
+            const tempEl = activeDocument.body.createDiv();
             // Apply the var to color, if invalid, it will fallback to empty string
             tempEl.style.color = `var(${cssVar})`;
-            document.body.appendChild(tempEl);
+            activeDocument.body.appendChild(tempEl);
             const computedColor = getComputedStyle(tempEl).color;
             tempEl.remove();
             // If the computed color is empty or transparent, use fallback
@@ -528,7 +529,7 @@ export class SemanticGraphView extends ItemView {
                     }
                 }
             } catch (e) {
-                console.error("[SemanticGraphView] Failed to update graph", e);
+                logger.error("[SemanticGraphView] Failed to update graph", e);
             }
         })();
     }, 150, true);

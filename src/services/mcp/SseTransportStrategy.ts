@@ -1,9 +1,9 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 import { MCPServerConfig } from "../../settings/types";
+import { resolveSecrets } from "../../utils/secrets";
 import { isExternalUrl } from "../../utils/url";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
-import { resolveMcpSecrets } from "./utils";
 
 export class SseTransportStrategy implements IMcpTransportStrategy {
     public async connect(
@@ -23,7 +23,7 @@ export class SseTransportStrategy implements IMcpTransportStrategy {
         let headers: Record<string, string> = {};
         if (server.remoteHeaders) {
             try {
-                headers = resolveMcpSecrets(server.remoteHeaders, resolveSecret);
+                headers = await resolveSecrets(server.remoteHeaders, resolveSecret, `mcp-${server.id}-headers-`);
             } catch (e) {
                 throw new Error(`Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`);
             }

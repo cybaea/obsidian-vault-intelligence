@@ -6,8 +6,8 @@ import { Platform } from "obsidian";
 
 import { MCPServerConfig } from "../../settings/types";
 import { logger } from "../../utils/logger";
+import { resolveSecrets } from "../../utils/secrets";
 import { IMcpTransportStrategy, McpConnectionResult, SecretResolver } from "./IMcpTransportStrategy";
-import { resolveMcpSecrets } from "./utils";
 
 interface ChildProcessMinimal {
     kill: () => void;
@@ -67,7 +67,7 @@ class NativeStdioTransport implements Transport {
                 // while remaining strictly typed to satisfy ESLint
                 const req = (typeof window !== "undefined" && "require" in window)
                     ? (window as unknown as { require: (id: string) => unknown }).require
-                    : (globalThis as unknown as { require?: (id: string) => unknown }).require;
+                    : (activeDocument.win as unknown as { require?: (id: string) => unknown }).require;
 
                 if (typeof req !== "function") {
                     throw new Error("Native require is not available in this environment");
@@ -191,7 +191,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
 
         if (server.env) {
             try {
-                const customEnv = resolveMcpSecrets(server.env, resolveSecret);
+                const customEnv = await resolveSecrets(server.env, resolveSecret, `mcp-${server.id}-env-`);
                 for (const [k, v] of Object.entries(customEnv)) {
                     mergedEnv[k] = v;
                 }
@@ -233,7 +233,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                 try {
                     const req = (typeof window !== "undefined" && "require" in window)
                         ? (window as unknown as { require: (id: string) => unknown }).require
-                        : (globalThis as unknown as { require?: (id: string) => unknown }).require;
+                        : (activeDocument.win as unknown as { require?: (id: string) => unknown }).require;
 
                     if (typeof req !== "function") {
                         logger.warn("Native require is not available for process cleanup");
@@ -263,7 +263,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                         killer.on('close', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
-                        setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
+                        activeDocument.win.setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
                     }
                 } catch (e) {
                     logger.warn(`Failed to kill process tree for MCP pid ${pid}:`, e);

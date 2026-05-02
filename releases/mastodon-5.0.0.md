@@ -4,9 +4,9 @@ Fast reactions, followed by deep thought. We call it "Dual-Loop Search". 🧠
 
 This release completely rewrites the search architecture to solve the "I can't find my note" problem.
 
-https://github.com/cybaea/obsidian-vault-intelligence
+<https://github.com/cybaea/obsidian-vault-intelligence>
 
-@obsidian@mas.to #PKM #Obsidian
+@<obsidian@mas.to> #PKM #Obsidian
 
 ---
 
@@ -38,4 +38,4 @@ The result? A 99% smaller index for drawings and a search experience that finds 
 
 A big thank you to our users who pushed for better search accuracy. This architecture is the direct result of your feedback. 💜
 
-https://github.com/cybaea/obsidian-vault-intelligence
+<https://github.com/cybaea/obsidian-vault-intelligence>
