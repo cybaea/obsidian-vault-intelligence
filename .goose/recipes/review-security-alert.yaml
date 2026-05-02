@@ -42,6 +42,7 @@ instructions: |
      - **Update Priority**: (Immediate / Next Sprint / Informational)
      - **Risk Summary**: Explain if we are actually vulnerable based on our code usage.
      - **Next Step**: Usually "Click 'Create Security Update' on GitHub" or "Manually update package.json".
+     - **Changelog**: Provide the formatted entry for the `### Security` section of `CHANGELOG.md`, including the CVE/GHSA ID.
 
   6. Optional: Post a Discussion Comment
      If there is a related issue or if you want to log your findings, you can ask the user if they want you to create a GitHub Issue summarizing this research.
