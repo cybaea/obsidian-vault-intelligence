@@ -11,9 +11,15 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ## [Unreleased]
 
-### User features
+### Fixed
+
+-   Addressed 22 CodeQL security and quality alerts, including command injection protection, log sanitization, and type safety improvements.
+-   Fixed a potential runtime exception in `LocalEmbeddingService` during worker initialization.
 
 ### Developer features
+
+-   Improved security of build and release scripts by sanitizing shell commands and log outputs.
+-   Updated documentation workflow to use `npm ci` for deterministic builds.
 
 ### Security
 
