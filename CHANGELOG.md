@@ -13,6 +13,8 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+-   **CI/CD Optimization**: Fixed duplicate CI triggers in GitHub Actions by restricting `push` events to the `main` branch.
+-   **Script Enhancement**: Updated `publish-pr.sh` to support `--auto` and `--admin` flags, allowing merges to bypass or schedule according to hardened branch protection policies.
 -   **Security Hardening & OpenSSF Scorecard**: Significantly improved the project's security posture to satisfy OpenSSF Scorecard benchmarks.
     -   Implemented a formal **Security Policy** (`SECURITY.md`) and **CODEOWNERS**.
     -   Hardened GitHub Actions workflows with top-level `permissions: read-all` to adhere to the principle of least privilege.
