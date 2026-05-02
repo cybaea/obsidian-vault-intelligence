@@ -2,6 +2,8 @@
 
 Thanks for your interest in contributing to this Obsidian plugin. This project relies on modern tooling (Node.js 22+, Vitest, ESLint Flat Config) and follows an "Agentic AI" architecture.
 
+To view or raise a bug or feature request, please use the [GitHub Issues](https://github.com/cybaea/obsidian-vault-intelligence/issues) page.
+
 ## Getting started
 
 ### Prerequisites
