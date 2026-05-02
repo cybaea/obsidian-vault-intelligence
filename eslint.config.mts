@@ -63,6 +63,7 @@ export default tseslint.config(
 		".tmp",
 		"node_modules",
 		"dist",
+		"coverage",
 		".vitepress",
 		"esbuild.config.mjs",
 		"eslint.config.js",

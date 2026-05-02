@@ -1,4 +1,7 @@
 {
+    "ignoreFiles": [
+        "coverage/**"
+    ],
     "extends": "stylelint-config-standard",
     "rules": {
         "selector-class-pattern": null,
