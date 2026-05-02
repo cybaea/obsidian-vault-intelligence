@@ -95,9 +95,9 @@ We follow a strict **Test-Driven Development (TDD) friendly** policy:
 
 All changes **must** be submitted via Pull Request. Direct pushes to the `main` branch are disabled by branch protection rules.
 
-1. Create a feature branch for your work.
-2. Push your branch frequently to allow for "interim" feedback.
-3. When ready, use our automation script to publish your PR:
+1.  Create a feature branch for your work.
+2.  Push your branch frequently to allow for "interim" feedback.
+3.  When ready, use our automation script to publish your PR:
 
     ```bash
     npm run publish-pr
