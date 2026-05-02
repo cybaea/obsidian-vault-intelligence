@@ -39,6 +39,7 @@ export default tseslint.config(
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-non-null-assertion": "error",
 			"@typescript-eslint/no-explicit-any": "error",
+			"@typescript-eslint/no-unnecessary-type-assertion": "error",
 			"obsidianmd/ui/sentence-case": ["error", {
 				brands: ["Google", "Gemini", "Google Cloud Console", "Transformers.js"],
 				acronyms: ["API", "HTML", "AI", "ID", "CX"]
