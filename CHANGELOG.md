@@ -11,6 +11,12 @@ New features are added in the "[Unreleased]" section.
 
 ### User features
 
+### Developer features
+
+## [9.3.0] - 2026-05-02
+
+### User features
+
 -   **Custom Headers for Ollama:** Users can now configure custom HTTP headers (e.g., authentication tokens, proxy headers) for Ollama requests. 
 
 ### Developer features
