@@ -245,7 +245,7 @@ describe('McpClientManager', () => {
 
         managerWithInternal.connections.set('test-server', {
             client: {
-                callTool: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 1000)))
+                callTool: vi.fn(() => new Promise((resolve) => activeWindow.setTimeout(resolve, 1000)))
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
             status: 'connected'

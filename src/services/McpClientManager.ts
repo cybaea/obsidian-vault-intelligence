@@ -279,7 +279,7 @@ export class McpClientManager implements IProvider {
         try {
             // Include strict timeout
             const timeoutPromise = new Promise<never>((_, reject) => {
-                timeoutId = setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
+                timeoutId = activeWindow.setTimeout(() => reject(new Error("MCP Tool Execution Timeout")), MCP_CONSTANTS.TOOL_EXECUTION_TIMEOUT_MS);
             });
             
             const abortPromises: Promise<never>[] = [];
@@ -334,7 +334,7 @@ export class McpClientManager implements IProvider {
             }
             throw new ProviderError(`Failed to execute MCP tool ${mapping.originalName}: ${String(error)}`, "mcp");
         } finally {
-            if (timeoutId) clearTimeout(timeoutId);
+            if (timeoutId) activeWindow.clearTimeout(timeoutId);
             if (signal && onAbort) signal.removeEventListener('abort', onAbort);
         }
     }

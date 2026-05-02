@@ -94,7 +94,7 @@ interface OramaDocument {
 }
 
 interface OramaHit {
-    document: OramaDocument;
+    activeDocument: OramaDocument;
     id: string;
     score: number;
 }

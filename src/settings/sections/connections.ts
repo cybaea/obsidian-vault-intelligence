@@ -118,7 +118,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 }
             }));
 
-        apiSetting.descEl.createEl('div', {
+        apiSetting.descEl.createDiv({
             cls: 'vi-settings-hint',
             text: `To use a new key, click "${"Link"}" to select or create a secret. Credentials are stored securely and not synced.`
         });
@@ -238,7 +238,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
  */
 function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
-    const fragment = document.createDocumentFragment();
+    const fragment = activeDocument.createFragment();
 
     const google = "Google";
     const gemini = "Gemini";

@@ -114,7 +114,7 @@ export class WorkerManager {
 
             const result = await task(this.api);
             if (delayMs > 0) {
-                await new Promise(resolve => setTimeout(resolve, delayMs));
+                await new Promise(resolve => activeWindow.setTimeout(resolve, delayMs));
             }
             return result;
         })();

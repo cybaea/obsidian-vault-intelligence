@@ -56,7 +56,7 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         const IS_HEAVY_ASSET = ['.onnx', '.bin', '.wasm', '.msgpack'].some(ext => url.toLowerCase().endsWith(ext)) || url.includes('huggingface.co');
         const TIMEOUT_MS = IS_HEAVY_ASSET ? WORKER_CONSTANTS.HEAVY_ASSET_TIMEOUT_MS : WORKER_CONSTANTS.API_REQUEST_TIMEOUT_MS;
 
-        const timeoutId = setTimeout(() => {
+        const timeoutId = activeWindow.setTimeout(() => {
             if (pendingFetches.has(requestId)) {
                 pendingFetches.delete(requestId);
                 reject(new Error(`Fetch proxy request ${requestId} (${url}) timed out after ${TIMEOUT_MS / 1000}s.`));
@@ -64,12 +64,12 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         }, TIMEOUT_MS);
 
         const wrappedResolve = (resp: Response) => {
-            clearTimeout(timeoutId);
+            activeWindow.clearTimeout(timeoutId);
             resolve(resp);
         };
 
         const wrappedReject = (err: Error) => {
-            clearTimeout(timeoutId);
+            activeWindow.clearTimeout(timeoutId);
             reject(err);
         };
 
@@ -183,7 +183,7 @@ self.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
 // --- Helper for Event Loop Yielding ---
 // Forces the worker to "breathe" and allow the browser/host to see it is still alive.
 async function yieldToEventLoop() {
-    return new Promise(resolve => setTimeout(resolve, 0));
+    return new Promise(resolve => activeWindow.setTimeout(resolve, 0));
 }
 
 // --- Pipeline Singleton ---

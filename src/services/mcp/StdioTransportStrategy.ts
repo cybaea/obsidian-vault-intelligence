@@ -263,7 +263,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                         killer.on('close', () => {
                             try { processLib.kill(pid); } catch { /* ignore */ }
                         });
-                        setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
+                        activeWindow.setTimeout(() => { try { processLib.kill(pid); } catch { /* ignore */ } }, 1000);
                     }
                 } catch (e) {
                     logger.warn(`Failed to kill process tree for MCP pid ${pid}:`, e);

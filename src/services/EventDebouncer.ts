@@ -108,14 +108,14 @@ export class EventDebouncer {
         const isActive = activeFile?.path === path;
 
         if (isActive) {
-            if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
+            if (this.activeFileTimer) activeWindow.clearTimeout(this.activeFileTimer);
             if (this.pendingActiveUpdate && this.pendingActiveUpdate.path !== path) {
                 this.pendingBackgroundUpdates.set(this.pendingActiveUpdate.path, this.pendingActiveUpdate.file);
                 this.scheduleBackgroundBatch();
             }
             this.pendingBackgroundUpdates.delete(path);
             this.pendingActiveUpdate = { file, path };
-            this.activeFileTimer = setTimeout(() => {
+            this.activeFileTimer = activeWindow.setTimeout(() => {
                 const update = this.pendingActiveUpdate;
                 this.pendingActiveUpdate = null;
                 this.activeFileTimer = null;
@@ -133,7 +133,7 @@ export class EventDebouncer {
     private scheduleBackgroundBatch() {
         if (this.backgroundBatchTimer) return;
         const delay = this.settings().indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS;
-        this.backgroundBatchTimer = setTimeout(() => {
+        this.backgroundBatchTimer = activeWindow.setTimeout(() => {
             this.backgroundBatchTimer = null;
             const files = Array.from(this.pendingBackgroundUpdates.values());
             this.pendingBackgroundUpdates.clear();
@@ -202,8 +202,8 @@ export class EventDebouncer {
      * Flushes all currently pending timer updates immediately, usually before a shutdown.
      */
     public async flushPending() {
-        if (this.activeFileTimer) clearTimeout(this.activeFileTimer);
-        if (this.backgroundBatchTimer) clearTimeout(this.backgroundBatchTimer);
+        if (this.activeFileTimer) activeWindow.clearTimeout(this.activeFileTimer);
+        if (this.backgroundBatchTimer) activeWindow.clearTimeout(this.backgroundBatchTimer);
 
         const activeUpdate = this.pendingActiveUpdate?.file;
         this.pendingActiveUpdate = null;

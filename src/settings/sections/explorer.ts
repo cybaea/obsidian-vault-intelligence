@@ -30,7 +30,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const loop = "Loop";
 
 
-    const providerDesc = document.createDocumentFragment();
+    const providerDesc = activeDocument.createFragment();
     providerDesc.appendText('Choose where your document vectors are calculated.');
     providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -131,7 +131,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        const dimensionDesc = document.createDocumentFragment();
+        const dimensionDesc = activeDocument.createFragment();
         dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
         dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
             setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -410,7 +410,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 await plugin.saveSettings();
             }));
 
-    const folderSemDesc = document.createDocumentFragment();
+    const folderSemDesc = activeDocument.createFragment();
     folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
     folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
     const ul = folderSemDesc.createEl('ul', { cls: 'vault-intelligence-settings-list' });
@@ -450,7 +450,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
                         btn.setWarning();
-                        setTimeout(() => {
+                        activeWindow.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
                                 btn.buttonEl.classList.remove('mod-warning');

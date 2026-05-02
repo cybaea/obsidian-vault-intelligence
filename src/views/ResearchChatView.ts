@@ -285,7 +285,7 @@ export class ResearchChatView extends ItemView {
                     streamingComponent = new Component();
                     streamingComponent.load();
 
-                    const tempEl = document.createElement('div');
+                    const tempEl = activeDocument.createDiv();
                     
                     // 3. Render into the temporary component, NOT `this`
                     await MarkdownRenderer.render(this.plugin.app, modelMsg.text, tempEl, "", streamingComponent);
@@ -297,7 +297,7 @@ export class ResearchChatView extends ItemView {
                         const getOffset = (node: Node | null, offset: number) => {
                             if (!node) return 0;
                             let totalOffset = offset;
-                            const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                            const walker = activeDocument.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
                             let currentNode: Node | null = walker.nextNode();
                             while (currentNode && currentNode !== node) {
                                 totalOffset += currentNode.textContent?.length || 0;
@@ -318,7 +318,7 @@ export class ResearchChatView extends ItemView {
                         
                         if (savedSelection && selection) {
                             const findNodeAndOffset = (targetOffset: number) => {
-                                const walker = document.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
+                                const walker = activeDocument.createTreeWalker(lastMessageNode, NodeFilter.SHOW_TEXT, null);
                                 let currentNode: Node | null = walker.nextNode();
                                 let currentOffset = 0;
                                 let lastTextNode: Node | null = null;

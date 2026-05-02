@@ -7,7 +7,7 @@ import { MCPServerConfig } from "../types";
 export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): void {
     containerEl.empty();
     
-    const mcpHeading = document.createDocumentFragment();
+    const mcpHeading = activeDocument.createFragment();
     mcpHeading.appendText('External ' + 'MCP' + ' servers');
     mcpHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools." });
@@ -112,7 +112,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
     const renderEditor = (server: MCPServerConfig | null, index: number = -1) => {
         containerEl.empty();
         
-        const editorHeading = document.createDocumentFragment();
+        const editorHeading = activeDocument.createFragment();
         editorHeading.appendText(server ? 'Edit ' + 'MCP' + ' server' : 'Add ' + 'MCP' + ' server');
         const editorGroup = new SettingGroup(containerEl).setHeading(editorHeading);
         
@@ -147,7 +147,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
         });
 
         if (currentConfig.type === "stdio") {
-            const cmdDesc = document.createDocumentFragment();
+            const cmdDesc = activeDocument.createFragment();
             cmdDesc.appendText("Absolute path to the executable (e.g. /usr/local/bin/python or /opt/homebrew/bin/node). Avoid wrappers like 'npx' or relative paths.");
             
             editorGroup.addSetting(setting => {

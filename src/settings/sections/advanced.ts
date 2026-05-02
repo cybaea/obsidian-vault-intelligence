@@ -18,7 +18,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 1. Indexing Performance ---
-    const performanceHeading = document.createDocumentFragment();
+    const performanceHeading = activeDocument.createFragment();
     performanceHeading.appendText('Performance');
     performanceHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Technical tuning for background indexing. ' });
@@ -61,7 +61,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    const chunkDesc = document.createDocumentFragment();
+    const chunkDesc = activeDocument.createFragment();
     chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
     chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -115,7 +115,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     }
 
     // --- 2. System and API ---
-    const systemHeading = document.createDocumentFragment();
+    const systemHeading = activeDocument.createFragment();
     systemHeading.appendText(`System and ${api}`);
     systemHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'System-level settings and API connection tuning. ' });
@@ -159,7 +159,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 3. Search and Context Tuning ---
-    const tuningHeading = document.createDocumentFragment();
+    const tuningHeading = activeDocument.createFragment();
     tuningHeading.appendText('Search and context tuning');
     tuningHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
@@ -312,7 +312,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 4. Developer and Debugging ---
-    const devHeading = document.createDocumentFragment();
+    const devHeading = activeDocument.createFragment();
     devHeading.appendText('Developer');
     devHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
@@ -365,7 +365,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 5. Security (Proactive SSRF Protection) ---
-    const secHeading = document.createDocumentFragment();
+    const secHeading = activeDocument.createFragment();
     secHeading.appendText('Security');
     secHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.appendText('Allows the agent to access localhost and private network IPs. ');
@@ -389,7 +389,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 6. Model filtering ---
-    const filterHeading = document.createDocumentFragment();
+    const filterHeading = activeDocument.createFragment();
     filterHeading.appendText('Model filtering');
     filterHeading.createDiv({ cls: 'setting-item-description' }, (div) => {
         div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });

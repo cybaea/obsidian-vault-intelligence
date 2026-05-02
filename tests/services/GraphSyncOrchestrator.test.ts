@@ -12,8 +12,8 @@ import { GraphSyncOrchestrator } from '../../src/services/GraphSyncOrchestrator'
 
 // Mock requestIdleCallback for test environment
 if (typeof globalThis.requestIdleCallback === 'undefined') {
-    (globalThis as any).requestIdleCallback = (cb: () => void) => setTimeout(() => cb(), 1);
-    (globalThis as any).cancelIdleCallback = (id: number) => clearTimeout(id);
+    (globalThis as any).requestIdleCallback = (cb: () => void) => activeWindow.setTimeout(() => cb(), 1);
+    (globalThis as any).cancelIdleCallback = (id: number) => activeWindow.clearTimeout(id);
 }
 
 // Mock dependencies

@@ -228,7 +228,7 @@ describe('ToolRegistry Capabilities', () => {
             const registry = createRegistry(mockProvider);
             
             mockMcpClientManager.readResource = vi.fn().mockImplementation(() => {
-                return new Promise(resolve => setTimeout(resolve, 100000));
+                return new Promise(resolve => activeWindow.setTimeout(resolve, 100000));
             });
 
             const resultPromise = registry.execute({

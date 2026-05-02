@@ -149,8 +149,8 @@ export function renderKeyValueEditor({
 }: KeyValueEditorConfig) {
     const wrapper = container.createDiv();
     wrapper.setCssProps({ borderTop: "1px solid var(--background-modifier-border)", padding: "1em 0" });
-    wrapper.createEl("div", { cls: "setting-item-name", text: title });
-    wrapper.createEl("div", { cls: "setting-item-description", text: description }).setCssProps({ marginBottom: "1em" });
+    wrapper.createDiv({ cls: "setting-item-name", text: title });
+    wrapper.createDiv({ cls: "setting-item-description", text: description }).setCssProps({ marginBottom: "1em" });
     
     let pairs: { key: string; value: string; isSecret: boolean }[] = [];
     try {
