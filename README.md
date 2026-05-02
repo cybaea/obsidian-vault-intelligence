@@ -4,6 +4,7 @@
 
 [![CodeQL](https://github.com/cybaea/obsidian-vault-intelligence/actions/workflows/codeql.yml/badge.svg)](https://github.com/cybaea/obsidian-vault-intelligence/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cybaea/obsidian-vault-intelligence/badge)](https://scorecard.dev/viewer/?uri=github.com/cybaea/obsidian-vault-intelligence)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12733/badge)](https://www.bestpractices.dev/projects/12733)
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cybaea/obsidian-vault-intelligence) ![GitHub last commit](https://img.shields.io/github/last-commit/cybaea/obsidian-vault-intelligence?logo=github) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/cybaea/obsidian-vault-intelligence?logo=github) 
 

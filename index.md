@@ -63,4 +63,10 @@ features:
     details: Built for visual thinkers. We index Canvas and Excalidraw text without cluttering your search results with JSON and SVG code.
     link: /docs/explanation/strategic-positioning#5-zero-noise-visual-indexing
     linkText: See how it works
+
+  - icon: 🛡️
+    title: "OpenSSF Certified"
+    details: "Verified against the OpenSSF Best Practices for secure, sustainable software development."
+    link: https://www.bestpractices.dev/projects/12733
+    linkText: View Badge
 ---
