@@ -42,5 +42,6 @@ jobs:
           
           # 4. Create and Push the Tag
           # Because we checked out with the PAT, this push is authenticated as 'You'
-          git tag "$PACKAGE_VERSION"
+          # Use an annotated tag for better compatibility with release tools and Scorecard
+          git tag -a "$PACKAGE_VERSION" -m "Release $PACKAGE_VERSION"
           git push origin "$PACKAGE_VERSION"
