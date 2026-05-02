@@ -71,10 +71,10 @@ To make this seamless, Vault Intelligence uses a "Slim-Sync" Hybrid Architecture
 
 We adhere to industry-standard security and supply chain integrity practices:
 
-- **SLSA Build Provenance**: Our build process generates cryptographically signed attestations for all release artifacts, ensuring build integrity.
-- **OpenSSF Scorecard**: We monitor our security posture via the [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/cybaea/obsidian-vault-intelligence).
-- **Automated Scanning**: We use CodeQL and Renovate to identify and remediate vulnerabilities and outdated dependencies.
-- **Hardened Workflows**: All CI/CD workflows are pinned to full commit SHAs and follow the principle of least privilege.
+-   **SLSA Build Provenance**: Our build process generates cryptographically signed attestations for all release artifacts, ensuring build integrity.
+-   **OpenSSF Scorecard**: We monitor our security posture via the [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/cybaea/obsidian-vault-intelligence).
+-   **Automated Scanning**: We use CodeQL and Renovate to identify and remediate vulnerabilities and outdated dependencies.
+-   **Hardened Workflows**: All CI/CD workflows are pinned to full commit SHAs and follow the principle of least privilege.
 
 For more details, see our [Security Policy](SECURITY.md) and [Security and Robustness Standards](devs/security-and-robustness.md).
 
