@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.3.2] - 2026-05-02
+
+### User features
+
+### Developer features
+
 -   Switched to annotated tags in `auto-tag.yml` for better compatibility with supply chain security tools.
 -   Upgraded to `actions/attest-build-provenance` in release workflow to generate SLSA provenance.
 
