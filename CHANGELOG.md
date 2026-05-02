@@ -13,6 +13,12 @@ New features are added in the "[Unreleased]" section.
 
 ### Developer features
 
+## [9.3.1] - 2026-05-02
+
+### User features
+
+### Developer features
+
 -   **CI/CD Optimization**: Fixed duplicate CI triggers in GitHub Actions by restricting `push` events to the `main` branch.
 -   **Script Enhancement**: Updated `publish-pr.sh` to support `--auto` and `--admin` flags, allowing merges to bypass or schedule according to hardened branch protection policies.
 -   **Security Hardening & OpenSSF Scorecard**: Significantly improved the project's security posture to satisfy OpenSSF Scorecard benchmarks.
