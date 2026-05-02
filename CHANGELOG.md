@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 New features are added in the "[Unreleased]" section.
 
+Security fixes should be added to a `### Security` section and include the CVE assignment or similar, where available.
+
 ## [Unreleased]
 
 ### User features
