@@ -87,4 +87,22 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
         // Use any to check for non-existent key in type
         expect((plugin.settings as unknown as Record<string, unknown>)['gardenerRecheckHours']).toBeUndefined();
     });
+
+    it('should migrate legacy secret ID references into googleApiKeySecret', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '8.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        const legacyData = {
+            googleApiKey: 'vault-intelligence-api-key',
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveSettings = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        expect(plugin.settings.googleApiKeySecret).toBe('vault-intelligence-api-key');
+        expect(plugin.settings.googleApiKey).toBe('');
+    });
 });

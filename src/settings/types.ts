@@ -63,6 +63,7 @@ export interface VaultIntelligenceSettings {
     gardenerSystemInstruction: string | null;
     geminiRetries: number;
     googleApiKey: string;
+    googleApiKeySecret: string;
     groundingModel: string;
     hiddenModels: string[];
     implicitFolderSemantics: ImplicitFolderSemanticsMode;
@@ -195,6 +196,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     gardenerSystemInstruction: null, // Use default by reference
     geminiRetries: 10,
     googleApiKey: '',
+    googleApiKeySecret: '',
     groundingModel: 'gemini-flash-lite-latest',
     hiddenModels: [],
     implicitFolderSemantics: 'ontology',

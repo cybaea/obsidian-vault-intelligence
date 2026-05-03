@@ -3,7 +3,7 @@ import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsi
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { validateHeaderKey } from "../../utils/headers";
-import { resolveSecrets } from "../../utils/secrets";
+import { hasGoogleApiKey, resolveSecrets } from "../../utils/secrets";
 import { renderKeyValueEditor } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import "../components"; // Ensure prototype extensions load
@@ -95,15 +95,19 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
     } else {
         // Modern: SecretStorage (v1.11.4+)
         apiSetting.addComponent(el => new SecretComponent(plugin.app, el)
-            .setValue(plugin.settings.googleApiKey || '')
+            .setValue(plugin.settings.googleApiKeySecret || plugin.settings.googleApiKey || '')
             .onChange(async (value) => {
-                plugin.settings.googleApiKey = value;
+                const isRawKey = value.startsWith('AIza');
+                if (isRawKey) {
+                    plugin.settings.googleApiKey = value;
+                    plugin.settings.googleApiKeySecret = '';
+                } else {
+                    plugin.settings.googleApiKeySecret = value;
+                    plugin.settings.googleApiKey = '';
+                }
                 await plugin.saveSettings();
 
-                const actualKey: string | null = (value === 'vault-intelligence-api-key')
-                    ? await plugin.geminiService.getApiKey()
-                    : value;
-
+                const actualKey = await plugin.geminiService.getApiKey();
                 if (actualKey && actualKey.startsWith('AIza')) {
                     try {
                         const app = plugin.app as unknown as InternalApp;
@@ -202,7 +206,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         .addButton(btn => btn
             .setButtonText("Refresh models")
             .setIcon('refresh-cw')
-            .setDisabled(!plugin.settings.googleApiKey)
+            .setDisabled(!hasGoogleApiKey(plugin.settings))
             .onClick(async () => {
                 btn.setDisabled(true);
                 btn.setButtonText("Refreshing...");

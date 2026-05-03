@@ -1,3 +1,21 @@
+import { VaultIntelligenceSettings } from "../settings/types";
+
+export const GOOGLE_API_KEY_SECRET_NAME = 'vault-intelligence-api-key';
+
+export function getGoogleApiKeySecretName(settings: VaultIntelligenceSettings): string | null {
+    if (settings.googleApiKeySecret) {
+        return settings.googleApiKeySecret;
+    }
+    if (settings.googleApiKey && !settings.googleApiKey.startsWith('AIza')) {
+        return settings.googleApiKey;
+    }
+    return null;
+}
+
+export function hasGoogleApiKey(settings: VaultIntelligenceSettings): boolean {
+    return !!settings.googleApiKey || !!settings.googleApiKeySecret;
+}
+
 /**
  * Resolve secret placeholders in a JSON-stringified key-value map.
  * 

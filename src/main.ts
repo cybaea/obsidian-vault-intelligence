@@ -20,6 +20,7 @@ import { DEFAULT_SETTINGS, IVaultIntelligencePlugin, VaultIntelligenceSettings, 
 import { IEmbeddingClient } from "./types/providers";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
+import { GOOGLE_API_KEY_SECRET_NAME, hasGoogleApiKey } from "./utils/secrets";
 import { ResearchChatView } from "./views/ResearchChatView";
 import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
@@ -168,7 +169,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (this.settings.googleApiKey || this.settings.ollamaEndpoint) {
+		if (hasGoogleApiKey(this.settings) || this.settings.ollamaEndpoint) {
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
 				const ollamaProvider = this.providerRegistry.getOllamaProvider() as unknown as InternalOllamaProvider;
@@ -474,6 +475,14 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			this.settings.gardenerSystemInstruction = null;
 		}
 
+		// Migration: Preserve secret key references separately from raw API keys.
+		if (this.settings.googleApiKey && !this.settings.googleApiKey.startsWith('AIza') && !this.settings.googleApiKeySecret) {
+			logger.info("Migrating legacy Google API key reference into googleApiKeySecret.");
+			this.settings.googleApiKeySecret = this.settings.googleApiKey;
+			this.settings.googleApiKey = '';
+			await this.saveSettings();
+		}
+
 		// --- Tiered Context Control Migration (v8.2.0) ---
 		// Migrate legacy local context budgets to explicitly overridden model budgets
 		// Ensures users who heavily customized their local VRAM budget don't lose it on upgrade.
@@ -513,8 +522,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 				const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
 
 				if (storage && storage.setSecret) {
-					storage.setSecret('vault-intelligence-api-key', this.settings.googleApiKey);
-					this.settings.googleApiKey = 'vault-intelligence-api-key';
+					storage.setSecret(GOOGLE_API_KEY_SECRET_NAME, this.settings.googleApiKey);
+					this.settings.googleApiKeySecret = GOOGLE_API_KEY_SECRET_NAME;
+					this.settings.googleApiKey = '';
 					await this.saveData(this.settings);
 					logger.info("[SecretStorage] Migration successful.");
 				} else {

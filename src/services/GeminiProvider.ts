@@ -6,6 +6,7 @@ import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
+import { getGoogleApiKeySecretName, hasGoogleApiKey } from "../utils/secrets";
 import { ModelRegistry } from "./ModelRegistry";
 
 interface InternalSecretStorage {
@@ -47,18 +48,20 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
      * Handles SecretStorage ID lookup vs Legacy plain text fallback.
      */
     public async getApiKey(): Promise<string | null> {
-        const storedValue = this.settings.googleApiKey;
-        if (!storedValue) return null;
+        const rawKey = this.settings.googleApiKey?.trim();
+        const secretKey = getGoogleApiKeySecretName(this.settings);
 
-        if (this.settings.secretStorageFailure || storedValue.startsWith('AIza')) {
-            return storedValue;
+        if (!rawKey && !secretKey) return null;
+
+        if (this.settings.secretStorageFailure || (rawKey && rawKey.startsWith('AIza'))) {
+            return rawKey || null;
         }
 
-        if (storedValue) {
+        if (secretKey) {
             try {
                 const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
                 if (storage && storage.getSecret) {
-                    return Promise.resolve(storage.getSecret(storedValue));
+                    return Promise.resolve(storage.getSecret(secretKey));
                 }
                 return null;
             } catch (error) {
@@ -66,6 +69,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 return null;
             }
         }
+
         return null;
     }
 
@@ -74,7 +78,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
         const apiKey = await this.getApiKey();
         if (!apiKey) {
-            if (this.settings.googleApiKey && !this.settings.googleApiKey.startsWith('AIza')) {
+            if (getGoogleApiKeySecretName(this.settings)) {
                 new Notice("API key not found in this device's keychain. Please re-select it in settings.");
             }
             throw new ProviderError("Google API Key is missing or could not be retrieved.", "google");
@@ -96,7 +100,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     public isReady(): boolean {
-        return !!this.client || (!!this.settings.googleApiKey && !this.settings.secretStorageFailure);
+        return !!this.client || (hasGoogleApiKey(this.settings) && !this.settings.secretStorageFailure);
     }
 
     // --- IReasoningClient Implementation ---

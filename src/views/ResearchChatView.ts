@@ -9,6 +9,7 @@ import { ProviderRegistry } from "../services/ProviderRegistry";
 import { IEmbeddingClient, ToolCall, ToolResult } from "../types/providers";
 import { VaultSearchResult } from "../types/search";
 import { logger } from "../utils/logger";
+import { hasGoogleApiKey } from "../utils/secrets";
 import { FileSuggest } from "./FileSuggest";
 
 export class ResearchChatView extends ItemView {
@@ -583,7 +584,7 @@ export class ResearchChatView extends ItemView {
         selectEl.innerHTML = '';
         
         const chatModels = ModelRegistry.getChatModels(this.plugin.settings.hiddenModels);
-        const hasApiKey = !!this.plugin.settings.googleApiKey;
+        const hasApiKey = hasGoogleApiKey(this.plugin.settings);
         const hasOllama = !!this.plugin.settings.ollamaEndpoint;
         const canUseChat = hasApiKey || hasOllama;
 
