@@ -2,32 +2,54 @@ import WebSocket from 'ws';
 import fs from 'fs';
 
 const LOG_FILE = 'debug_worker.log';
-fs.writeFileSync(LOG_FILE, 'Starting log capture...\n');
+
+/**
+ * Sanitizes a string for logging to prevent log injection.
+ * @param {string} s The string to sanitize.
+ * @returns {string} The sanitized string.
+ */
+function sanitize(s) {
+    return String(s).replace(/\r?\n|\r/g, ' ');
+}
+
+/**
+ * Validates a WebSocket URL to prevent SSRF.
+ * @param {string} urlStr The URL string to validate.
+ * @returns {string} The validated URL string.
+ */
+function validateDebuggerUrl(urlStr) {
+    const url = new URL(urlStr);
+    if (url.protocol !== 'ws:') throw new Error('Invalid protocol');
+    if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') throw new Error('Invalid host');
+    if (url.port !== '9223') throw new Error('Invalid port');
+    return url.href;
+}
 
 async function captureLogs() {
+    fs.writeFileSync(LOG_FILE, 'Starting log capture...\n');
     try {
         const res = await fetch('http://localhost:9223/json');
         const rawTargets = await res.json();
         
-        // Explicitly sanitize and validate input from network before writing to file
         if (!Array.isArray(rawTargets)) throw new Error("Invalid response from debugger");
+        
         const targets = rawTargets.map(t => ({
             type: String(t.type).replace(/[^a-z]/g, ''),
             url: String(t.url).replace(/[^\w.:/ -]/g, ''),
-            webSocketDebuggerUrl: String(t.webSocketDebuggerUrl).replace(/[^\w.:/ -]/g, '')
+            webSocketDebuggerUrl: validateDebuggerUrl(String(t.webSocketDebuggerUrl))
         }));
 
-        fs.appendFileSync(LOG_FILE, `Found ${String(targets.length).replace(/[\n\r]/g, '')} targets\n`);
+        fs.appendFileSync(LOG_FILE, `Found ${sanitize(targets.length)} targets\n`);
 
         const blobWorkers = targets.filter(t => t.type === 'worker' && t.url.includes('blob:'));
-        fs.appendFileSync(LOG_FILE, `Found ${String(blobWorkers.length).replace(/[\n\r]/g, '')} blob workers\n`);
+        fs.appendFileSync(LOG_FILE, `Found ${sanitize(blobWorkers.length)} blob workers\n`);
 
         blobWorkers.forEach((worker, index) => {
-            fs.appendFileSync(LOG_FILE, `Connecting to worker ${index}: ${worker.url.replace(/[\n\r]/g, '')}\n`);
+            fs.appendFileSync(LOG_FILE, `Connecting to worker ${sanitize(index)}: ${sanitize(worker.url)}\n`);
             const ws = new WebSocket(worker.webSocketDebuggerUrl);
 
             ws.on('open', () => {
-                fs.appendFileSync(LOG_FILE, `WS Open for worker ${index}\n`);
+                fs.appendFileSync(LOG_FILE, `WS Open for worker ${sanitize(index)}\n`);
                 ws.send(JSON.stringify({ id: 1, method: "Runtime.enable" }));
                 ws.send(JSON.stringify({ id: 2, method: "Log.enable" }));
             });
@@ -35,20 +57,18 @@ async function captureLogs() {
             ws.on('message', (data) => {
                 const msg = JSON.parse(data);
                 if (msg.method === "Runtime.consoleAPICalled") {
-                    const text = msg.params.args.map(a => String(a.value || a.description || JSON.stringify(a))).join(' ').replace(/[\n\r]/g, ' ');
-                    fs.appendFileSync(LOG_FILE, `[Worker ${index}] ${text.replace(/[\n\r]/g, ' ')}\n`);
+                    const text = msg.params.args.map(a => String(a.value || a.description || JSON.stringify(a))).join(' ');
+                    fs.appendFileSync(LOG_FILE, `[Worker ${sanitize(index)}] ${sanitize(text)}\n`);
                 }
             });
 
             ws.on('error', (err) => {
-                const sanitizedError = String(err.message).replace(/[\n\r]/g, ' ');
-                fs.appendFileSync(LOG_FILE, `WS Error for worker ${index}: ${sanitizedError}\n`);
+                fs.appendFileSync(LOG_FILE, `WS Error for worker ${sanitize(index)}: ${sanitize(err.message)}\n`);
             });
         });
 
     } catch (err) {
-        const sanitizedError = String(err.message).replace(/[\n\r]/g, ' ');
-        fs.appendFileSync(LOG_FILE, `Error: ${sanitizedError}\n`);
+        fs.appendFileSync(LOG_FILE, `Error: ${sanitize(err.message)}\n`);
     }
 
     setTimeout(() => {

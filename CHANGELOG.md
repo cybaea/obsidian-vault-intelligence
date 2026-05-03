@@ -23,6 +23,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Security
 
+-   Hardened script security against Log Injection and SSRF in `scripts/upgrade-transformers.cjs`, `scripts/capture-logs.mjs`, `scripts/debug-to-file.mjs`, and `scripts/debug-worker.mjs`.
+-   Improved input validation and taint-tracking in automation scripts.
 -   Implemented command injection protection in build and release scripts. Hardened `version-bump.mjs`, `release-prep.mjs`, and `upgrade-transformers.cjs` by migrating from `execSync` to `execFileSync` to prevent environment variable and argument injection (CWE-078, CWE-088).
 -   Added log injection sanitization in debug and logging scripts (CWE-117).
 -   Implemented origin verification for worker message handlers (CWE-940, CWE-020).
