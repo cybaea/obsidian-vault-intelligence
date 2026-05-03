@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Preserved secure Google API key references across plugin upgrades by introducing a dedicated `googleApiKeySecret` setting and migrating raw keys into `SecretStorage` automatically, preventing repeated secret re-linking after updates.
+
 ## [9.3.3] - 2026-05-03
 
 ### User features
