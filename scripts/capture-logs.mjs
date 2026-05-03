@@ -6,7 +6,13 @@ import WebSocket from 'ws';
  * @returns {string} The sanitized string.
  */
 function sanitize(s) {
-    return String(s).replace(/\r?\n|\r/g, ' ');
+    return String(s)
+        // Remove CR/LF and Unicode line separators used for log forging
+        .replace(/[\r\n\u2028\u2029]/g, ' ')
+        // Remove remaining ASCII control chars (except tab) that can affect log rendering
+        .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
 }
 
 /**
