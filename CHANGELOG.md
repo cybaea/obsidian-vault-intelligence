@@ -19,6 +19,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Fixed an issue where the Agent chat would generate errors in the console log.
+
 ### Developer features
 
 -   Fixed a local embedding worker initialization failure in `LocalEmbeddingService` caused by `activeWindow` being undefined in worker context.
