@@ -18,7 +18,7 @@ async function captureLogs() {
     ws.on('message', (data) => {
         const msg = JSON.parse(data);
         if (msg.method === "Runtime.consoleAPICalled") {
-            const text = msg.params.args.map(a => a.value || a.description).join(' ');
+            const text = msg.params.args.map(a => a.value || a.description).join(' ').replace(/[\r\n]/g, ' ');
             console.log(`[CDP LOG] ${text}`);
         }
     });

@@ -107,21 +107,6 @@ async function validate() {
     // 3. Check for Sharp duplication (Architectural Guardrail)
     console.log("Checking for sharp module duplication...");
     try {
-        const { execSync } = require('child_process');
-        const lsOutput = execSync('npm ls sharp --json', { encoding: 'utf8', cwd: path.join(__dirname, '..') });
-        // const lsData = JSON.parse(lsOutput);
-        
-        // Count occurrences of sharp in the dependency tree
-        const countSharp = (deps) => {
-            let count = 0;
-            if (!deps) return 0;
-            for (const name in deps) {
-                if (name === 'sharp') count++;
-                count += countSharp(deps[name].dependencies);
-            }
-            return count;
-        };
-
         // This is a bit complex to parse from npm ls --json correctly, 
         // a simpler way is to check if node_modules/@xenova/transformers/node_modules/sharp exists
         const nestedSharpPath = path.join(__dirname, '../node_modules/@xenova/transformers/node_modules/sharp');

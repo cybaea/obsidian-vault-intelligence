@@ -88,7 +88,8 @@ async function run() {
         console.log("Please review the changes and commit.");
 
     } catch (error) {
-        console.error(`\nFAILED: ${error.message.replace(/[\r\n]/g, '')}`);
+        const sanitizedError = String(error.message).replace(/[\r\n]/g, ' ');
+        console.error(`\nFAILED: ${sanitizedError}`);
         process.exit(1);
     }
 }

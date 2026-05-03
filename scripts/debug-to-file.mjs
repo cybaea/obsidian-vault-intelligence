@@ -8,13 +8,14 @@ async function captureLogs() {
     try {
         const res = await fetch('http://localhost:9223/json');
         const targets = await res.json();
-        fs.appendFileSync(LOG_FILE, `Found ${targets.length} targets\n`);
+        fs.appendFileSync(LOG_FILE, `Found ${String(targets.length).replace(/[\r\n]/g, '')} targets\n`);
 
         const blobWorkers = targets.filter(t => t.type === 'worker' && t.url.includes('blob:'));
-        fs.appendFileSync(LOG_FILE, `Found ${blobWorkers.length} blob workers\n`);
+        fs.appendFileSync(LOG_FILE, `Found ${String(blobWorkers.length).replace(/[\r\n]/g, '')} blob workers\n`);
 
         blobWorkers.forEach((worker, index) => {
-            fs.appendFileSync(LOG_FILE, `Connecting to worker ${index}: ${worker.url}\n`);
+            const sanitizedUrl = String(worker.url).replace(/[\r\n]/g, '');
+            fs.appendFileSync(LOG_FILE, `Connecting to worker ${index}: ${sanitizedUrl}\n`);
             const ws = new WebSocket(worker.webSocketDebuggerUrl);
 
             ws.on('open', () => {
@@ -32,12 +33,14 @@ async function captureLogs() {
             });
 
             ws.on('error', (err) => {
-                fs.appendFileSync(LOG_FILE, `WS Error for worker ${index}: ${err.message}\n`);
+                const sanitizedError = String(err.message).replace(/[\r\n]/g, ' ');
+                fs.appendFileSync(LOG_FILE, `WS Error for worker ${index}: ${sanitizedError}\n`);
             });
         });
 
     } catch (err) {
-        fs.appendFileSync(LOG_FILE, `Error: ${err.message}\n`);
+        const sanitizedError = String(err.message).replace(/[\r\n]/g, ' ');
+        fs.appendFileSync(LOG_FILE, `Error: ${sanitizedError}\n`);
     }
 
     setTimeout(() => {
