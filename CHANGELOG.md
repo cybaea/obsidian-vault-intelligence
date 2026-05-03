@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.3.5] - 2026-05-03
+
+### User features
+
+### Developer features
+
 -   Fix release provenance workflow.
 
 ## [9.3.4] - 2026-05-03
