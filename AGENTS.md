@@ -97,6 +97,10 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 - **Skills (Active)**: If you need to understand specific APIs or complex workflows, load the relevant `SKILL.md` from `.agents/skills/`.
 
 ### 5. Historical Integrity Protocol
+### Lessons Learned: Data Loss Prevention
+- **The "Cat-Write" Anti-Pattern**: Never read a large file with `cat` or `read_file` and write it back with `write`. This WILL cause silent truncation because tool output buffers are limited.
+- **Verification**: Always verify line counts with `wc -l` before and after editing any file over 50 lines.
+
 
 - **Historical Integrity Protocol**: You are forbidden from deleting, summarizing, or truncating existing history in `CHANGELOG.md`, `ARCHITECTURE.md`, or any other key documents.
 - **Byte-Count Verification**: Before committing an edit to a file over 50 lines, you must state the original line count and the expected new line count to verify you aren't accidentally dropping data.

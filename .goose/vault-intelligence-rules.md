@@ -35,42 +35,34 @@ To reduce token-bloat and increase research quality, you MUST favor high-level d
 - **Tier 2 (Precise Verification)**: Use `Developer.shell` (grep) or `Developer.read_file` ONLY for the final "Discovery Proof" to verify specific lines of code or SDK signatures.
 - **Constraint**: Avoid `cat` or `read_file` on files larger than 100 lines for initial scans. Use `Summarize` first.
 
-### Quality Gate (Critical)
+## 3. Historical Integrity & Safety (Hard Stop Protocol)
 
-- **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist in `src/services/` or `src/utils/`.
-- **Modality Rule**: For multimodal content, you MUST prioritize the identified Provider's native data structures (e.g. binary parts, image arrays, or base64 fields) over external binary processing libraries. Proposing an external library requires a `grep` proof that the provider SDK lacks the capability.
-- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers or offload to the Provider's native API.
-- **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
-- **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
-- **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?
-
-## 4. Historical Integrity & Safety (Hard Stop Protocol)
+**CRITICAL**: Tool output (stdout) is often limited to 2000 lines or specific byte counts. Reading a file with `cat` or `read_file` and then writing it back with `write` IS THE LEADING CAUSE OF DATA LOSS.
 
 ### File Modification Rules
-- **FORBIDDEN**: Using `Developer.write` on existing files over 100 lines. This leads to silent truncation and data loss.
-- **MANDATORY**: Use `Developer.edit` with precise `before` and `after` blocks for all updates to large files (e.g., `CHANGELOG.md`, `ARCHITECTURE.md`).
-- **MANDATORY**: Run `wc -l <file>` immediately BEFORE and AFTER any edit. You MUST report the line count delta in your response.
-- **MANDATORY**: If an unintended truncation is detected (unexpected line count drop), you MUST immediately run `git checkout <file>` to restore the file before taking any further action.
+- **FORBIDDEN**: Using `Developer.write` on existing files over 50 lines. This leads to silent truncation.
+- **MANDATORY**: Use `Developer.edit` with precise `before` and `after` blocks for all updates to existing files.
+- **MANDATORY**: The "Verification Loop":
+  1. Run `wc -l <file>` BEFORE the edit.
+  2. Perform `Developer.edit`.
+  3. Run `wc -l <file>` AFTER the edit.
+  4. Compare the counts. If the count dropped significantly (more than your edit intended), run `git checkout <file>` immediately.
+- **REPORTING**: You must report the line count delta (e.g., "Line count: 784 -> 787") in your final confirmation.
 
 ### Reading Strategy
-- **FORBIDDEN**: Using `cat` or raw `read` on files larger than 100 lines. The tool output will be truncated, leading to "split-brain" reasoning.
-- **MANDATORY**: Use `head`, `tail`, `sed`, or `grep` to extract only the context you need to perform an `edit`.
+- **FORBIDDEN**: Using `cat` or raw `read` on files larger than 100 lines to ingest content for a write operation.
+- **MANDATORY**: Use `head`, `tail`, `sed`, or `grep` to extract only the context anchors you need for `Developer.edit`.
+
+## 4. Quality Gate (Critical)
+
+- **Grep Proof Requirement**: Proposing any new file, class, or dependency MUST be preceded by a `grep` proof showing that a similar capability does NOT currently exist.
+- **Modality Rule**: For multimodal content, you MUST prioritize the identified Provider's native data structures.
+- **Main-Thread Ban**: Processing binary blobs on the main thread is FORBIDDEN. Use Workers.
+- **Golden Rules**: Does it violate SOA (logic in UI)? Does it use `Vault.read()` directly?
+- **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level?
 
 ## 5. Communication Style
 
 - **Status**: Report only significant research milestones.
 - **Format**: Use sentence case. Avoid bold in headers. Use "and" over "&".
 - **Tone**: Professional, adversarial, and engineering-focused.
-
-## 4. Historical Integrity & Hard Stop Protocol
-
-To prevent unintended data loss in large files (like `CHANGELOG.md`), you MUST follow these constraints:
-
-### Constraints
-- **Forbidden**: Never use `Developer.write` or `Developer.write_file` to update an existing file that is likely to be large (>100 lines).
-- **Mandatory**: Use `Developer.edit` for targeted search-and-replace.
-- **Verification**: Always run `wc -l <path>` before and after any modification to ensure no unintended truncation occurred.
-- **Read Strategy**: Do NOT use `cat` or `read_file` on large files. Use `sed`, `grep`, or `head/tail` to find the specific anchors for editing.
-
-### Failure Condition
-Truncating a file (e.g. dropping historical changelog entries) is defined as an **Architectural Failure**. If this occurs, immediately run `git checkout <path>` to restore the state.
