@@ -1,7 +1,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 async function getLatestVersion() {
     return new Promise((resolve, reject) => {
@@ -32,8 +32,11 @@ async function run() {
     try {
         console.log("Fetching latest version from NPM...");
         let latest = await getLatestVersion();
-        // Sanitize version string
+        // Sanitize version string and validate format
         latest = latest.replace(/[^0-9.]/g, '');
+        if (!/^\d+\.\d+\.\d+$/.test(latest)) {
+            throw new Error(`Invalid version format received from NPM: ${latest}`);
+        }
         const current = getPackageVersion();
 
         console.log(`Current pinned version: ${current}`);
@@ -77,12 +80,12 @@ async function run() {
 
         // 3. Run npm install
         console.log("Running npm install...");
-        execSync('npm install', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+        execFileSync('npm', ['install'], { stdio: 'inherit', cwd: path.join(__dirname, '..') });
         console.log("OK: node_modules updated.");
 
         // 4. Run verification
         console.log("Running final verification...");
-        execSync('node scripts/validate-dependencies.cjs', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+        execFileSync('node', ['scripts/validate-dependencies.cjs'], { stdio: 'inherit', cwd: path.join(__dirname, '..') });
 
         console.log("\nSUCCESS: Transformers.js upgraded and verified.");
         console.log("Please review the changes and commit.");

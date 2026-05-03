@@ -23,10 +23,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Security
 
--   Implemented command injection protection in build and release scripts, specifically hardening `version-bump.mjs` and `release-prep.mjs` against environment variable and argument injection (CWE-078, CWE-088).
+-   Implemented command injection protection in build and release scripts. Hardened `version-bump.mjs`, `release-prep.mjs`, and `upgrade-transformers.cjs` by migrating from `execSync` to `execFileSync` to prevent environment variable and argument injection (CWE-078, CWE-088).
 -   Added log injection sanitization in debug and logging scripts (CWE-117).
 -   Implemented origin verification for worker message handlers (CWE-940, CWE-020).
--   Added input validation for dependency and upgrade scripts (CWE-434, CWE-912, CWE-200).
+-   Added input validation for dependency and upgrade scripts, including strict origin checks for CDN URLs (CWE-434, CWE-912, CWE-200).
 
 ## [9.3.2] - 2026-05-02
 

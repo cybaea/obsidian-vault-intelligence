@@ -1,14 +1,11 @@
-import { execSync, execFileSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 // Helper to run commands and return output cleanly
 const run = (cmd, args = []) => {
     try {
-        if (args.length > 0) {
-            return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe' }).trim();
-        }
-        return execSync(cmd, { encoding: 'utf8', stdio: 'pipe' }).trim();
+        return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe' }).trim();
     } catch (error) {
-        // When execSync fails, it throws. We catch it to allow custom handling if needed,
+        // When execFileSync fails, it throws. We catch it to allow custom handling if needed,
         // or just rethrow to stop execution.
         throw new Error(`Command failed: ${cmd} ${args.join(' ')}\n${error.message}\n${error.stderr || ''}`);
     }
@@ -16,10 +13,7 @@ const run = (cmd, args = []) => {
 
 // Helper to run commands where we want to see live output (like git push)
 const runLive = (cmd, args = []) => {
-    if (args.length > 0) {
-        return execFileSync(cmd, args, { stdio: 'inherit' });
-    }
-    return execSync(cmd, { stdio: 'inherit' });
+    return execFileSync(cmd, args, { stdio: 'inherit' });
 };
 
 const type = (process.argv[2] || 'patch').replace(/[^a-zA-Z0-9.-]/g, '');

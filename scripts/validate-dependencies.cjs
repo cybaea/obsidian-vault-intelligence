@@ -82,7 +82,9 @@ async function validate() {
                 console.log(`OK: WASM_CDN_URL version matches.`);
 
                 console.log(`Checking CDN reachability: ${url}...`);
-                if (!url.startsWith('https://')) throw new Error('Invalid CDN URL');
+                if (!url.startsWith('https://cdn.jsdelivr.net/')) {
+                    throw new Error(`Invalid CDN URL origin: ${url}. Only jsdelivr is allowed.`);
+                }
                 const res = await checkUrl(url + 'ort-wasm.wasm');
                 if (res.status !== 'OK') {
                     console.error(`FAILED: CDN asset not reachable: ${res.url} (Code: ${res.code || res.message})`);

@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
-import { execFileSync, execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 // Sanitize version from environment to prevent command injection
 const targetVersion = (process.env.npm_package_version || '').replace(/[^a-zA-Z0-9.-]/g, '');
