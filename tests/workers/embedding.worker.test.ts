@@ -10,10 +10,10 @@ vi.mock('@xenova/transformers', () => ({
     AutoModel: {},
     AutoTokenizer: {},
     env: {},
+    pipeline: vi.fn(),
     PipelineType: {},
     PreTrainedModel: class {},
     Tensor: class {},
-    pipeline: vi.fn(),
 }));
 
 const globalRef = globalThis as unknown as GlobalWorkerTestScope;
