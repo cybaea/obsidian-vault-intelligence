@@ -108,7 +108,10 @@ async function run() {
         const errorMessage = error && typeof error === 'object' && 'message' in error
             ? error.message
             : String(error);
-        console.error(`\nFAILED: ${sanitize(errorMessage)}`);
+        const safeErrorMessage = String(errorMessage)
+            .replace(/[\r\n]+/g, ' ')
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+        console.error(`FAILED: ${safeErrorMessage}`);
         process.exit(1);
     }
 }
