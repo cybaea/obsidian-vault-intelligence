@@ -109,7 +109,7 @@ async function run() {
             ? error.message
             : String(error);
         const safeErrorMessage = sanitize(errorMessage);
-        console.error(`FAILED: ${safeErrorMessage}`);
+        console.error("FAILED: Upgrade process encountered an error.");
         process.exit(1);
     }
 }
