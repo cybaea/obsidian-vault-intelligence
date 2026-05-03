@@ -6,12 +6,6 @@
 
 Before writing any code, you must read `eslint.config.mts` and `AGENTS.md`. Treat these not as suggestions, but as hard technical constraints that define the 'Success Criteria' for this task. If you are about to use any, STOP and define a strict interface instead, as required by the 'Strict type safety' rule.
 
-### Editing integrity
-
-1.  **Prefer `Developer.edit` over `Developer.write`**: Use targeted search-and-replace for large files so you don't need to handle the entire file content in my context.
-2.  **Explicit Verification**: Use `wc -l` to verify line counts before and after any modification to ensure no unintended data loss occurred.
-3.  **Assume Truncation**: Treat any tool output that returns full file contents as potentially incomplete and avoid using it for overwrite operations.
-
 # Agent Initialization
 1. Read `AGENTS.md` for core project architecture and standards.
 2. Read `.goose/vault-intelligence-rules.md` for Goose-specific research and planning protocols.

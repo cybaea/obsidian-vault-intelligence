@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
-const targetVersion = process.env.npm_package_version;
+// Sanitize version from environment to prevent command injection
+const targetVersion = (process.env.npm_package_version || '').replace(/[^a-zA-Z0-9.-]/g, '');
 
 if (!targetVersion) {
     console.error("❌ npm_package_version is not set.");
@@ -37,7 +38,7 @@ if (isMajorOrMinor || minAppVersionChanged) {
 // 3. Update CHANGELOG.md
 console.log(`📝 Updating CHANGELOG.md for version ${targetVersion}...`);
 try {
-    execSync(`node scripts/update-changelog.mjs ${targetVersion}`, { stdio: 'inherit' }); // security-disable-line
+    execFileSync('node', ['scripts/update-changelog.mjs', targetVersion], { stdio: 'inherit' });
 } catch (e) {
     console.error("❌ Failed to update CHANGELOG.md");
     process.exit(1);

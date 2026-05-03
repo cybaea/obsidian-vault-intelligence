@@ -20,7 +20,8 @@ function checkUrl(url) {
 function getPackageVersion() {
     const pkgPath = path.join(__dirname, '../package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    return pkg.dependencies['@xenova/transformers'];
+    const version = pkg.dependencies['@xenova/transformers'];
+    return String(version).replace(/[^0-9.]/g, '');
 }
 
 function getInstalledVersion() {
@@ -82,7 +83,9 @@ async function validate() {
                 console.log(`OK: WASM_CDN_URL version matches.`);
 
                 console.log(`Checking CDN reachability: ${url}...`);
-                if (!url.startsWith('https://')) throw new Error('Invalid CDN URL');
+                if (!url.startsWith('https://cdn.jsdelivr.net/')) {
+                    throw new Error(`Invalid CDN URL origin: ${url}. Only jsdelivr is allowed.`);
+                }
                 const res = await checkUrl(url + 'ort-wasm.wasm');
                 if (res.status !== 'OK') {
                     console.error(`FAILED: CDN asset not reachable: ${res.url} (Code: ${res.code || res.message})`);
@@ -107,21 +110,6 @@ async function validate() {
     // 3. Check for Sharp duplication (Architectural Guardrail)
     console.log("Checking for sharp module duplication...");
     try {
-        const { execSync } = require('child_process');
-        const lsOutput = execSync('npm ls sharp --json', { encoding: 'utf8', cwd: path.join(__dirname, '..') });
-        // const lsData = JSON.parse(lsOutput);
-        
-        // Count occurrences of sharp in the dependency tree
-        const countSharp = (deps) => {
-            let count = 0;
-            if (!deps) return 0;
-            for (const name in deps) {
-                if (name === 'sharp') count++;
-                count += countSharp(deps[name].dependencies);
-            }
-            return count;
-        };
-
         // This is a bit complex to parse from npm ls --json correctly, 
         // a simpler way is to check if node_modules/@xenova/transformers/node_modules/sharp exists
         const nestedSharpPath = path.join(__dirname, '../node_modules/@xenova/transformers/node_modules/sharp');

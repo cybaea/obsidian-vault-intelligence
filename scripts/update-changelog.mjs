@@ -2,10 +2,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const changelogPath = join(process.cwd(), 'CHANGELOG.md');
-const version = process.argv[2];
+const version = (process.argv[2] || '').replace(/[^a-zA-Z0-9.-]/g, '');
 
 if (!version) {
     console.error('Usage: node scripts/update-changelog.mjs <version>');
+    console.error('Note: Version must only contain alphanumeric characters, dots, and dashes.');
     process.exit(1);
 }
 
@@ -35,9 +36,10 @@ try {
     const newContent = content.replace(unreleasedHeader, newSection);
 
     writeFileSync(changelogPath, newContent);
-    console.log(`✅ Updated CHANGELOG.md for version ${version}`);
+    console.log(`✅ Updated CHANGELOG.md for version ${version.replace(/[\n\r]/g, '')}`);
 
 } catch (error) {
-    console.error(`❌ Failed to update CHANGELOG.md: ${error.message}`);
+    const sanitizedError = String(error.message).replace(/[\n\r]/g, ' ');
+    console.error(`❌ Failed to update CHANGELOG.md: ${sanitizedError}`);
     process.exit(1);
 }

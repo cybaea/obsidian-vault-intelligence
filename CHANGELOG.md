@@ -17,15 +17,18 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   Fixed a potential runtime exception in `LocalEmbeddingService` during worker initialization.
 -   Updated documentation workflow to use `npm ci` for deterministic builds.
--   Added a local security linter (`scripts/lint-security.mjs`) to detect dangerous patterns and security vulnerabilities pre-commit.
+-   Added a local security linter (`scripts/lint-security.mjs`) to detect dangerous patterns, including direct `process.env` usage in `execSync` and unsanitized command strings.
 -   Consolidated and improved TypeScript definitions for inline workers.
+-   Removed unused `lsOutput` variable in `scripts/validate-dependencies.cjs`.
 
 ### Security
 
--   Implemented command injection protection in build and release scripts (CWE-078, CWE-088).
+-   Hardened script security against Log Injection and SSRF in `scripts/upgrade-transformers.cjs`, `scripts/capture-logs.mjs`, `scripts/debug-to-file.mjs`, and `scripts/debug-worker.mjs`.
+-   Improved input validation and taint-tracking in automation scripts.
+-   Implemented command injection protection in build and release scripts. Hardened `version-bump.mjs`, `release-prep.mjs`, and `upgrade-transformers.cjs` by migrating from `execSync` to `execFileSync` to prevent environment variable and argument injection (CWE-078, CWE-088).
 -   Added log injection sanitization in debug and logging scripts (CWE-117).
 -   Implemented origin verification for worker message handlers (CWE-940, CWE-020).
--   Added input validation for dependency and upgrade scripts (CWE-434, CWE-912, CWE-200).
+-   Added input validation for dependency and upgrade scripts, including strict origin checks for CDN URLs (CWE-434, CWE-912, CWE-200).
 
 ## [9.3.2] - 2026-05-02
 
