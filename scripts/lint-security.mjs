@@ -16,6 +16,12 @@ const dangerousPatterns = [
         regex: /execSync\(\x60[^\x24\x60]*\x24\{(?![^}]*\.replace)[^}]+\}[^\x60]*\x60/g,
         message: "Potential command injection in execSync. Ensure variables are sanitized.",
         severity: 'warn'
+    },
+    {
+        // Catch direct process.env usage in execSync
+        regex: /execSync\([^)]*process\.env/g,
+        message: "Direct use of process.env in execSync is dangerous. Sanitize into a variable first.",
+        severity: 'error'
     }
 ];
 
