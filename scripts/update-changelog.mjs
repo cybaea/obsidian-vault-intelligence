@@ -36,9 +36,10 @@ try {
     const newContent = content.replace(unreleasedHeader, newSection);
 
     writeFileSync(changelogPath, newContent);
-    console.log(`✅ Updated CHANGELOG.md for version ${version}`);
+    console.log(`✅ Updated CHANGELOG.md for version ${version.replace(/[\n\r]/g, '')}`);
 
 } catch (error) {
-    console.error(`❌ Failed to update CHANGELOG.md: ${error.message}`);
+    const sanitizedError = String(error.message).replace(/[\n\r]/g, ' ');
+    console.error(`❌ Failed to update CHANGELOG.md: ${sanitizedError}`);
     process.exit(1);
 }

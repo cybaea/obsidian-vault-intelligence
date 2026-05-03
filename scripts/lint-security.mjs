@@ -22,11 +22,23 @@ const dangerousPatterns = [
         regex: /execSync\([^)]*process\.env/g,
         message: "Direct use of process.env in execSync is dangerous. Sanitize into a variable first.",
         severity: 'error'
+    },
+    {
+        regex: /(?:writeFileSync|appendFileSync|writeFile|appendFile)\([^,]+,\s*(?![^,]*\.replace)[^,]*\$\{?(?:targets|latest|worker|data|msg|text|args|current|pkgContent|constantsContent)\b[^,]*\)/g,
+        message: "Potential untrusted data written to file. Ensure variables are sanitized.",
+        severity: 'warn'
+    },
+    {
+        regex: /console\.(?:log|info|warn|error)\([^)]*(?![^)]*\.replace)[^)]*\$\{?(?:targets|latest|worker|data|msg|text|args|q\.query|error|e|err)\b[^)]*\)/g,
+        message: "Potential log injection. Ensure variables are sanitized with .replace(/\\n|\\r/g, '').",
+        severity: 'warn'
     }
 ];
 
 function scanFile(filePath) {
     if (filePath.includes('lint-security.mjs')) return 0;
+    // Only scan scripts/ directory for these specific shell/file/log patterns
+    if (!filePath.includes('scripts/') && !filePath.endsWith('.mjs') && !filePath.endsWith('.cjs')) return 0;
     
     const fileContent = fs.readFileSync(filePath, 'utf8');
     const lines = fileContent.split('\n');

@@ -34,18 +34,20 @@ async function connectToDebugger() {
         ws.on('message', (data) => {
             const message = JSON.parse(data);
             if (message.method === "Runtime.consoleAPICalled") {
-                const args = message.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ').replace(/[\r\n]/g, ' ');
+                const args = message.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ');
                 const sanitizedArgs = String(args).replace(/[\r\n]/g, ' ');
                 console.log(`[Worker Console] ${sanitizedArgs}`);
             }
         });
 
         ws.on('error', (err) => {
-            console.error("WebSocket error:", err);
+            const sanitizedErr = String(err.message || err).replace(/[\r\n]/g, ' ');
+            console.error(`WebSocket error: ${sanitizedErr}`);
         });
 
     } catch (e) {
-        console.error("Failed to connect:", e);
+        const sanitizedError = String(e.message || e).replace(/[\r\n]/g, ' ');
+        console.error(`Failed to connect: ${sanitizedError}`);
     }
 }
 

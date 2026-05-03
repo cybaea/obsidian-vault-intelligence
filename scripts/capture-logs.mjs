@@ -30,13 +30,14 @@ async function captureLogs() {
     ws.on('message', (data) => {
         const msg = JSON.parse(data);
         if (msg.method === "Runtime.consoleAPICalled") {
-            const text = msg.params.args.map(a => a.value || a.description).join(' ').replace(/[\r\n]/g, ' ');
-            console.log(`[CDP LOG] ${text}`);
+            const text = msg.params.args.map(a => String(a.value || a.description)).join(' ').replace(/[\n\r]/g, ' ');
+            console.log(`[CDP LOG] ${text.replace(/[\n\r]/g, ' ')}`);
         }
     });
 
     ws.on('error', (err) => {
-        console.error("WS Error:", err);
+        const sanitizedError = String(err.message || err).replace(/[\n\r]/g, ' ');
+        console.error(`WS Error: ${sanitizedError}`);
     });
 
     // Keep running for 10 seconds to catch initial burst

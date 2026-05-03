@@ -31,49 +31,48 @@ async function run() {
 
     try {
         console.log("Fetching latest version from NPM...");
-        let latest = await getLatestVersion();
-        // Sanitize version string and validate format
-        latest = latest.replace(/[^0-9.]/g, '');
-        if (!/^\d+\.\d+\.\d+$/.test(latest)) {
-            throw new Error(`Invalid version format received from NPM: ${latest}`);
+        const rawLatest = await getLatestVersion();
+        
+        const match = String(rawLatest).match(/^(\d+)\.(\d+)\.(\d+)$/);
+        if (!match) {
+            throw new Error(`Invalid version format received from NPM: ${rawLatest}`);
         }
+        // Force conversion to numbers and back to string to break taint flow completely
+        const latest = `${parseInt(match[1], 10)}.${parseInt(match[2], 10)}.${parseInt(match[3], 10)}`;
         const current = getPackageVersion();
 
-        console.log(`Current pinned version: ${current}`);
-        console.log(`Latest available version: ${latest}`);
+        console.log(`Current pinned version: ${current.replace(/[\n\r]/g, '')}`);
+        console.log(`Latest available version: ${latest.replace(/[\n\r]/g, '')}`);
 
         if (current === latest) {
             console.log("No update required. Already at latest version.");
             return;
         }
 
-        console.log(`Update found! Upgrading ${current} -> ${latest}...`);
+        console.log(`Update found! Upgrading ${current.replace(/[\n\r]/g, '')} -> ${latest.replace(/[\n\r]/g, '')}...`);
 
-        // 1. Update package.json
+        // 1. Update package.json using JSON object to avoid string manipulation risks
         const pkgPath = path.join(__dirname, '../package.json');
-        let pkgContent = fs.readFileSync(pkgPath, 'utf8');
-        pkgContent = pkgContent.replace(
-            `"@xenova/transformers": "${current}"`,
-            `"@xenova/transformers": "${latest}"`
-        );
-        fs.writeFileSync(pkgPath, pkgContent);
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        pkg.dependencies['@xenova/transformers'] = latest;
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
         console.log("OK: package.json updated.");
 
         // 2. Update src/constants.ts
         const constantsPath = path.join(__dirname, '../src/constants.ts');
         let constantsContent = fs.readFileSync(constantsPath, 'utf8');
 
-        // Update WASM_VERSION
-        constantsContent = constantsContent.replace(
-            /WASM_VERSION:\s*['"](.+?)['"]/,
-            `WASM_VERSION: '${latest}'`
-        );
-
-        // Update WASM_CDN_URL (specifically the version part)
-        constantsContent = constantsContent.replace(
-            /WASM_CDN_URL:\s*['"](.+?@)(.+?)(\/.+?)['"]/,
-            `WASM_CDN_URL: '$1${latest}$3'`
-        );
+        // Use line-by-line replacement with validated version string
+        constantsContent = constantsContent.split('\n').map(line => {
+            if (line.includes('WASM_VERSION:')) {
+                return line.replace(/['"].*?['"]/, `'${latest}'`);
+            }
+            if (line.includes('WASM_CDN_URL:')) {
+                // Ensure we only replace the version part and keep the rest intact
+                return line.replace(/@(\d+\.\d+\.\d+)\/dist/, `@${latest}/dist`);
+            }
+            return line;
+        }).join('\n');
 
         fs.writeFileSync(constantsPath, constantsContent);
         console.log("OK: src/constants.ts updated.");
