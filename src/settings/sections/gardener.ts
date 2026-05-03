@@ -2,6 +2,7 @@ import { Setting, App, Plugin, TextComponent } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
+import { hasGoogleApiKey } from "../../utils/secrets";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -28,7 +29,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         });
     });
 
-    const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
     const canUseChat = hasApiKey || hasOllama;
 

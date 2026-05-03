@@ -86,6 +86,17 @@ describe('GeminiProvider', () => {
             expect(key).toBe('custom-secret-value');
         });
 
+        it('should call secretStorage.getSecret for googleApiKeySecret references', async () => {
+            mockSettings.googleApiKey = '';
+            mockSettings.googleApiKeySecret = 'custom-secret-id';
+            mockGetSecret.mockReturnValue('secret-from-storage');
+
+            const key = await service.getApiKey();
+
+            expect(mockGetSecret).toHaveBeenCalledWith('custom-secret-id');
+            expect(key).toBe('secret-from-storage');
+        });
+
         it('should return null if secretStorage throws an error', async () => {
             mockSettings.googleApiKey = 'vault-intelligence-api-key';
             mockGetSecret.mockImplementation(() => {

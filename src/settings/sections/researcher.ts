@@ -3,6 +3,7 @@ import { Setting, App, Plugin } from "obsidian";
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
+import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
@@ -26,7 +27,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
         });
     });
 
-    const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
     const canUseChat = hasApiKey || hasOllama;
 

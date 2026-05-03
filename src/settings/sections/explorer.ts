@@ -6,6 +6,7 @@ import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegis
 import { RoutingEmbeddingService } from "../../services/RoutingEmbeddingService";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { logger } from "../../utils/logger";
+import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
@@ -23,7 +24,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         });
     });
 
-    const hasApiKey = !!plugin.settings.googleApiKey;
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
     const gemini = "Gemini";
     const ollama = "Ollama";
@@ -312,7 +313,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .setName('Re-ranking model')
             .setDesc(`The AI engine used for the second loop (${analyst}) to verify and rank search results.`)
             .addDropdown(dropdown => {
-                renderModelDropdown(dropdown, chatModels, reRankingModelCurrent, !!plugin.settings.googleApiKey || !!plugin.settings.ollamaEndpoint, !!plugin.settings.ollamaEndpoint, (val) => {
+                renderModelDropdown(dropdown, chatModels, reRankingModelCurrent, hasGoogleApiKey(plugin.settings) || !!plugin.settings.ollamaEndpoint, !!plugin.settings.ollamaEndpoint, (val) => {
                     void (async () => {
                         if (val !== 'custom') {
                             plugin.settings.reRankingModel = val;
