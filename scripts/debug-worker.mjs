@@ -6,7 +6,18 @@ import WebSocket from 'ws';
  * @returns {string} The sanitized string.
  */
 function sanitize(s) {
-    return String(s).replace(/\r?\n|\r/g, ' ');
+    const value = typeof s === 'string' ? s : (() => {
+        try {
+            return String(s);
+        } catch {
+            return '[Unserializable]';
+        }
+    })();
+
+    return value
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        .trim();
 }
 
 /**
