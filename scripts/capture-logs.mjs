@@ -59,8 +59,20 @@ async function captureLogs() {
         ws.on('message', (data) => {
             const msg = JSON.parse(data);
             if (msg.method === "Runtime.consoleAPICalled") {
-                const text = msg.params.args.map(a => String(a.value || a.description)).join(' ');
-                console.log(`[CDP LOG] ${sanitize(text)}`);
+                const text = msg.params.args
+                    .map((a) => {
+                        const raw = a?.value ?? a?.description ?? '';
+                        if (typeof raw === 'string') return raw;
+                        if (typeof raw === 'number' || typeof raw === 'boolean' || typeof raw === 'bigint') return String(raw);
+                        try {
+                            return JSON.stringify(raw);
+                        } catch {
+                            return String(raw);
+                        }
+                    })
+                    .join(' ');
+                const safeText = sanitize(text);
+                console.log(`[CDP LOG] ${safeText}`);
             }
         });
 
