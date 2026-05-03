@@ -37,6 +37,14 @@ safeEnv.backends.onnx.wasm.proxy = false;
 const pendingFetches = new Map<number, { resolve: (resp: Response) => void, reject: (err: Error) => void }>();
 let fetchRequestId = 0;
 
+const timer = (() => {
+    const globalRef = globalThis as unknown as Record<string, unknown>;
+    if (typeof globalRef.activeWindow !== 'undefined') {
+        return globalRef.activeWindow as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
+    }
+    return globalThis as unknown as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
+})();
+
 // Override global fetch to proxy through main thread (bypasses Obsidian CSP/CORS)
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -52,11 +60,11 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
 
         // --- Smart Timeout Implementation ---
         // 1. Determine timeout based on context (Model weights vs API/Metadata)
-        // Allow longer timeout for model assets (.onnx, .bin, .wasm, etc.) to support slow connections
+        // Allow longer timeout for model assets (.onnx, .bin, .wasm, .msgpack, etc.) to support slow connections
         const IS_HEAVY_ASSET = ['.onnx', '.bin', '.wasm', '.msgpack'].some(ext => url.toLowerCase().endsWith(ext)) || url.includes('huggingface.co');
         const TIMEOUT_MS = IS_HEAVY_ASSET ? WORKER_CONSTANTS.HEAVY_ASSET_TIMEOUT_MS : WORKER_CONSTANTS.API_REQUEST_TIMEOUT_MS;
 
-        const timeoutId = activeWindow.setTimeout(() => {
+        const timeoutId = timer.setTimeout(() => {
             if (pendingFetches.has(requestId)) {
                 pendingFetches.delete(requestId);
                 reject(new Error(`Fetch proxy request ${requestId} (${url}) timed out after ${TIMEOUT_MS / 1000}s.`));
@@ -64,12 +72,12 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         }, TIMEOUT_MS);
 
         const wrappedResolve = (resp: Response) => {
-            activeWindow.clearTimeout(timeoutId);
+            timer.clearTimeout(timeoutId);
             resolve(resp);
         };
 
         const wrappedReject = (err: Error) => {
-            activeWindow.clearTimeout(timeoutId);
+            timer.clearTimeout(timeoutId);
             reject(err);
         };
 
@@ -183,7 +191,7 @@ self.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
 // --- Helper for Event Loop Yielding ---
 // Forces the worker to "breathe" and allow the browser/host to see it is still alive.
 async function yieldToEventLoop() {
-    return new Promise(resolve => activeWindow.setTimeout(resolve, 0));
+    return new Promise(resolve => timer.setTimeout(resolve, 0));
 }
 
 // --- Pipeline Singleton ---
