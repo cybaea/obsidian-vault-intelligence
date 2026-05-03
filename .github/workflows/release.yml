@@ -30,14 +30,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Generate build provenance
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          subject-path: |
-            main.js
-            manifest.json
-            styles.css
-
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,3 +43,22 @@ jobs:
             --title="$tag" \
             --draft \
             main.js manifest.json styles.css
+
+      - name: Generate build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c32 # v4.1.0
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if [ "$tag" = "$GITHUB_REF" ]; then
+            tag=$(node -p "require('./manifest.json').version")
+          fi
+
+          gh release edit "$tag" --draft=false
