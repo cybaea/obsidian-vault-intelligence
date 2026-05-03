@@ -97,7 +97,8 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         apiSetting.addComponent(el => new SecretComponent(plugin.app, el)
             .setValue(plugin.settings.googleApiKeySecret || plugin.settings.googleApiKey || '')
             .onChange(async (value) => {
-                const isRawKey = value.startsWith('AIza');
+                // Strengthen validation: Google API keys are 39 characters, start with 'AIza', and are alphanumeric
+                const isRawKey = value.length === 39 && value.startsWith('AIza') && /^[A-Za-z0-9]+$/.test(value);
                 if (isRawKey) {
                     plugin.settings.googleApiKey = value;
                     plugin.settings.googleApiKeySecret = '';
@@ -106,6 +107,11 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     plugin.settings.googleApiKey = '';
                 }
                 await plugin.saveSettings();
+
+                // Warn if input starts with 'AIza' but doesn't match full key format
+                if (value.startsWith('AIza') && !isRawKey) {
+                    new Notice("Warning: This input starts with 'AIza' but doesn't match the expected Google API key format (39 alphanumeric characters). If this is a raw API key, please verify its format. Otherwise, it will be treated as a secret reference.");
+                }
 
                 const actualKey = await plugin.geminiService.getApiKey();
                 if (actualKey && actualKey.startsWith('AIza')) {
