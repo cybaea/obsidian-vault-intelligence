@@ -5,11 +5,13 @@ const { execFileSync } = require('child_process');
 
 /**
  * Sanitizes a string for logging to prevent log injection.
- * @param {string} s The string to sanitize.
+ * @param {unknown} s The value to sanitize.
  * @returns {string} The sanitized string.
  */
 function sanitize(s) {
-    return String(s).replace(/\r?\n|\r/g, ' ');
+    return String(s)
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
 }
 
 async function getLatestVersion() {
@@ -103,7 +105,10 @@ async function run() {
 
         console.log("\nSUCCESS: Transformers.js upgraded and verified.");
     } catch (error) {
-        console.error(`\nFAILED: ${sanitize(error.message || error)}`);
+        const errorMessage = error && typeof error === 'object' && 'message' in error
+            ? error.message
+            : String(error);
+        console.error(`\nFAILED: ${sanitize(errorMessage)}`);
         process.exit(1);
     }
 }
