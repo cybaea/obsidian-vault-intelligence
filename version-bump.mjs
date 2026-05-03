@@ -38,7 +38,7 @@ if (isMajorOrMinor || minAppVersionChanged) {
 // 3. Update CHANGELOG.md
 console.log(`📝 Updating CHANGELOG.md for version ${targetVersion}...`);
 try {
-    execSync(`node scripts/update-changelog.mjs ${targetVersion}`, { stdio: 'inherit' });
+    execSync(`node scripts/update-changelog.mjs ${targetVersion.replace(/[^a-zA-Z0-9.-]/g, '')}`, { stdio: 'inherit' });
 } catch (e) {
     console.error("❌ Failed to update CHANGELOG.md");
     process.exit(1);
