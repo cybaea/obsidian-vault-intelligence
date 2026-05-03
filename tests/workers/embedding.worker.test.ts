@@ -32,12 +32,15 @@ describe('Embedding worker timer fallback', () => {
         globalRef.self = globalThis;
         globalRef.addEventListener = vi.fn() as unknown as typeof globalThis.addEventListener;
 
-        globalThis.setTimeout = vi.fn((callback: TimerHandler, ms?: number, ...args: unknown[]) => {
+        const mockedSetTimeout = vi.fn((callback: TimerHandler, ms?: number, ...args: unknown[]) => {
             return originalSetTimeout(callback, ms, ...args);
-        });
-        globalThis.clearTimeout = vi.fn((id?: number) => {
-            return originalClearTimeout(id);
-        });
+        }) as unknown as typeof setTimeout;
+        const mockedClearTimeout = vi.fn((timeout?: number | ReturnType<typeof originalSetTimeout>) => {
+            return originalClearTimeout(timeout as number | undefined);
+        }) as unknown as typeof clearTimeout;
+
+        globalThis.setTimeout = mockedSetTimeout;
+        globalThis.clearTimeout = mockedClearTimeout;
 
         globalThis.fetch = vi.fn(() => Promise.resolve(new Response('ok')));
     });
@@ -52,7 +55,7 @@ describe('Embedding worker timer fallback', () => {
     });
 
     it('falls back to globalThis timers when activeWindow is unavailable', async () => {
-        const workerModule = await import('../../src/workers/embedding.worker.ts');
+        const workerModule = await import('../../src/workers/embedding.worker');
 
         expect(workerModule.timer.setTimeout).toBe(globalThis.setTimeout);
         expect(workerModule.timer.clearTimeout).toBe(globalThis.clearTimeout);
