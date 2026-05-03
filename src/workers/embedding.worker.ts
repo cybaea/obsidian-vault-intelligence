@@ -37,7 +37,7 @@ safeEnv.backends.onnx.wasm.proxy = false;
 const pendingFetches = new Map<number, { resolve: (resp: Response) => void, reject: (err: Error) => void }>();
 let fetchRequestId = 0;
 
-const timer = (() => {
+export const timer = (() => {
     const globalRef = globalThis as unknown as Record<string, unknown>;
     if (typeof globalRef.activeWindow !== 'undefined') {
         return globalRef.activeWindow as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
