@@ -15,7 +15,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
--   Fixed a potential runtime exception in `LocalEmbeddingService` during worker initialization.
+-   Fixed a local embedding worker initialization failure in `LocalEmbeddingService` caused by `activeWindow` being undefined in worker context.
 -   Updated documentation workflow to use `npm ci` for deterministic builds.
 -   Added a local security linter (`scripts/lint-security.mjs`) to detect dangerous patterns, including direct `process.env` usage in `execSync` and unsanitized command strings.
 -   Consolidated and improved TypeScript definitions for inline workers.
