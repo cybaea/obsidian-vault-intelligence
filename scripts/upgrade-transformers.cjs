@@ -105,11 +105,7 @@ async function run() {
 
         console.log("\nSUCCESS: Transformers.js upgraded and verified.");
     } catch (error) {
-        const errorMessage = error && typeof error === 'object' && 'message' in error
-            ? error.message
-            : String(error);
-        const safeErrorMessage = sanitize(errorMessage);
-        console.error(`FAILED: ${safeErrorMessage}`);
+        console.error("FAILED: Upgrade process encountered an error.");
         process.exit(1);
     }
 }
