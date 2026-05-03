@@ -15,8 +15,9 @@ function sanitize(s) {
     })();
 
     return value
-        .replace(/[\r\n]+/g, ' ')
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        .replace(/[\r\n\u2028\u2029]+/g, ' ')
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\u2066-\u2069]/g, '')
+        .replace(/\s{2,}/g, ' ')
         .trim();
 }
 
