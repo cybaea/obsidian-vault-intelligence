@@ -7,15 +7,23 @@ fs.writeFileSync(LOG_FILE, 'Starting log capture...\n');
 async function captureLogs() {
     try {
         const res = await fetch('http://localhost:9223/json');
-        const targets = await res.json();
-        fs.appendFileSync(LOG_FILE, `Found ${String(targets.length).replace(/[\r\n]/g, '')} targets\n`);
+        const rawTargets = await res.json();
+        
+        // Explicitly sanitize and validate input from network before writing to file
+        if (!Array.isArray(rawTargets)) throw new Error("Invalid response from debugger");
+        const targets = rawTargets.map(t => ({
+            type: String(t.type).replace(/[^a-z]/g, ''),
+            url: String(t.url).replace(/[^\w.:/ -]/g, ''),
+            webSocketDebuggerUrl: String(t.webSocketDebuggerUrl).replace(/[^\w.:/ -]/g, '')
+        }));
+
+        fs.appendFileSync(LOG_FILE, `Found ${targets.length} targets\n`);
 
         const blobWorkers = targets.filter(t => t.type === 'worker' && t.url.includes('blob:'));
-        fs.appendFileSync(LOG_FILE, `Found ${String(blobWorkers.length).replace(/[\r\n]/g, '')} blob workers\n`);
+        fs.appendFileSync(LOG_FILE, `Found ${blobWorkers.length} blob workers\n`);
 
         blobWorkers.forEach((worker, index) => {
-            const sanitizedUrl = String(worker.url).replace(/[\r\n]/g, '');
-            fs.appendFileSync(LOG_FILE, `Connecting to worker ${index}: ${sanitizedUrl}\n`);
+            fs.appendFileSync(LOG_FILE, `Connecting to worker ${index}: ${worker.url}\n`);
             const ws = new WebSocket(worker.webSocketDebuggerUrl);
 
             ws.on('open', () => {

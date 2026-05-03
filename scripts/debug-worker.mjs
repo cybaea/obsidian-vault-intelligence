@@ -3,7 +3,15 @@ import WebSocket from 'ws';
 async function connectToDebugger() {
     try {
         const response = await fetch('http://localhost:9223/json');
-        const targets = await response.json();
+        const rawTargets = await response.json();
+
+        if (!Array.isArray(rawTargets)) throw new Error("Invalid response from debugger");
+        const targets = rawTargets.map(t => ({
+            type: String(t.type).replace(/[^a-z]/g, ''),
+            url: String(t.url).replace(/[^\w.:/ -]/g, ''),
+            webSocketDebuggerUrl: String(t.webSocketDebuggerUrl).replace(/[^\w.:/ -]/g, ''),
+            title: String(t.title).replace(/[^\w.:/ -]/g, '')
+        }));
 
         // Find the worker target
         const workerTarget = targets.find(t => t.type === 'worker' && t.url.includes('blob:'));
@@ -27,7 +35,8 @@ async function connectToDebugger() {
             const message = JSON.parse(data);
             if (message.method === "Runtime.consoleAPICalled") {
                 const args = message.params.args.map(a => a.value || a.description || JSON.stringify(a)).join(' ').replace(/[\r\n]/g, ' ');
-                console.log(`[Worker Console] ${args.replace(/[\r\n]/g, '')}`);
+                const sanitizedArgs = String(args).replace(/[\r\n]/g, ' ');
+                console.log(`[Worker Console] ${sanitizedArgs}`);
             }
         });
 

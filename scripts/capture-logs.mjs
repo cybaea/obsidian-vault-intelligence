@@ -2,7 +2,19 @@ import WebSocket from 'ws';
 
 async function captureLogs() {
     const res = await fetch('http://localhost:9223/json');
-    const targets = await res.json();
+    const rawTargets = await res.json();
+
+    if (!Array.isArray(rawTargets)) {
+        console.error("Invalid response from debugger");
+        process.exit(1);
+    }
+
+    const targets = rawTargets.map(t => ({
+        type: String(t.type).replace(/[^a-z]/g, ''),
+        url: String(t.url).replace(/[^\w.:/ -]/g, ''),
+        webSocketDebuggerUrl: String(t.webSocketDebuggerUrl).replace(/[^\w.:/ -]/g, '')
+    }));
+
     const worker = targets.find(t => t.type === 'worker' && t.url.includes('blob:'));
 
     if (!worker) {

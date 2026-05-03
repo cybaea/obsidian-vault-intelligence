@@ -20,7 +20,8 @@ function checkUrl(url) {
 function getPackageVersion() {
     const pkgPath = path.join(__dirname, '../package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    return pkg.dependencies['@xenova/transformers'];
+    const version = pkg.dependencies['@xenova/transformers'];
+    return String(version).replace(/[^0-9.]/g, '');
 }
 
 function getInstalledVersion() {

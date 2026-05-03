@@ -2,10 +2,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const changelogPath = join(process.cwd(), 'CHANGELOG.md');
-const version = process.argv[2];
+const version = (process.argv[2] || '').replace(/[^a-zA-Z0-9.-]/g, '');
 
 if (!version) {
     console.error('Usage: node scripts/update-changelog.mjs <version>');
+    console.error('Note: Version must only contain alphanumeric characters, dots, and dashes.');
     process.exit(1);
 }
 
