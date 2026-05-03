@@ -44,8 +44,33 @@ To reduce token-bloat and increase research quality, you MUST favor high-level d
 - **Mobile Check**: Does it use Node.js `fs` or `child_process` at the top level? Does it have a graceful mobile fallback?
 - **Privacy Check**: Does it propose background uploads without explicit folder/file whitelisting?
 
-## 3. Communication Style
+## 4. Historical Integrity & Safety (Hard Stop Protocol)
+
+### File Modification Rules
+- **FORBIDDEN**: Using `Developer.write` on existing files over 100 lines. This leads to silent truncation and data loss.
+- **MANDATORY**: Use `Developer.edit` with precise `before` and `after` blocks for all updates to large files (e.g., `CHANGELOG.md`, `ARCHITECTURE.md`).
+- **MANDATORY**: Run `wc -l <file>` immediately BEFORE and AFTER any edit. You MUST report the line count delta in your response.
+- **MANDATORY**: If an unintended truncation is detected (unexpected line count drop), you MUST immediately run `git checkout <file>` to restore the file before taking any further action.
+
+### Reading Strategy
+- **FORBIDDEN**: Using `cat` or raw `read` on files larger than 100 lines. The tool output will be truncated, leading to "split-brain" reasoning.
+- **MANDATORY**: Use `head`, `tail`, `sed`, or `grep` to extract only the context you need to perform an `edit`.
+
+## 5. Communication Style
 
 - **Status**: Report only significant research milestones.
 - **Format**: Use sentence case. Avoid bold in headers. Use "and" over "&".
 - **Tone**: Professional, adversarial, and engineering-focused.
+
+## 4. Historical Integrity & Hard Stop Protocol
+
+To prevent unintended data loss in large files (like `CHANGELOG.md`), you MUST follow these constraints:
+
+### Constraints
+- **Forbidden**: Never use `Developer.write` or `Developer.write_file` to update an existing file that is likely to be large (>100 lines).
+- **Mandatory**: Use `Developer.edit` for targeted search-and-replace.
+- **Verification**: Always run `wc -l <path>` before and after any modification to ensure no unintended truncation occurred.
+- **Read Strategy**: Do NOT use `cat` or `read_file` on large files. Use `sed`, `grep`, or `head/tail` to find the specific anchors for editing.
+
+### Failure Condition
+Truncating a file (e.g. dropping historical changelog entries) is defined as an **Architectural Failure**. If this occurs, immediately run `git checkout <path>` to restore the state.
