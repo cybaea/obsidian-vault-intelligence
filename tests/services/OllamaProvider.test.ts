@@ -8,7 +8,6 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { ModelRegistry } from '../../src/services/ModelRegistry';
 import { OllamaProvider } from '../../src/services/OllamaProvider';
 import { VaultIntelligenceSettings } from '../../src/settings/types';
-import { type ChatOptions } from '../../src/types/providers';
 
 vi.mock('obsidian', () => ({
     Platform: { isDesktopApp: true },
@@ -132,7 +131,7 @@ describe('OllamaProvider', () => {
                 supportedMethods: ['nativeTools']
             });
 
-            await provider.generateMessage([{ content: 'hi', role: 'user' }], {} as ChatOptions);
+            await provider.generateMessage([{ content: 'hi', role: 'user' }], {});
 
             expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
                 headers: expect.objectContaining({

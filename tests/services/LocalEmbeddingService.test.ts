@@ -63,7 +63,7 @@ describe('LocalEmbeddingService', () => {
         
         (service as unknown as LocalEmbeddingServicePrivates)._onMessage({ 
             data: { error: 'failed', id: 1, status: 'error' }
-        } as MessageEvent);
+        });
         
         expect(mockNotice.hide).toHaveBeenCalled();
     });

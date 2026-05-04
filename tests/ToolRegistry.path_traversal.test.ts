@@ -77,7 +77,7 @@ describe('ToolRegistry Security', () => {
             mockGraphService,
             mockSearchOrchestrator,
             mockContextAssembler,
-            mockFileTools as unknown as FileTools,
+            mockFileTools,
             {} as never
         );
     });

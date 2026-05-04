@@ -187,7 +187,7 @@ describe('AgentService Integration', () => {
         expect(assemblerSpy).toHaveBeenCalled();
 
         /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
-        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        const gm = mockReasoningClient.generateMessageStream;
         /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         
         const firstCall = gm.mock.calls[0] as unknown[];
@@ -216,7 +216,7 @@ describe('AgentService Integration', () => {
         await stream.next();
 
         /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
-        const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
+        const gm = mockReasoningClient.generateMessageStream;
         /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         
         const firstCall = gm.mock.calls[0] as unknown[] | undefined;

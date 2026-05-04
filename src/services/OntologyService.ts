@@ -132,7 +132,7 @@ export class OntologyService {
             for (const child of folder.children) {
                 if (child instanceof TFile && child.extension === "md") {
                     const cache = this.app.metadataCache.getFileCache(child);
-                    const fm = cache?.frontmatter as Record<string, unknown> | undefined;
+                    const fm = (cache?.frontmatter ?? {}) as Record<string, unknown>;
 
                     // 1. Check for Ignore/Exclude Flags
                     const gardener = fm?.["gardener"];

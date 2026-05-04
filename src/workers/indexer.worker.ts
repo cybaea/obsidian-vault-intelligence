@@ -643,7 +643,7 @@ const IndexerWorker: WorkerAPI = {
                             path: sibling,
                             score: score,
                             title: attr.title || sibling.split('/').pop()?.replace('.md', '')
-                        } as GraphSearchResult);
+                        });
                     }
                 }
             }
@@ -986,7 +986,7 @@ const IndexerWorker: WorkerAPI = {
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            orama: slimRaw as unknown as RawData,
+            orama: slimRaw,
         };
 
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
@@ -1188,7 +1188,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
                 start: doc.start,
                 title: doc.title,
                 tokenCount: doc.tokenCount,
-            } as GraphSearchResult);
+            });
         }
     }
 

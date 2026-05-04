@@ -156,7 +156,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 toolObjects.push({ googleSearch: {} });
             }
             if (useUrlContext) {
-                toolObjects.push({ urlContext: {} } as import('@google/genai').Tool);
+                toolObjects.push({ urlContext: {} });
             }
 
             if (toolObjects.length > 0) {
@@ -247,7 +247,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             toolObjects.push({ googleSearch: {} });
         }
         if (useUrlContext) {
-            toolObjects.push({ urlContext: {} } as import('@google/genai').Tool);
+            toolObjects.push({ urlContext: {} });
         }
 
         if (toolObjects.length > 0) {
@@ -367,7 +367,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const requestParams: UnifiedSDKParams = {
                 config: {
                     responseMimeType: "application/json",
-                    responseSchema: responseSchema as Record<string, unknown>
+                    responseSchema: responseSchema
                 },
                 contents: contents,
                 model: options.modelId || this.settings.chatModel
@@ -424,7 +424,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                         if (call.thought_signature) {
                             part['thought_signature'] = call.thought_signature;
                         }
-                        parts.push(part as unknown as Part);
+                        parts.push(part);
                     });
                 } else if (m.role === 'tool' && m.toolResults && m.toolResults.length > 0) {
                     m.toolResults.forEach(res => {
@@ -432,14 +432,14 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                             name: res.name,
                             response: res.result
                         };
-                        parts.push({ functionResponse: fr as unknown as Part['functionResponse'] } as Part);
+                        parts.push({ functionResponse: fr });
                     });
                 } else if (m.role === 'user' && m.name && m.toolCalls && m.toolCalls.length > 0) {
                     // Legacy fallback (Phase 1 stabilization)
                     parts.push({
                         functionResponse: {
                             name: m.name,
-                            response: (m.toolCalls?.[0]?.args as Record<string, unknown>) || undefined
+                            response: m.toolCalls?.[0]?.args || undefined
                         }
                     });
                 }
@@ -470,8 +470,8 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         return tools.map(t => ({
             description: t.description,
             name: t.name,
-            parameters: t.parameters as unknown as Record<string, unknown> // Note SDK Typing is strict, we typecast
-        })) as FunctionDeclaration[];
+            parameters: t.parameters as unknown as FunctionDeclaration['parameters']
+        }));
     }
 
     private parseResponse(response: GenerateContentResponse): UnifiedMessage {

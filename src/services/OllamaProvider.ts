@@ -575,7 +575,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             port: url.port || (url.protocol === "https:" ? 443 : 80),
         };
 
-        const req = (httpProvider as { request: (opts: unknown) => NodeRequest }).request(reqOptions);
+        const req = httpProvider.request(reqOptions);
         
         // Timeout guard
         req.setTimeout(OLLAMA_CONSTANTS.SOCKET_TIMEOUT_MS, () => {
@@ -615,7 +615,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
         try {
             for await (const chunk of res) {
-                buffer += decoder.decode(chunk as BufferSource, { stream: true });
+                buffer += decoder.decode(chunk, { stream: true });
                 if (buffer.length > OLLAMA_CONSTANTS.MAX_BUFFER_SIZE) {
                     throw new Error("NDJSON stream chunk exceeded maximum safe buffer size.");
                 }
@@ -829,7 +829,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     content: JSON.stringify(tr.result),
                     role: "tool",
                     tool_call_id: tr.id // ID is required to link result back to the specific call
-                })) as OllamaMessage[];
+                }));
             }
             
             let content = m.content || "";
@@ -843,7 +843,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
             return [{
                 content: content,
                 // Ollama expects 'assistant' and 'tool' (recent versions)
-                role: m.role as "user" | "system" | "assistant" | "tool",
+                role: m.role,
                 tool_calls: useNativeTools && m.toolCalls ? m.toolCalls.map(tc => ({
                     function: {
                         arguments: tc.args,

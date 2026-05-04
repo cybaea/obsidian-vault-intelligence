@@ -37,7 +37,7 @@ describe("ResultHydrator", () => {
         const expectedHash = fastHash(originalSnippet);
 
         const currentFileContent = "Some new prefix text.\nThe quick brown fox jumps over the lazy dog.\nSome suffix suffix.";
-        mockVaultManager.readFile = vi.fn().mockResolvedValue(currentFileContent as never) as never;
+        mockVaultManager.readFile = vi.fn().mockResolvedValue(currentFileContent);
 
         // Mock drift parameters: Original indices before text drifted
         const results = await hydrator.hydrate([
