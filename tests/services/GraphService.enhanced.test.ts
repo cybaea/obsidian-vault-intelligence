@@ -65,12 +65,12 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         // Mock Vector Results (Content match)
         const vectorResults: GraphSearchResult[] = [
-            { path: 'hybrid.md', score: 0.8 } as GraphSearchResult
+            { path: 'hybrid.md', score: 0.8 }
         ];
 
         // Mock Neighbor Results (Graph connection)
         const neighborResults: GraphSearchResult[] = [
-            { path: 'hybrid.md', score: 0.5 } as GraphSearchResult
+            { path: 'hybrid.md', score: 0.5 }
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
@@ -90,11 +90,11 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         const filePath = 'source.md';
 
         const vectorResults: GraphSearchResult[] = [
-            { path: 'hybrid-top.md', score: 0.95 } as GraphSearchResult
+            { path: 'hybrid-top.md', score: 0.95 }
         ];
 
         const neighborResults: GraphSearchResult[] = [
-            { path: 'hybrid-top.md', score: 0.5 } as GraphSearchResult
+            { path: 'hybrid-top.md', score: 0.5 }
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
@@ -112,12 +112,12 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
 
         // Vector returns something else
         const vectorResults: GraphSearchResult[] = [
-            { path: 'vector-only.md', score: 0.8 } as GraphSearchResult
+            { path: 'vector-only.md', score: 0.8 }
         ];
 
         // Neighbor returns a sibling not in vectors
         const neighborResults: GraphSearchResult[] = [
-            { path: 'pure-neighbor.md', score: 0.3 } as GraphSearchResult
+            { path: 'pure-neighbor.md', score: 0.3 }
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);
@@ -174,8 +174,8 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
     it('should exclude the source file itself from all sources', async () => {
         const filePath = 'source.md';
 
-        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([{ path: filePath, score: 1.0 } as GraphSearchResult]);
-        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([{ path: filePath, score: 0.5 } as GraphSearchResult]);
+        vi.spyOn(graphService, 'getSimilar').mockResolvedValue([{ path: filePath, score: 1.0 }]);
+        vi.spyOn(graphService, 'getNeighbors').mockResolvedValue([{ path: filePath, score: 0.5 }]);
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);
         expect(results.some(r => r.path === filePath)).toBe(false);
@@ -187,12 +187,12 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         // Vector match A: 0.9 (pure)
         // Vector match B: 0.8 (hybrid) -> 0.8 * 1.15 = 0.92
         const vectorResults: GraphSearchResult[] = [
-            { path: 'pure-vector.md', score: 0.9 } as GraphSearchResult,
-            { path: 'hybrid.md', score: 0.8 } as GraphSearchResult
+            { path: 'pure-vector.md', score: 0.9 },
+            { path: 'hybrid.md', score: 0.8 }
         ];
 
         const neighborResults: GraphSearchResult[] = [
-            { path: 'hybrid.md', score: 0.5 } as GraphSearchResult
+            { path: 'hybrid.md', score: 0.5 }
         ];
 
         vi.spyOn(graphService, 'getSimilar').mockResolvedValue(vectorResults);

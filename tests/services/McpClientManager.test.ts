@@ -67,6 +67,12 @@ Object.defineProperty(globalThis, 'process', {
     value: { env: { HOME: '/home/user', PATH: '/bin', SENSITIVE_KEY: 'secret123' }, platform: 'linux' }
 });
 
+interface McpClientManagerPrivates {
+    connections: Map<string, { status: string; errorMessage?: string; }>;
+    connectServer(config: MCPServerConfig): Promise<void>;
+    toolNameMap: Map<string, { originalName: string; serverId: string }>;
+}
+
 describe('McpClientManager', () => {
     let mockApp: App;
     let mockSettings: VaultIntelligenceSettings;
@@ -137,10 +143,10 @@ describe('McpClientManager', () => {
 
         mockLocalStorageValue[`vi-mcp-trust-${serverConfig.id}`] = '0102030405';
 
-        const managerWithInternal = manager as unknown as { connectServer(config: MCPServerConfig): Promise<void> };
+        const managerWithInternal = manager as unknown as McpClientManagerPrivates;
         
         try {
-            await managerWithInternal.connectServer(serverConfig as MCPServerConfig);
+            await managerWithInternal.connectServer(serverConfig);
         } catch {
             // Internal tests may swallow execution failures, but we verify environment injection regardless
         }
@@ -194,13 +200,10 @@ describe('McpClientManager', () => {
             url: 'http://169.254.169.254/latest/meta-data/'
         };
 
-        const managerWithInternal = manager as unknown as { 
-            connectServer(config: MCPServerConfig): Promise<void>; 
-            connections: Map<string, { status: string; errorMessage?: string; }>;
-        };
+        const managerWithInternal = manager as unknown as McpClientManagerPrivates;
         
         mockLocalStorageValue[`vi-mcp-trust-${localServerConfig.id}`] = '0102030405';
-        await managerWithInternal.connectServer(localServerConfig as MCPServerConfig);
+        await managerWithInternal.connectServer(localServerConfig);
         
         const connection = managerWithInternal.connections.get(localServerConfig.id);
         expect(connection).toBeDefined();
@@ -249,7 +252,7 @@ describe('McpClientManager', () => {
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
             status: 'connected'
-        } as unknown);
+        });
 
         managerWithInternal.toolNameMap.set('mcp__test-server__long-tool', {
             originalName: 'long-tool',
@@ -279,7 +282,7 @@ describe('McpClientManager', () => {
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
             status: 'connected'
-        } as unknown);
+        });
 
         const resources = await manager.getAvailableResources();
         expect(resources).toHaveLength(1);

@@ -3,7 +3,7 @@ import { Notice, requestUrl } from "obsidian";
 import { WORKER_CONSTANTS } from "../constants";
 import { IVaultIntelligencePlugin, VaultIntelligenceSettings } from "../settings/types";
 import { EmbeddingPriority, IEmbeddingClient, IProvider } from "../types/providers";
-import { ConfigureMessage, ProgressPayload, WorkerMessage } from "../types/worker.types";
+import { ProgressPayload, WorkerMessage } from "../types/worker.types";
 import { logger } from "../utils/logger";
 import EmbeddingWorker from "../workers/embedding.worker";
 import { ModelRegistry } from "./ModelRegistry";
@@ -112,7 +112,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
 
         try {
             // MAGIC LINE: Just instantiate it like a class
-            const WorkerClass = EmbeddingWorker as unknown as new (options?: WorkerOptions) => Worker;
+            const WorkerClass = EmbeddingWorker;
             if (typeof WorkerClass !== 'function') {
                 throw new Error("[LocalEmbedding] Worker constructor is not a function");
             }
@@ -221,7 +221,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
                 simd,
                 type: 'configure',
                 version: WORKER_CONSTANTS.WASM_VERSION
-            } as ConfigureMessage);
+            });
 
             logger.info(`Local embedding worker initialized (${numThreads} threads, SIMD: ${simd}${this.fallbackThreads ? ' [THREAD-FALLBACK]' : ''}${this.fallbackSimd === false ? ' [SIMD-FALLBACK]' : ''}).`);
         } catch (e) {
@@ -238,7 +238,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             simd: this.settings.embeddingSimd,
             type: 'configure',
             version: WORKER_CONSTANTS.WASM_VERSION
-        } as ConfigureMessage);
+        });
     }
 
     private async _onMessage(event: MessageEvent) {

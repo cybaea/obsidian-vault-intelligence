@@ -279,9 +279,9 @@ class PipelineSingleton {
 
                     let data: ArrayLike<number | bigint>;
                     if (segmentIds instanceof Tensor) {
-                        data = segmentIds.data as ArrayLike<number | bigint>;
+                        data = segmentIds.data;
                     } else {
-                        data = segmentIds as ArrayLike<number | bigint>;
+                        data = segmentIds;
                     }
                     input_ids.push(...Array.from(data).map(num => Number(num)));
                 } catch (e) {
@@ -304,7 +304,7 @@ class PipelineSingleton {
 
                     if (!chunkText.trim()) continue;
 
-                    const output = await pipe(chunkText, { normalize: true, pooling: 'mean' }) as unknown as PipelineOutput;
+                    const output = await pipe(chunkText, { normalize: true, pooling: 'mean' });
                     vectors.push(Array.from(output.data as ArrayLike<number>));
                 } catch (e) {
                     logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);

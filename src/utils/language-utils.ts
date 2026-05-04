@@ -75,7 +75,7 @@ export function resolveStopwordKey(language: string | undefined | null): OramaSt
     if (normalized.includes('serbian') || normalized.startsWith('sr')) return 'serbian';
 
     // Fallback to engine language mapping (which covers most cases)
-    return resolveEngineLanguage(language) as OramaStopwordKey;
+    return resolveEngineLanguage(language);
 }
 
 /**

@@ -35,8 +35,7 @@ describe('GardenerService Payload and Budgeting', () => {
             },
             vault: {
                 cachedRead: vi.fn().mockResolvedValue(''),
-                // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
-                create: vi.fn().mockResolvedValue({ path: 'plan.md' } as unknown as TFile),
+                create: vi.fn().mockResolvedValue({ path: 'plan.md' }),
                 createFolder: vi.fn().mockResolvedValue(undefined),
                 getAbstractFileByPath: vi.fn().mockReturnValue(null),
                 getMarkdownFiles: vi.fn().mockReturnValue([]),

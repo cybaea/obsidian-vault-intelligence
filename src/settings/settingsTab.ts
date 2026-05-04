@@ -41,7 +41,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             { id: "researcher", label: "Researcher", render: renderResearcherSettings },
             { id: "explorer", label: "Explorer", render: renderExplorerSettings },
             { id: "gardener", label: "Gardener", render: renderGardenerSettings },
-            { id: "storage", label: "Storage", render: renderStorageSettings as (context: SettingsTabContext) => void },
+            { id: "storage", label: "Storage", render: (context) => void renderStorageSettings(context) },
             { id: "mcp", label: "MCP Tools", render: renderMcpSettings },
             { id: "advanced", label: "Advanced", render: renderAdvancedSettings },
         ];

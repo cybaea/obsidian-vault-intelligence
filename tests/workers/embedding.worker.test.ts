@@ -30,7 +30,7 @@ describe('Embedding worker timer fallback', () => {
 
         delete globalRef.activeWindow;
         globalRef.self = globalThis;
-        globalRef.addEventListener = vi.fn() as unknown as typeof globalThis.addEventListener;
+        globalRef.addEventListener = vi.fn();
 
         const mockedSetTimeout = vi.fn((callback: TimerHandler, ms?: number, ...args: unknown[]) => {
             return originalSetTimeout(callback, ms, ...args);
