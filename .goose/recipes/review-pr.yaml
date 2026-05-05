@@ -47,6 +47,7 @@ instructions: |
      
   4. Research release notes and breaking changes
      Search the web or the package's changelogs. Look for "breaking changes", "migration guide", or security fixes.
+     Include your findings in the final report, especially if there are potential breaking changes or security implications. If the PR is a security fix, identify the CVE or GHSA ID and include it in the report.
      
   5. Codebase impact analysis
      Use your tools to search the codebase (e.g., `grep` or search features) to find usage of affected APIs if breaking changes are suspected.
@@ -54,7 +55,8 @@ instructions: |
   6. Automated Verification Suite
      Run the tests using `npm ci` to respect the lockfile and avoid unnecessary changes. Execute:
      `npm ci && npm run build && npm test && npm run lint && npm run docs:build`
-     
+     If any of these steps fail, include the exact error messages in your final report. Do NOT attempt to fix the errors yourself; just report them as findings.
+
   7. Report Findings
      Do NOT create artifacts in the repository. Summarize your research and verification results explicitly in the chat.
      Post the summary as a comment on the PR using `gh pr comment`.
