@@ -57,16 +57,22 @@ instructions: |
      `npm ci && npm run build && npm test && npm run lint && npm run docs:build`
      If any of these steps fail, include the exact error messages in your final report. Do NOT attempt to fix the errors yourself; just report them as findings.
 
-  7. Report Findings
+  7. Push verified rebase
+     If all automated checks pass, push the verified rebase to confirm it works on the remote. Execute:
+     `git push origin HEAD --force-with-lease`
+     This ensures the rebased changes are verified and available for review or merging.
+
+  8. Report Findings
      Do NOT create artifacts in the repository. Summarize your research and verification results explicitly in the chat.
      Post the summary as a comment on the PR using `gh pr comment`.
      
      a. Write your detailed findings to a temporary file named `pr_summary.txt`. 
+        Include a section: "**Rebased and Verified**: This PR has been rebased on the latest main and all automated checks passed."
         Include a section: "**Manual Verification**: Please manually load the plugin in Obsidian to check for UI regressions, as automated tests cannot cover this."
         If this is a security fix, include a section: "**Changelog Entry**: Provide the entry for the `### Security` section, including the CVE/GHSA ID."
      b. Execute the following to post the comment and clean up:
         `gh pr comment {{ pr_number }} --body-file pr_summary.txt && rm pr_summary.txt`
         
-  8. Cleanup (Optional)
+  9. Cleanup (Optional)
      If the review is successful and you are NOT merging immediately, switch back to main. Execute:
      `git checkout main && git branch -D -`
