@@ -101,6 +101,7 @@
     "protobufjs": "^8.0.0",
     "uuid": "^14.0.0",
     "fetch-blob": "^4.0.0",
+    "ip-address": "10.2.0",
     "node-domexception": "file:./scripts/stubs/node-domexception"
   }
 }
