@@ -15,6 +15,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+### Security
+
+-   Fixed [CVE-2026-42338](https://github.com/advisories/GHSA-v2v4-37r5-5v8g) (Medium severity) by overriding transitive dependency `ip-address` to `v10.2.0`.
+
 ## [9.3.5] - 2026-05-03
 
 ### User features
