@@ -18,6 +18,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### Security
 
 -   Upgraded `@google/genai` to 2.0.0 to incorporate the latest SDK improvements and security patches.
+-   Upgraded `hono` from 4.12.14 to 4.12.18, fixing GHSA-p77w-8qqv-26rm, GHSA-qp7p-654g-cw7p, GHSA-hm8q-7f3q-5f36, GHSA-69xw-7hcm-h432 and including improvements.
 
 ## [9.3.6] - 2026-05-06
 
