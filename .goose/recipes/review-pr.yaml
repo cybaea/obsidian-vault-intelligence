@@ -59,6 +59,7 @@ instructions: |
 
   7. Update CHANGELOG.md
      If this PR is a security fix (identified in step 4), update `CHANGELOG.md` by adding the security entry to the `### Security` section under `[Unreleased]`, including the CVE/GHSA ID.
+     Run `npm run lint:md` to verify the formatting of the changelog entry, fixing any linting errors if necessary.
      Commit the change. Execute:
      `git add CHANGELOG.md && git commit -m "docs: update CHANGELOG.md with security fix details"`
 
