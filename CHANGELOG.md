@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.3.7] - 2026-05-08
+
+### User features
+
+### Developer features
+
 ### Security
 
 -   Upgraded `@google/genai` to 2.0.0 to incorporate the latest SDK improvements and security patches.
