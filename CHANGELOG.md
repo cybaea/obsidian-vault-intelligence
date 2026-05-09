@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.3.8] - 2026-05-09
+
+### User features
+
+### Developer features
+
 ### Security
 
 -   Updated `fast-uri` to 3.1.2 to address security vulnerabilities [GHSA-v39h-62p7-jpjc](https://github.com/fastify/fast-uri/security/advisories/GHSA-v39h-62p7-jpjc) and [GHSA-q3j6-qgpj-74h6](https://github.com/fastify/fast-uri/security/advisories/GHSA-q3j6-qgpj-74h6).
