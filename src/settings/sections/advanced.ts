@@ -125,6 +125,22 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     const sysGroup = new SettingGroup(containerEl).setHeading(systemHeading);
 
     sysGroup.addSetting(setting => {
+        setting.setName('Voyage AI API retries')
+        .setDesc('Number of retries for voyage AI connections.')
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.voyageRetries))
+            .setValue(String(plugin.settings.voyageRetries))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.voyageRetries = num;
+                    await plugin.saveSettings();
+                }
+            })
+        );
+    });
+
+    sysGroup.addSetting(setting => {
         setting.setName(`${gemini} API retries`)
         .setDesc('Number of retries for spotty connections.')
         .addText(text => text

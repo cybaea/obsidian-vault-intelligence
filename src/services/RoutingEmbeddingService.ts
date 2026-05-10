@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { GeminiProvider } from "./GeminiProvider";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 import { OllamaProvider } from "./OllamaProvider";
+import { VoyageAIProvider } from "./VoyageAIProvider";
 
 /**
  * Handles routing of embedding requests to either local (WASM) or remote (Gemini) providers.
@@ -13,6 +14,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     private localService: LocalEmbeddingService;
     private geminiService: GeminiProvider;
     private ollamaService: OllamaProvider;
+    private voyageService: VoyageAIProvider;
     private settings: VaultIntelligenceSettings;
 
     constructor(plugin: IVaultIntelligencePlugin, gemini: GeminiProvider, settings: VaultIntelligenceSettings) {
@@ -20,6 +22,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         this.localService = new LocalEmbeddingService(plugin, settings);
         this.geminiService = gemini;
         this.ollamaService = new OllamaProvider(settings, plugin.app);
+        this.voyageService = new VoyageAIProvider(settings, plugin.app);
     }
 
     /**
@@ -62,6 +65,9 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         }
         if (model.startsWith('local/')) {
             return this.localService;
+        }
+        if (model.startsWith('voyage/')) {
+            return this.voyageService;
         }
         return this.geminiService;
     }

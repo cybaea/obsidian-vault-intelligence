@@ -28,6 +28,10 @@ export class ProviderRegistry {
         if (id.startsWith("ollama/")) {
             return this.ollamaProvider;
         }
+        if (id.startsWith("voyage/")) {
+            // Voyage is embedding only. Fallback to Gemini for reasoning if a Voyage model is somehow passed here.
+            return this.geminiProvider;
+        }
         return this.geminiProvider;
     }
 
@@ -42,6 +46,7 @@ export class ProviderRegistry {
         if (id.startsWith("ollama/")) {
             return this.ollamaProvider;
         }
+        // Voyage is embedding only
         return this.geminiProvider;
     }
 

@@ -20,7 +20,7 @@ import { DEFAULT_SETTINGS, IVaultIntelligencePlugin, VaultIntelligenceSettings, 
 import { IEmbeddingClient } from "./types/providers";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
-import { GOOGLE_API_KEY_SECRET_NAME, hasGoogleApiKey } from "./utils/secrets";
+import { GOOGLE_API_KEY_SECRET_NAME, VOYAGE_API_KEY_SECRET_NAME, hasGoogleApiKey, hasVoyageApiKey } from "./utils/secrets";
 import { ResearchChatView } from "./views/ResearchChatView";
 import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
@@ -169,7 +169,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (hasGoogleApiKey(this.settings) || this.settings.ollamaEndpoint) {
+		if (hasGoogleApiKey(this.settings) || hasVoyageApiKey(this.settings) || this.settings.ollamaEndpoint) {
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
 				const ollamaProvider = this.providerRegistry.getOllamaProvider() as unknown as InternalOllamaProvider;
@@ -512,6 +512,21 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			delete (this.settings as unknown as Record<string, unknown>)['gardenerRecheckHours'];
 			await this.saveSettings();
 			logger.info(`Migrating gardenerRecheckHours (${hours}) to gardenerRecheckDays (${this.settings.gardenerRecheckDays})`);
+		}
+
+		// --- Voyage SecretStorage Migration ---
+		if (this.settings.voyageApiKey && (this.settings.voyageApiKey.startsWith('pa-') || this.settings.voyageApiKey.startsWith('al-')) && !this.settings.secretStorageFailure) {
+			try {
+				const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+				if (storage && storage.setSecret) {
+					storage.setSecret(VOYAGE_API_KEY_SECRET_NAME, this.settings.voyageApiKey);
+					this.settings.voyageApiKeySecret = VOYAGE_API_KEY_SECRET_NAME;
+					this.settings.voyageApiKey = '';
+					await this.saveData(this.settings);
+				}
+			} catch (error) {
+				logger.error("[SecretStorage] Voyage migration failed:", error);
+			}
 		}
 
 		// --- SecretStorage Migration (v7.0.0) ---

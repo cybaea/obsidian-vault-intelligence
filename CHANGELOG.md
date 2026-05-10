@@ -13,7 +13,17 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   **Voyage AI Support**: Added Voyage AI as a high-performance cloud embedding provider for document retrieval and semantic search. #466
+-   **Modern Models**: Support for the latest **Voyage 4** family (Large, Balanced, and Lite) optimized for high-accuracy semantic search.
+-   **Custom Dimensions**: Integrated support for **Matryoshka embeddings**, allowing users to scale vector dimensions from 128 to 2048 to balance performance and index size.
+-   **Secure Credentials**: Secure storage for Voyage API keys with OS keychain integration and cross-platform (Desktop/Mobile) support.
+-   **Stability Control**: Added dedicated retry configuration for Voyage AI connections in the Advanced settings.
+
 ### Developer features
+
+-   **VoyageAIProvider**: Implemented a dedicated provider for the Voyage AI REST API following the `IEmbeddingClient` interface.
+-   **Smart Batching**: Developed tier-aware chunk batching and token estimation logic to respect Voyage AI service limits and concurrency constraints.
+-   **Dynamic Routing**: Integrated Voyage AI into the `RoutingEmbeddingService` to support seamless provider switching and reasoning fallbacks.
 
 ## [9.3.8] - 2026-05-09
 

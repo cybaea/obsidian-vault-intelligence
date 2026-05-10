@@ -74,6 +74,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
     const google = "Google";
     const gemini = "Gemini";
     const ollama = "Ollama";
+    const voyage = "Voyage AI";
 
     const apiSetting = new Setting(containerEl)
         .setName(`${google} API key`)
@@ -200,6 +201,45 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         title: "Ollama HTTP headers",
         validateKey: (key: string) => validateHeaderKey(key)
     });
+
+    // --- 2b. Voyage AI API Key ---
+    const voyageSetting = new Setting(containerEl)
+        .setName(`${voyage} API key`)
+        .setClass('vault-intelligence-api-setting');
+
+    if (plugin.settings.secretStorageFailure) {
+        voyageSetting
+            .addText(text => {
+                text
+                    .setPlaceholder('API key')
+                    .setValue(plugin.settings.voyageApiKey || '')
+                    .setPassword()
+                    .onChange(async (value) => {
+                        plugin.settings.voyageApiKey = value;
+                        await plugin.saveSettings();
+                    });
+            });
+    } else {
+        voyageSetting.addComponent(el => new SecretComponent(plugin.app, el)
+            .setValue(plugin.settings.voyageApiKeySecret || plugin.settings.voyageApiKey || '')
+            .onChange(async (value) => {
+                // Voyage keys start with 'pa-' or 'al-'
+                const isRawKey = value.startsWith('pa-') || value.startsWith('al-');
+                if (isRawKey) {
+                    plugin.settings.voyageApiKey = value;
+                    plugin.settings.voyageApiKeySecret = '';
+                } else {
+                    plugin.settings.voyageApiKeySecret = value;
+                    plugin.settings.voyageApiKey = '';
+                }
+                await plugin.saveSettings();
+            }));
+
+        voyageSetting.descEl.createDiv({
+            cls: 'vi-settings-hint',
+            text: `Enter your ${voyage} API key. Obtain it from ${"voyageai.com"}.`
+        });
+    }
 
     // --- 3. Model List Management ---
     new Setting(containerEl)

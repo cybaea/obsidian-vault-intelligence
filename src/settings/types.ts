@@ -9,7 +9,7 @@ import { PersistenceManager } from "../services/PersistenceManager";
 import { IEmbeddingClient } from "../types/providers";
 import { LogLevel } from "../utils/logger";
 
-export type EmbeddingProvider = 'gemini' | 'local' | 'ollama';
+export type EmbeddingProvider = 'gemini' | 'local' | 'ollama' | 'voyage';
 
 export type ImplicitFolderSemanticsMode = 'none' | 'ontology' | 'all';
 
@@ -92,6 +92,9 @@ export interface VaultIntelligenceSettings {
     structuralEdgeThickness: number;
     systemInstruction: string | null;
     vaultSearchResultsLimit: number;
+    voyageApiKey: string;
+    voyageApiKeySecret: string;
+    voyageRetries: number;
 }
 
 // Default System Prompt with {{DATE}} placeholder
@@ -224,7 +227,10 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     similarNotesLimit: 20,
     structuralEdgeThickness: 1.0,
     systemInstruction: null, // Use default by reference
-    vaultSearchResultsLimit: 25
+    vaultSearchResultsLimit: 25,
+    voyageApiKey: '',
+    voyageApiKeySecret: '',
+    voyageRetries: 3
 };
 
 export interface IVaultIntelligencePlugin {
