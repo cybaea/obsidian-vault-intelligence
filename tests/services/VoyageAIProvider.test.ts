@@ -1,5 +1,6 @@
-import { App } from 'obsidian';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { App, requestUrl } from 'obsidian';
+import { beforeEach, describe, expect, it, vi, Mock } from 'vitest';
 
 import { VoyageAIProvider } from '../../src/services/VoyageAIProvider';
 import { VaultIntelligenceSettings } from '../../src/settings/types';
@@ -11,6 +12,20 @@ vi.mock('obsidian', () => {
         requestUrl: vi.fn(),
     };
 });
+
+/**
+ * Interface to expose private methods for testing.
+ */
+interface VoyageAIProviderTestInstance {
+    createBatches(texts: string[]): string[][];
+}
+
+interface RequestUrlMockParams {
+    body: string;
+    headers: Record<string, string>;
+    method: string;
+    url: string;
+}
 
 describe('VoyageAIProvider', () => {
     let provider: VoyageAIProvider;
@@ -36,12 +51,69 @@ describe('VoyageAIProvider', () => {
         provider = new VoyageAIProvider(mockSettings, mockApp);
     });
 
+    describe('API Payload Verification', () => {
+        it('should send correct input_type and output_dimension for embedQuery', async () => {
+            const mockResponse = {
+                json: {
+                    data: [{ embedding: [0.1, 0.2], index: 0 }],
+                    usage: { total_tokens: 10 }
+                },
+                status: 200
+            };
+            (requestUrl as Mock).mockResolvedValue(mockResponse);
+
+            await provider.embedQuery('test query');
+
+            const firstCall = (requestUrl as Mock).mock.calls[0];
+            if (!firstCall) throw new Error('Request not called');
+            const callArgs = firstCall[0] as RequestUrlMockParams;
+            expect(callArgs.body).toContain('"input_type":"query"');
+            expect(callArgs.body).toContain('"output_dimension":1024');
+        });
+
+        it('should send correct input_type for embedDocument', async () => {
+            const mockResponse = {
+                json: {
+                    data: [{ embedding: [0.1, 0.2], index: 0 }],
+                    usage: { total_tokens: 10 }
+                },
+                status: 200
+            };
+            (requestUrl as Mock).mockResolvedValue(mockResponse);
+
+            await provider.embedDocument('test document');
+
+            const firstCall = (requestUrl as Mock).mock.calls[0];
+            if (!firstCall) throw new Error('Request not called');
+            const callArgs = firstCall[0] as RequestUrlMockParams;
+            expect(callArgs.body).toContain('"input_type":"document"');
+        });
+
+        it('should send correct input_type for embedChunks', async () => {
+            const mockResponse = {
+                json: {
+                    data: [{ embedding: [0.1, 0.2], index: 0 }],
+                    usage: { total_tokens: 10 }
+                },
+                status: 200
+            };
+            (requestUrl as Mock).mockResolvedValue(mockResponse);
+
+            await provider.embedChunks(['chunk1']);
+
+            const firstCall = (requestUrl as Mock).mock.calls[0];
+            if (!firstCall) throw new Error('Request not called');
+            const callArgs = firstCall[0] as RequestUrlMockParams;
+            expect(callArgs.body).toContain('"input_type":"document"');
+        });
+    });
+
     describe('createBatches', () => {
         it('should split texts into batches based on token limits', () => {
-            const texts = new Array(20).fill('a'.repeat(100000));
+            const texts: string[] = Array.from({ length: 20 }, () => 'a'.repeat(100000));
             
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- testing private method
-            const batches = (provider as any).createBatches(texts) as string[][];
+            const providerTest = provider as unknown as VoyageAIProviderTestInstance;
+            const batches = providerTest.createBatches(texts);
             
             expect(batches.length).toBeGreaterThan(1);
             const firstBatch = batches[0];
@@ -51,10 +123,10 @@ describe('VoyageAIProvider', () => {
         });
 
         it('should respect the 1000 chunk limit', () => {
-            const texts = new Array(1500).fill('short');
+            const texts: string[] = Array.from({ length: 1500 }, () => 'short');
             
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- testing private method
-            const batches = (provider as any).createBatches(texts) as string[][];
+            const providerTest = provider as unknown as VoyageAIProviderTestInstance;
+            const batches = providerTest.createBatches(texts);
             
             expect(batches).toHaveLength(2);
             const b0 = batches[0];
