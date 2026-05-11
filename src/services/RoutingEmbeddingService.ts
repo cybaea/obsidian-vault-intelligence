@@ -107,12 +107,16 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     /**
-     * Synchronizes configuration changes to the active provider (usually Local Worker).
+     * Synchronizes configuration changes to all sub-services.
      */
     updateConfiguration() {
+        this.localService.updateSettings(this.settings);
         if (this.localService.updateConfiguration) {
             this.localService.updateConfiguration();
         }
+        this.voyageService.updateSettings(this.settings);
+        this.ollamaService.updateSettings(this.settings);
+        this.geminiService.updateSettings(this.settings);
     }
 
     /**

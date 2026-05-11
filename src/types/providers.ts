@@ -102,16 +102,18 @@ export interface IReasoningCapabilities {
     supportsWebGrounding: boolean;
 }
 
-export interface IModelProvider extends IProvider, IReasoningCapabilities {}
+export interface IModelProvider extends IProvider, IReasoningCapabilities { }
 
 export class ProviderError extends Error {
     public readonly provider: string;
     public readonly status?: number;
+    public readonly retryAfter?: number; // seconds
     
-    constructor(message: string, provider: string, status?: number) {
+    constructor(message: string, provider: string, status?: number, retryAfter?: number) {
         super(message);
         this.name = "ProviderError";
         this.provider = provider;
         this.status = status;
+        this.retryAfter = retryAfter;
     }
 }

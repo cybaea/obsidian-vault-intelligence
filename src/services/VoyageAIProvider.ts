@@ -98,12 +98,16 @@ export class VoyageAIProvider implements IEmbeddingClient {
         let totalTokens = 0;
         const allVectors: number[][] = [];
 
-        for (const batch of batches) {
+        for (const [i, batch] of batches.entries()) {
+            // Introduce a small delay between batches to respect RPM limits, 
+            // especially for free tier users (3 RPM).
+            if (i > 0) {
+                await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
+            }
+
             const response = await this.requestEmbeddings(batch, 'document');
             totalTokens += response.usage.total_tokens;
             
-            // Voyage returns embeddings in the same order as input usually, but let's be safe and use index if it were available for sorting, 
-            // though the array is what we care about here.
             const sortedBatch = response.data.sort((a, b) => a.index - b.index);
             allVectors.push(...sortedBatch.map(d => d.embedding));
         }
@@ -173,7 +177,12 @@ export class VoyageAIProvider implements IEmbeddingClient {
             if (response.status !== 200) {
                 const errorData = response.json as { error?: { message?: string } } | undefined;
                 const message = errorData?.error?.message || response.text || `Voyage API error ${response.status}`;
-                throw new ProviderError(message, "voyage", response.status);
+                
+                // Extract retry-after if present (standard for 429)
+                const retryAfter = response.headers['retry-after'];
+                const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+                
+                throw new ProviderError(message, "voyage", response.status, retryAfterSec);
             }
 
             return response.json as VoyageResponse;
@@ -183,18 +192,40 @@ export class VoyageAIProvider implements IEmbeddingClient {
     private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.voyageRetries): Promise<T> {
         let lastError: Error | null = null;
         let delay = 1000;
+        const MAX_BACKOFF_MS = 60000; // Cap backoff at 60 seconds
+
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
                 return await operation();
             } catch (error: unknown) {
-                const err = error as { message?: string; status?: number };
-                const isTransientError = err.status === 429 || err.status === 503 || err.status === 504 || err.message?.includes("Failed to fetch");
+                const err = error as { message?: string; status?: number; retryAfter?: number };
+                
+                // Obsidian's requestUrl often throws an error with the status in the message.
+                // We must check both the status property and the message string.
+                const isTransientError = 
+                    err.status === 429 || 
+                    err.message?.includes("429") || 
+                    err.status === 503 || 
+                    err.status === 504 || 
+                    err.message?.includes("Failed to fetch");
 
                 if (isTransientError) {
-                    logger.warn(`Voyage transient error (${err.message || "unknown"}). Retrying in ${Math.round(delay)}ms...`);
+                    // Use server-provided retry-after if available, otherwise use our backoff
+                    const retryAfterMs = err.retryAfter ? err.retryAfter * 1000 : delay;
+                    
+                    // Add jitter (±10%) to prevent thundering herd if multiple chunks fail
+                    const jitter = 0.9 + Math.random() * 0.2;
+                    const finalDelay = Math.min(retryAfterMs * jitter, MAX_BACKOFF_MS);
+
+                    logger.warn(`Voyage transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
+                    
                     lastError = error instanceof Error ? error : new Error(String(error));
-                    await new Promise(resolve => activeWindow.setTimeout(resolve, delay));
-                    delay *= 2;
+                    await new Promise(resolve => activeWindow.setTimeout(resolve, finalDelay));
+                    
+                    // Only increase our internal delay if the server didn't specify a time
+                    if (!err.retryAfter) {
+                        delay = Math.min(delay * 2, MAX_BACKOFF_MS);
+                    }
                 } else {
                     throw error;
                 }

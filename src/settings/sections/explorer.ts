@@ -118,7 +118,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const current = plugin.settings.embeddingModel;
             const isPreset = onlineEmbeddingModels.some(m => m.id === current);
             if (!isPreset) {
-                const labelName = providerName === 'gemini' ? "Gemini" : "Ollama";
+                const labelName = providerName === 'gemini' ? "Gemini" : (providerName === 'voyage' ? "Voyage" : "Ollama");
                 new Setting(containerEl)
                     .setName(`Custom ${labelName} model`)
                     .setDesc(`Enter the specific ${labelName} embedding model ID.`)

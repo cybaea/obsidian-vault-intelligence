@@ -658,6 +658,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
 		if (this.mcpClientManager) void this.mcpClientManager.updateSettings(this.settings);
+		if (this.embeddingService && (this.embeddingService as RoutingEmbeddingService).updateConfiguration) {
+			(this.embeddingService as RoutingEmbeddingService).updateConfiguration();
+		}
 
 		if (this.graphSyncOrchestrator) {
 			if (requiresWorkerRestart) {
@@ -755,6 +758,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (changed) {
 			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);
 			await this.saveData(this.settings);
+		}
+
+		// Migration: Bump voyageRetries to match geminiRetries for existing users (v9.3.8)
+		if (this.settings.voyageRetries === 3) {
+			logger.info("[Migration] Bumping voyageRetries from 3 to 10 for improved resilience.");
+			this.settings.voyageRetries = 10;
+			await this.saveSettings();
 		}
 	}
 

@@ -230,7 +230,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     vaultSearchResultsLimit: 25,
     voyageApiKey: '',
     voyageApiKeySecret: '',
-    voyageRetries: 3
+    voyageRetries: 10
 };
 
 export interface IVaultIntelligencePlugin {

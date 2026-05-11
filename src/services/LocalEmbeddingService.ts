@@ -230,6 +230,10 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
         }
     }
 
+    public updateSettings(settings: VaultIntelligenceSettings) {
+        this.settings = settings;
+    }
+
     public updateConfiguration() {
         if (!this.worker) return;
         this.worker.postMessage({
