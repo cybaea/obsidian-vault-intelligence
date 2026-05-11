@@ -32,11 +32,12 @@ export class SimilarNotesView extends ItemView {
         let refreshTimer: number | null = null;
         this.registerEvent(
             this.plugin.graphService.on('graph:index-updated', () => {
-                if (refreshTimer) activeWindow.clearTimeout(refreshTimer);
-                refreshTimer = activeWindow.setTimeout(() => {
+                if (refreshTimer) window.clearTimeout(refreshTimer);
+                refreshTimer = window.setTimeout(() => {
                     const file = this.plugin.app.workspace.getActiveFile();
+                    logger.debug(`[SimilarNotesView] Index updated, refreshing for: ${file?.path}`);
                     void this.updateForFile(file, true); // Force refresh
-                }, 2000); // Debounce UI refresh by 1s to stop flicker
+                }, 1000); // Debounce UI refresh by 1s to stop flicker
             })
         );
     }

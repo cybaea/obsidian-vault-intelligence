@@ -1081,13 +1081,14 @@ const IndexerWorker: WorkerAPI = {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
-        await IndexerWorker.deleteFile(normalizedPath);
-
         // We update the node initially, but we might patch it with token counts later
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, 0);
         updateGraphEdges(normalizedPath, content, links);
 
-        if (content.trim().length === 0) return;
+        if (content.trim().length === 0) {
+            await IndexerWorker.deleteFile(normalizedPath);
+            return;
+        }
 
         const cleanlyContent = sanitizeExcalidrawContent(content);
         const { body, frontmatter } = splitFrontmatter(cleanlyContent);
@@ -1108,6 +1109,10 @@ const IndexerWorker: WorkerAPI = {
 
         if (validFullTexts.length > 0) {
             const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
+            
+            // Atomic update: only delete the old version if the new one was successfully embedded
+            await IndexerWorker.deleteFile(normalizedPath);
+            
             totalTokens = res.tokenCount;
             // The res.vectors contains the batched embeddings for the full texts
             // We need to zip them back. If a chunk resulted in an empty string it was skipped in validFullTexts.

@@ -1,7 +1,8 @@
 import Graph from "graphology";
 import { Events, App } from "obsidian";
 
-import { GRAPH_CONSTANTS } from "../constants";
+import { GRAPH_CONSTANTS, WORKER_INDEXER_CONSTANTS } from "../constants";
+import { VaultIntelligenceSettings } from "../settings/types";
 import { GraphSearchResult, GraphNodeData, SerializableGraphSearchResult, SynonymCandidate } from "../types/graph";
 import { logger } from "../utils/logger";
 import { ResultHydrator } from './ResultHydrator';
@@ -27,6 +28,7 @@ export interface GraphTraversalOptions {
  */
 export class GraphService extends Events {
     private app: App;
+    private settings: VaultIntelligenceSettings;
     private vaultManager: VaultManager;
     private workerManager: WorkerManager;
     private hydrator: ResultHydrator;
@@ -38,12 +40,14 @@ export class GraphService extends Events {
     constructor(
         app: App,
         vaultManager: VaultManager,
-        workerManager: WorkerManager
+        workerManager: WorkerManager,
+        settings: VaultIntelligenceSettings
     ) {
         super();
         this.app = app;
         this.vaultManager = vaultManager;
         this.workerManager = workerManager;
+        this.settings = settings;
         this.hydrator = new ResultHydrator(app, vaultManager);
     }
 
@@ -122,9 +126,19 @@ export class GraphService extends Events {
     public async getGraphEnhancedSimilar(path: string, limit: number): Promise<GraphSearchResult[]> {
         const weights = GRAPH_CONSTANTS.ENHANCED_SIMILAR_WEIGHTS;
 
+        // Calculate candidate pool based on user limits and overshoot factor
+        const candidateLimit = Math.min(
+            limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
+            this.settings.contextMaxFiles
+        );
+
+        // Safety Net: Use user's minimum similarity floor, but allow a slight permissive bleed 
+        // to catch graph neighbors that can be 'rescued' by the hybrid boost.
+        const permissiveFloor = Math.min(0.1, this.settings.minSimilarityScore);
+
         // Fetch similarity from worker via Facade methods
         const [vectorResults, neighborResults] = await Promise.all([
-            this.getSimilar(path, 50, 0.3), // Permissive floor to allow rescue
+            this.getSimilar(path, candidateLimit, permissiveFloor),
             this.getNeighbors(path, { direction: 'both', mode: 'ontology' })
         ]);
 

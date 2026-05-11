@@ -195,7 +195,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.persistenceManager = new PersistenceManager(this);
 		this.workerManager = new WorkerManager(this.app, this.embeddingService);
 
-		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager);
+		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager, this.settings);
 
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
@@ -269,27 +269,6 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.registerView(
 			VIEW_TYPES.SIMILAR_NOTES,
 			(leaf) => new SimilarNotesView(leaf, this, this.graphService)
-		);
-
-		// Event listeners for UI updates
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => {
-				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
-				leaves.forEach(leaf => {
-					if (leaf.view instanceof SimilarNotesView) {
-						void leaf.view.updateView();
-					}
-				});
-
-				// FIX: Hook up the Semantic Graph to active-leaf-change
-				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
-				graphLeaves.forEach(leaf => {
-					if (leaf.view instanceof SemanticGraphView) {
-						const file = this.app.workspace.getActiveFile();
-						void leaf.view.updateForFile(file);
-					}
-				});
-			})
 		);
 
 		// Commands
@@ -395,9 +374,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Settings Tab
 		this.addSettingTab(new VaultIntelligenceSettingTab(this.app, this));
 
-		// Event listeners for UI updates
+		// --- Global Event Listeners ---
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => {
+				// 1. Refresh Similar Notes (Explorer)
 				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
 				leaves.forEach(leaf => {
 					if (leaf.view instanceof SimilarNotesView) {
@@ -405,7 +385,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					}
 				});
 
-				// Notify Semantic Galaxy to update on file change
+				// 2. Refresh Semantic Galaxy
 				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
 				graphLeaves.forEach(leaf => {
 					if (leaf.view instanceof SemanticGraphView) {

@@ -22,6 +22,10 @@ const mockPlugin = {
 } as unknown as Plugin;
 
 const mockVaultManager = {} as any;
+const mockSettings = {
+    contextMaxFiles: 100,
+    minSimilarityScore: 0.5
+} as any;
 
 const mockWorkerManager = {
     executeMutation: vi.fn(),
@@ -39,7 +43,8 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         graphService = new GraphService(
             mockPlugin.app,
             mockVaultManager,
-            mockWorkerManager
+            mockWorkerManager,
+            mockSettings
         );
 
         // Mock internal methods

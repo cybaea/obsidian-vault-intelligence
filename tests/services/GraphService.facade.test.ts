@@ -12,12 +12,13 @@ describe('GraphService Facade', () => {
     let graphService: GraphService;
     const mockApp = {} as any;
     const mockVaultManager = {} as any;
+    const mockSettings = {} as any;
     const mockWorkerManager = {
         executeQuery: vi.fn(),
     } as any;
 
     beforeEach(() => {
-        graphService = new GraphService(mockApp, mockVaultManager, mockWorkerManager);
+        graphService = new GraphService(mockApp, mockVaultManager, mockWorkerManager, mockSettings);
     });
 
     it('should proxy keywordSearch to WorkerManager', async () => {
