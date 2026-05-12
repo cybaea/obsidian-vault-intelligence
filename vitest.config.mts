@@ -1,20 +1,20 @@
-import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-    test: {
-        globals: true,
-        environment: 'node',
-        include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-        setupFiles: ['./tests/setup-globals.ts'],
-        coverage: {
-            provider: 'v8',
-            reporter: ['text', 'json', 'html'],
-        },
-    },
     resolve: {
         alias: {
             obsidian: path.resolve('./tests/mocks/obsidian.ts'),
         },
+    },
+    test: {
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json', 'html'],
+        },
+        environment: 'node',
+        globals: true,
+        include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+        setupFiles: ['./tests/setup-globals.ts'],
     },
 });

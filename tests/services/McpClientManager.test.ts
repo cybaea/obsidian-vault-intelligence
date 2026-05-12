@@ -58,9 +58,7 @@ const mockLocalStorage = {
 Object.defineProperty(globalThis, 'localStorage', {
     value: mockLocalStorage,
 });
-Object.defineProperty(globalThis, 'window', {
-    value: { localStorage: mockLocalStorage }
-});
+
 
 // Mock environment
 Object.defineProperty(globalThis, 'process', {
@@ -248,7 +246,7 @@ describe('McpClientManager', () => {
 
         managerWithInternal.connections.set('test-server', {
             client: {
-                callTool: vi.fn(() => new Promise((resolve) => activeWindow.setTimeout(resolve, 1000)))
+                callTool: vi.fn(() => new Promise((resolve) => window.setTimeout(resolve, 1000)))
             },
             config: { id: 'test-server', name: 'Test Server', type: 'stdio' },
             status: 'connected'

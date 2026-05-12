@@ -463,7 +463,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
                         btn.setWarning();
-                        activeWindow.setTimeout(() => {
+                        window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
                                 btn.buttonEl.classList.remove('mod-warning');
