@@ -29,6 +29,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
     const gemini = "Gemini";
     const ollama = "Ollama";
+    const voyage = "Voyage AI";
     const analyst = "Analyst";
     const loop = "Loop";
 
@@ -49,7 +50,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const transformers = "Transformers.js";
             dropdown.addOption('gemini', `${google} ${gemini} (cloud)`)
                 .addOption('ollama', 'Ollama (local server)')
-                .addOption('voyage', 'Voyage AI (cloud)')
+                .addOption('voyage', `${voyage} (cloud)`)
                 .addOption('local', `${transformers} (local)`)
                 .setValue(plugin.settings.embeddingProvider)
                 .onChange((value) => {

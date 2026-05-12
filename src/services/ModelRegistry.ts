@@ -135,29 +135,6 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     }
 ];
 
-export const VOYAGE_EMBEDDING_MODELS: ModelDefinition[] = [
-    {
-        dimensions: 1024,
-        id: 'voyage/voyage-4-large',
-        isDefault: false,
-        label: 'Voyage 4 Large (SOTA) - 1024d',
-        provider: 'voyage'
-    },
-    {
-        dimensions: 1024,
-        id: 'voyage/voyage-4',
-        isDefault: true,
-        label: 'Voyage 4 (Balanced) - 1024d',
-        provider: 'voyage'
-    },
-    {
-        dimensions: 1024,
-        id: 'voyage/voyage-4-lite',
-        isDefault: false,
-        label: 'Voyage 4 Lite (Fast) - 1024d',
-        provider: 'voyage'
-    }
-];
 
 export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
@@ -173,6 +150,49 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
         isDefault: true,
         label: 'Gemini Embedding 001 (Standard) - 768d',
         provider: 'gemini'
+    }
+];
+
+export const VOYAGE_EMBEDDING_MODELS: ModelDefinition[] = [
+    {
+        description: 'Latest flagship model. High performance across all tasks.',
+        dimensions: 1024,
+        id: 'voyage-3',
+        isDefault: true,
+        label: 'Voyage 3 (Default) - 1024d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Optimized for code and technical content.',
+        dimensions: 1024,
+        id: 'voyage-code-3',
+        isDefault: false,
+        label: 'Voyage Code 3 - 1024d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Legacy flagship model.',
+        dimensions: 1024,
+        id: 'voyage-2',
+        isDefault: false,
+        label: 'Voyage 2 - 1024d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Optimized for speed and efficiency.',
+        dimensions: 512,
+        id: 'voyage-3-lite',
+        isDefault: false,
+        label: 'Voyage 3 Lite - 512d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Large flagship model for maximum performance.',
+        dimensions: 2048,
+        id: 'voyage-3-large',
+        isDefault: false,
+        label: 'Voyage 3 Large - 2048d',
+        provider: 'voyage'
     }
 ];
 

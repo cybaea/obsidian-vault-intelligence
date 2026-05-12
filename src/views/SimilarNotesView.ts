@@ -91,6 +91,7 @@ export class SimilarNotesView extends ItemView {
             // Hybrid Retrieval: Merged Vector + Graph Expansion (Preserves 0.65 floor and +0.1 boost)
             const limit = this.plugin.settings.similarNotesLimit;
             const finalResults = await this.graphService.getGraphEnhancedSimilar(file.path, limit);
+            logger.debug(`[SimilarNotesView] finalResults: ${finalResults.length}, settings.minSimilarityScore: ${this.plugin.settings.minSimilarityScore}`);
             if (this.lastUpdateId !== currentUpdateId) return;
 
             // Filter results by minimum similarity score

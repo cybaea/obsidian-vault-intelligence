@@ -135,6 +135,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
         });
     }
 
+
     const statusEl = containerEl.createDiv({ cls: 'vi-ollama-status' });
     const updateStatus = async (url: string) => {
         if (!url) {

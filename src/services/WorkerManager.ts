@@ -53,26 +53,40 @@ export class WorkerManager {
         });
 
         const embedder = Comlink.proxy(async (textOrTexts: string | string[], title: string) => {
-            if (Array.isArray(textOrTexts)) {
-                if (this.embeddingService.embedChunks) {
-                    return await this.embeddingService.embedChunks(textOrTexts, title);
-                }
-                const vectors: number[][] = [];
-                let totalTokens = 0;
-                for (const t of textOrTexts) {
-                    const res = await this.embeddingService.embedDocument(t, title);
-                    vectors.push(res.vectors[0] || []);
-                    totalTokens += res.tokenCount;
-                }
-                return { tokenCount: totalTokens, vectors };
-            }
+            // Set a safety timeout to prevent worker deadlock if the provider hangs
+            const timeoutPromise = new Promise<never>((_, reject) => 
+                activeWindow.setTimeout(() => reject(new Error("Embedding request timed out")), 60000)
+            );
 
-            if (title === 'Query') {
-                return await this.embeddingService.embedQuery(textOrTexts);
+            try {
+                const requestPromise = (async () => {
+                    if (Array.isArray(textOrTexts)) {
+                        if (this.embeddingService.embedChunks) {
+                            return await this.embeddingService.embedChunks(textOrTexts, title);
+                        }
+                        const vectors: number[][] = [];
+                        let totalTokens = 0;
+                        for (const t of textOrTexts) {
+                            const res = await this.embeddingService.embedDocument(t, title);
+                            vectors.push(res.vectors[0] || []);
+                            totalTokens += res.tokenCount;
+                        }
+                        return { tokenCount: totalTokens, vectors };
+                    }
+
+                    if (title === 'Query') {
+                        return await this.embeddingService.embedQuery(textOrTexts);
+                    }
+                    // Default: Embed as document (for indexing)
+                    const { tokenCount, vectors } = await this.embeddingService.embedDocument(textOrTexts, title);
+                    return { tokenCount, vector: vectors[0] || [], vectors };
+                })();
+
+                return await Promise.race([requestPromise, timeoutPromise]);
+            } catch (error) {
+                logger.error("[WorkerManager] Embedding proxy error:", error);
+                throw error;
             }
-            // Default: Embed as document (for indexing)
-            const { tokenCount, vectors } = await this.embeddingService.embedDocument(textOrTexts, title);
-            return { tokenCount, vector: vectors[0] || [] };
         });
 
         return await api.initialize(config, fetcher, embedder);

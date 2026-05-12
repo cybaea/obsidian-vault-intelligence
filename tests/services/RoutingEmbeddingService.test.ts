@@ -11,11 +11,13 @@ import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../../src/s
 vi.mock("../../src/services/GeminiProvider");
 vi.mock("../../src/services/LocalEmbeddingService");
 vi.mock("../../src/services/OllamaProvider");
+vi.mock("../../src/services/VoyageAIProvider");
 
 interface RoutingEmbeddingServicePrivates {
     geminiService: GeminiProvider;
     localService: any;
     ollamaService: any;
+    voyageService: any;
 }
 
 describe('RoutingEmbeddingService', () => {
@@ -28,7 +30,8 @@ describe('RoutingEmbeddingService', () => {
         vi.clearAllMocks();
         mockSettings = {
             embeddingDimension: 256,
-            embeddingModel: 'local/MinishLab/potion-base-8M'
+            embeddingModel: 'local/MinishLab/potion-base-8M',
+            embeddingProvider: 'local'
         } as unknown as VaultIntelligenceSettings;
         mockGemini = {} as unknown as GeminiProvider;
         mockPlugin = { app: {
@@ -43,7 +46,8 @@ describe('RoutingEmbeddingService', () => {
         service = new RoutingEmbeddingService(mockPlugin, mockGemini, mockSettings);
     });
 
-    it('should route local/* to localService', async () => {
+    it('should route local to localService', async () => {
+        mockSettings.embeddingProvider = 'local';
         const privates = service as unknown as RoutingEmbeddingServicePrivates;
         const localService = privates.localService;
         localService.embedQuery = vi.fn().mockResolvedValue({ tokenCount: 1, vector: [1, 2] });
@@ -52,7 +56,8 @@ describe('RoutingEmbeddingService', () => {
         expect(localService.embedQuery).toHaveBeenCalled();
     });
 
-    it('should route ollama/* to ollamaService', async () => {
+    it('should route ollama to ollamaService', async () => {
+        mockSettings.embeddingProvider = 'ollama';
         mockSettings.embeddingModel = 'ollama/llama3';
         const privates = service as unknown as RoutingEmbeddingServicePrivates;
         const ollamaService = privates.ollamaService;
@@ -62,7 +67,19 @@ describe('RoutingEmbeddingService', () => {
         expect(ollamaService.embedQuery).toHaveBeenCalled();
     });
 
-    it('should route gemini-* to geminiService', async () => {
+    it('should route voyage to voyageService', async () => {
+        mockSettings.embeddingProvider = 'voyage';
+        mockSettings.embeddingModel = 'voyage-3';
+        const privates = service as unknown as RoutingEmbeddingServicePrivates;
+        const voyageService = privates.voyageService;
+        voyageService.embedQuery = vi.fn().mockResolvedValue({ tokenCount: 1, vector: [1, 2] });
+        
+        await service.embedQuery("test");
+        expect(voyageService.embedQuery).toHaveBeenCalled();
+    });
+
+    it('should route gemini to geminiService', async () => {
+        mockSettings.embeddingProvider = 'gemini';
         mockSettings.embeddingModel = 'gemini-embedding-001';
         const privates = service as unknown as RoutingEmbeddingServicePrivates;
         const geminiService = privates.geminiService;

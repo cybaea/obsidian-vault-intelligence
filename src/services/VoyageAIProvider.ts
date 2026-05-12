@@ -1,4 +1,3 @@
-
 import { App, Notice, requestUrl } from "obsidian";
 
 import { SEARCH_CONSTANTS } from "../constants";
@@ -18,9 +17,9 @@ interface InternalSecretStorage {
 }
 
 const VOYAGE_TOKEN_LIMITS: Record<string, number> = {
-    'voyage/voyage-4': 320000,
-    'voyage/voyage-4-large': 120000,
-    'voyage/voyage-4-lite': 1000000,
+    'voyage-3': 320000,
+    'voyage-3-large': 120000,
+    'voyage-3-lite': 1000000,
 };
 
 const DEFAULT_LIMIT = 320000;
@@ -99,8 +98,6 @@ export class VoyageAIProvider implements IEmbeddingClient {
         const allVectors: number[][] = [];
 
         for (const [i, batch] of batches.entries()) {
-            // Introduce a small delay between batches to respect RPM limits, 
-            // especially for free tier users (3 RPM).
             if (i > 0) {
                 await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
             }
@@ -117,7 +114,6 @@ export class VoyageAIProvider implements IEmbeddingClient {
 
     private createBatches(texts: string[]): string[][] {
         const modelLimit = VOYAGE_TOKEN_LIMITS[this.settings.embeddingModel] || DEFAULT_LIMIT;
-        // 10% safety margin as per plan
         const safeLimit = modelLimit * 0.9;
         const maxBatchSize = 1000;
 
@@ -164,7 +160,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
                     input,
                     input_type: inputType,
                     model,
-                    output_dimension: this.settings.embeddingDimension
+                    output_dimension: this.settings.embeddingDimension > 0 ? this.settings.embeddingDimension : undefined
                 }),
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -178,7 +174,6 @@ export class VoyageAIProvider implements IEmbeddingClient {
                 const errorData = response.json as { error?: { message?: string } } | undefined;
                 const message = errorData?.error?.message || response.text || `Voyage API error ${response.status}`;
                 
-                // Extract retry-after if present (standard for 429)
                 const retryAfter = response.headers['retry-after'];
                 const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
                 

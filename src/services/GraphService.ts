@@ -112,7 +112,7 @@ export class GraphService extends Events {
             const hydrated = await this.hydrateAndHandleDrift(rawResults);
 
             // Use default threshold if not provided
-            const threshold = minScore ?? 0.5; // Default floor
+            const threshold = (minScore !== undefined && minScore !== null) ? minScore : 0.5; // Default floor
             return hydrated.filter(r => r.score >= threshold);
         } catch {
             return [];

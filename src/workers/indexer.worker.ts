@@ -285,6 +285,11 @@ const IndexerWorker: WorkerAPI = {
         if (graph.hasNode(normalizedPath)) {
             graph.dropNode(normalizedPath);
         }
+        await IndexerWorker.deleteOramaRecord(normalizedPath);
+    },
+
+    async deleteOramaRecord(path: string) {
+        const normalizedPath = workerNormalizePath(path);
         try {
             const results = await search(orama, {
                 limit: 1000,
@@ -662,9 +667,15 @@ const IndexerWorker: WorkerAPI = {
             where: { path: { eq: normalizedPath } }
         });
 
-        if (!docResult.hits.length) return [];
+        if (!docResult.hits.length) {
+            workerLogger.warn(`[IndexerWorker] No vector hits found for source path: ${normalizedPath}. Indexing might still be in progress.`);
+            return [];
+        }
         const vectors = docResult.hits.map(h => h.document.embedding as number[]);
-        if (vectors.length === 0 || !vectors[0]) return [];
+        if (vectors.length === 0 || !vectors[0]) {
+            workerLogger.warn(`[IndexerWorker] Empty embedding array for source path: ${normalizedPath}`);
+            return [];
+        }
 
         const dim = vectors[0].length;
         const centroid = new Array(dim).fill(0);
@@ -690,6 +701,8 @@ const IndexerWorker: WorkerAPI = {
             vector: { property: 'embedding', value: centroid },
             where: { path: { nin: [normalizedPath] } }
         });
+
+        workerLogger.debug(`[IndexerWorker] Semantic search for ${normalizedPath} found ${results.hits.length} hits.`);
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
@@ -1081,7 +1094,7 @@ const IndexerWorker: WorkerAPI = {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
-        // We update the node initially, but we might patch it with token counts later
+        // We update the graph immediately (fast, local) to ensure structural neighbors work
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, 0);
         updateGraphEdges(normalizedPath, content, links);
 
@@ -1108,54 +1121,59 @@ const IndexerWorker: WorkerAPI = {
         const validFullTexts = fullTexts.filter(text => text.length > 0);
 
         if (validFullTexts.length > 0) {
-            const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
-            
-            // Atomic update: only delete the old version if the new one was successfully embedded
-            await IndexerWorker.deleteFile(normalizedPath);
-            
-            totalTokens = res.tokenCount;
-            // The res.vectors contains the batched embeddings for the full texts
-            // We need to zip them back. If a chunk resulted in an empty string it was skipped in validFullTexts.
-            let vectorIdx = 0;
-            
-            for (let i = 0; i < chunks.length; i++) {
-                const chunk = chunks[i];
-                if (!chunk) continue;
+            try {
+                const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
+                
+                // Atomic update: only delete the old version if the new one was successfully embedded
+                await IndexerWorker.deleteOramaRecord(normalizedPath);
 
-                const fullText = (context + "\n" + chunk.text).trim();
-                const chunkId = `${normalizedPath}#${i}`;
+                totalTokens = res.tokenCount;
+                // The res.vectors contains the batched embeddings for the full texts
+                let vectorIdx = 0;
+                
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    if (!chunk) continue;
 
-                if (fullText.length === 0) continue;
+                    const fullText = (context + "\n" + chunk.text).trim();
+                    const chunkId = `${normalizedPath}#${i}`;
 
-                const resVectors = res.vectors;
-                const resVector = res.vector;
-                const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[]; // Fallback to single vector if worker didn't respect batch (legacy)
+                    if (fullText.length === 0) continue;
 
-                batchedDocs.push({
-                    anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
-                    author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
-                    content: chunk.text, // Live index keeps content (pure)
-                    context: context, // Metadata header
-                    created: mtime,
-                    embedding: vector,
-                    end: chunk.end + bodyOffset,
-                    id: chunkId,
-                    mtime: mtime,
-                    params: [], // Simplified for now
-                    path: normalizedPath,
-                    start: chunk.start + bodyOffset,
-                    status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
-                    title: title,
-                    tokenCount: totalTokens / validFullTexts.length, // Distribute total tokens roughly
-                });
+                    const resVectors = res.vectors;
+                    const resVector = res.vector;
+                    const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[];
+
+                    batchedDocs.push({
+                        anchorHash: fastHash(chunk.text),
+                        author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
+                        content: chunk.text,
+                        context: context,
+                        created: mtime,
+                        embedding: vector,
+                        end: chunk.end + bodyOffset,
+                        id: chunkId,
+                        mtime: mtime,
+                        params: [],
+                        path: normalizedPath,
+                        start: chunk.start + bodyOffset,
+                        status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
+                        title: title,
+                        tokenCount: totalTokens / validFullTexts.length,
+                    });
+                }
+
+                for (const doc of batchedDocs) {
+                    await upsert(orama, doc);
+                }
+            } catch (error) {
+                workerLogger.error(`[IndexerWorker] Failed to embed ${path}:`, error);
+                // We DON'T delete the old Orama record here, so the old version persists.
+                // However, we still update the graph node with the new content (structural only).
             }
         }
 
-        for (const doc of batchedDocs) {
-            await upsert(orama, doc);
-        }
-
-        // Patch the graph node with the final token count
+        // Final patch for structural node
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, totalTokens);
     },
 
@@ -1200,7 +1218,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
     const finalHits = Array.from(uniqueHits.values());
     let maxS = 0;
     for (const h of finalHits) if (h.score > maxS) maxS = h.score;
-    const factor = Math.max(1.0, maxS);
+    const factor = Math.max(1e-6, maxS);
 
     return finalHits
         .map((h: GraphSearchResult) => ({ ...h, score: h.score / factor }))

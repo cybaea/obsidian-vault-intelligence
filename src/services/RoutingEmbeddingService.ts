@@ -59,17 +59,18 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     private get currentService(): IEmbeddingClient {
-        const model = this.settings.embeddingModel;
-        if (model.startsWith('ollama/')) {
-            return this.ollamaService;
+        const provider = this.settings.embeddingProvider;
+        switch (provider) {
+            case 'voyage':
+                return this.voyageService;
+            case 'ollama':
+                return this.ollamaService;
+            case 'local':
+                return this.localService;
+            case 'gemini':
+            default:
+                return this.geminiService;
         }
-        if (model.startsWith('local/')) {
-            return this.localService;
-        }
-        if (model.startsWith('voyage/')) {
-            return this.voyageService;
-        }
-        return this.geminiService;
     }
 
     /**
