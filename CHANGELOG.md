@@ -27,6 +27,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Fixed a data loss issue where similarity connections would disappear after switching notes during background indexing.
 -   Improved embedding accuracy by removing redundant title prefixes that were distorting similarity results.
 -   Updates upstream dependencies.
+-   Renamed the `document` property in `OramaHit` to `doc` in the indexer worker to prevent collisions with the global `document` object (Obsidian community plugin quality warning).
+-   Strictly typed the return paths in the indexer worker to prevent unsafe return of error objects (Obsidian community plugin quality warning).
 
 ### Security
 
