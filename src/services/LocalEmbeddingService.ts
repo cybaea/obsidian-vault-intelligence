@@ -376,10 +376,17 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
         if (content.length <= CHUNK_SIZE_CHARS) {
             return this.runTask(content, priority, title);
         }
+        return this.embedLargeDocument(content, title || "", priority);
+    }
 
-        logger.debug(`[LocalEmbedding] Chunking large document (${content.length} chars) into ${Math.ceil(content.length / CHUNK_SIZE_CHARS)} parts.`);
+    /**
+     * Internal helper to split a massive document into manageable chunks for the worker.
+     */
+    private async embedLargeDocument(content: string, title: string, priority: EmbeddingPriority): Promise<{ vectors: number[][]; tokenCount: number }> {
+        logger.debug(`[LocalEmbedding] Chunking large document (${content.length} chars) into ${Math.ceil(content.length / WORKER_CONSTANTS.MAX_CHARS_PER_TOKENIZATION_BLOCK)} parts.`);
         const allVectors: number[][] = [];
         let totalTokens = 0;
+        const CHUNK_SIZE_CHARS = WORKER_CONSTANTS.MAX_CHARS_PER_TOKENIZATION_BLOCK;
         for (let i = 0; i < content.length; i += CHUNK_SIZE_CHARS) {
             const chunk = content.slice(i, i + CHUNK_SIZE_CHARS);
             const chunkTitle = title ? `${title} (Part ${i / CHUNK_SIZE_CHARS + 1})` : undefined;
@@ -390,6 +397,29 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
             // Explicitly yield to main thread event loop between chunks
             await new Promise(resolve => activeWindow.setTimeout(resolve, 0));
         }
+        return {
+            tokenCount: totalTokens,
+            vectors: allVectors
+        };
+    }
+
+    /**
+     * Batch embedding implementation for multiple pre-split chunks.
+     * Complies with IEmbeddingClient interface.
+     */
+    async embedChunks(texts: string[], title?: string, priority: EmbeddingPriority = 'high'): Promise<{ tokenCount: number; vectors: number[][] }> {
+        const allVectors: number[][] = [];
+        let totalTokens = 0;
+
+        for (const text of texts) {
+            const { tokenCount, vectors } = await this.runTask(text, priority, title);
+            allVectors.push(...vectors);
+            totalTokens += tokenCount;
+
+            // Yield to UI to prevent blocking on massive batches
+            await new Promise(resolve => activeWindow.setTimeout(resolve, 0));
+        }
+
         return {
             tokenCount: totalTokens,
             vectors: allVectors

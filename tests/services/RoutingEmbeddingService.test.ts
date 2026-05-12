@@ -88,6 +88,16 @@ describe('RoutingEmbeddingService', () => {
         await service.embedQuery("test");
         expect((geminiService as any).embedQuery).toHaveBeenCalled();
     });
+
+    it('should route embedChunks to localService correctly', async () => {
+        mockSettings.embeddingProvider = 'local';
+        const privates = service as unknown as RoutingEmbeddingServicePrivates;
+        const localService = privates.localService;
+        localService.embedChunks = vi.fn().mockResolvedValue({ tokenCount: 10, vectors: [[1], [2]] });
+        
+        await service.embedChunks(["chunk1", "chunk2"]);
+        expect(localService.embedChunks).toHaveBeenCalledWith(["chunk1", "chunk2"], undefined, undefined);
+    });
 });
 
 /* eslint-enable @typescript-eslint/no-explicit-any -- End of private method mocking */

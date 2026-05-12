@@ -667,25 +667,23 @@ const IndexerWorker: WorkerAPI = {
             where: { path: { eq: normalizedPath } }
         });
 
-        if (!docResult.hits.length) {
-            workerLogger.warn(`[IndexerWorker] No vector hits found for source path: ${normalizedPath}. Indexing might still be in progress.`);
-            return [];
-        }
-        const vectors = docResult.hits.map(h => h.document.embedding as number[]);
-        if (vectors.length === 0 || !vectors[0]) {
-            workerLogger.warn(`[IndexerWorker] Empty embedding array for source path: ${normalizedPath}`);
+        const sourceVectors = docResult.hits.map(h => h.document.embedding as number[]);
+        workerLogger.debug(`[IndexerWorker] getSimilar: Found ${sourceVectors.length} source vectors for ${normalizedPath}`);
+        
+        if (sourceVectors.length === 0 || !sourceVectors[0]) {
+            workerLogger.warn(`[IndexerWorker] No embeddings found for source path: ${normalizedPath}. Index might be stale or file was just modified.`);
             return [];
         }
 
-        const dim = vectors[0].length;
+        const dim = sourceVectors[0].length;
         const centroid = new Array(dim).fill(0);
-        for (const vec of vectors) {
+        for (const vec of sourceVectors) {
             for (let i = 0; i < dim; i++) centroid[i] += vec[i];
         }
 
         let magnitude = 0;
         for (let i = 0; i < dim; i++) {
-            centroid[i] = centroid[i] / vectors.length;
+            centroid[i] = centroid[i] / sourceVectors.length;
             magnitude += centroid[i] * centroid[i];
         }
         magnitude = Math.sqrt(magnitude);
@@ -694,6 +692,8 @@ const IndexerWorker: WorkerAPI = {
             for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
         }
 
+        workerLogger.debug(`[IndexerWorker] getSimilar: centroid magnitude=${magnitude.toFixed(4)}, dim=${dim}`);
+        
         const results = await search(orama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',

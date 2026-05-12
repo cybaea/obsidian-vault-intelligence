@@ -147,7 +147,7 @@ interface FeatureExtractorPipeline {
 }
 
 // Type for our unified extractor function
-type ChunkedExtractor = (text: string) => Promise<{ vectors: number[][], tokenCount: number }>;
+type ChunkedExtractor = (text: string | string[]) => Promise<{ vectors: number[][], tokenCount: number }>;
 
 // --- 5. Global Error Handling ---
 // Catch errors from sub-workers (like ONNX) or unhandled rejections
@@ -262,60 +262,67 @@ class PipelineSingleton {
         // Actually, pipeline() does NOT chunk automatically for feature-extraction. It truncates.
         // So we MUST implement chunking using pipe.tokenizer.
 
-        return async (text: string) => {
-            const tokenizer = pipe.tokenizer;
-            const MAX_TOKENS = 512;
-            const CHUNK_SIZE = MAX_TOKENS - 2;
+        return async (input: string | string[]) => {
+            const texts = Array.isArray(input) ? input : [input];
+            const allVectors: number[][] = [];
+            let totalTokenCount = 0;
 
-            // --- Memory Safety: Character-level pre-segmentation ---
-            const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
-            const input_ids: number[] = [];
+            for (const text of texts) {
+                const tokenizer = pipe.tokenizer;
+                const MAX_TOKENS = 512;
+                const CHUNK_SIZE = MAX_TOKENS - 2;
 
-            for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
-                const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
-                try {
-                    const result = await tokenizer(segment, { add_special_tokens: false });
-                    const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
+                // --- Memory Safety: Character-level pre-segmentation ---
+                const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
+                const input_ids: number[] = [];
 
-                    let data: ArrayLike<number | bigint>;
-                    if (segmentIds instanceof Tensor) {
-                        data = segmentIds.data;
-                    } else {
-                        data = segmentIds;
+                for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
+                    const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
+                    try {
+                        const result = await tokenizer(segment, { add_special_tokens: false });
+                        const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
+
+                        let data: ArrayLike<number | bigint>;
+                        if (segmentIds instanceof Tensor) {
+                            data = segmentIds.data;
+                        } else {
+                            data = segmentIds;
+                        }
+                        input_ids.push(...Array.from(data).map(num => Number(num)));
+                    } catch (e) {
+                        logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
+                        throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
                     }
-                    input_ids.push(...Array.from(data).map(num => Number(num)));
-                } catch (e) {
-                    logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
-                    throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                    await yieldToEventLoop();
                 }
-                await yieldToEventLoop();
-            }
 
-            if (input_ids.length === 0) return { tokenCount: 0, vectors: [] };
+                if (input_ids.length === 0) continue;
 
-            const vectors: number[][] = [];
-            for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
-                const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
-                try {
-                    const chunkText = tokenizer.decode(chunkIds, {
-                        clean_up_tokenization_spaces: true,
-                        skip_special_tokens: true
-                    });
+                totalTokenCount += input_ids.length;
 
-                    if (!chunkText.trim()) continue;
+                for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
+                    const chunkIds = input_ids.slice(i, i + CHUNK_SIZE);
+                    try {
+                        const chunkText = tokenizer.decode(chunkIds, {
+                            clean_up_tokenization_spaces: true,
+                            skip_special_tokens: true
+                        });
 
-                    const output = await pipe(chunkText, { normalize: true, pooling: 'mean' });
-                    vectors.push(Array.from(output.data as ArrayLike<number>));
-                } catch (e) {
-                    logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
-                    throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                        if (!chunkText.trim()) continue;
+
+                        const output = await pipe(chunkText, { normalize: true, pooling: 'mean' });
+                        allVectors.push(Array.from(output.data as ArrayLike<number>));
+                    } catch (e) {
+                        logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
+                        throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                    }
+                    await yieldToEventLoop();
                 }
-                await yieldToEventLoop();
             }
 
             return {
-                tokenCount: input_ids.length,
-                vectors: vectors
+                tokenCount: totalTokenCount,
+                vectors: allVectors
             };
         };
     }
@@ -338,42 +345,48 @@ class PipelineSingleton {
             }
         }
 
-        return async (text: string) => {
-            const MAX_TOKENS = 512;
-            const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
-            const input_ids: number[] = [];
+        return async (input: string | string[]) => {
+            const texts = Array.isArray(input) ? input : [input];
+            const allVectors: number[][] = [];
+            let totalTokenCount = 0;
 
-            for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
-                const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
-                const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
-                input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
-                await yieldToEventLoop();
-            }
+            for (const text of texts) {
+                const MAX_TOKENS = 512;
+                const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
+                const input_ids: number[] = [];
 
-            if (input_ids.length === 0) return { tokenCount: 0, vectors: [] };
+                for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
+                    const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
+                    const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
+                    input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
+                    await yieldToEventLoop();
+                }
 
-            const vectors: number[][] = [];
-            const idsArray = input_ids;
+                if (input_ids.length === 0) continue;
+                totalTokenCount += input_ids.length;
 
-            for (let i = 0; i < idsArray.length; i += MAX_TOKENS) {
-                const chunkIds = idsArray.slice(i, i + MAX_TOKENS);
+                const idsArray = input_ids;
 
-                const model_inputs = {
-                    input_ids: new Tensor('int64', new BigInt64Array(chunkIds.map(BigInt)), [chunkIds.length]),
-                    offsets: new Tensor('int64', new BigInt64Array([BigInt(0)]), [1]),
-                };
+                for (let i = 0; i < idsArray.length; i += MAX_TOKENS) {
+                    const chunkIds = idsArray.slice(i, i + MAX_TOKENS);
 
-                const output = await model(model_inputs) as Record<string, Tensor>;
-                const embeddings = output['embeddings'];
-                if (!embeddings) throw new Error("Missing embeddings");
+                    const model_inputs = {
+                        input_ids: new Tensor('int64', new BigInt64Array(chunkIds.map(BigInt)), [chunkIds.length]),
+                        offsets: new Tensor('int64', new BigInt64Array([BigInt(0)]), [1]),
+                    };
 
-                vectors.push(Array.from(embeddings.data as ArrayLike<number>));
-                await yieldToEventLoop();
+                    const output = await model(model_inputs) as Record<string, Tensor>;
+                    const embeddings = output['embeddings'];
+                    if (!embeddings) throw new Error("Missing embeddings");
+
+                    allVectors.push(Array.from(embeddings.data as ArrayLike<number>));
+                    await yieldToEventLoop();
+                }
             }
 
             return {
-                tokenCount: input_ids.length,
-                vectors: vectors
+                tokenCount: totalTokenCount,
+                vectors: allVectors
             };
         };
     }

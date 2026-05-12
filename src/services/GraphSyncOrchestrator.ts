@@ -201,6 +201,7 @@ export class GraphSyncOrchestrator {
 
                 logger.info("[GraphSyncOrchestrator] Scan complete.");
                 this._isScanning = false;
+                this.lifecycleManager.requestSave();
                 this.eventBus.trigger('graph:index-ready');
             }
         } catch (error) {
