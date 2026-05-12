@@ -1122,6 +1122,7 @@ const IndexerWorker: WorkerAPI = {
 
         if (validFullTexts.length > 0) {
             try {
+                workerLogger.debug(`[IndexerWorker] Generating embeddings for ${normalizedPath}: ${validFullTexts.length} chunks. Context length: ${context.length}`);
                 const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
                 
                 // Atomic update: only delete the old version if the new one was successfully embedded
@@ -1143,6 +1144,11 @@ const IndexerWorker: WorkerAPI = {
                     const resVectors = res.vectors;
                     const resVector = res.vector;
                     const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[];
+
+                    if (!vector || vector.length === 0) {
+                        workerLogger.warn(`[IndexerWorker] Skipping Orama upsert for ${normalizedPath} chunk ${i} due to missing embedding.`);
+                        continue;
+                    }
 
                     batchedDocs.push({
                         anchorHash: fastHash(chunk.text),

@@ -368,7 +368,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     async embedDocument(text: string, title?: string, priority: EmbeddingPriority = 'high'): Promise<{ vectors: number[][], tokenCount: number }> {
-        const content = title ? `Title: ${title}\n\n${text}` : text;
+        const content = text;
 
         // Main-thread chunking to prevent massive string transfers 
         // and ensure the worker yields/responds to heartbeats/IO periodically.

@@ -68,7 +68,27 @@ describe('VoyageAIProvider', () => {
             if (!firstCall) throw new Error('Request not called');
             const callArgs = firstCall[0] as RequestUrlMockParams;
             expect(callArgs.body).toContain('"input_type":"query"');
-            expect(callArgs.body).toContain('"output_dimension":1024');
+            // output_dimension should NOT be present if it's 1024 (default)
+            expect(callArgs.body).not.toContain('"output_dimension":1024');
+        });
+
+        it('should send output_dimension when it differs from default', async () => {
+            const mockResponse = {
+                json: {
+                    data: [{ embedding: [0.1, 0.2], index: 0 }],
+                    usage: { total_tokens: 10 }
+                },
+                status: 200
+            };
+            (requestUrl as Mock).mockResolvedValue(mockResponse);
+
+            mockSettings.embeddingDimension = 512;
+            await provider.embedQuery('test query');
+
+            const firstCall = (requestUrl as Mock).mock.calls[0];
+            if (!firstCall) throw new Error('Request not called');
+            const callArgs = firstCall[0] as RequestUrlMockParams;
+            expect(callArgs.body).toContain('"output_dimension":512');
         });
 
         it('should send correct input_type for embedDocument', async () => {

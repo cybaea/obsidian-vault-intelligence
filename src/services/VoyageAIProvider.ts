@@ -17,9 +17,9 @@ interface InternalSecretStorage {
 }
 
 const VOYAGE_TOKEN_LIMITS: Record<string, number> = {
-    'voyage-3': 320000,
-    'voyage-3-large': 120000,
-    'voyage-3-lite': 1000000,
+    'voyage/voyage-4': 320000,
+    'voyage/voyage-4-large': 120000,
+    'voyage/voyage-4-lite': 1000000,
 };
 
 const DEFAULT_LIMIT = 320000;
@@ -160,7 +160,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
                     input,
                     input_type: inputType,
                     model,
-                    output_dimension: this.settings.embeddingDimension > 0 ? this.settings.embeddingDimension : undefined
+                    output_dimension: (this.settings.embeddingDimension && this.settings.embeddingDimension !== 1024) ? this.settings.embeddingDimension : undefined
                 }),
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
