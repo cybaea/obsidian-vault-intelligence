@@ -24,6 +24,14 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Added extensive diagnostic logging to the background worker to help troubleshoot indexing and connection issues.
 -   Fixed a data loss issue where similarity connections would disappear after switching notes during background indexing.
 -   Improved embedding accuracy by removing redundant title prefixes that were distorting similarity results.
+-   Updates upstream dependencies.
+
+### Security
+
+-   Updated mermaid (a build dependency only) addressing security issues:
+    -   CVE-2026-41148 / GHSA-xcj9-5m2h-648r: Improper sanitization of in diagrams leads to CSS injection.
+    -   CVE-2026-41159 / GHSA-87f9-hvmw-gh4p: Improper sanitization of configuration leads to CSS injection via options like .
+    -   CVE-2026-41149 / GHSA-ghcm-xqfw-q4vr: Improper sanitization of in state diagrams leads to HTML injection.
 
 ## [9.3.8] - 2026-05-09
 
