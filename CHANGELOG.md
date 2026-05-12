@@ -13,7 +13,17 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Implemented support for Voyage AI as an embedding provider.
+-   Improved similarity score thresholding to correctly handle zero values in the Explorer settings.
+
 ### Developer features
+
+-   Refactored the embedding pipeline to correctly handle batch arrays across the worker boundary, preventing partial index corruption.
+-   Added explicit persistence triggers after full vault scans to ensure index state is immediately saved to disk.
+-   Implemented robust per-chunk timeouts and extended safety windows in the worker manager to support indexing of very large documents.
+-   Added extensive diagnostic logging to the background worker to help troubleshoot indexing and connection issues.
+-   Fixed a data loss issue where similarity connections would disappear after switching notes during background indexing.
+-   Improved embedding accuracy by removing redundant title prefixes that were distorting similarity results.
 
 ## [9.3.8] - 2026-05-09
 

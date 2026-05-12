@@ -22,7 +22,10 @@ Before writing any code, you must read `eslint.config.mts` and `AGENTS.md`. Trea
 - Always consider if changes should have new test scripts built for them. Incorporate them into the `npm run test` process.
 
 # Documentation
-- We document all code changes in `CHANGELOG.md`; make sure you update it if needed. Do not delete existing entries but add yours to the 'Unreleased' section.
+- We document all code changes in `CHANGELOG.md`; make sure you update it **if needed**, that is, if we have made updates since the last user-facing release. Do not update `CHANGELOG.md` for internal commits that is resolving errors or omissions in the code for features we are working on; the test is: did the user see the problem or omission? If not, no update to `CHANGELOG.md` is needed. 
+- Do not delete ANY existing entries outside the 'Unreleased' section, but add yours to the 'Unreleased' section.
+- **Always** verify line counts with `wc -l` before and after editing any file over 50 lines and always for `CHANGELOG.md`. If the line count has decreased that is a FAILURE. You MUST show the line counts to the user.
+
 
 # Final completion
 And the end of your implementation phase:

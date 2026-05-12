@@ -19,7 +19,7 @@ export interface ModelDefinition {
     isDefault?: boolean;
     label: string;
     outputTokenLimit?: number;
-    provider: 'gemini' | 'local' | 'ollama';
+    provider: 'gemini' | 'local' | 'ollama' | 'voyage';
     quantized?: boolean;
     supportedMethods?: string[];
     supportsNativeSearch?: boolean;
@@ -135,6 +135,7 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
     }
 ];
 
+
 export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
         dimensions: 3072,
@@ -149,6 +150,33 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
         isDefault: true,
         label: 'Gemini Embedding 001 (Standard) - 768d',
         provider: 'gemini'
+    }
+];
+
+export const VOYAGE_EMBEDDING_MODELS: ModelDefinition[] = [
+    {
+        description: 'Large flagship model for maximum performance. Supports Matryoshka (256, 512, 1024, 2048).',
+        dimensions: 1024,
+        id: 'voyage/voyage-4-large',
+        isDefault: false,
+        label: 'Voyage 4 Large (SOTA) - 1024d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Newest flagship model. High performance across all tasks. Supports Matryoshka (256, 512, 1024, 2048).',
+        dimensions: 1024,
+        id: 'voyage/voyage-4',
+        isDefault: true,
+        label: 'Voyage 4 (Flagship) - 1024d',
+        provider: 'voyage'
+    },
+    {
+        description: 'Optimized for speed and efficiency. Supports Matryoshka (256, 512, 1024, 2048).',
+        dimensions: 1024,
+        id: 'voyage/voyage-4-lite',
+        isDefault: false,
+        label: 'Voyage 4 Lite - 1024d',
+        provider: 'voyage'
     }
 ];
 
@@ -429,8 +457,9 @@ export class ModelRegistry {
                 if (id.match(/^gemini-embedding-/)) return 2;
                 if (id.match(/^gemini-[\d.]+/)) return 3;
                 if (id.match(/^gemini-/)) return 4;
-                if (id.match(/^gemma-/)) return 5;
-                return 6;
+                if (id.match(/^voyage\//)) return 5;
+                if (id.match(/^gemma-/)) return 6;
+                return 7;
             };
 
             const rankA = getRank(a);
@@ -470,7 +499,8 @@ export class ModelRegistry {
             ...GEMINI_CHAT_MODELS,
             ...GEMINI_GROUNDING_MODELS,
             ...LOCAL_EMBEDDING_MODELS,
-            ...GEMINI_EMBEDDING_MODELS
+            ...GEMINI_EMBEDDING_MODELS,
+            ...VOYAGE_EMBEDDING_MODELS
         ];
 
         // Return a deduplicated list
@@ -502,8 +532,9 @@ export class ModelRegistry {
      * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' | 'voyage' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
+        if (provider === 'voyage') return VOYAGE_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
         return models.filter(m =>
             m.provider === provider &&
@@ -536,7 +567,7 @@ export class ModelRegistry {
      * @param provider - The provider.
      * @returns The default model ID string.
      */
-    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' = 'gemini'): string {
+    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' | 'voyage' = 'gemini'): string {
         let models: ModelDefinition[] = [];
         if (type === 'chat') models = this.getChatModels();
         else if (type === 'grounding') models = this.getGroundingModels();
@@ -558,7 +589,8 @@ export class ModelRegistry {
             ...GEMINI_CHAT_MODELS,
             ...GEMINI_GROUNDING_MODELS,
             ...LOCAL_EMBEDDING_MODELS,
-            ...GEMINI_EMBEDDING_MODELS
+            ...GEMINI_EMBEDDING_MODELS,
+            ...VOYAGE_EMBEDDING_MODELS
         ].find(m => m.id === id);
     }
 

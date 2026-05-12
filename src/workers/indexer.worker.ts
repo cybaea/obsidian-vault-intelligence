@@ -1,5 +1,5 @@
 import { decode, encode } from '@msgpack/msgpack';
-import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama';
+import { search, upsert, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
@@ -285,6 +285,11 @@ const IndexerWorker: WorkerAPI = {
         if (graph.hasNode(normalizedPath)) {
             graph.dropNode(normalizedPath);
         }
+        await IndexerWorker.deleteOramaRecord(normalizedPath);
+    },
+
+    async deleteOramaRecord(path: string) {
+        const normalizedPath = workerNormalizePath(path);
         try {
             const results = await search(orama, {
                 limit: 1000,
@@ -652,38 +657,64 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0): Promise<GraphSearchResult[]> {
-        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
-        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
+        const currentOrama = orama;
+        const currentConfig = config;
+        if (!currentOrama || !currentConfig) return [];
+        
         const normalizedPath = workerNormalizePath(path);
 
-        const docResult = await search(orama, {
+        const docResult = await search(currentOrama, {
             includeVectors: true,
             limit: 100,
             where: { path: { eq: normalizedPath } }
         });
 
-        if (!docResult.hits.length) return [];
-        const vectors = docResult.hits.map(h => h.document.embedding as number[]);
-        if (vectors.length === 0 || !vectors[0]) return [];
+        const sourceVectors: number[][] = [];
+        for (const hit of docResult.hits) {
+            const hitTyped = hit as unknown as { document: OramaDocument };
+            const doc = hitTyped.document;
+            if (doc.embedding && Array.isArray(doc.embedding)) {
+                sourceVectors.push(doc.embedding);
+            }
+        }
+        
+        if (sourceVectors.length === 0) {
+            workerLogger.warn(`[IndexerWorker] No embeddings found for source path: ${normalizedPath}.`);
+            return [];
+        }
 
-        const dim = vectors[0].length;
-        const centroid = new Array(dim).fill(0);
-        for (const vec of vectors) {
-            for (let i = 0; i < dim; i++) centroid[i] += vec[i];
+        const firstVec = sourceVectors[0];
+        if (!firstVec) return [];
+        const dim = firstVec.length;
+        const centroid: number[] = new Array<number>(dim).fill(0);
+        
+        for (const vec of sourceVectors) {
+            for (let i = 0; i < dim; i++) {
+                const val = vec[i];
+                if (typeof val === 'number') {
+                    const currentSum = centroid[i] ?? 0;
+                    centroid[i] = currentSum + val;
+                }
+            }
         }
 
         let magnitude = 0;
         for (let i = 0; i < dim; i++) {
-            centroid[i] = centroid[i] / vectors.length;
-            magnitude += centroid[i] * centroid[i];
+            const current = centroid[i] ?? 0;
+            const avg = current / sourceVectors.length;
+            centroid[i] = avg;
+            magnitude += avg * avg;
         }
         magnitude = Math.sqrt(magnitude);
 
         if (magnitude > 1e-6) {
-            for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
+            for (let i = 0; i < dim; i++) {
+                const current = centroid[i] ?? 0;
+                centroid[i] = current / magnitude;
+            }
         }
-
-        const results = await search(orama, {
+        
+        const results = await search(currentOrama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
@@ -905,7 +936,8 @@ const IndexerWorker: WorkerAPI = {
                 try {
                     const fullRaw = await storage.get(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`);
                     if (fullRaw) {
-                        load(orama, fullRaw as RawData);
+                        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+                        await oramaLib.load(orama, fullRaw as unknown as RawData);
                         workerLogger.info("[loadIndex] Restored FULL index from Hot Store.");
                         loadedFull = true;
                     }
@@ -915,7 +947,8 @@ const IndexerWorker: WorkerAPI = {
 
                 if (!loadedFull) {
                     workerLogger.info("[loadIndex] Hot Store empty or failed, loading SLIM index.");
-                    load(orama, parsed.orama);
+                    const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+                    await oramaLib.load(orama, parsed.orama);
                 }
             } catch (e) {
                 workerLogger.warn("Orama load failed", e);
@@ -939,23 +972,8 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async saveIndex(): Promise<Uint8Array> {
-        const { save } = await import('@orama/orama');
-
-        interface OramaDocsStoreRaw {
-            count: number;
-            docs: Record<string, Record<string, unknown>>;
-        }
-
-        interface OramaRawData {
-            docs: OramaDocsStoreRaw;
-            index: unknown;
-            internalDocumentIDStore: unknown;
-            language: string;
-            pinning: unknown;
-            sorting: unknown;
-        }
-
-        const rawFull = (save as (orama: unknown) => OramaRawData)(orama);
+        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+        const rawFull = await oramaLib.save(orama);
 
         // 1. Save FULL index to "Hot Store" (IndexedDB)
         try {
@@ -967,26 +985,33 @@ const IndexerWorker: WorkerAPI = {
 
         // 2. Prepare SLIM index for "Cold Store" (Vault File)
         // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
-        const slimRaw: OramaRawData = { ...rawFull };
-
-        if (rawFull.docs?.docs) {
-            const hollowDocs: Record<string, Record<string, unknown>> = {};
-            for (const [id, doc] of Object.entries(rawFull.docs.docs)) {
+        const rawFullTyped = rawFull as unknown as OramaRawDocs;
+        const hollowDocs: Record<string, Record<string, unknown>> = {};
+        
+        if (rawFullTyped.docs?.docs) {
+            for (const [id, doc] of Object.entries(rawFullTyped.docs.docs)) {
                 hollowDocs[id] = {
                     ...doc,
                     content: "",
                     context: ""
                 };
             }
-            slimRaw.docs = { ...rawFull.docs, docs: hollowDocs };
         }
+
+        const oramaData: RawData = {
+            ...rawFullTyped,
+            docs: {
+                ...rawFullTyped.docs,
+                docs: hollowDocs
+            }
+        } as unknown as RawData;
 
         const serialized: SerializedIndexState = {
             embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            orama: slimRaw,
+            orama: oramaData,
         };
 
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
@@ -1081,13 +1106,14 @@ const IndexerWorker: WorkerAPI = {
         const normalizedPath = workerNormalizePath(path);
         const hash = await computeHash(content);
 
-        await IndexerWorker.deleteFile(normalizedPath);
-
-        // We update the node initially, but we might patch it with token counts later
+        // We update the graph immediately (fast, local) to ensure structural neighbors work
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, 0);
         updateGraphEdges(normalizedPath, content, links);
 
-        if (content.trim().length === 0) return;
+        if (content.trim().length === 0) {
+            await IndexerWorker.deleteFile(normalizedPath);
+            return;
+        }
 
         const cleanlyContent = sanitizeExcalidrawContent(content);
         const { body, frontmatter } = splitFrontmatter(cleanlyContent);
@@ -1107,50 +1133,65 @@ const IndexerWorker: WorkerAPI = {
         const validFullTexts = fullTexts.filter(text => text.length > 0);
 
         if (validFullTexts.length > 0) {
-            const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
-            totalTokens = res.tokenCount;
-            // The res.vectors contains the batched embeddings for the full texts
-            // We need to zip them back. If a chunk resulted in an empty string it was skipped in validFullTexts.
-            let vectorIdx = 0;
-            
-            for (let i = 0; i < chunks.length; i++) {
-                const chunk = chunks[i];
-                if (!chunk) continue;
+            try {
+                workerLogger.debug(`[IndexerWorker] Generating embeddings for ${normalizedPath}: ${validFullTexts.length} chunks. Context length: ${context.length}`);
+                const res = (await generateEmbedding(validFullTexts, title)) as { vectors?: number[][]; vector?: number[]; tokenCount: number };
+                
+                // Atomic update: only delete the old version if the new one was successfully embedded
+                await IndexerWorker.deleteOramaRecord(normalizedPath);
 
-                const fullText = (context + "\n" + chunk.text).trim();
-                const chunkId = `${normalizedPath}#${i}`;
+                totalTokens = res.tokenCount;
+                // The res.vectors contains the batched embeddings for the full texts
+                let vectorIdx = 0;
+                
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    if (!chunk) continue;
 
-                if (fullText.length === 0) continue;
+                    const fullText = (context + "\n" + chunk.text).trim();
+                    const chunkId = `${normalizedPath}#${i}`;
 
-                const resVectors = res.vectors;
-                const resVector = res.vector;
-                const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[]; // Fallback to single vector if worker didn't respect batch (legacy)
+                    if (fullText.length === 0) continue;
 
-                batchedDocs.push({
-                    anchorHash: fastHash(chunk.text), // Anchor on the body text, not context
-                    author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
-                    content: chunk.text, // Live index keeps content (pure)
-                    context: context, // Metadata header
-                    created: mtime,
-                    embedding: vector,
-                    end: chunk.end + bodyOffset,
-                    id: chunkId,
-                    mtime: mtime,
-                    params: [], // Simplified for now
-                    path: normalizedPath,
-                    start: chunk.start + bodyOffset,
-                    status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
-                    title: title,
-                    tokenCount: totalTokens / validFullTexts.length, // Distribute total tokens roughly
-                });
+                    const resVectors = res.vectors;
+                    const resVector = res.vector;
+                    const vector = (resVectors && resVectors[vectorIdx] ? resVectors[vectorIdx++] : resVector) as number[];
+
+                    if (!vector || vector.length === 0) {
+                        workerLogger.warn(`[IndexerWorker] Skipping Orama upsert for ${normalizedPath} chunk ${i} due to missing embedding.`);
+                        continue;
+                    }
+
+                    batchedDocs.push({
+                        anchorHash: fastHash(chunk.text),
+                        author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
+                        content: chunk.text,
+                        context: context,
+                        created: mtime,
+                        embedding: vector,
+                        end: chunk.end + bodyOffset,
+                        id: chunkId,
+                        mtime: mtime,
+                        params: [],
+                        path: normalizedPath,
+                        start: chunk.start + bodyOffset,
+                        status: parsedFM.status ? sanitizeProperty(parsedFM.status) : 'active',
+                        title: title,
+                        tokenCount: totalTokens / validFullTexts.length,
+                    });
+                }
+
+                for (const doc of batchedDocs) {
+                    await upsert(orama, doc);
+                }
+            } catch (error) {
+                workerLogger.error(`[IndexerWorker] Failed to embed ${path}:`, error);
+                // We DON'T delete the old Orama record here, so the old version persists.
+                // However, we still update the graph node with the new content (structural only).
             }
         }
 
-        for (const doc of batchedDocs) {
-            await upsert(orama, doc);
-        }
-
-        // Patch the graph node with the final token count
+        // Final patch for structural node
         updateGraphNode(normalizedPath, content, mtime, size, title, hash, totalTokens);
     },
 
@@ -1193,12 +1234,8 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
     }
 
     const finalHits = Array.from(uniqueHits.values());
-    let maxS = 0;
-    for (const h of finalHits) if (h.score > maxS) maxS = h.score;
-    const factor = Math.max(1.0, maxS);
 
     return finalHits
-        .map((h: GraphSearchResult) => ({ ...h, score: h.score / factor }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 }
@@ -1342,10 +1379,23 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
     }
 }
 
+interface OramaV3 {
+    create: (config: unknown) => Promise<AnyOrama>;
+    load: (orama: AnyOrama, data: RawData) => Promise<void>;
+    save: (orama: AnyOrama) => Promise<RawData>;
+}
+
+interface OramaRawDocs {
+    docs: {
+        count: number;
+        docs: Record<string, Record<string, unknown>>;
+    };
+}
+
 async function recreateOrama() {
     try {
-        const { create } = await import('@orama/orama');
-        orama = create({
+        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+        orama = await oramaLib.create({
             language: getOramaLanguage(config.agentLanguage || 'english'),
             schema: {
                 anchorHash: 'number',

@@ -1,6 +1,7 @@
 import { VaultIntelligenceSettings } from "../settings/types";
 
 export const GOOGLE_API_KEY_SECRET_NAME = 'vault-intelligence-api-key';
+export const VOYAGE_API_KEY_SECRET_NAME = 'vault-intelligence-voyage-api-key';
 
 export function getGoogleApiKeySecretName(settings: VaultIntelligenceSettings): string | null {
     if (settings.googleApiKeySecret) {
@@ -12,8 +13,26 @@ export function getGoogleApiKeySecretName(settings: VaultIntelligenceSettings): 
     return null;
 }
 
+export function getVoyageApiKeySecretName(settings: VaultIntelligenceSettings): string | null {
+    if (settings.voyageApiKeySecret) {
+        return settings.voyageApiKeySecret;
+    }
+    if (settings.voyageApiKey && !settings.voyageApiKey.startsWith('pa-') && !settings.voyageApiKey.startsWith('al-')) {
+        return settings.voyageApiKey;
+    }
+    return null;
+}
+
+export function isVoyageApiKey(key: string): boolean {
+    return key.startsWith('pa-') || key.startsWith('al-');
+}
+
 export function hasGoogleApiKey(settings: VaultIntelligenceSettings): boolean {
     return !!settings.googleApiKey || !!settings.googleApiKeySecret;
+}
+
+export function hasVoyageApiKey(settings: VaultIntelligenceSettings): boolean {
+    return !!settings.voyageApiKey || !!settings.voyageApiKeySecret;
 }
 
 /**

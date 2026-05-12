@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { GeminiProvider } from "./GeminiProvider";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 import { OllamaProvider } from "./OllamaProvider";
+import { VoyageAIProvider } from "./VoyageAIProvider";
 
 /**
  * Handles routing of embedding requests to either local (WASM) or remote (Gemini) providers.
@@ -13,6 +14,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     private localService: LocalEmbeddingService;
     private geminiService: GeminiProvider;
     private ollamaService: OllamaProvider;
+    private voyageService: VoyageAIProvider;
     private settings: VaultIntelligenceSettings;
 
     constructor(plugin: IVaultIntelligencePlugin, gemini: GeminiProvider, settings: VaultIntelligenceSettings) {
@@ -20,6 +22,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         this.localService = new LocalEmbeddingService(plugin, settings);
         this.geminiService = gemini;
         this.ollamaService = new OllamaProvider(settings, plugin.app);
+        this.voyageService = new VoyageAIProvider(settings, plugin.app);
     }
 
     /**
@@ -56,14 +59,18 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     private get currentService(): IEmbeddingClient {
-        const model = this.settings.embeddingModel;
-        if (model.startsWith('ollama/')) {
-            return this.ollamaService;
+        const provider = this.settings.embeddingProvider;
+        switch (provider) {
+            case 'voyage':
+                return this.voyageService;
+            case 'ollama':
+                return this.ollamaService;
+            case 'local':
+                return this.localService;
+            case 'gemini':
+            default:
+                return this.geminiService;
         }
-        if (model.startsWith('local/')) {
-            return this.localService;
-        }
-        return this.geminiService;
     }
 
     /**
@@ -101,12 +108,16 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     }
 
     /**
-     * Synchronizes configuration changes to the active provider (usually Local Worker).
+     * Synchronizes configuration changes to all sub-services.
      */
     updateConfiguration() {
+        this.localService.updateSettings(this.settings);
         if (this.localService.updateConfiguration) {
             this.localService.updateConfiguration();
         }
+        this.voyageService.updateSettings(this.settings);
+        this.ollamaService.updateSettings(this.settings);
+        this.geminiService.updateSettings(this.settings);
     }
 
     /**

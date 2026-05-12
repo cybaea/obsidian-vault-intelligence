@@ -26,8 +26,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
     const gemini = "Gemini";
     const ollama = "Ollama";
+    const voyage = "Voyage AI";
     const analyst = "Analyst";
     const loop = "Loop";
 
@@ -48,11 +50,12 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const transformers = "Transformers.js";
             dropdown.addOption('gemini', `${google} ${gemini} (cloud)`)
                 .addOption('ollama', 'Ollama (local server)')
+                .addOption('voyage', `${voyage} (cloud)`)
                 .addOption('local', `${transformers} (local)`)
                 .setValue(plugin.settings.embeddingProvider)
                 .onChange((value) => {
                     void (async () => {
-                        const provider = value as 'gemini' | 'local';
+                        const provider = value as 'gemini' | 'local' | 'ollama' | 'voyage';
                         plugin.settings.embeddingProvider = provider;
 
                         const defaultModelId = ModelRegistry.getDefaultModel('embedding', provider);
@@ -64,6 +67,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         // Language-aware defaults for chunk size
                         if (provider === 'local') {
                             plugin.settings.embeddingChunkSize = 512;
+                        } else if (provider === 'voyage') {
+                            plugin.settings.embeddingChunkSize = 1024;
                         } else {
                             // Gemini: Check for complex languages (CJK, etc.)
                             plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
@@ -87,10 +92,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .setName('Embedding model')
         .setDesc(`The specific model used to generate vector embeddings.`);
 
-    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama') {
+    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama' || plugin.settings.embeddingProvider === 'voyage') {
         const providerName = plugin.settings.embeddingProvider;
         const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
-        const providerEnabled = providerName === 'gemini' ? hasApiKey : hasOllama;
+        const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
 
         if (providerEnabled) {
             embeddingSetting.addDropdown(dropdown => {
@@ -114,7 +119,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             const current = plugin.settings.embeddingModel;
             const isPreset = onlineEmbeddingModels.some(m => m.id === current);
             if (!isPreset) {
-                const labelName = providerName === 'gemini' ? "Gemini" : "Ollama";
+                const labelName = providerName === 'gemini' ? "Gemini" : (providerName === 'voyage' ? "Voyage" : "Ollama");
                 new Setting(containerEl)
                     .setName(`Custom ${labelName} model`)
                     .setDesc(`Enter the specific ${labelName} embedding model ID.`)
@@ -127,7 +132,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         }));
             }
         } else {
-            const labelName = providerName === 'gemini' ? 'API key' : 'Ollama endpoint';
+            const labelName = providerName === 'gemini' ? 'API key' : (providerName === 'ollama' ? 'Ollama endpoint' : 'Voyage API key');
             embeddingSetting.addText(text => text
                 .setPlaceholder(`Configure ${labelName} to enable selection`)
                 .setDisabled(true));
@@ -147,7 +152,13 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
                 const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
 
-                if (providerName === 'ollama') {
+                if (providerName === 'voyage') {
+                    dropdown.addOption('1024', '1024 (Standard)')
+                        .addOption('512', '512 (Matryoshka)')
+                        .addOption('256', '256 (Matryoshka)')
+                        .addOption('128', '128 (Matryoshka)')
+                        .addOption('2048', '2048 (Large)');
+                } else if (providerName === 'ollama') {
                     const nativeDim = currentModel?.dimensions || 768;
                     dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
 
@@ -473,5 +484,4 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 })();
             }));
 }
-
 

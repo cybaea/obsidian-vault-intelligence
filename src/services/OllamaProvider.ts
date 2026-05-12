@@ -148,6 +148,10 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
 
     constructor(private settings: VaultIntelligenceSettings, private _app: App) {}
 
+    public updateSettings(settings: VaultIntelligenceSettings) {
+        this.settings = settings;
+    }
+
     private async getOllamaHeaders(): Promise<Record<string, string>> {
         const now = Date.now();
         

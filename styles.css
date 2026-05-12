@@ -72,7 +72,7 @@
 }
 
 .research-chat-view .chat-thought {
-    font-size: 0.8em;
+    font-size: var(--font-ui-smallest);
     opacity: 0.7;
     font-style: italic;
     margin-bottom: 4px;
@@ -362,13 +362,13 @@ a.similar-notes-link:hover {
 
 .gardener-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--font-large);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
 
 .gardener-summary {
-    font-size: 0.95rem;
+    font-size: var(--font-small);
     color: var(--text-muted);
     margin-bottom: 1.25rem;
     line-height: var(--line-height-normal);
@@ -418,7 +418,7 @@ a.similar-notes-link:hover {
 
 .action-file-path {
     font-family: var(--font-monospace);
-    font-size: 0.85rem;
+    font-size: var(--font-ui-smaller);
     background: var(--background-secondary);
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
@@ -432,7 +432,7 @@ a.similar-notes-link:hover {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.9rem;
+    font-size: var(--font-ui-small);
     padding: 0.2rem 0;
 }
 
@@ -462,7 +462,7 @@ a.similar-notes-link:hover {
 }
 
 .action-rationale {
-    font-size: 0.85rem;
+    font-size: var(--font-ui-smaller);
     color: var(--text-muted);
     margin: 0;
     padding-top: 0.75rem;
@@ -556,7 +556,7 @@ a.similar-notes-link:hover {
 }
 
 .gardener-loading-text {
-    font-size: 0.9rem;
+    font-size: var(--font-ui-small);
     color: var(--text-muted);
     font-style: italic;
 }
@@ -646,7 +646,7 @@ a.similar-notes-link:hover {
 }
 
 .vault-intelligence-suggestion .suggestion-note {
-    font-size: 0.8em;
+    font-size: var(--font-ui-smallest);
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -656,7 +656,7 @@ a.similar-notes-link:hover {
 /* Context Files List in Chat */
 .context-details {
     margin-top: 8px;
-    font-size: 0.9em;
+    font-size: var(--font-ui-small);
     color: var(--text-muted);
 }
 
@@ -958,7 +958,11 @@ a.similar-notes-link:hover {
 .tool-confirmation-modal .modal-button-container button.mod-warning {
     background-color: var(--text-error);
     color: white;
-}.chat-content:empty { display: none; }
+}
+
+.chat-content:empty {
+    display: none;
+}
 
 .chat-error-block {
     color: var(--text-error);
@@ -1014,6 +1018,7 @@ a.similar-notes-link:hover {
 
 .vi-kv-description {
     margin-bottom: 1em;
+    font-size: var(--font-ui-small);
 }
 
 .vi-kv-row {
@@ -1027,7 +1032,7 @@ a.similar-notes-link:hover {
     align-items: center;
     color: var(--text-muted);
     display: flex;
-    font-size: 0.8em;
+    font-size: var(--font-ui-smallest);
     gap: 0.2em;
 }
 
@@ -1060,7 +1065,7 @@ a.similar-notes-link:hover {
 
 .mcp-status {
     border-radius: 4px;
-    font-size: 0.8em;
+    font-size: var(--font-ui-smallest);
     margin-left: 10px;
     padding: 2px 6px;
     background-color: var(--background-modifier-border);

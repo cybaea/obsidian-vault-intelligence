@@ -8,6 +8,7 @@ import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 export function renderAdvancedSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
+    const voyage = "Voyage AI";
     const gemini = "Gemini";
     const api = "API";
     const local = "Local";
@@ -75,8 +76,8 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .addOption('1024', '1024 (High context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
-            .addOption('4096', `4096 (Large context)`)
-            .addOption('8192', `8192 (Document scale)`)
+            .addOption('4096', `4096 (${voyage} safe)`)
+            .addOption('8192', `8192 (${voyage} maximum)`)
             .setValue(String(plugin.settings.embeddingChunkSize))
             .onChange(async (value) => {
                 const suggested = parseInt(value);
@@ -112,19 +113,15 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         });
     }
 
-    // --- 2. System and API ---
-    const systemHeading = activeDocument.createDocumentFragment();
-    systemHeading.appendText(`System and ${api}`);
-    systemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
-        div.createSpan({ text: 'System-level settings and API connection tuning. ' });
-        div.createEl('a', {
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.PERFORMANCE, target: '_blank' },
-            text: 'View documentation'
-        });
+    // --- 2a. Gemini System and API ---
+    const geminiSystemHeading = activeDocument.createDocumentFragment();
+    geminiSystemHeading.appendText(`${gemini} system and ${api}`);
+    geminiSystemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
+        div.createSpan({ text: `${gemini}-level settings and API connection tuning. ` });
     });
-    const sysGroup = new SettingGroup(containerEl).setHeading(systemHeading);
+    const geminiSysGroup = new SettingGroup(containerEl).setHeading(geminiSystemHeading);
 
-    sysGroup.addSetting(setting => {
+    geminiSysGroup.addSetting(setting => {
         setting.setName(`${gemini} API retries`)
         .setDesc('Number of retries for spotty connections.')
         .addText(text => text
@@ -140,7 +137,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    sysGroup.addSetting(setting => {
+    geminiSysGroup.addSetting(setting => {
         setting.setName('Model cache duration (days)')
         .setDesc(`How long to cache available ${gemini} models locally.`)
         .addText(text => text
@@ -155,6 +152,31 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             })
         );
     });
+
+    // --- 2b. Voyage System and API ---
+    const voyageSystemHeading = activeDocument.createDocumentFragment();
+    voyageSystemHeading.appendText(`${voyage} system and ${api}`);
+    voyageSystemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
+        div.createSpan({ text: `${voyage}-level settings and API connection tuning. ` });
+    });
+    const voyageSysGroup = new SettingGroup(containerEl).setHeading(voyageSystemHeading);
+
+    voyageSysGroup.addSetting(setting => {
+        setting.setName(`${voyage} API retries`)
+        .setDesc('Number of retries for connections.')
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.voyageRetries))
+            .setValue(String(plugin.settings.voyageRetries))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num) && num >= 0) {
+                    plugin.settings.voyageRetries = num;
+                    await plugin.saveSettings();
+                }
+            })
+        );
+    });
+
 
     // --- 3. Search and Context Tuning ---
     const tuningHeading = activeDocument.createDocumentFragment();

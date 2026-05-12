@@ -20,7 +20,7 @@ import { DEFAULT_SETTINGS, IVaultIntelligencePlugin, VaultIntelligenceSettings, 
 import { IEmbeddingClient } from "./types/providers";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
-import { GOOGLE_API_KEY_SECRET_NAME, hasGoogleApiKey } from "./utils/secrets";
+import { GOOGLE_API_KEY_SECRET_NAME, VOYAGE_API_KEY_SECRET_NAME, hasGoogleApiKey, hasVoyageApiKey } from "./utils/secrets";
 import { ResearchChatView } from "./views/ResearchChatView";
 import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
@@ -169,7 +169,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (hasGoogleApiKey(this.settings) || this.settings.ollamaEndpoint) {
+		if (hasGoogleApiKey(this.settings) || hasVoyageApiKey(this.settings) || this.settings.ollamaEndpoint) {
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
 				const ollamaProvider = this.providerRegistry.getOllamaProvider() as unknown as InternalOllamaProvider;
@@ -195,7 +195,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.persistenceManager = new PersistenceManager(this);
 		this.workerManager = new WorkerManager(this.app, this.embeddingService);
 
-		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager);
+		this.graphService = new GraphService(this.app, this.vaultManager, this.workerManager, this.settings);
 
 		this.metadataManager = new MetadataManager(this.app);
 		this.ontologyService = new OntologyService(this.app, this.settings);
@@ -269,27 +269,6 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		this.registerView(
 			VIEW_TYPES.SIMILAR_NOTES,
 			(leaf) => new SimilarNotesView(leaf, this, this.graphService)
-		);
-
-		// Event listeners for UI updates
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => {
-				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
-				leaves.forEach(leaf => {
-					if (leaf.view instanceof SimilarNotesView) {
-						void leaf.view.updateView();
-					}
-				});
-
-				// FIX: Hook up the Semantic Graph to active-leaf-change
-				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
-				graphLeaves.forEach(leaf => {
-					if (leaf.view instanceof SemanticGraphView) {
-						const file = this.app.workspace.getActiveFile();
-						void leaf.view.updateForFile(file);
-					}
-				});
-			})
 		);
 
 		// Commands
@@ -395,9 +374,10 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// Settings Tab
 		this.addSettingTab(new VaultIntelligenceSettingTab(this.app, this));
 
-		// Event listeners for UI updates
+		// --- Global Event Listeners ---
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => {
+				// 1. Refresh Similar Notes (Explorer)
 				const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SIMILAR_NOTES);
 				leaves.forEach(leaf => {
 					if (leaf.view instanceof SimilarNotesView) {
@@ -405,7 +385,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 					}
 				});
 
-				// Notify Semantic Galaxy to update on file change
+				// 2. Refresh Semantic Galaxy
 				const graphLeaves = this.app.workspace.getLeavesOfType(VIEW_TYPES.SEMANTIC_GRAPH);
 				graphLeaves.forEach(leaf => {
 					if (leaf.view instanceof SemanticGraphView) {
@@ -512,6 +492,21 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			delete (this.settings as unknown as Record<string, unknown>)['gardenerRecheckHours'];
 			await this.saveSettings();
 			logger.info(`Migrating gardenerRecheckHours (${hours}) to gardenerRecheckDays (${this.settings.gardenerRecheckDays})`);
+		}
+
+		// --- Voyage SecretStorage Migration ---
+		if (this.settings.voyageApiKey && (this.settings.voyageApiKey.startsWith('pa-') || this.settings.voyageApiKey.startsWith('al-')) && !this.settings.secretStorageFailure) {
+			try {
+				const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+				if (storage && storage.setSecret) {
+					storage.setSecret(VOYAGE_API_KEY_SECRET_NAME, this.settings.voyageApiKey);
+					this.settings.voyageApiKeySecret = VOYAGE_API_KEY_SECRET_NAME;
+					this.settings.voyageApiKey = '';
+					await this.saveData(this.settings);
+				}
+			} catch (error) {
+				logger.error("[SecretStorage] Voyage migration failed:", error);
+			}
 		}
 
 		// --- SecretStorage Migration (v7.0.0) ---
@@ -643,6 +638,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (logger) logger.setLevel(this.settings.logLevel);
 		if (this.geminiService) this.geminiService.updateSettings(this.settings);
 		if (this.mcpClientManager) void this.mcpClientManager.updateSettings(this.settings);
+		if (this.embeddingService && (this.embeddingService as RoutingEmbeddingService).updateConfiguration) {
+			(this.embeddingService as RoutingEmbeddingService).updateConfiguration();
+		}
 
 		if (this.graphSyncOrchestrator) {
 			if (requiresWorkerRestart) {
@@ -740,6 +738,13 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		if (changed) {
 			logger.info(UI_STRINGS.NOTICE_SANITISED_BUDGETS);
 			await this.saveData(this.settings);
+		}
+
+		// Migration: Bump voyageRetries to match geminiRetries for existing users (v9.3.8)
+		if (this.settings.voyageRetries === 3) {
+			logger.info("[Migration] Bumping voyageRetries from 3 to 10 for improved resilience.");
+			this.settings.voyageRetries = 10;
+			await this.saveSettings();
 		}
 	}
 

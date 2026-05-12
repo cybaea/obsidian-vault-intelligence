@@ -106,6 +106,7 @@ export interface WorkerAPI {
     buildPriorityPayload(queryVector: number[], query: string): Promise<unknown[]>;
     clearIndex(): Promise<void>;
     deleteFile(path: string): Promise<void>;
+    deleteOramaRecord(path: string): Promise<void>;
     findOntologySynonyms(semanticThreshold: number): Promise<SynonymCandidate[]>;
     findOrphanCandidates(ontologyPrefix: string, gracePeriodMs: number): Promise<string[]>;
     fullReset(): Promise<void>;

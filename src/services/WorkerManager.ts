@@ -51,28 +51,71 @@ export class WorkerManager {
             });
             return res.json as unknown;
         });
-
         const embedder = Comlink.proxy(async (textOrTexts: string | string[], title: string) => {
-            if (Array.isArray(textOrTexts)) {
-                if (this.embeddingService.embedChunks) {
-                    return await this.embeddingService.embedChunks(textOrTexts, title);
-                }
-                const vectors: number[][] = [];
-                let totalTokens = 0;
-                for (const t of textOrTexts) {
-                    const res = await this.embeddingService.embedDocument(t, title);
-                    vectors.push(res.vectors[0] || []);
-                    totalTokens += res.tokenCount;
-                }
-                return { tokenCount: totalTokens, vectors };
-            }
+            try {
+                const timeoutMs = 300000; // 5 minutes per operation
 
-            if (title === 'Query') {
-                return await this.embeddingService.embedQuery(textOrTexts);
+                if (Array.isArray(textOrTexts)) {
+                    logger.debug(`[WorkerManager] Embedding batch of ${textOrTexts.length} for ${title}`);
+                    if (this.embeddingService.embedChunks) {
+                        const batchTimeoutPromise = new Promise<never>((_, reject) => 
+                            activeWindow.setTimeout(() => reject(new Error(`Embedding batch request timed out for ${title}`)), timeoutMs * 5)
+                        );
+                        return await Promise.race([
+                            this.embeddingService.embedChunks(textOrTexts, title),
+                            batchTimeoutPromise
+                        ]);
+                    }
+                    const vectors: number[][] = [];
+                    let totalTokens = 0;
+                    for (const t of textOrTexts) {
+                        const chunkTimeoutPromise = new Promise<never>((_, reject) => 
+                            activeWindow.setTimeout(() => reject(new Error(`Embedding request timed out for chunk of ${title}`)), timeoutMs)
+                        );
+                        
+                        const res = await Promise.race([
+                            this.embeddingService.embedDocument(t, title),
+                            chunkTimeoutPromise
+                        ]);
+                        
+                        const vector = res.vectors[0];
+                        if (!vector || vector.length === 0) {
+                            logger.warn(`[WorkerManager] Skipping embedding for chunk of ${title} due to missing embedding.`);
+                            continue;
+                        }
+                        vectors.push(vector);
+                        totalTokens += res.tokenCount;
+                    }
+                    logger.debug(`[WorkerManager] Batch completed for ${title}. Vectors: ${vectors.length}, Tokens: ${totalTokens}`);
+                    return { tokenCount: totalTokens, vectors };
+                }
+
+                if (title === 'Query') {
+                    return await this.embeddingService.embedQuery(textOrTexts);
+                }
+
+                // Default: Embed as document (for indexing)
+                const timeoutPromise = new Promise<never>((_, reject) => 
+                    activeWindow.setTimeout(() => reject(new Error(`Embedding request timed out for ${title}`)), timeoutMs)
+                );
+
+                logger.debug(`[WorkerManager] Embedding single document: ${title} (${textOrTexts.length} chars)`);
+                const { tokenCount, vectors } = await Promise.race([
+                    this.embeddingService.embedDocument(textOrTexts, title),
+                    timeoutPromise
+                ]);
+                
+                const vector = vectors[0] || [];
+                if (vector.length > 0) {
+                    logger.debug(`[WorkerManager] Embedding successful for ${title}. Vector[0-4]: ${vector.slice(0, 5).join(', ')}`);
+                } else {
+                    logger.warn(`[WorkerManager] Embedding returned empty vector for ${title}`);
+                }
+                return { tokenCount, vector, vectors };
+            } catch (error) {
+                logger.error("[WorkerManager] Embedding proxy error:", error);
+                throw error;
             }
-            // Default: Embed as document (for indexing)
-            const { tokenCount, vectors } = await this.embeddingService.embedDocument(textOrTexts, title);
-            return { tokenCount, vector: vectors[0] || [] };
         });
 
         return await api.initialize(config, fetcher, embedder);

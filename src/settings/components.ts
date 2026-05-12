@@ -77,9 +77,18 @@ export function renderModelDropdown(
     const ollamaModels = models.filter(m => m.provider === 'ollama');
     const localModels = models.filter(m => m.provider === 'local');
 
+    const voyageModels = models.filter(m => m.provider === 'voyage');
+
     if (googleModels.length > 0) {
         const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
         for (const m of googleModels) {
+            group.createEl('option', { text: m.label, value: m.id });
+        }
+    }
+
+    if (voyageModels.length > 0) {
+        const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Voyage AI)' } });
+        for (const m of voyageModels) {
             group.createEl('option', { text: m.label, value: m.id });
         }
     }
