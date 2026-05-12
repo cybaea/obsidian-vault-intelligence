@@ -108,10 +108,10 @@ interface SerializedIndexState {
 }
 
 const workerLogger = {
-    debug: (msg: string, ...args: unknown[]) => globalThis.console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
-    error: (msg: string, ...args: unknown[]) => globalThis.console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
-    info: (msg: string, ...args: unknown[]) => globalThis.console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args),
-    warn: (msg: string, ...args: unknown[]) => globalThis.console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
+    debug: (msg: string, ...args: unknown[]) => self.console.debug(`[VaultIntelligence:DEBUG] [IndexerWorker] ${msg}`, ...args),
+    error: (msg: string, ...args: unknown[]) => self.console.error(`[VaultIntelligence:ERROR] [IndexerWorker] ${msg}`, ...args),
+    info: (msg: string, ...args: unknown[]) => self.console.warn(`[VaultIntelligence:INFO] [IndexerWorker] ${msg}`, ...args),
+    warn: (msg: string, ...args: unknown[]) => self.console.warn(`[VaultIntelligence:WARN] [IndexerWorker] ${msg}`, ...args)
 };
 
 // 2. Semantic Splitter (Header-Based with Fallback)
