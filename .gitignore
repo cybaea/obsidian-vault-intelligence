@@ -40,3 +40,4 @@ worker.js
 .vault-intelligence/
 model-cache.json
 obsidian-vault-intelligence.code-workspace
+.goose/*.log
