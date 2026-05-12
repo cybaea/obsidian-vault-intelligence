@@ -94,6 +94,12 @@ interface OramaDocument {
 }
 
 interface OramaHit {
+    doc: OramaDocument;
+    id: string;
+    score: number;
+}
+
+interface OramaResultHit {
     document: OramaDocument;
     id: string;
     score: number;
@@ -147,7 +153,7 @@ const IndexerWorker: WorkerAPI = {
         const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
 
         for (const hit of vectorResults.hits) {
-            const doc = hit.document as unknown as OramaDocument;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (!candidates.has(hit.id)) {
                 candidates.set(hit.id, {
                     content: doc.content,
@@ -159,7 +165,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         for (const hit of keywordResults.hits) {
-            const doc = hit.document as unknown as OramaDocument;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (!candidates.has(hit.id)) {
                 candidates.set(hit.id, {
                     content: doc.content,
@@ -242,7 +248,7 @@ const IndexerWorker: WorkerAPI = {
 
             const hydrationMap = new Map<string, string>();
             for (const hit of hydrationResults.hits) {
-                const doc = hit.document as unknown as OramaDocument;
+                const doc = (hit as unknown as OramaResultHit).document;
                 hydrationMap.set(hit.id, doc.content);
                 hydrationMap.set(doc.path, doc.content);
             }
@@ -338,8 +344,8 @@ const IndexerWorker: WorkerAPI = {
                     limit: 1,
                     where: { path: { eq: node } }
                 });
-                if (results.hits.length > 0 && results.hits[0]?.document.embedding) {
-                    topicEmbedding = results.hits[0].document.embedding as number[];
+                if (results.hits.length > 0 && (results.hits[0] as unknown as OramaResultHit)?.document?.embedding) {
+                    topicEmbedding = (results.hits[0] as unknown as OramaResultHit).document.embedding || [];
                     collectedVectors.push(topicEmbedding);
                 }
             }
@@ -358,7 +364,7 @@ const IndexerWorker: WorkerAPI = {
                 });
                 for (const hit of neighborResults.hits) {
                     // Safety check needed since typed as unknown internally
-                    const doc = hit.document as unknown as OramaDocument;
+                    const doc = (hit as unknown as OramaResultHit).document;
                     if (doc.embedding) {
                         collectedVectors.push(doc.embedding);
                     }
@@ -667,8 +673,7 @@ const IndexerWorker: WorkerAPI = {
 
         const sourceVectors: number[][] = [];
         for (const hit of docResult.hits) {
-            const hitTyped = hit as unknown as { document: OramaDocument };
-            const doc = hitTyped.document;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (doc.embedding && Array.isArray(doc.embedding)) {
                 sourceVectors.push(doc.embedding);
             }
@@ -718,7 +723,11 @@ const IndexerWorker: WorkerAPI = {
             where: { path: { nin: [normalizedPath] } }
         });
 
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
+        return maxPoolResults(results.hits.map(h => ({
+            doc: (h as unknown as OramaResultHit).document,
+            id: h.id,
+            score: h.score
+        })), limit, minScore);
     },
 
     async getSubgraph(centerPath: string, updateId: number, existingPositions?: Record<string, { x: number, y: number }>, attractionMultiplier: number = 1.0): Promise<unknown> {
@@ -896,7 +905,11 @@ const IndexerWorker: WorkerAPI = {
             threshold: WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE,
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, 0);
+        return maxPoolResults(results.hits.map(h => ({
+            doc: (h as unknown as OramaResultHit).document,
+            id: h.id,
+            score: h.score
+        })), limit, 0);
     },
 
     async loadIndex(data: string | Uint8Array): Promise<boolean> {
@@ -985,9 +998,9 @@ const IndexerWorker: WorkerAPI = {
         const hollowDocs: Record<string, Record<string, unknown>> = {};
         
         if (rawFullTyped.docs?.docs) {
-            for (const [id, doc] of Object.entries(rawFullTyped.docs.docs)) {
+            for (const [id, oramaDoc] of Object.entries(rawFullTyped.docs.docs)) {
                 hollowDocs[id] = {
-                    ...doc,
+                    ...oramaDoc,
                     content: "",
                     context: ""
                 };
@@ -1000,7 +1013,7 @@ const IndexerWorker: WorkerAPI = {
                 ...rawFullTyped.docs,
                 docs: hollowDocs
             }
-        } as unknown as RawData;
+        } as RawData;
 
         const serialized: SerializedIndexState = {
             embeddingChunkSize: config.embeddingChunkSize,
@@ -1034,14 +1047,18 @@ const IndexerWorker: WorkerAPI = {
         const [vectorResults, keywordResults] = await Promise.all([vectorPromise, keywordPromise]);
         const hits = new Map<string, OramaHit>();
 
-        for (const hit of vectorResults.hits) hits.set(hit.id, hit as unknown as OramaHit);
+        for (const hit of vectorResults.hits) {
+            const h = hit as unknown as OramaResultHit;
+            hits.set(h.id, { doc: h.document, id: h.id, score: h.score });
+        }
 
         let maxKS = 0;
         for (const h of keywordResults.hits) if (h.score > maxKS) maxKS = h.score;
         const norm = Math.max(1.0, maxKS);
 
         for (const hit of keywordResults.hits) {
-            const h = hit as unknown as OramaHit;
+            const hTyped = hit as unknown as OramaResultHit;
+            const h: OramaHit = { doc: hTyped.document, id: hTyped.id, score: hTyped.score };
             const score = h.score / norm;
             if (hits.has(h.id)) {
                 const existing = hits.get(h.id);
@@ -1068,7 +1085,11 @@ const IndexerWorker: WorkerAPI = {
             },
             where: { path: { in: normalizedPaths } }
         });
-        return maxPoolResults(results.hits as unknown as OramaHit[], limit, config.minSimilarityScore ?? 0);
+        return maxPoolResults(results.hits.map(h => ({
+            doc: (h as unknown as OramaResultHit).document,
+            id: h.id,
+            score: h.score
+        })), limit, config.minSimilarityScore ?? 0);
     },
 
     async updateAliasMap(map: Record<string, string>) {
@@ -1213,7 +1234,7 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
     const uniqueHits = new Map<string, GraphSearchResult>();
     for (const hit of hits) {
         if (hit.score < minScore) continue;
-        const doc = hit.document;
+        const doc = hit.doc;
         const existing = uniqueHits.get(doc.path);
         if (!existing || hit.score > existing.score) {
             uniqueHits.set(doc.path, {
