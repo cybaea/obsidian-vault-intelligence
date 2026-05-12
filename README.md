@@ -97,6 +97,22 @@ Currently available in Beta via BRAT:
 3.  Enter: `https://github.com/cybaea/obsidian-vault-intelligence`
 4.  Enable Vault Intelligence in your Community Plugins list.
 
+## Network Connectivity
+
+To provide its features, Vault Intelligence may connect to several external or local services depending on your configuration:
+
+-   **AI Providers (Inference & Embeddings)**:
+    -   **Google Gemini**: Connects to `generativelanguage.googleapis.com` for chat, embeddings, and model management.
+    -   **Voyage AI**: Connects to `api.voyageai.com` for high-performance embeddings.
+    -   **Ollama**: Connects to your local or remote Ollama instance (default: `http://localhost:11434`). Supports custom HTTP headers for authenticated proxies.
+-   **Local Model Support**:
+    -   **HuggingFace & JSDelivr**: When using local embeddings (Transformers.js), the plugin downloads model weights and WASM binaries from `huggingface.co` and `cdn.jsdelivr.net`.
+-   **Agent Capabilities**:
+    -   **Web Grounding / URL Reader**: If the Researcher agent is asked to search the web or read a URL, it will connect to the specific addresses provided (e.g., via Google Search or direct URL access).
+    -   **MCP Servers**: Connects to external Model Context Protocol servers via Stdio (local binaries) or HTTP/SSE as configured in your settings.
+-   **Plugin Updates & Documentation**:
+    -   **GitHub API**: Connects to `api.github.com` to fetch the latest release notes and update information.
+
 ## Contributing
 
 We welcome contributions from developers, designers, and prompt engineers! 
