@@ -18,7 +18,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 1. Indexing Performance ---
-    const performanceHeading = activeDocument.createDocumentFragment();
+    const performanceHeading = createFragment();
     performanceHeading.appendText('Performance');
     performanceHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Technical tuning for background indexing. ' });
@@ -61,7 +61,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
-    const chunkDesc = activeDocument.createDocumentFragment();
+    const chunkDesc = createFragment();
     chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
     chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -114,7 +114,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     }
 
     // --- 2a. Gemini System and API ---
-    const geminiSystemHeading = activeDocument.createDocumentFragment();
+    const geminiSystemHeading = createFragment();
     geminiSystemHeading.appendText(`${gemini} system and ${api}`);
     geminiSystemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: `${gemini}-level settings and API connection tuning. ` });
@@ -154,7 +154,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 2b. Voyage System and API ---
-    const voyageSystemHeading = activeDocument.createDocumentFragment();
+    const voyageSystemHeading = createFragment();
     voyageSystemHeading.appendText(`${voyage} system and ${api}`);
     voyageSystemHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: `${voyage}-level settings and API connection tuning. ` });
@@ -179,7 +179,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
 
 
     // --- 3. Search and Context Tuning ---
-    const tuningHeading = activeDocument.createDocumentFragment();
+    const tuningHeading = createFragment();
     tuningHeading.appendText('Search and context tuning');
     tuningHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Tune how search expands results and assembles context. ' });
@@ -332,7 +332,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 4. Developer and Debugging ---
-    const devHeading = activeDocument.createDocumentFragment();
+    const devHeading = createFragment();
     devHeading.appendText('Developer');
     devHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Diagnostic tools and logging verbosity. ' });
@@ -385,7 +385,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 5. Security (Proactive SSRF Protection) ---
-    const secHeading = activeDocument.createDocumentFragment();
+    const secHeading = createFragment();
     secHeading.appendText('Security');
     secHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.appendText('Allows the agent to access localhost and private network IPs. ');
@@ -409,7 +409,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
 
     // --- 6. Model filtering ---
-    const filterHeading = activeDocument.createDocumentFragment();
+    const filterHeading = createFragment();
     filterHeading.appendText('Model filtering');
     filterHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: 'Hide specific models from dropdown menus to reduce clutter.' });
