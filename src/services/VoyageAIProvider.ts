@@ -99,7 +99,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
 
         for (const [i, batch] of batches.entries()) {
             if (i > 0) {
-                await new Promise(resolve => activeWindow.setTimeout(resolve, 500));
+                await new Promise(resolve => window.setTimeout(resolve, 500));
             }
 
             const response = await this.requestEmbeddings(batch, 'document');
@@ -215,7 +215,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
                     logger.warn(`Voyage transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
                     
                     lastError = error instanceof Error ? error : new Error(String(error));
-                    await new Promise(resolve => activeWindow.setTimeout(resolve, finalDelay));
+                    await new Promise(resolve => window.setTimeout(resolve, finalDelay));
                     
                     // Only increase our internal delay if the server didn't specify a time
                     if (!err.retryAfter) {

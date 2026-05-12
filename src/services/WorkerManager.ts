@@ -59,7 +59,7 @@ export class WorkerManager {
                     logger.debug(`[WorkerManager] Embedding batch of ${textOrTexts.length} for ${title}`);
                     if (this.embeddingService.embedChunks) {
                         const batchTimeoutPromise = new Promise<never>((_, reject) => 
-                            activeWindow.setTimeout(() => reject(new Error(`Embedding batch request timed out for ${title}`)), timeoutMs * 5)
+                            window.setTimeout(() => reject(new Error(`Embedding batch request timed out for ${title}`)), timeoutMs * 5)
                         );
                         return await Promise.race([
                             this.embeddingService.embedChunks(textOrTexts, title),
@@ -70,7 +70,7 @@ export class WorkerManager {
                     let totalTokens = 0;
                     for (const t of textOrTexts) {
                         const chunkTimeoutPromise = new Promise<never>((_, reject) => 
-                            activeWindow.setTimeout(() => reject(new Error(`Embedding request timed out for chunk of ${title}`)), timeoutMs)
+                            window.setTimeout(() => reject(new Error(`Embedding request timed out for chunk of ${title}`)), timeoutMs)
                         );
                         
                         const res = await Promise.race([
@@ -96,7 +96,7 @@ export class WorkerManager {
 
                 // Default: Embed as document (for indexing)
                 const timeoutPromise = new Promise<never>((_, reject) => 
-                    activeWindow.setTimeout(() => reject(new Error(`Embedding request timed out for ${title}`)), timeoutMs)
+                    window.setTimeout(() => reject(new Error(`Embedding request timed out for ${title}`)), timeoutMs)
                 );
 
                 logger.debug(`[WorkerManager] Embedding single document: ${title} (${textOrTexts.length} chars)`);
@@ -157,7 +157,7 @@ export class WorkerManager {
 
             const result = await task(this.api);
             if (delayMs > 0) {
-                await new Promise(resolve => activeWindow.setTimeout(resolve, delayMs));
+                await new Promise(resolve => window.setTimeout(resolve, delayMs));
             }
             return result;
         })();

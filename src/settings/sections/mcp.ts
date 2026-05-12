@@ -31,7 +31,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                 const headerRow = serverDiv.createDiv("mcp-server-header");
                 headerRow.addClass("mcp-server-header");
                 
-                const _title = headerRow.createEl("h4", { text: server.name || "Unnamed Server" });
+                headerRow.createEl("h4", { text: server.name || "Unnamed Server" });
                 // Style moved to .mcp-server-header h4
                 
                 // Status indicator
