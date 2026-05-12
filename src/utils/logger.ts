@@ -29,29 +29,25 @@ export class Logger {
 
     public debug(message: string, ...args: unknown[]) {
         if (!this.silent && this.level <= LogLevel.DEBUG) {
-            // eslint-disable-next-line no-console -- Centralized logging utility
-            console.debug(`[VaultIntelligence:DEBUG] ${message}`, ...args);
+            window.console.debug(`[VaultIntelligence:DEBUG] ${message}`, ...args);
         }
     }
 
     public info(message: string, ...args: unknown[]) {
         if (!this.silent && this.level <= LogLevel.INFO) {
-            // eslint-disable-next-line no-console -- Centralized logging utility
-            console.warn(`[VaultIntelligence:INFO] ${message}`, ...args);
+            window.console.warn(`[VaultIntelligence:INFO] ${message}`, ...args);
         }
     }
 
     public warn(message: string, ...args: unknown[]) {
         if (!this.silent && this.level <= LogLevel.WARN) {
-            // eslint-disable-next-line no-console -- Centralized logging utility
-            console.warn(`[VaultIntelligence:WARN] ${message}`, ...args);
+            window.console.warn(`[VaultIntelligence:WARN] ${message}`, ...args);
         }
     }
 
     public error(message: string, ...args: unknown[]) {
         if (!this.silent && this.level <= LogLevel.ERROR) {
-            // eslint-disable-next-line no-console -- Centralized logging utility
-            console.error(`[VaultIntelligence:ERROR] ${message}`, ...args);
+            window.console.error(`[VaultIntelligence:ERROR] ${message}`, ...args);
         }
     }
 }
