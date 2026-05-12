@@ -1023,7 +1023,11 @@ const IndexerWorker: WorkerAPI = {
             orama: oramaData,
         };
 
-        return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
+        const encoded = encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
+        if (!(encoded instanceof Uint8Array)) {
+            throw new Error("Serialization failed: encoded data is not a Uint8Array");
+        }
+        return encoded;
     },
 
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
