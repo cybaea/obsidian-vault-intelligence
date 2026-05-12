@@ -1,4 +1,4 @@
-import { Setting, App, setIcon, Notice, SecretComponent, requestUrl } from "obsidian";
+import { App, Notice, SecretComponent, Setting, requestUrl, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
@@ -184,6 +184,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             }));
 
     renderKeyValueEditor({
+        app: plugin.app,
         container: containerEl,
         currentJson: plugin.settings.ollamaHeaders,
         description: "Optional HTTP headers for authentication or proxy configuration. Use 'Secret' to securely store tokens in the device keychain.",
@@ -289,7 +290,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
  */
 function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
-    const fragment = activeDocument.createDocumentFragment();
+    const fragment = createFragment();
 
     const google = "Google";
     const gemini = "Gemini";

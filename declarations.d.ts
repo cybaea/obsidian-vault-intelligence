@@ -9,3 +9,8 @@ declare module "*/indexer.worker" {
     }
 }
 
+/**
+ * Obsidian global helper to create a DocumentFragment.
+ * This is safer than native createDocumentFragment for multi-window support.
+ */
+declare function createFragment(callback?: (el: DocumentFragment) => void): DocumentFragment;

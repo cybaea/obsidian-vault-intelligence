@@ -3,6 +3,7 @@ import type { TextComponent } from "obsidian";
 import { DropdownComponent, setIcon } from "obsidian";
 import * as Obsidian from "obsidian";
 
+import { ConfirmationModal } from "../modals/ConfirmationModal";
 import { ModelDefinition } from "../services/ModelRegistry";
 
 declare module "obsidian" {
@@ -128,6 +129,7 @@ export function renderModelDropdown(
 }
 
 export interface KeyValueEditorConfig {
+    app: Obsidian.App;
     container: HTMLElement;
     currentJson: string | undefined;
     description: string;
@@ -140,6 +142,7 @@ export interface KeyValueEditorConfig {
 }
 
 export function renderKeyValueEditor({
+    app,
     container,
     currentJson,
     description,
@@ -252,13 +255,22 @@ export function renderKeyValueEditor({
 
             const delBtn = row.createEl("button", { text: "X" });
             delBtn.onclick = () => {
-                /* eslint-disable-next-line no-alert -- User confirmation required for deletion of sensitive configuration */
-                if (pair.key && !confirm(`Are you sure you want to delete the header "${pair.key}"?`)) {
-                    return;
+                if (pair.key) {
+                    new ConfirmationModal(
+                        app,
+                        "Confirm deletion",
+                        `Are you sure you want to delete the header "${pair.key}"?`,
+                        () => {
+                            pairs.splice(idx, 1);
+                            savePairs();
+                            renderTable();
+                        }
+                    ).open();
+                } else {
+                    pairs.splice(idx, 1);
+                    savePairs();
+                    renderTable();
                 }
-                pairs.splice(idx, 1);
-                savePairs();
-                renderTable();
             };
         });
 

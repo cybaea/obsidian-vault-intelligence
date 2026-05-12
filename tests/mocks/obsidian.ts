@@ -115,6 +115,13 @@ export class Menu {
     showAtPosition = vi.fn().mockReturnThis();
 }
 
+
+export function createFragment(callback?: (el: DocumentFragment) => void): DocumentFragment {
+    const frag = (g as any).document.createDocumentFragment();
+    if (callback) callback(frag);
+    return frag;
+}
+
 export const Platform = {
     isMobile: false,
     isDesktopApp: true
@@ -160,6 +167,7 @@ if (g) {
     (g as any).activeDocument = (g as any).document;
     (g as any).activeWindow = g;
     (g as any).activeDocument.win = g;
+    (g as any).createFragment = createFragment;
 
     // Mock getComputedStyle for theme resolution tests
     (g as any).getComputedStyle = () => ({

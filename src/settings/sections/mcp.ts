@@ -1,4 +1,4 @@
-import { SettingGroup, ButtonComponent, ToggleComponent } from "obsidian";
+import { ButtonComponent, SettingGroup, ToggleComponent } from "obsidian";
 
 import { renderKeyValueEditor } from "../components";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -7,7 +7,7 @@ import { MCPServerConfig } from "../types";
 export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): void {
     containerEl.empty();
     
-    const mcpHeading = activeDocument.createDocumentFragment();
+    const mcpHeading = createFragment();
     mcpHeading.appendText('External ' + 'MCP' + ' servers');
     mcpHeading.createDiv({ cls: 'setting-item-description' }, (div: HTMLDivElement) => {
         div.createSpan({ text: "Connect external model context protocol (" + "MCP" + ") servers to allow AI models to perform external actions, such as fetching weather, reading databases, or integrating with other tools." });
@@ -112,7 +112,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
     const renderEditor = (server: MCPServerConfig | null, index: number = -1) => {
         containerEl.empty();
         
-        const editorHeading = activeDocument.createDocumentFragment();
+        const editorHeading = createFragment();
         editorHeading.appendText(server ? 'Edit ' + 'MCP' + ' server' : 'Add ' + 'MCP' + ' server');
         const editorGroup = new SettingGroup(containerEl).setHeading(editorHeading);
         
@@ -147,7 +147,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
         });
 
         if (currentConfig.type === "stdio") {
-            const cmdDesc = activeDocument.createDocumentFragment();
+            const cmdDesc = createFragment();
             cmdDesc.appendText("Absolute path to the executable (e.g. /usr/local/bin/python or /opt/homebrew/bin/node). Avoid wrappers like 'npx' or relative paths.");
             
             editorGroup.addSetting(setting => {
@@ -175,6 +175,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             });
 
             renderKeyValueEditor({
+                app: plugin.app,
                 container: containerEl,
                 currentJson: currentConfig.env,
                 description: "Define environment variables. Use 'Secret' to securely store API keys in the device keychain.",
@@ -199,6 +200,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             });
 
             renderKeyValueEditor({
+                app: plugin.app,
                 container: containerEl,
                 currentJson: currentConfig.remoteHeaders,
                 description: "Optional HTTP headers for authentication. Use 'Secret' to securely store tokens in the device keychain.",

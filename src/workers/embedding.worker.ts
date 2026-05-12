@@ -38,16 +38,16 @@ const pendingFetches = new Map<number, { resolve: (resp: Response) => void, reje
 let fetchRequestId = 0;
 
 export const timer = (() => {
-    const globalRef = globalThis as unknown as Record<string, unknown>;
+    const globalRef = self as unknown as Record<string, unknown>;
     if (typeof globalRef.activeWindow !== 'undefined') {
         return globalRef.activeWindow as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
     }
-    return globalThis as unknown as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
+    return self as unknown as { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
 })();
 
 // Override global fetch to proxy through main thread (bypasses Obsidian CSP/CORS)
-const originalFetch = globalThis.fetch;
-globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+const originalFetch = self.fetch;
+self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : input.toString();
 
     // Only proxy HuggingFace or remote calls. Local WASM paths should use original fetch (cached)

@@ -56,3 +56,8 @@ g.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn()
 }));
+g.createFragment = vi.fn().mockImplementation((callback?: (el: any) => void) => {
+    const frag = mockDoc.createDocumentFragment();
+    if (callback) callback(frag);
+    return frag;
+});

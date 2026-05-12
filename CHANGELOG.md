@@ -18,6 +18,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Addressed the "no-alert" and "no-console" errors identified by the Obsidian Community review process.
+-   Replaced browser confirmation dialogs with custom Obsidian modals for better UX consistency and platform compatibility. (Obsidian community plugin error.)
 -   Refactored the embedding pipeline to correctly handle batch arrays across the worker boundary, preventing partial index corruption.
 -   Added explicit persistence triggers after full vault scans to ensure index state is immediately saved to disk.
 -   Implemented robust per-chunk timeouts and extended safety windows in the worker manager to support indexing of very large documents.
@@ -25,6 +27,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Fixed a data loss issue where similarity connections would disappear after switching notes during background indexing.
 -   Improved embedding accuracy by removing redundant title prefixes that were distorting similarity results.
 -   Updates upstream dependencies.
+-   Renamed the `document` property in `OramaHit` to `doc` in the indexer worker to prevent collisions with the global `document` object (Obsidian community plugin quality warning).
+-   Strictly typed the return paths in the indexer worker to prevent unsafe return of error objects (Obsidian community plugin quality warning).
 
 ### Security
 

@@ -1,4 +1,4 @@
-import { Setting, Notice, setIcon } from "obsidian";
+import { Notice, Setting, setIcon } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
@@ -34,7 +34,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     const loop = "Loop";
 
 
-    const providerDesc = activeDocument.createDocumentFragment();
+    const providerDesc = createFragment();
     providerDesc.appendText('Choose where your document vectors are calculated.');
     providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -138,7 +138,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 .setDisabled(true));
         }
 
-        const dimensionDesc = activeDocument.createDocumentFragment();
+        const dimensionDesc = createFragment();
         dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
         dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
             setIcon(div.createSpan(), 'lucide-alert-triangle');
@@ -423,7 +423,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 await plugin.saveSettings();
             }));
 
-    const folderSemDesc = activeDocument.createDocumentFragment();
+    const folderSemDesc = createFragment();
     folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
     folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
     const ul = folderSemDesc.createEl('ul', { cls: 'vault-intelligence-settings-list' });
@@ -484,4 +484,3 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 })();
             }));
 }
-
