@@ -18,6 +18,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Replaced browser confirmation dialogs with custom Obsidian modals for better UX consistency and platform compatibility. (Obsidian community plugin error.)
 -   Refactored the embedding pipeline to correctly handle batch arrays across the worker boundary, preventing partial index corruption.
 -   Added explicit persistence triggers after full vault scans to ensure index state is immediately saved to disk.
 -   Implemented robust per-chunk timeouts and extended safety windows in the worker manager to support indexing of very large documents.

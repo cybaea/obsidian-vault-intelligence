@@ -175,6 +175,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             });
 
             renderKeyValueEditor({
+                app: plugin.app,
                 container: containerEl,
                 currentJson: currentConfig.env,
                 description: "Define environment variables. Use 'Secret' to securely store API keys in the device keychain.",
@@ -199,6 +200,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
             });
 
             renderKeyValueEditor({
+                app: plugin.app,
                 container: containerEl,
                 currentJson: currentConfig.remoteHeaders,
                 description: "Optional HTTP headers for authentication. Use 'Secret' to securely store tokens in the device keychain.",

@@ -184,6 +184,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
             }));
 
     renderKeyValueEditor({
+        app: plugin.app,
         container: containerEl,
         currentJson: plugin.settings.ollamaHeaders,
         description: "Optional HTTP headers for authentication or proxy configuration. Use 'Secret' to securely store tokens in the device keychain.",
