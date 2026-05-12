@@ -48,8 +48,8 @@
     gap: 10px;
 }
 
-.research-chat-view .chat-message {
-    user-select: text !important;
+.workspace .research-chat-view .chat-message {
+    user-select: text;
     padding: 8px 12px;
     border-radius: 8px;
     max-width: 80%;
@@ -94,9 +94,9 @@
 }
 
 /* Ensure code blocks within chat are also selectable and look nice */
-.research-chat-view .chat-message pre,
-.research-chat-view .chat-message code {
-    user-select: text !important;
+.workspace .research-chat-view .chat-message pre,
+.workspace .research-chat-view .chat-message code {
+    user-select: text;
 }
 
 /* Spotlight UI (Dual-Loop Search) */
@@ -226,11 +226,11 @@ a.similar-notes-link:hover {
 /* ------------------------------------ */
 
 /* Force the System Instruction setting to stack vertically */
-.vault-intelligence-system-instruction-setting {
-    display: block !important;
+.setting-item.vault-intelligence-system-instruction-setting {
+    display: block;
 
     /* Use standard Obsidian spacing variables */
-    padding-bottom: var(--size-4-4) !important;
+    padding-bottom: var(--size-4-4);
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
@@ -278,7 +278,7 @@ a.similar-notes-link:hover {
     background-color: transparent;
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-    font-size: var(--font-ui-smaller) !important;
+    font-size: var(--font-ui-smaller);
     color: var(--text-muted);
 }
 
@@ -612,8 +612,8 @@ a.similar-notes-link:hover {
 }
 
 /* File Suggest Styles */
-.vault-intelligence-suggestion {
-    display: flex !important;
+.suggestion-item.vault-intelligence-suggestion {
+    display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
@@ -844,9 +844,9 @@ a.similar-notes-link:hover {
     gap: var(--size-4-1);
 }
 
-.vi-release-notes-modal .modal-button-container .sponsor-button {
-    border-color: var(--color-red) !important;
-    color: var(--color-red) !important;
+.vi-release-notes-modal .modal-button-container button.sponsor-button {
+    border-color: var(--color-red);
+    color: var(--color-red);
 }
 
 .vi-release-notes-modal .modal-button-container .github-button,
@@ -870,9 +870,9 @@ a.similar-notes-link:hover {
     color: var(--text-normal);
 }
 
-.vi-release-notes-modal .modal-button-container .sponsor-button:hover {
-    background-color: #bf3989 !important;
-    color: white !important;
+.vi-release-notes-modal .modal-button-container button.sponsor-button:hover {
+    background-color: #bf3989;
+    color: white;
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button svg,
@@ -988,9 +988,9 @@ a.similar-notes-link:hover {
 }
 
 /* Key-Value Editor Validation */
-.vi-kv-row input.is-invalid {
-    border-color: var(--text-error) !important;
-    box-shadow: 0 0 0 1px var(--text-error) !important;
+body .vi-kv-row input.is-invalid {
+    border-color: var(--text-error);
+    box-shadow: 0 0 0 1px var(--text-error);
 }
 
 /* Password Component Styles */
@@ -998,8 +998,8 @@ a.similar-notes-link:hover {
     position: relative;
 }
 
-.vi-password-input {
-    padding-right: 30px !important;
+input.vi-password-input {
+    padding-right: 30px;
 }
 
 .vi-password-toggle {
