@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.4.0] - 2026-05-12
+
+### User features
+
 -   Implemented support for Voyage AI as an embedding provider.
 -   Improved similarity score thresholding to correctly handle zero values in the Explorer settings.
 
