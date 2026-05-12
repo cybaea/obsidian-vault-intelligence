@@ -1,5 +1,5 @@
 import { decode, encode } from '@msgpack/msgpack';
-import { load, search, upsert, type AnyOrama, type RawData } from '@orama/orama';
+import { search, upsert, type AnyOrama, type RawData } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
@@ -657,52 +657,70 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async getSimilar(path: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT, minScore: number = 0): Promise<GraphSearchResult[]> {
-        if (!orama) throw new Error("[IndexerWorker] Orama index not initialized");
-        if (!config) throw new Error("[IndexerWorker] Configuration not initialized");
+        const currentOrama = orama;
+        const currentConfig = config;
+        if (!currentOrama || !currentConfig) return [];
+        
         const normalizedPath = workerNormalizePath(path);
 
-        const docResult = await search(orama, {
+        const docResult = await search(currentOrama, {
             includeVectors: true,
             limit: 100,
             where: { path: { eq: normalizedPath } }
         });
 
-        const sourceVectors = docResult.hits.map(h => h.document.embedding as number[]);
-        workerLogger.debug(`[IndexerWorker] getSimilar: Found ${sourceVectors.length} source vectors for ${normalizedPath}`);
+        const sourceVectors: number[][] = [];
+        for (const hit of docResult.hits) {
+            const hitTyped = hit as unknown as { document: OramaDocument };
+            const doc = hitTyped.document;
+            if (doc.embedding && Array.isArray(doc.embedding)) {
+                sourceVectors.push(doc.embedding);
+            }
+        }
         
-        if (sourceVectors.length === 0 || !sourceVectors[0]) {
-            workerLogger.warn(`[IndexerWorker] No embeddings found for source path: ${normalizedPath}. Index might be stale or file was just modified.`);
+        if (sourceVectors.length === 0) {
+            workerLogger.warn(`[IndexerWorker] No embeddings found for source path: ${normalizedPath}.`);
             return [];
         }
 
-        const dim = sourceVectors[0].length;
-        const centroid = new Array(dim).fill(0);
+        const firstVec = sourceVectors[0];
+        if (!firstVec) return [];
+        const dim = firstVec.length;
+        const centroid: number[] = new Array<number>(dim).fill(0);
+        
         for (const vec of sourceVectors) {
-            for (let i = 0; i < dim; i++) centroid[i] += vec[i];
+            for (let i = 0; i < dim; i++) {
+                const val = vec[i];
+                if (typeof val === 'number') {
+                    const currentSum = centroid[i] ?? 0;
+                    centroid[i] = currentSum + val;
+                }
+            }
         }
 
         let magnitude = 0;
         for (let i = 0; i < dim; i++) {
-            centroid[i] = centroid[i] / sourceVectors.length;
-            magnitude += centroid[i] * centroid[i];
+            const current = centroid[i] ?? 0;
+            const avg = current / sourceVectors.length;
+            centroid[i] = avg;
+            magnitude += avg * avg;
         }
         magnitude = Math.sqrt(magnitude);
 
         if (magnitude > 1e-6) {
-            for (let i = 0; i < dim; i++) centroid[i] /= magnitude;
+            for (let i = 0; i < dim; i++) {
+                const current = centroid[i] ?? 0;
+                centroid[i] = current / magnitude;
+            }
         }
-
-        workerLogger.debug(`[IndexerWorker] getSimilar: centroid magnitude=${magnitude.toFixed(4)}, dim=${dim}`);
         
-        const results = await search(orama, {
+        const results = await search(currentOrama, {
             limit: limit * WORKER_INDEXER_CONSTANTS.SEARCH_OVERSHOOT_FACTOR_VECTOR,
             mode: 'vector',
             similarity: WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT,
             vector: { property: 'embedding', value: centroid },
             where: { path: { nin: [normalizedPath] } }
         });
-
-        workerLogger.debug(`[IndexerWorker] Semantic search for ${normalizedPath} found ${results.hits.length} hits.`);
 
         return maxPoolResults(results.hits as unknown as OramaHit[], limit, minScore);
     },
@@ -918,7 +936,8 @@ const IndexerWorker: WorkerAPI = {
                 try {
                     const fullRaw = await storage.get(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`);
                     if (fullRaw) {
-                        load(orama, fullRaw as RawData);
+                        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+                        await oramaLib.load(orama, fullRaw as unknown as RawData);
                         workerLogger.info("[loadIndex] Restored FULL index from Hot Store.");
                         loadedFull = true;
                     }
@@ -928,7 +947,8 @@ const IndexerWorker: WorkerAPI = {
 
                 if (!loadedFull) {
                     workerLogger.info("[loadIndex] Hot Store empty or failed, loading SLIM index.");
-                    load(orama, parsed.orama);
+                    const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+                    await oramaLib.load(orama, parsed.orama);
                 }
             } catch (e) {
                 workerLogger.warn("Orama load failed", e);
@@ -952,23 +972,8 @@ const IndexerWorker: WorkerAPI = {
     },
 
     async saveIndex(): Promise<Uint8Array> {
-        const { save } = await import('@orama/orama');
-
-        interface OramaDocsStoreRaw {
-            count: number;
-            docs: Record<string, Record<string, unknown>>;
-        }
-
-        interface OramaRawData {
-            docs: OramaDocsStoreRaw;
-            index: unknown;
-            internalDocumentIDStore: unknown;
-            language: string;
-            pinning: unknown;
-            sorting: unknown;
-        }
-
-        const rawFull = (save as (orama: unknown) => OramaRawData)(orama);
+        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+        const rawFull = await oramaLib.save(orama);
 
         // 1. Save FULL index to "Hot Store" (IndexedDB)
         try {
@@ -980,26 +985,33 @@ const IndexerWorker: WorkerAPI = {
 
         // 2. Prepare SLIM index for "Cold Store" (Vault File)
         // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
-        const slimRaw: OramaRawData = { ...rawFull };
-
-        if (rawFull.docs?.docs) {
-            const hollowDocs: Record<string, Record<string, unknown>> = {};
-            for (const [id, doc] of Object.entries(rawFull.docs.docs)) {
+        const rawFullTyped = rawFull as unknown as OramaRawDocs;
+        const hollowDocs: Record<string, Record<string, unknown>> = {};
+        
+        if (rawFullTyped.docs?.docs) {
+            for (const [id, doc] of Object.entries(rawFullTyped.docs.docs)) {
                 hollowDocs[id] = {
                     ...doc,
                     content: "",
                     context: ""
                 };
             }
-            slimRaw.docs = { ...rawFull.docs, docs: hollowDocs };
         }
+
+        const oramaData: RawData = {
+            ...rawFullTyped,
+            docs: {
+                ...rawFullTyped.docs,
+                docs: hollowDocs
+            }
+        } as unknown as RawData;
 
         const serialized: SerializedIndexState = {
             embeddingChunkSize: config.embeddingChunkSize,
             embeddingDimension: config.embeddingDimension,
             embeddingModel: config.embeddingModel,
             graph: graph.export(),
-            orama: slimRaw,
+            orama: oramaData,
         };
 
         return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
@@ -1222,12 +1234,8 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
     }
 
     const finalHits = Array.from(uniqueHits.values());
-    let maxS = 0;
-    for (const h of finalHits) if (h.score > maxS) maxS = h.score;
-    const factor = Math.max(1e-6, maxS);
 
     return finalHits
-        .map((h: GraphSearchResult) => ({ ...h, score: h.score / factor }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);
 }
@@ -1371,10 +1379,23 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
     }
 }
 
+interface OramaV3 {
+    create: (config: unknown) => Promise<AnyOrama>;
+    load: (orama: AnyOrama, data: RawData) => Promise<void>;
+    save: (orama: AnyOrama) => Promise<RawData>;
+}
+
+interface OramaRawDocs {
+    docs: {
+        count: number;
+        docs: Record<string, Record<string, unknown>>;
+    };
+}
+
 async function recreateOrama() {
     try {
-        const { create } = await import('@orama/orama');
-        orama = create({
+        const oramaLib = await import('@orama/orama') as unknown as OramaV3;
+        orama = await oramaLib.create({
             language: getOramaLanguage(config.agentLanguage || 'english'),
             schema: {
                 anchorHash: 'number',

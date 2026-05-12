@@ -32,6 +32,7 @@ export class SimilarNotesView extends ItemView {
         let refreshTimer: number | null = null;
         this.registerEvent(
             this.plugin.graphService.on('graph:index-updated', () => {
+                logger.debug(`[SimilarNotesView] Received graph:index-updated event`);
                 if (refreshTimer) window.clearTimeout(refreshTimer);
                 refreshTimer = window.setTimeout(() => {
                     const file = this.plugin.app.workspace.getActiveFile();
@@ -92,6 +93,15 @@ export class SimilarNotesView extends ItemView {
             const limit = this.plugin.settings.similarNotesLimit;
             const finalResults = await this.graphService.getGraphEnhancedSimilar(file.path, limit);
             logger.debug(`[SimilarNotesView] finalResults: ${finalResults.length}, settings.minSimilarityScore: ${this.plugin.settings.minSimilarityScore}`);
+            if (finalResults.length > 0) {
+                logger.debug(`[SimilarNotesView] Top result: ${finalResults[0]?.path} (Score: ${finalResults[0]?.score})`);
+            }
+            if (finalResults.length > 0) {
+                logger.debug(`[SimilarNotesView] Top result: ${finalResults[0]?.path} (Score: ${finalResults[0]?.score})`);
+            }
+            if (finalResults.length > 0) {
+                logger.debug(`[SimilarNotesView] Top result: ${finalResults[0]?.path} (Score: ${finalResults[0]?.score})`);
+            }
             if (this.lastUpdateId !== currentUpdateId) return;
 
             // Filter results by minimum similarity score

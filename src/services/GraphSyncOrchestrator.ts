@@ -197,9 +197,10 @@ export class GraphSyncOrchestrator {
             if (!signal.aborted) {
                 // Prune orphans (nodes that exist in graph but not in vault)
                 const validPaths = files.filter(f => !this.eventDebouncer.isPathExcluded(f.path)).map(f => f.path);
+                logger.info(`[GraphSyncOrchestrator] Starting pruneOrphans for ${validPaths.length} files`);
                 await this.workerManager.executeMutation(api => api.pruneOrphans(validPaths));
 
-                logger.info("[GraphSyncOrchestrator] Scan complete.");
+                logger.info("[GraphSyncOrchestrator] Scan complete. Triggering index-ready.");
                 this._isScanning = false;
                 this.lifecycleManager.requestSave();
                 this.eventBus.trigger('graph:index-ready');
