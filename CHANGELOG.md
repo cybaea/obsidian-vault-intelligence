@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   **CSS Refactor:** Removed all `!important` declarations from `styles.css` by using more specific CSS selectors, improving maintainability and adherence to style guidelines.
+
 ## [9.4.0] - 2026-05-12
 
 ### User features
