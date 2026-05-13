@@ -48,7 +48,7 @@
     gap: 10px;
 }
 
-.workspace .research-chat-view .chat-message {
+.workspace-leaf .research-chat-view .chat-message {
     user-select: text;
     padding: 8px 12px;
     border-radius: 8px;
@@ -94,8 +94,8 @@
 }
 
 /* Ensure code blocks within chat are also selectable and look nice */
-.workspace .research-chat-view .chat-message pre,
-.workspace .research-chat-view .chat-message code {
+.workspace-leaf .research-chat-view .chat-message pre,
+.workspace-leaf .research-chat-view .chat-message code {
     user-select: text;
 }
 
@@ -269,8 +269,8 @@ a.similar-notes-link:hover {
 /* The container for our settings info box */
 
 /* Shared styles for settings info/warning boxes */
-.vault-intelligence-settings-info,
-.vault-intelligence-settings-warning {
+.setting-item-description .vault-intelligence-settings-info,
+.setting-item-description .vault-intelligence-settings-warning {
     display: flex;
     align-items: start;
     gap: var(--size-4-2);
@@ -988,7 +988,7 @@ a.similar-notes-link:hover {
 }
 
 /* Key-Value Editor Validation */
-body .vi-kv-row input.is-invalid {
+.vi-kv-editor-wrapper .vi-kv-row input.is-invalid {
     border-color: var(--text-error);
     box-shadow: 0 0 0 1px var(--text-error);
 }
@@ -998,7 +998,7 @@ body .vi-kv-row input.is-invalid {
     position: relative;
 }
 
-input.vi-password-input {
+.vi-password-wrapper .vi-password-input {
     padding-right: 30px;
 }
 

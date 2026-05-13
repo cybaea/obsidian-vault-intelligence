@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Revert to 9.4.0 version and re-apply changes to styles.css.
+
 ## [9.4.1] - 2026-05-12
 
 ### User features
