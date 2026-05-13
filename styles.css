@@ -844,7 +844,7 @@ a.similar-notes-link:hover {
     gap: var(--size-4-1);
 }
 
-.modal.vi-release-notes-modal .modal-button-container .sponsor-button {
+.vi-release-notes-modal .modal-button-container button.sponsor-button {
     border-color: var(--color-red);
     color: var(--color-red);
 }
@@ -870,7 +870,7 @@ a.similar-notes-link:hover {
     color: var(--text-normal);
 }
 
-.modal.vi-release-notes-modal .modal-button-container .sponsor-button:hover {
+.vi-release-notes-modal .modal-button-container button.sponsor-button:hover {
     background-color: #bf3989;
     color: white;
 }
