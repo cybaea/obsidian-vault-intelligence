@@ -15,7 +15,16 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
--   **CSS Refactor:** Removed all `!important` declarations from `styles.css` by using more specific CSS selectors, improving maintainability and adherence to style guidelines.
+-   Revert to 9.4.0 version and re-apply changes to styles.css.
+
+## [9.4.1] - 2026-05-12
+
+### User features
+
+### Developer features
+
+-   Remove `!important` from `styles.css` to comply with Obsidian Community plugin submission guidelines.
+-   Fix unsafe return type and rename `doc` property in indexer worker to address plugin submission warnings and popout window compatibility.
 
 ## [9.4.0] - 2026-05-12
 
