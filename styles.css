@@ -48,8 +48,8 @@
     gap: 10px;
 }
 
-.workspace-leaf .research-chat-view .chat-message {
-    user-select: text;
+.research-chat-view .chat-message {
+    user-select: text !important;
     padding: 8px 12px;
     border-radius: 8px;
     max-width: 80%;
@@ -94,9 +94,9 @@
 }
 
 /* Ensure code blocks within chat are also selectable and look nice */
-.workspace-leaf .research-chat-view .chat-message pre,
-.workspace-leaf .research-chat-view .chat-message code {
-    user-select: text;
+.research-chat-view .chat-message pre,
+.research-chat-view .chat-message code {
+    user-select: text !important;
 }
 
 /* Spotlight UI (Dual-Loop Search) */
@@ -226,11 +226,11 @@ a.similar-notes-link:hover {
 /* ------------------------------------ */
 
 /* Force the System Instruction setting to stack vertically */
-.setting-item.vault-intelligence-system-instruction-setting {
-    display: block;
+.vault-intelligence-system-instruction-setting {
+    display: block !important;
 
     /* Use standard Obsidian spacing variables */
-    padding-bottom: var(--size-4-4);
+    padding-bottom: var(--size-4-4) !important;
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
@@ -269,8 +269,8 @@ a.similar-notes-link:hover {
 /* The container for our settings info box */
 
 /* Shared styles for settings info/warning boxes */
-.setting-item-description .vault-intelligence-settings-info,
-.setting-item-description .vault-intelligence-settings-warning {
+.vault-intelligence-settings-info,
+.vault-intelligence-settings-warning {
     display: flex;
     align-items: start;
     gap: var(--size-4-2);
@@ -278,7 +278,7 @@ a.similar-notes-link:hover {
     background-color: transparent;
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-    font-size: var(--font-ui-smaller);
+    font-size: var(--font-ui-smaller) !important;
     color: var(--text-muted);
 }
 
@@ -612,8 +612,8 @@ a.similar-notes-link:hover {
 }
 
 /* File Suggest Styles */
-.suggestion-item.vault-intelligence-suggestion {
-    display: flex;
+.vault-intelligence-suggestion {
+    display: flex !important;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
@@ -844,9 +844,9 @@ a.similar-notes-link:hover {
     gap: var(--size-4-1);
 }
 
-.vi-release-notes-modal .modal-button-container button.sponsor-button {
-    border-color: var(--color-red);
-    color: var(--color-red);
+.vi-release-notes-modal .modal-button-container .sponsor-button {
+    border-color: var(--color-red) !important;
+    color: var(--color-red) !important;
 }
 
 .vi-release-notes-modal .modal-button-container .github-button,
@@ -870,9 +870,9 @@ a.similar-notes-link:hover {
     color: var(--text-normal);
 }
 
-.vi-release-notes-modal .modal-button-container button.sponsor-button:hover {
-    background-color: #bf3989;
-    color: white;
+.vi-release-notes-modal .modal-button-container .sponsor-button:hover {
+    background-color: #bf3989 !important;
+    color: white !important;
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button svg,
@@ -988,9 +988,9 @@ a.similar-notes-link:hover {
 }
 
 /* Key-Value Editor Validation */
-.vi-kv-editor-wrapper .vi-kv-row input.is-invalid {
-    border-color: var(--text-error);
-    box-shadow: 0 0 0 1px var(--text-error);
+.vi-kv-row input.is-invalid {
+    border-color: var(--text-error) !important;
+    box-shadow: 0 0 0 1px var(--text-error) !important;
 }
 
 /* Password Component Styles */
@@ -998,8 +998,8 @@ a.similar-notes-link:hover {
     position: relative;
 }
 
-.vi-password-wrapper .vi-password-input {
-    padding-right: 30px;
+.vi-password-input {
+    padding-right: 30px !important;
 }
 
 .vi-password-toggle {
