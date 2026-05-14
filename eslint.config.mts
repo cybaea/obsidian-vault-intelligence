@@ -84,7 +84,7 @@ export default tseslint.config(
 		files: ['src/workers/**/*.ts', 'tests/**/*.ts'],
 		rules: {
 			"obsidianmd/no-global-this": "off", // Workers and tests need globalThis
-			"obsidianmd/prefer-active-doc": "off",
+			
 			"obsidianmd/prefer-window-timers": "off", // Workers don't have 'window'
 		}
 	},
