@@ -52,7 +52,9 @@ export async function retryOperation<T>(
                 logger.warn(`[${loggerPrefix}] Transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
                 
                 lastError = error instanceof Error ? error : new Error(String(error));
-                await new Promise(resolve => window.setTimeout(resolve, finalDelay));
+                if (attempt < retries - 1) {
+                    await new Promise(resolve => window.setTimeout(resolve, finalDelay));
+                }
                 
                 // Only increase our internal delay if the server didn't specify a time
                 if (!err.retryAfter) {

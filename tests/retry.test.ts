@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { ProviderError } from "../src/types/providers";
 import { retryOperation } from "../src/utils/retry";
@@ -47,23 +47,35 @@ describe("retryOperation", () => {
         const op = vi.fn().mockRejectedValue(new Error("Rate limit 429"));
         
         const promise = retryOperation(op, "test", 2);
-
-        // We must advance timers to allow the retry logic to progress
+        // Catch it immediately to prevent unhandled rejection
+        const errorPromise = promise.catch((e: unknown) => e);
+        
         await vi.runAllTimersAsync();
         
-        // Wait for the final rejection
-        await expect(promise).rejects.toThrow(ProviderError);
+        const error = await errorPromise;
+        expect(error).toBeInstanceOf(ProviderError);
+        const providerError = error as ProviderError;
+        expect(providerError.status).toBe(429);
         expect(op).toHaveBeenCalledTimes(2);
     });
 
     it("should fail immediately on non-transient errors", async () => {
         const op = vi.fn().mockRejectedValue(new Error("Bad Request"));
-        await expect(retryOperation(op, "test", 3)).rejects.toThrow(ProviderError);
+        
+        const promise = retryOperation(op, "test", 3);
+        const errorPromise = promise.catch((e: unknown) => e);
+
+        const error = await errorPromise;
+        expect(error).toBeInstanceOf(ProviderError);
         expect(op).toHaveBeenCalledTimes(1);
     });
 
     it("should respect Retry-After header if available", async () => {
-        const error = new Error("Rate limit 429") as Error & { status?: number; response?: { headers?: Record<string, string> } };
+        interface MockError extends Error {
+            response?: { headers?: Record<string, string> };
+            status?: number;
+        }
+        const error = new Error("Rate limit 429") as MockError;
         error.status = 429;
         error.response = { headers: { "retry-after": "10" } };
         
