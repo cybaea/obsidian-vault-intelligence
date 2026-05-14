@@ -73,7 +73,6 @@ async function loadStopWords(language: string): Promise<string[]> {
     }
 }
 
-
 interface OramaDocument {
     anchorHash: number;
     author?: string;
@@ -1024,7 +1023,8 @@ const IndexerWorker: WorkerAPI = {
             orama: oramaData,
         };
 
-        return encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
+        const encoded: Uint8Array = encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
+        return encoded;
     },
 
     async search(query: string, limit: number = WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT): Promise<GraphSearchResult[]> {
@@ -1229,8 +1229,6 @@ const IndexerWorker: WorkerAPI = {
 
 // --- Helper Functions ---
 
-
-
 function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): GraphSearchResult[] {
     const uniqueHits = new Map<string, GraphSearchResult>();
     for (const hit of hits) {
@@ -1258,7 +1256,6 @@ function maxPoolResults(hits: OramaHit[], limit: number, minScore: number): Grap
         .slice(0, limit);
 }
 
-
 function generateContextString(title: string, dir: string, fm: Record<string, unknown>, conf: WorkerConfig): string {
     const parts: string[] = [];
     const props = conf.contextAwareHeaderProperties || ['title', 'topics', 'tags', 'type', 'author', 'status'];
@@ -1279,9 +1276,6 @@ function generateContextString(title: string, dir: string, fm: Record<string, un
 
     return parts.join(' ').substring(0, 1000);
 }
-
-
-
 
 function updateGraphNode(path: string, content: string, mtime: number, size: number, title: string, hash: string, tokenCount: number) {
     const headers = extractHeaders(content);
@@ -1444,7 +1438,6 @@ async function computeHash(text: string): Promise<string> {
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-
 async function generateEmbedding(text: string | string[], title: string): Promise<{ vector: number[]; vectors?: number[][]; tokenCount: number }> {
     if (!embedderProxy) throw new Error("Embedding proxy not initialized.");
     const res = await embedderProxy(text, title);
@@ -1454,7 +1447,6 @@ async function generateEmbedding(text: string | string[], title: string): Promis
         vectors: res.vectors
     };
 }
-
 
 if (typeof postMessage !== 'undefined' && typeof addEventListener !== 'undefined') {
     Comlink.expose(IndexerWorker);
