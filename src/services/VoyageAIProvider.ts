@@ -97,11 +97,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
         let totalTokens = 0;
         const allVectors: number[][] = [];
 
-        for (const [i, batch] of batches.entries()) {
-            if (i > 0) {
-                await new Promise(resolve => window.setTimeout(resolve, 500));
-            }
-
+        for (const batch of batches) {
             const response = await this.requestEmbeddings(batch, 'document');
             totalTokens += response.usage.total_tokens;
             
