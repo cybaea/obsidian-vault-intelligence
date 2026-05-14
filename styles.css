@@ -290,6 +290,10 @@ a.similar-notes-link:hover {
     border: var(--border-width) solid var(--text-warning);
 }
 
+.vi-settings-tabs-content .setting-item-info .setting-item-description .vault-intelligence-settings-success svg.lucide-lock {
+    margin-right: var(--size-4-1);
+}
+
 .vault-intelligence-settings-info .lucide-info,
 .vault-intelligence-settings-warning .lucide-alert-triangle {
     flex-shrink: 0;
