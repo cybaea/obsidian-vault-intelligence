@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.4.5] - 2026-05-14
+
+### User features
+
+### Developer features
+
 -   chore: added linter directives to try to satisfy community site; see issue [150](https://github.com/obsidianmd/eslint-plugin/issues/150) on `eslint-plugin-obsidianmd`.
 -   fix: Resolved a linter warning regarding "Unsafe return of a value of type error" in the indexing worker by explicitly typing the MessagePack encoding result. This ensures compatibility with the strict linter used by the Obsidian community plugin review process.
 
