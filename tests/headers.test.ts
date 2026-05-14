@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
 import { parseRetryAfterHeader } from "../src/utils/headers";
 
 describe("parseRetryAfterHeader", () => {

@@ -1,13 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { retryOperation } from "../src/utils/retry";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { ProviderError } from "../src/types/providers";
+import { retryOperation } from "../src/utils/retry";
 
 vi.mock("../src/utils/logger", () => ({
     logger: {
-        warn: vi.fn(),
+        debug: vi.fn(),
         error: vi.fn(),
         info: vi.fn(),
-        debug: vi.fn()
+        warn: vi.fn()
     }
 }));
 
@@ -62,7 +63,7 @@ describe("retryOperation", () => {
     });
 
     it("should respect Retry-After header if available", async () => {
-        const error: any = new Error("Rate limit 429");
+        const error = new Error("Rate limit 429") as Error & { status?: number; response?: { headers?: Record<string, string> } };
         error.status = 429;
         error.response = { headers: { "retry-after": "10" } };
         
