@@ -170,8 +170,22 @@ export class VoyageAIProvider implements IEmbeddingClient {
                 const errorData = response.json as { error?: { message?: string } } | undefined;
                 const message = errorData?.error?.message || response.text || `Voyage API error ${response.status}`;
                 
-                const retryAfter = response.headers['retry-after'];
-                const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+                // Extract retry-after header (case-insensitive)
+                const retryAfterHeader = Object.entries(response.headers).find(([k]) => k.toLowerCase() === 'retry-after')?.[1];
+                let retryAfterSec: number | undefined;
+                
+                if (retryAfterHeader) {
+                    const parsed = parseInt(retryAfterHeader, 10);
+                    if (!isNaN(parsed)) {
+                        retryAfterSec = parsed;
+                    } else {
+                        // Handle HTTP-date format
+                        const date = Date.parse(retryAfterHeader);
+                        if (!isNaN(date)) {
+                            retryAfterSec = Math.max(0, Math.ceil((date - Date.now()) / 1000));
+                        }
+                    }
+                }
                 
                 throw new ProviderError(message, "voyage", response.status, retryAfterSec);
             }
