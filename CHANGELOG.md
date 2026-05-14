@@ -11,6 +11,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ## [Unreleased]
 
+-   Refactor: Move hardcoded retry delays and backoff limits to centralized `RETRY_CONSTANTS` in `src/constants.ts`.
+
 ### User features
 
 -   Speed up embeddings when using Voyage AI as the provider.
