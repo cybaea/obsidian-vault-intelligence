@@ -916,7 +916,7 @@ a.similar-notes-link:hover {
 
     /* Limit height for large diffs */
     overflow-y: auto;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background-color: var(--background-primary);
     padding: var(--size-4-2);
@@ -973,7 +973,7 @@ a.similar-notes-link:hover {
     margin-top: var(--size-4-2);
     margin-bottom: var(--size-4-2);
     border-radius: var(--radius-s);
-    font-weight: 500;
+    font-weight: var(--font-medium);
 }
 
 .chat-cancelled-block {
@@ -1007,12 +1007,12 @@ a.similar-notes-link:hover {
     right: 5px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 10;
+    z-index: var(--layer-cover);
 }
 
 /* Key-Value Editor Styles */
 .vi-kv-editor-wrapper {
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--border-width) solid var(--background-modifier-border);
     padding: 1em 0;
 }
 
@@ -1064,7 +1064,7 @@ a.similar-notes-link:hover {
 }
 
 .mcp-status {
-    border-radius: 4px;
+    border-radius: var(--radius-s);
     font-size: var(--font-ui-smallest);
     margin-left: 10px;
     padding: 2px 6px;
