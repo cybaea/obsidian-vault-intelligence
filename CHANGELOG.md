@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Cleaned up `styles.css` by removing `!important` declarations and replacing hard-coded values with Obsidian CSS variables for better theme compatibility.
+
 ## [9.4.2] - 2026-05-13
 
 ### User features
