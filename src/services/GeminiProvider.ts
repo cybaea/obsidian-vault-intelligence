@@ -2,7 +2,7 @@ import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentParame
 import { App, Notice } from "obsidian";
 import { z } from "zod";
 
-import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
