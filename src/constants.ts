@@ -468,3 +468,10 @@ export const WORKER_LATENCY_CONSTANTS = {
     /** Multiple of chunk size allowed in the fast-path search */
     LATENCY_BUDGET_FACTOR: 4.0
 };
+
+export const RETRY_CONSTANTS = {
+    /** Initial delay for exponential backoff (ms) */
+    INITIAL_DELAY_MS: 1000,
+    /** Maximum delay for exponential backoff (ms) */
+    MAX_BACKOFF_MS: 60000
+};

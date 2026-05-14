@@ -3,7 +3,9 @@ import { App, Notice, requestUrl } from "obsidian";
 import { SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { EmbeddingPriority, IEmbeddingClient, ProviderError } from "../types/providers";
+import { parseRetryAfterHeader } from "../utils/headers";
 import { logger } from "../utils/logger";
+import { retryOperation } from "../utils/retry";
 import { getVoyageApiKeySecretName, hasVoyageApiKey } from "../utils/secrets";
 
 interface VoyageResponse {
@@ -97,11 +99,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
         let totalTokens = 0;
         const allVectors: number[][] = [];
 
-        for (const [i, batch] of batches.entries()) {
-            if (i > 0) {
-                await new Promise(resolve => window.setTimeout(resolve, 500));
-            }
-
+        for (const batch of batches) {
             const response = await this.requestEmbeddings(batch, 'document');
             totalTokens += response.usage.total_tokens;
             
@@ -144,7 +142,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
     }
 
     private async requestEmbeddings(input: string[], inputType: 'query' | 'document'): Promise<VoyageResponse> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
             const apiKey = await this.getApiKey();
             if (!apiKey) {
                 if (getVoyageApiKeySecretName(this.settings)) {
@@ -174,58 +172,12 @@ export class VoyageAIProvider implements IEmbeddingClient {
                 const errorData = response.json as { error?: { message?: string } } | undefined;
                 const message = errorData?.error?.message || response.text || `Voyage API error ${response.status}`;
                 
-                const retryAfter = response.headers['retry-after'];
-                const retryAfterSec = retryAfter ? parseInt(retryAfter, 10) : undefined;
+                const retryAfterSec = parseRetryAfterHeader(response.headers);
                 
                 throw new ProviderError(message, "voyage", response.status, retryAfterSec);
             }
 
             return response.json as VoyageResponse;
-        });
-    }
-
-    private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.voyageRetries): Promise<T> {
-        let lastError: Error | null = null;
-        let delay = 1000;
-        const MAX_BACKOFF_MS = 60000; // Cap backoff at 60 seconds
-
-        for (let attempt = 0; attempt < retries; attempt++) {
-            try {
-                return await operation();
-            } catch (error: unknown) {
-                const err = error as { message?: string; status?: number; retryAfter?: number };
-                
-                // Obsidian's requestUrl often throws an error with the status in the message.
-                // We must check both the status property and the message string.
-                const isTransientError = 
-                    err.status === 429 || 
-                    err.message?.includes("429") || 
-                    err.status === 503 || 
-                    err.status === 504 || 
-                    err.message?.includes("Failed to fetch");
-
-                if (isTransientError) {
-                    // Use server-provided retry-after if available, otherwise use our backoff
-                    const retryAfterMs = err.retryAfter ? err.retryAfter * 1000 : delay;
-                    
-                    // Add jitter (±10%) to prevent thundering herd if multiple chunks fail
-                    const jitter = 0.9 + Math.random() * 0.2;
-                    const finalDelay = Math.min(retryAfterMs * jitter, MAX_BACKOFF_MS);
-
-                    logger.warn(`Voyage transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
-                    
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    await new Promise(resolve => window.setTimeout(resolve, finalDelay));
-                    
-                    // Only increase our internal delay if the server didn't specify a time
-                    if (!err.retryAfter) {
-                        delay = Math.min(delay * 2, MAX_BACKOFF_MS);
-                    }
-                } else {
-                    throw error;
-                }
-            }
-        }
-        throw lastError || new ProviderError("Max retries reached.", "voyage", 429);
+        }, "voyage", this.settings.voyageRetries, "VoyageAI");
     }
 }
