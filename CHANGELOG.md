@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.4.6] - 2026-05-14
+
+### User features
+
 -   Speed up embeddings when using Voyage AI as the provider.
 
 ### Developer features
