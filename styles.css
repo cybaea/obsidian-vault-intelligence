@@ -7,7 +7,7 @@
 }
 
 .research-chat-view .chat-header {
-    padding: 8px 12px;
+    padding: var(--size-4-2) var(--size-4-3);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -30,7 +30,7 @@
     font-size: var(--font-ui-smaller);
     color: var(--text-muted);
 }
-
+    
 .research-chat-view .control-label {
     white-space: nowrap;
 }
@@ -42,30 +42,30 @@
 .research-chat-view .chat-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 10px;
+    padding: var(--size-4-2);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--size-4-2);
 }
 
-.research-chat-view .chat-message {
-    user-select: text !important;
-    padding: 8px 12px;
-    border-radius: 8px;
+.research-chat-view .chat-container .chat-message {
+    user-select: text;
+    padding: var(--size-4-2) var(--size-4-3);
+    border-radius: var(--radius-m);
     max-width: 80%;
     line-height: var(--line-height-normal);
 }
 
-.research-chat-view .chat-message.model {
+.research-chat-view .chat-container .chat-message.model {
     background-color: var(--background-secondary);
     color: var(--text-normal);
 }
 
-.research-chat-view .chat-message.model .chat-content.is-streaming {
+.research-chat-view .chat-container .chat-message.model .chat-content.is-streaming {
     white-space: pre-wrap;
 }
 
-.research-chat-view .chat-message.user {
+.research-chat-view .chat-container .chat-message.user {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
     align-self: flex-end;
@@ -75,28 +75,28 @@
     font-size: var(--font-ui-smallest);
     opacity: 0.7;
     font-style: italic;
-    margin-bottom: 4px;
+    margin-bottom: var(--size-4-1);
 }
 
 .research-chat-view .input-container {
-    padding: 10px;
+    padding: var(--size-4-2);
     border-top: 1px solid var(--background-modifier-border);
 }
 
 .research-chat-view .chat-input {
     width: 100%;
-    min-height: 60px;
+    min-height: 3.5lh;
 }
 
 .research-chat-view .submit-button {
-    margin-top: 10px;
+    margin-top: var(--size-4-2);
     width: 100%;
 }
 
 /* Ensure code blocks within chat are also selectable and look nice */
-.research-chat-view .chat-message pre,
-.research-chat-view .chat-message code {
-    user-select: text !important;
+.research-chat-view .chat-container .chat-message pre,
+.research-chat-view .chat-container .chat-message code {
+    user-select: text;
 }
 
 /* Spotlight UI (Dual-Loop Search) */
@@ -106,7 +106,7 @@
     border-radius: var(--radius-m);
     padding: var(--size-4-3);
     margin: var(--size-4-2) 0;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+    box-shadow: 0 var(--size-4-1) var(--size-4-3) rgb(0 0 0 / 10%);
 }
 
 .research-chat-view .spotlight-container h5 {
@@ -117,7 +117,7 @@
     letter-spacing: 0.05em;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--size-4-1);
 }
 
 .research-chat-view .spotlight-container ul {
@@ -126,14 +126,14 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--size-4-1);
 }
 
 .research-chat-view .spotlight-container li {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 8px;
+    padding: var(--size-4-1) var(--size-4-2);
     border-radius: var(--radius-s);
     transition: background-color 0.1s ease;
 }
@@ -226,12 +226,12 @@ a.similar-notes-link:hover {
 /* ------------------------------------ */
 
 /* Force the System Instruction setting to stack vertically */
-.vault-intelligence-system-instruction-setting {
-    display: block !important;
+.setting-item.vault-intelligence-system-instruction-setting {
+    display: block;
 
     /* Use standard Obsidian spacing variables */
-    padding-bottom: var(--size-4-4) !important;
-    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: var(--size-4-4);
+    border-bottom: var(--border-width) solid var(--background-modifier-border);
 }
 
 /* Ensure the label/description has space below it */
@@ -257,7 +257,7 @@ a.similar-notes-link:hover {
 
     /* Ensure it matches the theme's input styling */
     background-color: var(--background-modifier-form-field);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
     color: var(--text-normal);
 
     /* Make it resizable vertically only */
@@ -278,7 +278,7 @@ a.similar-notes-link:hover {
     background-color: transparent;
     border-radius: var(--radius-s);
     padding: var(--size-4-2);
-    font-size: var(--font-ui-smaller) !important;
+    font-size: var(--font-ui-smaller);
     color: var(--text-muted);
 }
 
@@ -288,6 +288,10 @@ a.similar-notes-link:hover {
 
 .vault-intelligence-settings-warning {
     border: var(--border-width) solid var(--text-warning);
+}
+
+.vi-settings-tabs-content .setting-item-info .setting-item-description .vault-intelligence-settings-success svg.lucide-lock {
+    margin-right: var(--size-4-1);
 }
 
 .vault-intelligence-settings-info .lucide-info,
@@ -332,11 +336,11 @@ a.similar-notes-link:hover {
 .gardener-plan-ui {
     padding: 1.25rem;
     background: var(--background-secondary);
-    border-radius: 12px;
-    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    border: var(--border-width) solid var(--background-modifier-border);
     margin: 1.5rem 0;
     font-family: var(--font-interface);
-    box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+    box-shadow: 0 var(--size-4-1) var(--size-4-3) rgb(0 0 0 / 8%);
 }
 
 .gardener-header {
@@ -344,7 +348,7 @@ a.similar-notes-link:hover {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--border-width) solid var(--background-modifier-border);
     padding-bottom: 0.5rem;
 }
 
@@ -383,9 +387,9 @@ a.similar-notes-link:hover {
 .gardener-action-card {
     background: var(--background-primary);
     padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--background-modifier-border);
-    border-left: 5px solid var(--text-accent);
+    border-radius: var(--radius-m);
+    border: var(--border-width) solid var(--background-modifier-border);
+    border-left: var(--size-4-1) solid var(--text-accent);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -395,14 +399,14 @@ a.similar-notes-link:hover {
 
 .gardener-action-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgb(0 0 0 / 5%);
+    box-shadow: 0 var(--size-4-1) var(--size-4-3) rgb(0 0 0 / 5%);
 }
 
 .action-header {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     margin-bottom: 0.75rem;
     color: var(--text-normal);
 }
@@ -421,7 +425,7 @@ a.similar-notes-link:hover {
     font-size: var(--font-ui-smaller);
     background: var(--background-secondary);
     padding: 0.1rem 0.4rem;
-    border-radius: 4px;
+    border-radius: var(--radius-s);
 }
 
 .action-changes {
@@ -438,7 +442,7 @@ a.similar-notes-link:hover {
 
 .change-field {
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: var(--font-medium);
 }
 
 .change-arrow {
@@ -447,10 +451,10 @@ a.similar-notes-link:hover {
 
 .change-value {
     color: var(--text-success);
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     background: rgb(var(--mono-rgb-100), 0.05);
     padding: 0.1rem 0.3rem;
-    border-radius: 3px;
+    border-radius: var(--radius-s);
 }
 
 
@@ -466,7 +470,7 @@ a.similar-notes-link:hover {
     color: var(--text-muted);
     margin: 0;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--background-modifier-border-focus);
+    border-top: var(--border-width) solid var(--background-modifier-border-focus);
     line-height: 1.4;
 }
 
@@ -477,7 +481,7 @@ a.similar-notes-link:hover {
 }
 
 .gardener-footer button {
-    font-weight: 600;
+    font-weight: var(--font-semibold);
     padding: 0.5rem 1.25rem;
 }
 
@@ -485,8 +489,8 @@ a.similar-notes-link:hover {
     color: var(--text-error);
     background: rgb(var(--color-red-rgb), 0.1);
     padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--text-error);
+    border-radius: var(--radius-m);
+    border: var(--border-width) solid var(--text-error);
 }
 
 .action-checkbox-container {
@@ -580,7 +584,7 @@ a.similar-notes-link:hover {
     display: inline-flex;
     align-items: center;
     background: var(--background-secondary);
-    border-radius: 4px;
+    border-radius: var(--radius-s);
     padding: 2px 6px;
     margin: 2px;
     transition: opacity 0.2s ease, filter 0.2s ease;
@@ -613,7 +617,7 @@ a.similar-notes-link:hover {
 
 /* File Suggest Styles */
 .vault-intelligence-suggestion {
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
@@ -639,7 +643,7 @@ a.similar-notes-link:hover {
 }
 
 .vault-intelligence-suggestion .suggestion-title {
-    font-weight: 500;
+    font-weight: var(--font-medium);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -655,7 +659,7 @@ a.similar-notes-link:hover {
 
 /* Context Files List in Chat */
 .context-details {
-    margin-top: 8px;
+    margin-top: var(--size-4-2);
     font-size: var(--font-ui-small);
     color: var(--text-muted);
 }
@@ -663,7 +667,7 @@ a.similar-notes-link:hover {
 .context-details summary {
     cursor: pointer;
     user-select: none;
-    padding: 4px 0;
+    padding: var(--size-4-1) 0;
 }
 
 .context-details summary:hover {
@@ -673,17 +677,17 @@ a.similar-notes-link:hover {
 .context-file-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding-left: 12px;
-    margin-top: 4px;
-    border-left: 2px solid var(--background-modifier-border);
+    gap: var(--size-4-1);
+    padding-left: var(--size-4-3);
+    margin-top: var(--size-4-1);
+    border-left: calc(var(--border-width) * 2) solid var(--background-modifier-border);
 }
 
 .context-file-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 4px;
+    gap: var(--size-4-1);
+    padding: var(--size-4-1) var(--size-4-2);
     cursor: pointer;
     border-radius: 4px;
     transition: background-color 0.2s ease;
@@ -744,7 +748,7 @@ a.similar-notes-link:hover {
     border-radius: var(--radius-l);
     margin-bottom: var(--size-4-6);
     box-shadow: 0 4px 20px rgb(0 0 0 / 20%);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
 }
 
 .vi-settings-banner-link {
@@ -766,7 +770,7 @@ a.similar-notes-link:hover {
     font-style: italic;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--size-4-1);
     background-color: transparent;
 
     /* Or match message style */
@@ -845,8 +849,8 @@ a.similar-notes-link:hover {
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button {
-    border-color: var(--color-red) !important;
-    color: var(--color-red) !important;
+    border-color: var(--color-red);
+    color: var(--color-red);
 }
 
 .vi-release-notes-modal .modal-button-container .github-button,
@@ -871,8 +875,8 @@ a.similar-notes-link:hover {
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button:hover {
-    background-color: #bf3989 !important;
-    color: white !important;
+    background-color: #bf3989;
+    color: white;
 }
 
 .vi-release-notes-modal .modal-button-container .sponsor-button svg,
@@ -916,7 +920,7 @@ a.similar-notes-link:hover {
 
     /* Limit height for large diffs */
     overflow-y: auto;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background-color: var(--background-primary);
     padding: var(--size-4-2);
@@ -973,7 +977,7 @@ a.similar-notes-link:hover {
     margin-top: var(--size-4-2);
     margin-bottom: var(--size-4-2);
     border-radius: var(--radius-s);
-    font-weight: 500;
+    font-weight: var(--font-medium);
 }
 
 .chat-cancelled-block {
@@ -989,8 +993,8 @@ a.similar-notes-link:hover {
 
 /* Key-Value Editor Validation */
 .vi-kv-row input.is-invalid {
-    border-color: var(--text-error) !important;
-    box-shadow: 0 0 0 1px var(--text-error) !important;
+    border-color: var(--text-error);
+    box-shadow: 0 0 0 1px var(--text-error);
 }
 
 /* Password Component Styles */
@@ -999,7 +1003,7 @@ a.similar-notes-link:hover {
 }
 
 .vi-password-input {
-    padding-right: 30px !important;
+    padding-right: 30px;
 }
 
 .vi-password-toggle {
@@ -1007,12 +1011,12 @@ a.similar-notes-link:hover {
     right: 5px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 10;
+    z-index: var(--layer-cover);
 }
 
 /* Key-Value Editor Styles */
 .vi-kv-editor-wrapper {
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--border-width) solid var(--background-modifier-border);
     padding: 1em 0;
 }
 
@@ -1064,7 +1068,7 @@ a.similar-notes-link:hover {
 }
 
 .mcp-status {
-    border-radius: 4px;
+    border-radius: var(--radius-s);
     font-size: var(--font-ui-smallest);
     margin-left: 10px;
     padding: 2px 6px;
