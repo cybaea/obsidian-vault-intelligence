@@ -100,8 +100,8 @@ interface OramaHit {
 }
 
 interface OramaResultHit {
+    document: OramaDocument;
     id: string;
-    orama_document: OramaDocument;
     score: number;
 }
 
@@ -153,7 +153,7 @@ const IndexerWorker: WorkerAPI = {
         const candidates = new Map<string, { id: string; score: number; type: 'vector' | 'graph'; source?: string; content?: string }>();
 
         for (const hit of vectorResults.hits) {
-            const doc = (hit as unknown as OramaResultHit).orama_document;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (!candidates.has(hit.id)) {
                 candidates.set(hit.id, {
                     content: doc.content,
@@ -165,7 +165,7 @@ const IndexerWorker: WorkerAPI = {
         }
 
         for (const hit of keywordResults.hits) {
-            const doc = (hit as unknown as OramaResultHit).orama_document;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (!candidates.has(hit.id)) {
                 candidates.set(hit.id, {
                     content: doc.content,
@@ -248,7 +248,7 @@ const IndexerWorker: WorkerAPI = {
 
             const hydrationMap = new Map<string, string>();
             for (const hit of hydrationResults.hits) {
-                const doc = (hit as unknown as OramaResultHit).orama_document;
+                const doc = (hit as unknown as OramaResultHit).document;
                 hydrationMap.set(hit.id, doc.content);
                 hydrationMap.set(doc.path, doc.content);
             }
@@ -344,8 +344,8 @@ const IndexerWorker: WorkerAPI = {
                     limit: 1,
                     where: { path: { eq: node } }
                 });
-                if (results.hits.length > 0 && (results.hits[0] as unknown as OramaResultHit)?.orama_document?.embedding) {
-                    topicEmbedding = (results.hits[0] as unknown as OramaResultHit).orama_document.embedding || [];
+                if (results.hits.length > 0 && (results.hits[0] as unknown as OramaResultHit)?.document?.embedding) {
+                    topicEmbedding = (results.hits[0] as unknown as OramaResultHit).document.embedding || [];
                     collectedVectors.push(topicEmbedding);
                 }
             }
@@ -364,7 +364,7 @@ const IndexerWorker: WorkerAPI = {
                 });
                 for (const hit of neighborResults.hits) {
                     // Safety check needed since typed as unknown internally
-                    const doc = (hit as unknown as OramaResultHit).orama_document;
+                    const doc = (hit as unknown as OramaResultHit).document;
                     if (doc.embedding) {
                         collectedVectors.push(doc.embedding);
                     }
@@ -673,7 +673,7 @@ const IndexerWorker: WorkerAPI = {
 
         const sourceVectors: number[][] = [];
         for (const hit of docResult.hits) {
-            const doc = (hit as unknown as OramaResultHit).orama_document;
+            const doc = (hit as unknown as OramaResultHit).document;
             if (doc.embedding && Array.isArray(doc.embedding)) {
                 sourceVectors.push(doc.embedding);
             }
@@ -724,7 +724,7 @@ const IndexerWorker: WorkerAPI = {
         });
 
         return maxPoolResults(results.hits.map(h => ({
-            doc: (h as unknown as OramaResultHit).orama_document,
+            doc: (h as unknown as OramaResultHit).document,
             id: h.id,
             score: h.score
         })), limit, minScore);
@@ -906,7 +906,7 @@ const IndexerWorker: WorkerAPI = {
             tolerance: WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE
         });
         return maxPoolResults(results.hits.map(h => ({
-            doc: (h as unknown as OramaResultHit).orama_document,
+            doc: (h as unknown as OramaResultHit).document,
             id: h.id,
             score: h.score
         })), limit, 0);
@@ -1049,7 +1049,7 @@ const IndexerWorker: WorkerAPI = {
 
         for (const hit of vectorResults.hits) {
             const h = hit as unknown as OramaResultHit;
-            hits.set(h.id, { doc: h.orama_document, id: h.id, score: h.score });
+            hits.set(h.id, { doc: h.document, id: h.id, score: h.score });
         }
 
         let maxKS = 0;
@@ -1058,7 +1058,7 @@ const IndexerWorker: WorkerAPI = {
 
         for (const hit of keywordResults.hits) {
             const hTyped = hit as unknown as OramaResultHit;
-            const h: OramaHit = { doc: hTyped.orama_document, id: hTyped.id, score: hTyped.score };
+            const h: OramaHit = { doc: hTyped.document, id: hTyped.id, score: hTyped.score };
             const score = h.score / norm;
             if (hits.has(h.id)) {
                 const existing = hits.get(h.id);
@@ -1086,7 +1086,7 @@ const IndexerWorker: WorkerAPI = {
             where: { path: { in: normalizedPaths } }
         });
         return maxPoolResults(results.hits.map(h => ({
-            doc: (h as unknown as OramaResultHit).orama_document,
+            doc: (h as unknown as OramaResultHit).document,
             id: h.id,
             score: h.score
         })), limit, config.minSimilarityScore ?? 0);
