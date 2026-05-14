@@ -1,6 +1,6 @@
 import { App, Notice, requestUrl } from "obsidian";
 
-import { RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { EmbeddingPriority, IEmbeddingClient, ProviderError } from "../types/providers";
 import { parseRetryAfterHeader } from "../utils/headers";
