@@ -2,7 +2,7 @@ import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentParame
 import { App, Notice } from "obsidian";
 import { z } from "zod";
 
-import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
 import { logger } from "../utils/logger";
@@ -646,7 +646,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
 
     private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.geminiRetries): Promise<T> {
         let lastError: Error | null = null;
-        let delay = 1000;
+        let delay = RETRY_CONSTANTS.INITIAL_DELAY_MS;
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
                 return await operation();

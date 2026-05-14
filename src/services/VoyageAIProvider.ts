@@ -1,6 +1,6 @@
 import { App, Notice, requestUrl } from "obsidian";
 
-import { SEARCH_CONSTANTS } from "../constants";
+import { RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { EmbeddingPriority, IEmbeddingClient, ProviderError } from "../types/providers";
 import { logger } from "../utils/logger";
@@ -186,8 +186,8 @@ export class VoyageAIProvider implements IEmbeddingClient {
 
     private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.voyageRetries): Promise<T> {
         let lastError: Error | null = null;
-        let delay = 1000;
-        const MAX_BACKOFF_MS = 60000; // Cap backoff at 60 seconds
+        let delay = RETRY_CONSTANTS.INITIAL_DELAY_MS;
+        const MAX_BACKOFF_MS = RETRY_CONSTANTS.MAX_BACKOFF_MS;
 
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
