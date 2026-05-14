@@ -15,6 +15,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Optimization: Removed redundant 500ms fixed delay between Voyage AI embedding batches, relying instead on centralized exponential backoff.
 -   Fix: Applied missing backoff cap to `GeminiProvider` to prevent unbounded delay growth during retries.
 -   Fix: Improved `Retry-After` header parsing in `VoyageAIProvider` to be case-insensitive and support HTTP-date formats.
+-   Refactor: Harmonized transient error detection and added jittered backoff to `GeminiProvider` for better reliability.
 
 ### User features
 

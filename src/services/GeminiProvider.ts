@@ -5,6 +5,7 @@ import { z } from "zod";
 import { MODEL_CONSTANTS, RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
+import { parseRetryAfterHeader } from "../utils/headers";
 import { logger } from "../utils/logger";
 import { getGoogleApiKeySecretName, hasGoogleApiKey } from "../utils/secrets";
 import { ModelRegistry } from "./ModelRegistry";
@@ -651,14 +652,35 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             try {
                 return await operation();
             } catch (error: unknown) {
-                const err = error as { message?: string; status?: number };
-                const isTransientError = err.message?.includes("429") || err.status === 429 || err.message?.includes("Failed to fetch");
+                const err = error as { message?: string; status?: number; retryAfter?: number; response?: { headers?: Record<string, string> } };
+                
+                // Attempt to extract retry-after from SDK error response if available
+                if (!err.retryAfter && err.response?.headers) {
+                    err.retryAfter = parseRetryAfterHeader(err.response.headers);
+                }
+                const isTransientError = 
+                    err.status === 429 || 
+                    err.message?.includes("429") || 
+                    err.status === 503 || 
+                    err.status === 504 || 
+                    err.message?.includes("Failed to fetch");
 
                 if (isTransientError) {
-                    logger.warn(`Transient error (${err.message || "unknown"}). Retrying in ${Math.round(delay)}ms...`);
+                    // Use server-provided retry-after if available, otherwise use our backoff
+                    const retryAfterMs = err.retryAfter ? err.retryAfter * 1000 : delay;
+                    
+                    // Add jitter (±10%)
+                    const jitter = 0.9 + Math.random() * 0.2;
+                    const finalDelay = Math.min(retryAfterMs * jitter, RETRY_CONSTANTS.MAX_BACKOFF_MS);
+
+                    logger.warn(`Transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
                     lastError = error instanceof Error ? error : new Error(String(error));
-                    await new Promise(resolve => window.setTimeout(resolve, delay));
-                    delay = Math.min(delay * 2, RETRY_CONSTANTS.MAX_BACKOFF_MS); // Exponential backoff with cap
+                    await new Promise(resolve => window.setTimeout(resolve, finalDelay));
+                    
+                    // Only increase our internal delay if the server didn't specify a time
+                    if (!err.retryAfter) {
+                        delay = Math.min(delay * 2, RETRY_CONSTANTS.MAX_BACKOFF_MS);
+                    }
                 } else {
                     const message = err.message || "Unknown error occurred";
                     const status = err.status;

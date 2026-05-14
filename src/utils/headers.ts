@@ -72,3 +72,22 @@ export function mergeHeaders(...headersList: Array<Record<string, string> | unde
     
     return merged;
 }
+
+/**
+ * Parse a Retry-After header value into seconds.
+ * Supports both integer seconds and HTTP-date formats.
+ */
+export function parseRetryAfterHeader(headers: Record<string, string>): number | undefined {
+    const retryAfterHeader = Object.entries(headers).find(([k]) => k.toLowerCase() === 'retry-after')?.[1];
+    if (!retryAfterHeader) return undefined;
+
+    const parsed = parseInt(retryAfterHeader, 10);
+    if (!isNaN(parsed)) return parsed;
+
+    const date = Date.parse(retryAfterHeader);
+    if (!isNaN(date)) {
+        return Math.max(0, Math.ceil((date - Date.now()) / 1000));
+    }
+
+    return undefined;
+}

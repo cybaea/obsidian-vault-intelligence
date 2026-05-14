@@ -3,6 +3,7 @@ import { App, Notice, requestUrl } from "obsidian";
 import { RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { EmbeddingPriority, IEmbeddingClient, ProviderError } from "../types/providers";
+import { parseRetryAfterHeader } from "../utils/headers";
 import { logger } from "../utils/logger";
 import { getVoyageApiKeySecretName, hasVoyageApiKey } from "../utils/secrets";
 
@@ -170,22 +171,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
                 const errorData = response.json as { error?: { message?: string } } | undefined;
                 const message = errorData?.error?.message || response.text || `Voyage API error ${response.status}`;
                 
-                // Extract retry-after header (case-insensitive)
-                const retryAfterHeader = Object.entries(response.headers).find(([k]) => k.toLowerCase() === 'retry-after')?.[1];
-                let retryAfterSec: number | undefined;
-                
-                if (retryAfterHeader) {
-                    const parsed = parseInt(retryAfterHeader, 10);
-                    if (!isNaN(parsed)) {
-                        retryAfterSec = parsed;
-                    } else {
-                        // Handle HTTP-date format
-                        const date = Date.parse(retryAfterHeader);
-                        if (!isNaN(date)) {
-                            retryAfterSec = Math.max(0, Math.ceil((date - Date.now()) / 1000));
-                        }
-                    }
-                }
+                const retryAfterSec = parseRetryAfterHeader(response.headers);
                 
                 throw new ProviderError(message, "voyage", response.status, retryAfterSec);
             }
