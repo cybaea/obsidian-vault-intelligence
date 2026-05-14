@@ -658,7 +658,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                     logger.warn(`Transient error (${err.message || "unknown"}). Retrying in ${Math.round(delay)}ms...`);
                     lastError = error instanceof Error ? error : new Error(String(error));
                     await new Promise(resolve => window.setTimeout(resolve, delay));
-                    delay *= 2; // Exponential backoff
+                    delay = Math.min(delay * 2, RETRY_CONSTANTS.MAX_BACKOFF_MS); // Exponential backoff with cap
                 } else {
                     const message = err.message || "Unknown error occurred";
                     const status = err.status;
