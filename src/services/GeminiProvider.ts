@@ -2,11 +2,11 @@ import { Content, EmbedContentConfig, FunctionDeclaration, GenerateContentParame
 import { App, Notice } from "obsidian";
 import { z } from "zod";
 
-import { MODEL_CONSTANTS, RETRY_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ChatOptions, IEmbeddingClient, IModelProvider, IReasoningClient, IToolDefinition, ProviderError, StreamChunk, ToolCall, UnifiedMessage } from "../types/providers";
-import { parseRetryAfterHeader } from "../utils/headers";
 import { logger } from "../utils/logger";
+import { retryOperation } from "../utils/retry";
 import { getGoogleApiKeySecretName, hasGoogleApiKey } from "../utils/secrets";
 import { ModelRegistry } from "./ModelRegistry";
 
@@ -107,7 +107,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     // --- IReasoningClient Implementation ---
 
     public async generateMessage(messages: UnifiedMessage[], options: ChatOptions): Promise<UnifiedMessage> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
             const client = await this.getClient();
             const contents = this.formatHistory(messages);
 
@@ -199,7 +199,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             }
 
             return parsed;
-        });
+        }, "google", this.settings.geminiRetries, "Gemini");
     }
 
     public async *generateMessageStream(messages: UnifiedMessage[], options: ChatOptions): AsyncIterableIterator<StreamChunk> {
@@ -353,7 +353,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     public async generateStructured<T>(messages: UnifiedMessage[], schema: z.ZodType<T>, options: ChatOptions): Promise<T> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
             const client = await this.getClient();
             const contents = this.formatHistory(messages);
             
@@ -391,7 +391,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 const message = error instanceof Error ? error.message : String(error);
                 throw new ProviderError(`Failed to parse structured output: ${message}`, "google");
             }
-        });
+        }, "google", this.settings.geminiRetries, "Gemini");
     }
 
     // --- Adapters Data Mapping ---
@@ -543,7 +543,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
      * Web grounding goes out through here.
      */
     public async searchWithGrounding(query: string): Promise<{ text: string, tokenCount: number }> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
              const client = await this.getClient();
              const response = await client.models.generateContent({
                  config: { tools: [{ googleSearch: {} }] },
@@ -554,11 +554,11 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                  text: response.text || "",
                  tokenCount: this.extractTokenCount(response, query)
              };
-        });
+        }, "google", this.settings.geminiRetries, "Gemini");
     }
 
     public async solveWithCode(query: string): Promise<{ text: string, tokenCount: number }> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
              const client = await this.getClient();
              const response = await client.models.generateContent({
                  config: { tools: [{ codeExecution: {} }] },
@@ -578,7 +578,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                  text: resultString.trim() || "",
                  tokenCount: this.extractTokenCount(response, query)
              };
-        });
+        }, "google", this.settings.geminiRetries, "Gemini");
     }
 
     // --- IEmbeddingClient Implementation ---
@@ -602,7 +602,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     private async embedText(text: string, options: EmbedOptions = {}): Promise<{ values: number[], tokenCount: number }> {
-        return this.retryOperation(async () => {
+        return retryOperation(async () => {
             const client = await this.getClient();
             const config: EmbedContentConfig = {};
             
@@ -632,7 +632,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
                 tokenCount: this.extractTokenCount(result, text),
                 values: embeddings[0].values
             };
-        });
+        }, "google", this.settings.geminiRetries, "Gemini");
     }
 
     private extractTokenCount(response: unknown, fallbackText: string): number {
@@ -644,50 +644,4 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
     }
 
     // --- Utility ---
-
-    private async retryOperation<T>(operation: () => Promise<T>, retries: number = this.settings.geminiRetries): Promise<T> {
-        let lastError: Error | null = null;
-        let delay = RETRY_CONSTANTS.INITIAL_DELAY_MS;
-        for (let attempt = 0; attempt < retries; attempt++) {
-            try {
-                return await operation();
-            } catch (error: unknown) {
-                const err = error as { message?: string; status?: number; retryAfter?: number; response?: { headers?: Record<string, string> } };
-                
-                // Attempt to extract retry-after from SDK error response if available
-                if (!err.retryAfter && err.response?.headers) {
-                    err.retryAfter = parseRetryAfterHeader(err.response.headers);
-                }
-                const isTransientError = 
-                    err.status === 429 || 
-                    err.message?.includes("429") || 
-                    err.status === 503 || 
-                    err.status === 504 || 
-                    err.message?.includes("Failed to fetch");
-
-                if (isTransientError) {
-                    // Use server-provided retry-after if available, otherwise use our backoff
-                    const retryAfterMs = err.retryAfter ? err.retryAfter * 1000 : delay;
-                    
-                    // Add jitter (±10%)
-                    const jitter = 0.9 + Math.random() * 0.2;
-                    const finalDelay = Math.min(retryAfterMs * jitter, RETRY_CONSTANTS.MAX_BACKOFF_MS);
-
-                    logger.warn(`Transient error (${err.message || "unknown"}). Retrying in ${Math.round(finalDelay)}ms...`);
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                    await new Promise(resolve => window.setTimeout(resolve, finalDelay));
-                    
-                    // Only increase our internal delay if the server didn't specify a time
-                    if (!err.retryAfter) {
-                        delay = Math.min(delay * 2, RETRY_CONSTANTS.MAX_BACKOFF_MS);
-                    }
-                } else {
-                    const message = err.message || "Unknown error occurred";
-                    const status = err.status;
-                    throw new ProviderError(message, "google", status);
-                }
-            }
-        }
-        throw lastError || new ProviderError("Max retries reached.", "google", 429);
-    }
 }

@@ -16,6 +16,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Fix: Applied missing backoff cap to `GeminiProvider` to prevent unbounded delay growth during retries.
 -   Fix: Improved `Retry-After` header parsing in `VoyageAIProvider` to be case-insensitive and support HTTP-date formats.
 -   Refactor: Harmonized transient error detection and added jittered backoff to `GeminiProvider` for better reliability.
+-   Refactor: Extracted `retryOperation` into a centralized utility in `src/utils/retry.ts` to unify exponential backoff logic across providers.
 
 ### User features
 
