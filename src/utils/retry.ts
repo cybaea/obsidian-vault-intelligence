@@ -69,5 +69,10 @@ export async function retryOperation<T>(
             }
         }
     }
-    throw lastError || new ProviderError("Max retries reached.", provider, 429);
+    
+    // If we've exhausted retries, wrap the last error in a ProviderError
+    if (lastError instanceof ProviderError) {
+        throw lastError;
+    }
+    throw new ProviderError(lastError?.message || "Max retries reached.", provider, 429);
 }
