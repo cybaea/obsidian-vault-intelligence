@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.4.7] - 2026-05-15
+
+### User features
+
+### Developer features
+
 -   Remove `eslint-disable` directive to get a better score on the Obsidian community site. See also [issue 150](https://github.com/obsidianmd/eslint-plugin/issues/150) on the Obsidian eslint-plugin project.
 
 ## [9.4.6] - 2026-05-14
