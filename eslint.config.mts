@@ -43,6 +43,7 @@ export default tseslint.config(
 	// Add parser options and our strict rules ONLY for TypeScript files
 	{
 		files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
+		ignores: ['eslint.config.mts'], // or use `files: ['src/**/*.ts', 'tests/**/*.ts'],` above.
 		languageOptions: {
 			parserOptions: {
 				projectService: {
@@ -62,12 +63,18 @@ export default tseslint.config(
 			"@typescript-eslint/no-explicit-any": "error",
 			"@typescript-eslint/no-non-null-assertion": "error",
 			"@typescript-eslint/no-unnecessary-type-assertion": "error",
+			"@typescript-eslint/no-unsafe-argument": "error",
+			"@typescript-eslint/no-unsafe-assignment": "error",
+			"@typescript-eslint/no-unsafe-call": "error",
+			"@typescript-eslint/no-unsafe-member-access": "error",
+			"@typescript-eslint/no-unsafe-return": "error",
 			"@typescript-eslint/require-await": "error",
-			"eslint-comments/disable-enable-pair": "error",
 
+			"eslint-comments/disable-enable-pair": "error",
 			"eslint-comments/no-unused-disable": "error",
 			"eslint-comments/require-description": "error",
 			"no-console": "error",
+			
 			// Re-enable the typed rules from Obsidian plugin specifically for TS files
 			"obsidianmd/no-plugin-as-component": "error",
 			"obsidianmd/no-unsupported-api": "error",
@@ -79,6 +86,7 @@ export default tseslint.config(
 				acronyms: ["API", "HTML", "AI", "ID", "CX"],
 				brands: ["Google", "Gemini", "Google Cloud Console", "Transformers.js"]
 			}],
+
 			"perfectionist/sort-imports": "error",
 			"perfectionist/sort-interfaces": "error",
 			"perfectionist/sort-objects": "error",
