@@ -17,6 +17,10 @@ export default tseslint.config(
 	},
 	// Include TypeScript ESLint recommended configs to register the plugin
 	...tseslint.configs.recommended,
+	...tseslint.configs.recommendedTypeChecked.map(config => ({
+    	...config,
+    	files: ['src/**/*.ts']
+	})),
 	// Apply Obsidian recommended configs, but ensure they don't leak 
 	// type-information requirements to non-TypeScript files.
 	...obsidianmd.configs.recommended.map(config => {

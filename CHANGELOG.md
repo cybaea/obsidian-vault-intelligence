@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Update the stale types from the Orama v2 -> v3 transition.
+
 ## [9.4.7] - 2026-05-15
 
 ### User features
