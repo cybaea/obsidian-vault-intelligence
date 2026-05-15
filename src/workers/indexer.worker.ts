@@ -99,7 +99,7 @@ interface OramaHit {
 }
 
 interface OramaResultHit {
-    // eslint-disable-next-line obsidianmd/prefer-active-doc -- Orama search results use the 'document' property name; this is a data property in a Web Worker, not a global DOM access.
+    // This is not a bug - see https://github.com/obsidianmd/eslint-plugin/issues/150
     document: OramaDocument;
     id: string;
     score: number;
