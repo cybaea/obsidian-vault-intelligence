@@ -1,5 +1,7 @@
 import { decode, encode } from '@msgpack/msgpack';
-import { search, upsert, type AnyOrama, type RawData } from '@orama/orama';
+import { search, upsert } from '@orama/orama';
+type OramaInstance = Parameters<typeof search>[0];
+type OramaRawData = unknown;
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
@@ -12,7 +14,7 @@ import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-uti
 import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
 let graph: Graph;
-let orama: AnyOrama;
+let orama: OramaInstance;
 let config: WorkerConfig;
 let embedderProxy: ((text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
@@ -110,7 +112,7 @@ interface SerializedIndexState {
     embeddingDimension: number;
     embeddingModel: string;
     graph: object;
-    orama: RawData;
+    orama: OramaRawData;
 }
 
 const workerLogger = {
@@ -946,7 +948,7 @@ const IndexerWorker: WorkerAPI = {
                     const fullRaw = await storage.get(STORES.VECTORS, `orama_index_${config.sanitizedModelId}`);
                     if (fullRaw) {
                         const oramaLib = await import('@orama/orama') as unknown as OramaV3;
-                        await oramaLib.load(orama, fullRaw as unknown as RawData);
+                        await oramaLib.load(orama, fullRaw);
                         workerLogger.info("[loadIndex] Restored FULL index from Hot Store.");
                         loadedFull = true;
                     }
@@ -994,7 +996,7 @@ const IndexerWorker: WorkerAPI = {
 
         // 2. Prepare SLIM index for "Cold Store" (Vault File)
         // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
-        const rawFullTyped = rawFull as unknown as OramaRawDocs;
+        const rawFullTyped = rawFull as OramaRawDocs;
         const hollowDocs: Record<string, Record<string, unknown>> = {};
         
         if (rawFullTyped.docs?.docs) {
@@ -1007,13 +1009,13 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
-        const oramaData: RawData = {
+        const oramaData: OramaRawData = {
             ...rawFullTyped,
             docs: {
                 ...rawFullTyped.docs,
                 docs: hollowDocs
             }
-        } as RawData;
+        };
 
         const serialized: SerializedIndexState = {
             embeddingChunkSize: config.embeddingChunkSize,
@@ -1392,9 +1394,9 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
 }
 
 interface OramaV3 {
-    create: (config: unknown) => Promise<AnyOrama>;
-    load: (orama: AnyOrama, data: RawData) => Promise<void>;
-    save: (orama: AnyOrama) => Promise<RawData>;
+    create: (config: unknown) => Promise<OramaInstance>;
+    load: (orama: OramaInstance, data: OramaRawData) => Promise<void>;
+    save: (orama: OramaInstance) => Promise<OramaRawData>;
 }
 
 interface OramaRawDocs {
