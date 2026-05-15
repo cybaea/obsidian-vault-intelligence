@@ -1,7 +1,5 @@
 import { decode, encode } from '@msgpack/msgpack';
-import { search, upsert } from '@orama/orama';
-type OramaInstance = Parameters<typeof search>[0];
-type OramaRawData = unknown;
+import { search, upsert, type AnyOrama } from '@orama/orama';
 import * as Comlink from 'comlink';
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
@@ -14,7 +12,7 @@ import { resolveEngineLanguage, resolveStopwordKey } from '../utils/language-uti
 import { extractLinks, fastHash, resolvePath, splitFrontmatter, workerNormalizePath } from '../utils/link-parsing';
 
 let graph: Graph;
-let orama: OramaInstance;
+let orama: AnyOrama;
 let config: WorkerConfig;
 let embedderProxy: ((text: string | string[], title: string) => Promise<{ vector: number[], vectors?: number[][], tokenCount: number }>) | null = null;
 const aliasMap: Map<string, string> = new Map(); // alias lower -> canonical path
@@ -112,7 +110,7 @@ interface SerializedIndexState {
     embeddingDimension: number;
     embeddingModel: string;
     graph: object;
-    orama: OramaRawData;
+    orama: unknown;
 }
 
 const workerLogger = {
@@ -1009,7 +1007,7 @@ const IndexerWorker: WorkerAPI = {
             }
         }
 
-        const oramaData: OramaRawData = {
+        const oramaData: unknown = {
             ...rawFullTyped,
             docs: {
                 ...rawFullTyped.docs,
@@ -1394,9 +1392,9 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
 }
 
 interface OramaV3 {
-    create: (config: unknown) => Promise<OramaInstance>;
-    load: (orama: OramaInstance, data: OramaRawData) => Promise<void>;
-    save: (orama: OramaInstance) => Promise<OramaRawData>;
+    create: (config: unknown) => Promise<AnyOrama>;
+    load: (orama: AnyOrama, data: unknown) => Promise<void>;
+    save: (orama: AnyOrama) => Promise<unknown>;
 }
 
 interface OramaRawDocs {
