@@ -15,6 +15,17 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Updated dependencies:
+
+| Package                  | Version Change           |
+|--------------------------|--------------------------|
+| `@google/genai`          | `2.0.0` → `2.3.0`        |
+| `secretlint` (+ preset)  | `13.0.0` → `13.0.2`      |
+| `@types/node`            | `24.10.13` → `24.12.4`   |
+| `vitest` (+ coverage/ui) | `4.0.17/4.1.5` → `4.1.6` |
+| `stylelint`              | `17.0.0` → `17.11.1`     |
+| `vite`                   | `8.0.11` → `8.0.13`      |
+
 ## [9.4.9] - 2026-05-15
 
 ### User features
