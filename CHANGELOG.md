@@ -17,6 +17,11 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   Update dependency protobufjs from 8.0.3 to 8.4.0 ([#505](https://github.com/cybaea/obsidian-vault-intelligence/pull/505)).
 
+### Security
+
+-   Updated dependency brace-expansion 5.0.2 - 5.0.5 to address [GHSA-jxxr-4gwj-5jf2](https://github.com/advisories/GHSA-jxxr-4gwj-5jf2).
+-   Updated dependency ws 8.0.0 - 8.20.0 to address [GHSA-58qx-3vcg-4xpx](https://github.com/advisories/GHSA-58qx-3vcg-4xpx).
+
 ## [9.4.10] - 2026-05-16
 
 ### User features
