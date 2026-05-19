@@ -16,6 +16,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### Developer features
 
 -   Update dependency protobufjs from 8.0.3 to 8.4.0 ([#505](https://github.com/cybaea/obsidian-vault-intelligence/pull/505)).
+-   Update all non-major dependencies ([#508](https://github.com/cybaea/obsidian-vault-intelligence/pull/508))
 
 ### Security
 
