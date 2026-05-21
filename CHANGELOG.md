@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.4.12] - 2026-05-21
+
+### User features
+
+### Developer features
+
 -   chore(deps): update all non-major dependencies [#511](https://github.com/cybaea/obsidian-vault-intelligence/pull/511).
 
 ## [9.4.11] - 2026-05-19
