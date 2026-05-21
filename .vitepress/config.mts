@@ -69,7 +69,13 @@ export default withMermaid(defineConfig({
     vite: {
         build: {
             target: 'es2022',
-            chunkSizeWarningLimit: 800
+            chunkSizeWarningLimit: 800,
+            rollupOptions: {
+                onwarn(warning, defaultHandler) {
+                    if (warning.code === 'INVALID_ANNOTATION') return
+                    defaultHandler(warning)
+                }
+            }
         }
     },
     themeConfig: {
