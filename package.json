@@ -42,7 +42,7 @@
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
     "@eslint/js": "^10.0.0",
-    "@eslint/json": "^1.0.0",
+    "@eslint/json": "^2.0.0",
     "@nolebase/vitepress-plugin-og-image": "^2.18.2",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@types/node": "^24.12.4",
