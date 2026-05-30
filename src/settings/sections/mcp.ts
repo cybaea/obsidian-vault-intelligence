@@ -99,7 +99,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     
                 new ButtonComponent(btnRow)
                     .setButtonText("Remove")
-                    .setWarning()
+                    .setDestructive()
                     .onClick(async () => {
                         plugin.settings.mcpServers.splice(index, 1);
                         await plugin.saveSettings(false);

@@ -279,7 +279,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .addButton(btn => btn
                 .setButtonText('Force re-download')
                 .setIcon('refresh-cw')
-                .setWarning()
+                .setDestructive()
                 .onClick(() => {
                     void (async () => {
                         const pluginWithService = plugin as unknown as { embeddingService?: unknown };
@@ -462,11 +462,11 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
-                        btn.setWarning();
+                        btn.setDestructive();
                         window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
-                                btn.buttonEl.classList.remove('mod-warning');
+                                btn.buttonEl.classList.remove('mod-destructive');
                             }
                         }, 5000);
                     } else {
@@ -478,7 +478,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             logger.error("Re-indexing failed", e);
                         } finally {
                             btn.setButtonText('Re-index vault');
-                            btn.buttonEl.classList.remove('mod-warning');
+                            btn.buttonEl.classList.remove('mod-destructive');
                         }
                     }
                 })();

@@ -15,6 +15,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Updated `minAppVersion` to `1.13.0` in `manifest.json` to support modern Obsidian APIs.
+-   Replaced deprecated `ButtonComponent.setWarning()` call with `ButtonComponent.setDestructive()` across the codebase to resolve linting failures.
+-   Fixed build-time test failures by updating `tests/services/OllamaProvider.test.ts` to mock the new `SecretStorage` interface structure correctly and removed redundant type casting.
+
 ## [9.4.12] - 2026-05-21
 
 ### User features
