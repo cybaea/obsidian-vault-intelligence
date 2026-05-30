@@ -22,7 +22,7 @@ export class ConfirmationModal extends Modal {
 
         new ButtonComponent(buttonContainer)
             .setButtonText("Confirm")
-            .setWarning()
+            .setDestructive()
             .onClick(() => {
                 this.onConfirm();
                 this.close();

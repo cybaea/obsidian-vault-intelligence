@@ -32,7 +32,7 @@ export async function renderStorageSettings(context: SettingsTabContext): Promis
         .setDesc('Completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data.')
         .addButton(btn => btn
             .setButtonText('Purge and reset')
-            .setWarning()
+            .setDestructive()
             .onClick(() => {
                 // We'll use a simple Notice or custom modal here to avoid 'confirm' lint
                 const notice = new Notice("Purging all data... Click here to confirm or wait to cancel.", 10000);

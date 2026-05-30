@@ -22,14 +22,12 @@ vi.mock('../../src/services/ModelRegistry', () => ({
     }
 }));
 
-interface SecretStorage {
-    getSecret: Mock;
-    listSecrets: Mock;
-    setSecret: Mock;
-}
-
-interface MockApp extends App {
-    secretStorage: SecretStorage;
+interface MockApp {
+    secretStorage: {
+        getSecret: Mock;
+        listSecrets: Mock;
+        setSecret: Mock;
+    };
 }
 
 describe('OllamaProvider', () => {
@@ -46,7 +44,7 @@ describe('OllamaProvider', () => {
                 listSecrets: vi.fn(),
                 setSecret: vi.fn()
             }
-        } as unknown as MockApp;
+        };
 
         mockSettings = {
             chatModel: 'ollama/llama3',
@@ -59,7 +57,7 @@ describe('OllamaProvider', () => {
             })
         } as unknown as VaultIntelligenceSettings;
 
-        provider = new OllamaProvider(mockSettings, mockApp);
+        provider = new OllamaProvider(mockSettings, mockApp as unknown as App);
     });
 
     describe('getOllamaHeaders', () => {
