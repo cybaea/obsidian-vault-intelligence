@@ -1,4 +1,4 @@
-# Obsidian Vault Intelligence
+# Vault Intelligence for Obsidian
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/cybaea/obsidian-vault-intelligence?style=social) ![Downloads](https://img.shields.io/github/downloads/cybaea/obsidian-vault-intelligence/total) ![100% Free & Open Source](https://img.shields.io/badge/100%25_Free_%26_Open_Source-blue) ![Local LLM Support](https://img.shields.io/badge/Local_LLM_Support-green) ![GitHub License](https://img.shields.io/github/license/cybaea/obsidian-vault-intelligence) 
 
