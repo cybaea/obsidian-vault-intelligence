@@ -202,6 +202,14 @@ export class WorkerLifecycleManager {
         const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
         if (oldDimension && oldModelId && !forceWipe) {
             await this.saveState();
+        } else if (forceWipe) {
+            // Delete state files for the current model & dimension to ensure they aren't loaded upon restart
+            const activeModelId = oldModelId || this.settings.embeddingModel;
+            const activeDimension = oldDimension || this.settings.embeddingDimension;
+            if (activeModelId && activeDimension) {
+                const sanitizedId = this.persistenceManager.getSanitizedModelId(activeModelId, activeDimension);
+                await this.persistenceManager.deleteState(`graph-state-${sanitizedId}.msgpack`);
+            }
         }
 
         this.workerManager.terminate();

@@ -260,11 +260,14 @@ export class GraphSyncOrchestrator {
         // 5. Clear transient error tracking
         this.eventDebouncer.clearQuarantine();
 
-        // 6. Tell EventDebouncer to Resume, flushing the buffer 
+        // 6. Start a new scan if needed (e.g. embedding dimension changed, or forced by user)
+        const scanPromise = this.scanAll(needsForcedScan);
+
+        // 7. Tell EventDebouncer to Resume, flushing the buffer 
         this.eventDebouncer.resume();
 
-        // 7. Rescan
-        void this.scanAll(needsForcedScan);
+        // 8. Wait for the scan to complete before allowing another config change or shutdown
+        await scanPromise;
     }
 
     public async flushAndShutdown() {

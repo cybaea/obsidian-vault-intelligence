@@ -74,7 +74,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
                         }
 
-                        await plugin.saveSettings(true);
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
                         containerEl.empty();
                         renderExplorerSettings(context);
                     })();
@@ -109,7 +110,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             } else if (val === 'gemini-embedding-2') {
                                 plugin.settings.embeddingDimension = 768;
                             }
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }
                         containerEl.empty();
@@ -129,7 +130,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .setValue(current)
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }));
             }
@@ -189,7 +190,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
                             }
 
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                             containerEl.empty();
                             renderExplorerSettings(context);
@@ -207,7 +208,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (modelDef?.dimensions) {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
-                        await plugin.saveSettings(true);
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
                     }
                     containerEl.empty();
                     renderExplorerSettings(context);
@@ -230,7 +232,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     .onChange((value) => {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         })();
                     }))
@@ -246,7 +248,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice(`Valid! Dims: ${result.recommendedDims}`);
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
-                                    plugin.requiresWorkerRestartOnExit = true;
+                                    plugin.requiresIndexWipeOnExit = true;
                                     await plugin.saveSettings(false);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
@@ -268,7 +270,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         const num = parseInt(value);
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }
                     }));
