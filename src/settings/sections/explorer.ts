@@ -245,7 +245,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
                                     plugin.requiresWorkerRestartOnExit = true;
-                            await plugin.saveSettings(false);
+                                    await plugin.saveSettings(false);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
                                 }
@@ -276,11 +276,14 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         new Setting(containerEl)
             .setName('Local model status')
             .setDesc(`Manage the local weights for ${plugin.settings.embeddingModel}.`)
-            .addButton(btn => btn
-                .setButtonText('Force re-download')
-                .setIcon('refresh-cw')
-                .setDestructive()
-                .onClick(() => {
+            .addButton(btn => {
+                btn
+                    .setButtonText('Force re-download')
+                    .setIcon('refresh-cw')
+                if (typeof btn.setDestructive == 'function') {
+                    btn.setDestructive()
+                }
+                btn.onClick(() => {
                     void (async () => {
                         const pluginWithService = plugin as unknown as { embeddingService?: unknown };
                         const service = pluginWithService.embeddingService;
@@ -298,7 +301,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             btn.setButtonText("Force re-download");
                         }
                     })();
-                }));
+                })
+            });
     }
 
     // --- 3. Similarity Thresholds ---
