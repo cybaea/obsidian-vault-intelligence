@@ -106,6 +106,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingModel = val;
                             if (modelDef?.dimensions) {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
+                            } else if (val === 'gemini-embedding-2') {
+                                plugin.settings.embeddingDimension = 768;
                             }
                             plugin.requiresWorkerRestartOnExit = true;
                             await plugin.saveSettings(false);

@@ -62,6 +62,11 @@ export class WorkerLifecycleManager {
         const activeModelId = modelId || this.settings.embeddingModel;
         const activeDimension = dimension || this.settings.embeddingDimension;
 
+        const isGemini2 = activeModelId === 'gemini-embedding-2';
+        const embeddingPrefixReservedChars = isGemini2 
+            ? (this.settings.embeddingMaxTitleLength || 100) + 50 
+            : undefined;
+
         return {
             agentLanguage: this.settings.agentLanguage,
             authorName: this.settings.authorName,
@@ -70,6 +75,7 @@ export class WorkerLifecycleManager {
             embeddingChunkSize: this.settings.embeddingChunkSize,
             embeddingDimension: activeDimension,
             embeddingModel: activeModelId,
+            embeddingPrefixReservedChars,
             implicitFolderSemantics: this.settings.implicitFolderSemantics,
             indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
             minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,

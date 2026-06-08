@@ -461,6 +461,7 @@ export const REGEX_CONSTANTS = {
 export const MODEL_CONSTANTS = {
     CHAT_MODEL: "gemini-pro",
     EMBEDDING_001: "gemini-embedding-001",
+    GEMINI_EMBEDDING_2: "gemini-embedding-2",
     TEXT_EMBEDDING_004: "text-embedding-004"
 };
 
