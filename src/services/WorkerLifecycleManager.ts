@@ -62,6 +62,11 @@ export class WorkerLifecycleManager {
         const activeModelId = modelId || this.settings.embeddingModel;
         const activeDimension = dimension || this.settings.embeddingDimension;
 
+        const isGemini2 = activeModelId === 'gemini-embedding-2';
+        const embeddingPrefixReservedChars = isGemini2 
+            ? (this.settings.embeddingMaxTitleLength || 100) + 50 
+            : undefined;
+
         return {
             agentLanguage: this.settings.agentLanguage,
             authorName: this.settings.authorName,
@@ -70,6 +75,7 @@ export class WorkerLifecycleManager {
             embeddingChunkSize: this.settings.embeddingChunkSize,
             embeddingDimension: activeDimension,
             embeddingModel: activeModelId,
+            embeddingPrefixReservedChars,
             implicitFolderSemantics: this.settings.implicitFolderSemantics,
             indexingDelayMs: this.settings.indexingDelayMs || GRAPH_CONSTANTS.DEFAULT_INDEXING_DELAY_MS,
             minSimilarityScore: this.settings.minSimilarityScore ?? 0.5,
@@ -196,6 +202,14 @@ export class WorkerLifecycleManager {
         const { dimension: oldDimension, id: oldModelId } = this.workerManager.activeModel;
         if (oldDimension && oldModelId && !forceWipe) {
             await this.saveState();
+        } else if (forceWipe) {
+            // Delete state files for the current model & dimension to ensure they aren't loaded upon restart
+            const activeModelId = oldModelId || this.settings.embeddingModel;
+            const activeDimension = oldDimension || this.settings.embeddingDimension;
+            if (activeModelId && activeDimension) {
+                const sanitizedId = this.persistenceManager.getSanitizedModelId(activeModelId, activeDimension);
+                await this.persistenceManager.deleteState(`graph-state-${sanitizedId}.msgpack`);
+            }
         }
 
         this.workerManager.terminate();

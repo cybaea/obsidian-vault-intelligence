@@ -74,7 +74,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingChunkSize = isComplexLanguage(plugin.settings.agentLanguage) ? 512 : 1024;
                         }
 
-                        await plugin.saveSettings(true);
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
                         containerEl.empty();
                         renderExplorerSettings(context);
                     })();
@@ -106,8 +107,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.settings.embeddingModel = val;
                             if (modelDef?.dimensions) {
                                 plugin.settings.embeddingDimension = modelDef.dimensions;
+                            } else if (val === 'gemini-embedding-2') {
+                                plugin.settings.embeddingDimension = 768;
                             }
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }
                         containerEl.empty();
@@ -127,7 +130,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         .setValue(current)
                         .onChange(async (val) => {
                             plugin.settings.embeddingModel = val;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }));
             }
@@ -187,7 +190,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
                             }
 
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                             containerEl.empty();
                             renderExplorerSettings(context);
@@ -205,7 +208,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (modelDef?.dimensions) {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
-                        await plugin.saveSettings(true);
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
                     }
                     containerEl.empty();
                     renderExplorerSettings(context);
@@ -228,7 +232,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     .onChange((value) => {
                         void (async () => {
                             plugin.settings.embeddingModel = value;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         })();
                     }))
@@ -244,8 +248,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                 new Notice(`Valid! Dims: ${result.recommendedDims}`);
                                 if (result.recommendedDims) {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
-                                    plugin.requiresWorkerRestartOnExit = true;
-                            await plugin.saveSettings(false);
+                                    plugin.requiresIndexWipeOnExit = true;
+                                    await plugin.saveSettings(false);
                                     containerEl.empty();
                                     renderExplorerSettings(context);
                                 }
@@ -266,7 +270,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         const num = parseInt(value);
                         if (!isNaN(num)) {
                             plugin.settings.embeddingDimension = num;
-                            plugin.requiresWorkerRestartOnExit = true;
+                            plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }
                     }));
@@ -276,11 +280,14 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         new Setting(containerEl)
             .setName('Local model status')
             .setDesc(`Manage the local weights for ${plugin.settings.embeddingModel}.`)
-            .addButton(btn => btn
-                .setButtonText('Force re-download')
-                .setIcon('refresh-cw')
-                .setDestructive()
-                .onClick(() => {
+            .addButton(btn => {
+                btn
+                    .setButtonText('Force re-download')
+                    .setIcon('refresh-cw')
+                if (typeof btn.setDestructive === 'function') {
+                    btn.setDestructive()
+                }
+                btn.onClick(() => {
                     void (async () => {
                         const pluginWithService = plugin as unknown as { embeddingService?: unknown };
                         const service = pluginWithService.embeddingService;
@@ -298,7 +305,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             btn.setButtonText("Force re-download");
                         }
                     })();
-                }));
+                })
+            });
     }
 
     // --- 3. Similarity Thresholds ---
@@ -462,7 +470,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
-                        btn.setDestructive();
+                        if (typeof btn.setDestructive === 'function') {
+                            btn.setDestructive();
+                        }
                         window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');

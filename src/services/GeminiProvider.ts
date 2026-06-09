@@ -607,16 +607,31 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
             const config: EmbedContentConfig = {};
             
             config.outputDimensionality = options.outputDimensionality || this.settings.embeddingDimension;
-            if (options.taskType) config.taskType = options.taskType;
-            if (options.title) config.title = options.title;
 
             let modelId = this.settings.embeddingModel;
             if (modelId === 'embedding-001') modelId = MODEL_CONSTANTS.EMBEDDING_001;
             if (modelId === 'embedding-004') modelId = MODEL_CONSTANTS.TEXT_EMBEDDING_004;
 
+            let textPayload = text;
+            const isGeminiEmbedding2 = modelId === MODEL_CONSTANTS.GEMINI_EMBEDDING_2;
+
+            if (isGeminiEmbedding2) {
+                // gemini-embedding-2 removes taskType completely and uses inline specs
+                if (options.taskType === 'RETRIEVAL_DOCUMENT') {
+                    const safeTitle = (options.title || 'Untitled').substring(0, this.settings.embeddingMaxTitleLength || 100);
+                    const sanitizedTitle = safeTitle.replace(/\|/g, '-');
+                    textPayload = `title: ${sanitizedTitle} | text: ${text}`;
+                } else if (options.taskType === 'RETRIEVAL_QUERY') {
+                    textPayload = `task: search result | query: ${text}`;
+                }
+            } else {
+                if (options.taskType) config.taskType = options.taskType;
+                if (options.title) config.title = options.title;
+            }
+
             const result = await client.models.embedContent({
                 config: config,
-                contents: text,
+                contents: textPayload,
                 model: modelId
             });
 

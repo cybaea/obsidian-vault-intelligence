@@ -208,6 +208,88 @@ describe('GeminiProvider', () => {
         });
     });
 
+    describe('Embeddings', () => {
+        let mockEmbedContent: Mock;
+
+        beforeEach(() => {
+            mockEmbedContent = vi.fn().mockResolvedValue({
+                embeddings: [{ values: [0.1, 0.2, 0.3] }],
+                usageMetadata: { totalTokenCount: 10 }
+            });
+            const mockClient = { models: { embedContent: mockEmbedContent } };
+            vi.spyOn(service as any, 'getClient').mockResolvedValue(mockClient);
+        });
+
+        it('should format legacy embed request with taskType and config.title', async () => {
+            mockSettings.embeddingModel = 'gemini-embedding-001';
+            mockSettings.embeddingDimension = 768;
+
+            const res = await service.embedDocument('hello world', 'My Title');
+
+            expect(mockEmbedContent).toHaveBeenCalledTimes(1);
+            const callParams = mockEmbedContent.mock.calls[0]?.[0];
+            expect(callParams.model).toBe('gemini-embedding-001');
+            expect(callParams.contents).toBe('hello world');
+            expect(callParams.config).toEqual({
+                outputDimensionality: 768,
+                taskType: 'RETRIEVAL_DOCUMENT',
+                title: 'My Title'
+            });
+            expect(res.vectors).toEqual([[0.1, 0.2, 0.3]]);
+        });
+
+        it('should format legacy embed query with taskType', async () => {
+            mockSettings.embeddingModel = 'gemini-embedding-001';
+            mockSettings.embeddingDimension = 768;
+
+            const res = await service.embedQuery('query text');
+
+            expect(mockEmbedContent).toHaveBeenCalledTimes(1);
+            const callParams = mockEmbedContent.mock.calls[0]?.[0];
+            expect(callParams.model).toBe('gemini-embedding-001');
+            expect(callParams.contents).toBe('query text');
+            expect(callParams.config).toEqual({
+                outputDimensionality: 768,
+                taskType: 'RETRIEVAL_QUERY'
+            });
+            expect(res.vector).toEqual([0.1, 0.2, 0.3]);
+        });
+
+        it('should format gemini-embedding-2 query inline and strip taskType', async () => {
+            mockSettings.embeddingModel = 'gemini-embedding-2';
+            mockSettings.embeddingDimension = 1536;
+
+            const res = await service.embedQuery('query text');
+
+            expect(mockEmbedContent).toHaveBeenCalledTimes(1);
+            const callParams = mockEmbedContent.mock.calls[0]?.[0];
+            expect(callParams.model).toBe('gemini-embedding-2');
+            expect(callParams.contents).toBe('task: search result | query: query text');
+            expect(callParams.config).toEqual({
+                outputDimensionality: 1536
+            });
+            expect(res.vector).toEqual([0.1, 0.2, 0.3]);
+        });
+
+        it('should format gemini-embedding-2 document inline, handle title truncation and sanitization', async () => {
+            mockSettings.embeddingModel = 'gemini-embedding-2';
+            mockSettings.embeddingDimension = 768;
+            mockSettings.embeddingMaxTitleLength = 10;
+
+            const res = await service.embedDocument('document text', 'My | Cool | Title That Is Too Long');
+
+            expect(mockEmbedContent).toHaveBeenCalledTimes(1);
+            const callParams = mockEmbedContent.mock.calls[0]?.[0];
+            expect(callParams.model).toBe('gemini-embedding-2');
+            // 'My | Cool | Title That Is Too Long' substring of 10 is 'My | Cool ' -> sanitizing | to - -> 'My - Cool '
+            expect(callParams.contents).toBe('title: My - Cool  | text: document text');
+            expect(callParams.config).toEqual({
+                outputDimensionality: 768
+            });
+            expect(res.vectors).toEqual([[0.1, 0.2, 0.3]]);
+        });
+    });
+
     describe('Translation Logic (private methods)', () => {
         it('should correctly merge consecutive roles in formatHistory', () => {
             const history: any[] = [

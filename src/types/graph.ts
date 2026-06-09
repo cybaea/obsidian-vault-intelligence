@@ -89,6 +89,7 @@ export interface WorkerConfig {
     embeddingChunkSize: number;
     embeddingDimension: number;
     embeddingModel: string;
+    embeddingPrefixReservedChars?: number;
     implicitFolderSemantics?: 'none' | 'ontology' | 'all';
     indexingDelayMs: number;
     minSimilarityScore: number;

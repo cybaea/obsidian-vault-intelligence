@@ -13,6 +13,9 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Added support for `gemini-embedding-2` model with inline task specifiers, supporting Matryoshka dimension scaling.
+-   Introduced an embedding maximum title length configuration (`embeddingMaxTitleLength`) with user control to protect text chunking from starvation during document embedding.
+
 ### Developer features
 
 -   Updated `minAppVersion` to `1.13.0` in `manifest.json` to support modern Obsidian APIs.
