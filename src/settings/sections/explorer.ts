@@ -283,9 +283,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .addButton(btn => {
                 btn
                     .setButtonText('Force re-download')
-                    .setIcon('refresh-cw')
+                    .setIcon('refresh-cw');
                 if (typeof btn.setDestructive === 'function') {
-                    btn.setDestructive()
+                    btn.setDestructive();
                 }
                 btn.onClick(() => {
                     void (async () => {

@@ -98,9 +98,9 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
                     });
 
                 const btn = new ButtonComponent(btnRow)
-                    .setButtonText("Remove")
+                    .setButtonText("Remove");
                 if (typeof btn.setDestructive == 'function') {
-                    btn.setDestructive()
+                    btn.setDestructive();
                 }
                 btn.onClick(async () => {
                     plugin.settings.mcpServers.splice(index, 1);
