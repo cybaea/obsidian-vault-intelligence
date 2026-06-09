@@ -284,7 +284,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 btn
                     .setButtonText('Force re-download')
                     .setIcon('refresh-cw')
-                if (typeof btn.setDestructive == 'function') {
+                if (typeof btn.setDestructive === 'function') {
                     btn.setDestructive()
                 }
                 btn.onClick(() => {
@@ -470,7 +470,9 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
-                        btn.setDestructive();
+                        if (typeof btn.setDestructive === 'function') {
+                            btn.setDestructive();
+                        }
                         window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');
