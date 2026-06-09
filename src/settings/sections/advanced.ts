@@ -83,6 +83,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 const suggested = parseInt(value);
                 if (suggested !== plugin.settings.embeddingChunkSize) {
                     plugin.settings.embeddingChunkSize = suggested;
+                    plugin.requiresIndexWipeOnExit = true;
                     await plugin.saveSettings();
                     // Notify GraphSyncOrchestrator to queue update
                     await plugin.graphSyncOrchestrator.updateConfig(plugin.settings);

@@ -1142,7 +1142,9 @@ const IndexerWorker: WorkerAPI = {
         const context = generateContextString(title, dir, parsedFM, config);
 
         const bodyOffset = cleanlyContent.indexOf(body);
-        const chunks = semanticSplit(body, (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+        let maxChunkChars = (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+        maxChunkChars = Math.max(100, maxChunkChars - (config.embeddingPrefixReservedChars || 0));
+        const chunks = semanticSplit(body, maxChunkChars);
 
         const batchedDocs: OramaDocument[] = [];
         let totalTokens = 0;

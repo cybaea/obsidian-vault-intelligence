@@ -40,6 +40,7 @@ export interface VaultIntelligenceSettings {
     contextWindowTokens: number;
     embeddingChunkSize: number;
     embeddingDimension: number;
+    embeddingMaxTitleLength: number;
     embeddingModel: string;
     embeddingProvider: EmbeddingProvider;
     embeddingSimd: boolean;
@@ -176,6 +177,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     contextWindowTokens: 200000,
     embeddingChunkSize: 512,
     embeddingDimension: 768,
+    embeddingMaxTitleLength: 100,
     embeddingModel: 'gemini-embedding-001',
     embeddingProvider: 'gemini',
     embeddingSimd: !Platform.isMobile,

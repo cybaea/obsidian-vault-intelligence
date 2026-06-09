@@ -1,6 +1,6 @@
 import { App, requestUrl } from "obsidian";
 
-import { MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
@@ -138,6 +138,13 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
 
 export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
+        dimensions: 768,
+        id: MODEL_CONSTANTS.GEMINI_EMBEDDING_2,
+        isDefault: true,
+        label: 'Gemini Embedding 2 (Standard) - 768d',
+        provider: 'gemini'
+    },
+    {
         dimensions: 3072,
         id: 'gemini-embedding-001',
         isDefault: false,
@@ -147,7 +154,7 @@ export const GEMINI_EMBEDDING_MODELS: ModelDefinition[] = [
     {
         dimensions: 768,
         id: 'gemini-embedding-001',
-        isDefault: true,
+        isDefault: false,
         label: 'Gemini Embedding 001 (Standard) - 768d',
         provider: 'gemini'
     }
