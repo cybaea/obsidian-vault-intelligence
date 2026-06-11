@@ -75,23 +75,43 @@ async function validate() {
         // Check CDN URL
         const cdnMatch = content.match(/WASM_CDN_URL:\s*['"](.+?)['"]/);
         if (cdnMatch && cdnMatch[1]) {
-            const url = cdnMatch[1];
-            if (!url.includes(`@${expectedVersion}/`)) {
-                console.error(`FAILED: WASM_CDN_URL does not contain version ${expectedVersion}: ${url}`);
+            const rawUrl = cdnMatch[1];
+            if (!rawUrl.includes(`@${expectedVersion}/`)) {
+                console.error(`FAILED: WASM_CDN_URL does not contain version ${expectedVersion}: ${rawUrl}`);
                 allOk = false;
             } else {
                 console.log(`OK: WASM_CDN_URL version matches.`);
+                console.log(`Checking CDN reachability: ${rawUrl}...`);
 
-                console.log(`Checking CDN reachability: ${url}...`);
-                if (!url.startsWith('https://cdn.jsdelivr.net/')) {
-                    throw new Error(`Invalid CDN URL origin: ${url}. Only jsdelivr is allowed.`);
-                }
-                const res = await checkUrl(url + 'ort-wasm.wasm');
-                if (res.status !== 'OK') {
-                    console.error(`FAILED: CDN asset not reachable: ${res.url} (Code: ${res.code || res.message})`);
+                try {
+                    // Safe parsing using Node.js URL API to sever the direct taint flow
+                    const parsedUrl = new URL(rawUrl);
+
+                    // Restrict strictly to HTTPS and allowed CDN origins
+                    const allowedCDNDomains = ['cdn.jsdelivr.net', 'fastly.jsdelivr.net'];
+                    if (parsedUrl.protocol !== 'https:') {
+                        throw new Error(`Unsafe protocol: ${parsedUrl.protocol}. HTTPS is required.`);
+                    }
+                    if (!allowedCDNDomains.includes(parsedUrl.hostname)) {
+                        throw new Error(`Unsafe host: ${parsedUrl.hostname}. Allowed CDNs are: ${allowedCDNDomains.join(', ')}`);
+                    }
+                    if (!parsedUrl.pathname.startsWith('/npm/@xenova/transformers')) {
+                        throw new Error(`Unsafe path pattern: ${parsedUrl.pathname}`);
+                    }
+
+                    // Convert validated URL back to string and append target asset
+                    const safeCheckUrl = parsedUrl.toString() + 'ort-wasm.wasm';
+                    const res = await checkUrl(safeCheckUrl);
+
+                    if (res.status !== 'OK') {
+                        console.error(`FAILED: CDN asset not reachable: ${res.url} (Code: ${res.code || res.message})`);
+                        allOk = false;
+                    } else {
+                        console.log(`OK: CDN asset reachable.`);
+                    }
+                } catch (err) {
+                    console.error(`FAILED: CDN URL validation failed: ${err.message.replace(/\n|\r/g, '')}`);
                     allOk = false;
-                } else {
-                    console.log(`OK: CDN asset reachable.`);
                 }
             }
         }
