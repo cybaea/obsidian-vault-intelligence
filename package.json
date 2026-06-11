@@ -83,7 +83,7 @@
     "events": "^3.3.0",
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
-    "sharp": "0.34.5",
+    "sharp": "0.35.0",
     "sigma": "^3.0.2",
     "zod": "^4.3.5",
     "zod-to-json-schema": "^3.25.1"
