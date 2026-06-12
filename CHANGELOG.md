@@ -23,6 +23,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Replaced deprecated `ButtonComponent.setWarning()` call with `ButtonComponent.setDestructive()` across the codebase to resolve linting failures.
 -   Fixed build-time test failures by updating `tests/services/OllamaProvider.test.ts` to mock the new `SecretStorage` interface structure correctly and removed redundant type casting.
 
+### Security
+
+### Security
+
+-   Updated `esbuild` to `0.28.1`, addressing security vulnerabilities _in the development/build environment only_ with no impact on the application. Address [GHSA-g7r4-m6w7-qqqr](https://github.com/evanw/esbuild/security/advisories/GHSA-g7r4-m6w7-qqqr) (directory traversal vulnerability in the development server on Windows) and [GHSA-gv7w-rqvm-qjhr](https://github.com/evanw/esbuild/security/advisories/GHSA-gv7w-rqvm-qjhr) (integrity checks in Deno API).
+
 ## [9.4.12] - 2026-05-21
 
 ### User features
