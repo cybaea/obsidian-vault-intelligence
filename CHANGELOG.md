@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.5.4] - 2026-06-12
+
+### User features
+
+### Developer features
+
 ## [9.5.3] - 2026-06-12
 
 ### Security
