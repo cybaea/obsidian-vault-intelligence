@@ -15,6 +15,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+## [9.5.1] - 2026-06-12
+
+### User features
+
+### Developer features
+
 -   Fixed Obsidian plugin validator warnings in indexer worker by replacing dot-access to `.document` property with bracket notation (`["document"]`) for popout window compatibility, and added proper error handling for embedding failures with `unknown` type in catch blocks.
 -   Bumped `protobufjs` development dependency to `^8.6.3` to address security advisory [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
 
