@@ -11,6 +11,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ## [Unreleased]
 
+### Security
+
+-   Corrected transitive dependency declarations of `protobufjs` to `^8.6.3` in `package-lock.json` to fully eliminate warnings from Obsidian's community plugin scanner regarding vulnerability [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
+
 ### User features
 
 ### Developer features
