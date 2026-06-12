@@ -1023,7 +1023,7 @@ const IndexerWorker: WorkerAPI = {
             orama: oramaData,
         };
 
-        const encoded: Uint8Array = encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH });
+        const encoded = encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH }) as unknown as Uint8Array;
         return encoded;
     },
 
