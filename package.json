@@ -100,7 +100,7 @@
     "vite": "$vite",
     "@vitejs/plugin-vue": "^6.0.6",
     "vitepress": "2.0.0-alpha.17",
-    "protobufjs": "$protobufjs",
+    "protobufjs": "^8.6.3",
     "uuid": "^14.0.0",
     "fetch-blob": "^4.0.0",
     "ip-address": "10.2.0",
