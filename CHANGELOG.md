@@ -13,7 +13,14 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Added WASM disclosures to `README` document.
+
 ### Developer features
+
+-   Reverting some battles with the Obsidian community scanner.
+    -   False positives from [linter](https://github.com/obsidianmd/eslint-plugin/issues/150) and [scanner](https://discord.com/channels/686053708261228577/1515318265415733348/1515487925293551676) are outstanding bugs for Obsidian to fix.
+-   Updated upstream dependencies ([#565](https://github.com/cybaea/obsidian-vault-intelligence/pull/565))
+-   Updated `CHANGELOG.md` with missing entries.
 
 ## [9.5.7] - 2026-06-13
 
@@ -21,11 +28,15 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Battling the false positives from the Obsidian community scanner.
+
 ## [9.5.6] - 2026-06-13
 
 ### User features
 
 ### Developer features
+
+-   Battling the false positives from the Obsidian community scanner.
 
 ## [9.5.5] - 2026-06-13
 
@@ -33,17 +44,22 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Battling the false positives from the Obsidian community scanner.
+
 ## [9.5.4] - 2026-06-12
 
 ### User features
 
 ### Developer features
 
+-   Battling the false positives from the Obsidian community scanner.
+
 ## [9.5.3] - 2026-06-12
 
 ### Security
 
--   Corrected transitive dependency declarations of `protobufjs` to `^8.6.3` in `package-lock.json` to fully eliminate warnings from Obsidian's community plugin scanner regarding vulnerability [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
+-   Battling the false positives from the Obsidian community scanner: adjusting transitive dependency declarations of `protobufjs` to `^8.6.3` in `package-lock.json` to eliminate spurious warnings from Obsidian's community plugin scanner regarding vulnerability [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
+-   Update linting to v10.5.0. ([#552](https://github.com/cybaea/obsidian-vault-intelligence/pull/552)
 
 ### User features
 
