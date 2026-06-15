@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.5.8] - 2026-06-15
+
+### User features
+
 -   Added WASM disclosures to `README` document.
 
 ### Developer features
