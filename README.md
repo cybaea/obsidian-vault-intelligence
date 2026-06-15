@@ -90,7 +90,11 @@ For more details, see our [Security Policy](SECURITY.md) and [Security and Robus
 
 ## Installation
 
-Currently available in Beta via BRAT:
+Install via the Obsidian Community site: <https://community.obsidian.md/plugins/vault-intelligence>.
+
+(Some false positives ([1](https://github.com/obsidianmd/eslint-plugin/issues/150), [2](https://discord.com/channels/686053708261228577/1515318265415733348/1515487925293551676)) may negatively affect the community score displayed by the automated scanner.)
+
+Alternatively, via BRAT:
 
 1.  Install **BRAT** from the Community Plugins store.
 2.  In BRAT settings, click **Add Beta plugin**.
@@ -112,6 +116,18 @@ To provide its features, Vault Intelligence may connect to several external or l
     -   **MCP Servers**: Connects to external Model Context Protocol servers via Stdio (local binaries) or HTTP/SSE as configured in your settings.
 -   **Plugin Updates & Documentation**:
     -   **GitHub API**: Connects to `api.github.com` to fetch the latest release notes and update information.
+
+## WebAssembly (WASM) Disclosures
+
+To deliver high-performance, local-first AI features directly inside the desktop application without requiring native, platform-dependent installation binaries, this plugin utilizes standard, open-source WebAssembly (WASM) modules. 
+
+The 9 referenced `.wasm` files originate entirely from our upstream production dependencies:
+
+*   **ONNX Runtime Web (`onnxruntime-web` via `@xenova/transformers`)**: Handles local tokenization and vector embedding generation on your CPU. The multiple `.wasm` references represent different pre-compiled execution targets (e.g., base WASM, SIMD-accelerated, and multi-threaded variants) that the engine dynamically switches between to optimize performance based on your computer's hardware.
+*   **Sharp Graphics Engine (`@img/sharp-wasm32`)**: Used for background image processing pipelines. 
+*   **Orama Search Engine (`@orama/orama`)**: Powers ultra-fast, local full-text keyword slicing and indexing.
+
+No custom or un-audited WASM modules are packaged or compiled within this repository. All underlying source code for these execution environments is fully public and maintained by their respective open-source foundations.
 
 ## Contributing
 
