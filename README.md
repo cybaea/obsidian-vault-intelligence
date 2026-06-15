@@ -124,7 +124,7 @@ To deliver high-performance, local-first AI features directly inside the desktop
 The 9 referenced `.wasm` files originate entirely from our upstream production dependencies:
 
 -   **ONNX Runtime Web (`onnxruntime-web` via `@xenova/transformers`)**: Handles local tokenization and vector embedding generation on your CPU. The multiple `.wasm` references represent different pre-compiled execution targets (e.g., base WASM, SIMD-accelerated, and multi-threaded variants) that the engine dynamically switches between to optimize performance based on your computer's hardware.
--   **Sharp Graphics Engine (@img/sharp-wasm32)**: Carried strictly as a transient sub-dependency of `@xenova/transformers` v2. While the vault intelligence plugin only handles local text tokenization and embedding generation, the upstream Hugging Face framework bundles sharp by default to support image vision architectures. It remains entirely unused by our production plugin code. 
+-   **Sharp Graphics Engine (@img/sharp-wasm32)**: Carried strictly as a transient sub-dependency of `@xenova/transformers` v2. While the vault intelligence plugin only handles local text tokenization and embedding generation, the upstream Hugging Face framework bundles sharp by default to support image vision architectures. It remains entirely unused by our production plugin code. See also issue [#566](https://github.com/cybaea/obsidian-vault-intelligence/issues/566).
 -   **Orama Search Engine (`@orama/orama`)**: Powers ultra-fast, local full-text keyword slicing and indexing.
 
 No custom or un-audited WASM modules are packaged or compiled within this repository. All underlying source code for these execution environments is fully public and maintained by their respective open-source foundations.
