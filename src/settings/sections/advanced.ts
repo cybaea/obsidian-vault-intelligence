@@ -101,7 +101,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
                 slider
                     .setLimits(1, maxThreads, 1)
                     .setValue(plugin.settings.embeddingThreads)
-                    .setDynamicTooltip()
                     .onChange(async (value) => {
                         plugin.settings.embeddingThreads = value;
                         await plugin.saveSettings();
@@ -204,7 +203,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.5, 0.99, 0.05)
             .setValue(plugin.settings.contextPrimaryThreshold)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.contextPrimaryThreshold = value;
                 await plugin.saveSettings();
@@ -228,7 +226,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.1, 0.9, 0.05)
             .setValue(plugin.settings.contextSupportingThreshold)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.contextSupportingThreshold = value;
                 await plugin.saveSettings();
@@ -252,7 +249,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.01, 0.5, 0.02)
             .setValue(plugin.settings.contextStructuralThreshold)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.contextStructuralThreshold = value;
                 await plugin.saveSettings();
@@ -276,7 +272,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(10, 200, 10)
             .setValue(plugin.settings.searchCentralityLimit)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.searchCentralityLimit = value;
                 await plugin.saveSettings();
@@ -300,7 +295,6 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(5, 500, 5)
             .setValue(plugin.settings.contextMaxFiles)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.contextMaxFiles = value;
                 await plugin.saveSettings();

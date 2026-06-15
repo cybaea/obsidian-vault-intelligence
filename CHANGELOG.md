@@ -13,14 +13,74 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.5.7] - 2026-06-13
+
+### User features
+
+### Developer features
+
+## [9.5.6] - 2026-06-13
+
+### User features
+
+### Developer features
+
+## [9.5.5] - 2026-06-13
+
+### User features
+
+### Developer features
+
+## [9.5.4] - 2026-06-12
+
+### User features
+
+### Developer features
+
+## [9.5.3] - 2026-06-12
+
+### Security
+
+-   Corrected transitive dependency declarations of `protobufjs` to `^8.6.3` in `package-lock.json` to fully eliminate warnings from Obsidian's community plugin scanner regarding vulnerability [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
+
+### User features
+
+### Developer features
+
+## [9.5.2] - 2026-06-12
+
+### User features
+
+### Developer features
+
+## [9.5.1] - 2026-06-12
+
+### User features
+
+### Developer features
+
+-   Fixed Obsidian plugin validator warnings in indexer worker by replacing dot-access to `.document` property with bracket notation (`["document"]`) for popout window compatibility, and added proper error handling for embedding failures with `unknown` type in catch blocks.
+-   Bumped `protobufjs` development dependency to `^8.6.3` to address security advisory [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg).
+
+### Security
+
+### User features
+
 -   Added support for `gemini-embedding-2` model with inline task specifiers, supporting Matryoshka dimension scaling.
 -   Introduced an embedding maximum title length configuration (`embeddingMaxTitleLength`) with user control to protect text chunking from starvation during document embedding.
 
 ### Developer features
 
+-   Promoted `protobufjs` to a development dependency and leveraged pointer reference syntax in overrides to resolve Renovate artifact generation (`EOVERRIDE`) failures.
 -   Updated `minAppVersion` to `1.13.0` in `manifest.json` to support modern Obsidian APIs.
 -   Replaced deprecated `ButtonComponent.setWarning()` call with `ButtonComponent.setDestructive()` across the codebase to resolve linting failures.
 -   Fixed build-time test failures by updating `tests/services/OllamaProvider.test.ts` to mock the new `SecretStorage` interface structure correctly and removed redundant type casting.
+
+### Security
+
+-   Updated `esbuild` to `0.28.1`, addressing security vulnerabilities _in the development/build environment only_ with no impact on the application. Address [GHSA-g7r4-m6w7-qqqr](https://github.com/evanw/esbuild/security/advisories/GHSA-g7r4-m6w7-qqqr) (directory traversal vulnerability in the development server on Windows) and [GHSA-gv7w-rqvm-qjhr](https://github.com/evanw/esbuild/security/advisories/GHSA-gv7w-rqvm-qjhr) (integrity checks in Deno API).
 
 ## [9.4.12] - 2026-05-21
 

@@ -363,7 +363,6 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0, 1, 0.05)
             .setValue(plugin.settings.minSimilarityScore)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.minSimilarityScore = value;
                 await plugin.saveSettings();
@@ -389,7 +388,6 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(50, 1000, 50)
             .setValue(plugin.settings.semanticGraphNodeLimit)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.semanticGraphNodeLimit = value;
                 await plugin.saveSettings();
@@ -401,7 +399,6 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.1, 5.0, 0.1)
             .setValue(plugin.settings.structuralEdgeThickness)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.structuralEdgeThickness = value;
                 await plugin.saveSettings();
@@ -413,7 +410,6 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.1, 5.0, 0.1)
             .setValue(plugin.settings.semanticEdgeThickness)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.semanticEdgeThickness = value;
                 await plugin.saveSettings();
@@ -425,7 +421,6 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.1, 5.0, 0.1)
             .setValue(plugin.settings.keywordWeight)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.keywordWeight = value;
                 await plugin.saveSettings();

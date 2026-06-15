@@ -345,7 +345,6 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         .addSlider(slider => slider
             .setLimits(0.5, 1.0, 0.01)
             .setValue(plugin.settings.gardenerSemanticMergeThreshold)
-            .setDynamicTooltip()
             .onChange(async (value) => {
                 plugin.settings.gardenerSemanticMergeThreshold = value;
                 await plugin.saveSettings();
