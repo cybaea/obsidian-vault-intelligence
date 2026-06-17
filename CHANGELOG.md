@@ -11,9 +11,9 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ## [Unreleased]
 
-### User features
-
 ### Developer features
+
+-   Avoided a security vulnerability in `markdown-it` (versions `<= 14.1.1`) by overriding it to `^14.2.0` in package dependencies.
 
 ## [9.5.8] - 2026-06-15
 
