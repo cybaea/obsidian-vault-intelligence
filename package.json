@@ -82,7 +82,7 @@
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
     "protobufjs": "^8.6.3",
-    "sharp": "0.35.1",
+    "sharp": "0.35.2",
     "sigma": "^3.0.2",
     "zod": "^4.3.5",
     "zod-to-json-schema": "^3.25.1"
