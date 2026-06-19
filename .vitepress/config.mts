@@ -1,6 +1,5 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
-import { buildEndGenerateOpenGraphImages } from '@nolebase/vitepress-plugin-og-image'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -172,10 +171,6 @@ export default withMermaid(defineConfig({
                         { text: 'Internal Agents Guide', link: '/AGENTS' }
                     ]
                 }
-            ],
-            // Hidden sidebar items to silence orphaned page warnings from OG image plugin
-            '___hidden': [
-                { text: '404', link: '/404' }
             ]
         },
 
@@ -209,14 +204,5 @@ export default withMermaid(defineConfig({
         if (pageData.relativePath.startsWith('devs/')) {
             pageData.title = `Developer guide: ${pageData.title}`
         }
-    },
-    // Map .md files from root and subdirs
-    async buildEnd(siteConfig) {
-        await buildEndGenerateOpenGraphImages({
-            baseUrl: 'https://cybaea.github.io/obsidian-vault-intelligence/',
-            category: {
-                byLevel: 1
-            }
-        })(siteConfig)
     }
 }))

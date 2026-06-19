@@ -13,6 +13,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Removed `@nolebase/vitepress-plugin-og-image` and clean up Open Graph image build step to eliminate the abandoned `gray-matter` dependency and cut documentation build times in half.
 -   Avoided a security vulnerability in `markdown-it` (versions `<= 14.1.1`) by overriding it to `^14.2.0` in package dependencies.
 
 ## [9.5.8] - 2026-06-15
