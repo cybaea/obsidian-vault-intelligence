@@ -27,7 +27,6 @@ const mainExternalModules = [
 	"@lezer/common",
 	"@lezer/highlight",
 	"@lezer/lr",
-	"sharp",
 	"onnxruntime-node",
 	...builtinModules.filter(m => m !== 'events'),
 	...builtinModules.filter(m => m !== 'events').map(m => `node:${m}`)
@@ -64,6 +63,9 @@ const context = await esbuild.context({
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	external: mainExternalModules,
+	alias: {
+		"@huggingface/transformers": "./node_modules/@huggingface/transformers/dist/transformers.web.js"
+	},
 	format: "cjs",
 	target: "es2020",
 	logLevel: "info",
@@ -84,6 +86,9 @@ const context = await esbuild.context({
 			target: 'es2020',
 			minify: prod,
 			external: workerExternalModules,
+			alias: {
+				"@huggingface/transformers": "./node_modules/@huggingface/transformers/dist/transformers.web.js"
+			},
 			// [!code ++] CRITICAL FIX: Force library to detect "browser" environment
 			define: {
 				'process.release.name': '"browser"',

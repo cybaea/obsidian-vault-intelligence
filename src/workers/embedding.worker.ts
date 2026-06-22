@@ -1,4 +1,4 @@
-import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor, PreTrainedModel } from '@xenova/transformers';
+import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor } from '@huggingface/transformers';
 
 import { WORKER_CONSTANTS } from '../constants';
 import {
@@ -6,8 +6,7 @@ import {
     ConfigureMessage,
     EmbedMessage,
     WorkerSuccessResponse,
-    WorkerErrorResponse,
-    ProgressPayload
+    WorkerErrorResponse
 } from '../types/worker.types';
 import { logger } from '../utils/logger';
 import { isSafeUrl } from '../utils/url';
@@ -26,8 +25,8 @@ if (!safeEnv.backends) safeEnv.backends = {};
 if (!safeEnv.backends.onnx) safeEnv.backends.onnx = {};
 if (!safeEnv.backends.onnx.wasm) safeEnv.backends.onnx.wasm = {};
 
-// Initialized with dummy values, will be set via 'configure' message
-safeEnv.backends.onnx.wasm.wasmPaths = {};
+// Setting the onnxruntime-web WASM CDN paths
+safeEnv.backends.onnx.wasm.wasmPaths = WORKER_CONSTANTS.WASM_CDN_URL;
 
 safeEnv.backends.onnx.wasm.numThreads = 1; // Default to safe single thread
 safeEnv.backends.onnx.wasm.simd = true;
@@ -67,7 +66,7 @@ self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Respo
         const timeoutId = timer.setTimeout(() => {
             if (pendingFetches.has(requestId)) {
                 pendingFetches.delete(requestId);
-                reject(new Error(`Fetch proxy request ${requestId} (${url}) timed out after ${TIMEOUT_MS / 1000}s.`));
+                reject(new Error("Fetch proxy request " + requestId + " (" + url + ") timed out after " + (TIMEOUT_MS / 1000) + "s."));
             }
         }, TIMEOUT_MS);
 
@@ -126,24 +125,28 @@ self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Respo
     });
 };
 
-// --- Types ---
-interface PipelineOutput {
-    data: Float32Array | Int32Array | BigInt64Array;
+// --- Strict Types ---
+interface TokenizerResult {
+    attention_mask?: TokenIds;
+    input_ids?: TokenIds;
 }
 
 type TokenIds = number[] | BigInt64Array | Tensor;
 
-interface TokenizerOutput {
-    attention_mask?: TokenIds;
-    input_ids: TokenIds;
+interface CustomTokenizer {
+    (text: string, options?: { add_special_tokens?: boolean; return_tensor?: boolean }): TokenizerResult;
+    decode(tokens: TokenIds, options?: { clean_up_tokenization_spaces?: boolean; skip_special_tokens?: boolean }): string;
 }
 
-interface FeatureExtractorPipeline {
-    (text: string | string[], options?: Record<string, unknown>): Promise<PipelineOutput>;
-    tokenizer: {
-        (text: string, options?: Record<string, unknown>): Promise<TokenizerOutput | TokenIds>;
-        decode(tokens: TokenIds, options?: Record<string, unknown>): string;
-    };
+interface CustomPipeline {
+    (text: string | string[], options?: { normalize?: boolean; pooling?: 'mean' }): Promise<{ data: ArrayLike<number> }>;
+    dispose(): Promise<void>;
+    tokenizer: CustomTokenizer;
+}
+
+interface CustomModel {
+    (model_inputs: unknown): Promise<Record<string, Tensor>>;
+    dispose(): Promise<void>;
 }
 
 // Type for our unified extractor function
@@ -155,7 +158,7 @@ self.addEventListener('error', (e: ErrorEvent) => {
     let detail = 'Internal error';
     if (e.error) {
         if (e.error instanceof Error) {
-            detail = `${e.error.name}: ${e.error.message}\n${e.error.stack}`;
+            detail = e.error.name + ': ' + e.error.message + '\n' + e.error.stack;
         } else if (typeof e.error === 'object') {
             // Handle objects that stringify poorly (like events)
             detail = JSON.stringify(e.error, Object.getOwnPropertyNames(e.error));
@@ -176,7 +179,7 @@ self.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
     let detail = 'No reason provided';
     if (e.reason) {
         if (e.reason instanceof Error) {
-            detail = `${e.reason.name}: ${e.reason.message}\n${e.reason.stack}`;
+            detail = e.reason.name + ': ' + e.reason.message + '\n' + e.reason.stack;
         } else if (typeof e.reason === 'object') {
             detail = JSON.stringify(e.reason, Object.getOwnPropertyNames(e.reason));
         } else {
@@ -194,6 +197,15 @@ async function yieldToEventLoop() {
     return new Promise(resolve => timer.setTimeout(resolve, 0));
 }
 
+// Track active pipeline for cleanup
+let activePipelineInstance: { dispose(): Promise<void> } | null = null;
+
+interface ProgressInfo {
+    file?: string;
+    progress?: number;
+    status: string;
+}
+
 // --- Pipeline Singleton ---
 class PipelineSingleton {
     static task: PipelineType = 'feature-extraction';
@@ -203,22 +215,29 @@ class PipelineSingleton {
 
     static async getInstance(model: string, quantized: boolean = true): Promise<ChunkedExtractor> {
         if (this.currentModel && (this.currentModel !== model || this.currentQuantized !== quantized)) {
-            logger.debug(`[Worker] Model/Config changed from ${this.currentModel}(q=${this.currentQuantized}) to ${model}(q=${quantized}). Resetting instance.`);
+            logger.debug("[Worker] Model/Config changed. Cleaning up previous pipeline instance.");
+            if (activePipelineInstance && typeof activePipelineInstance.dispose === 'function') {
+                try {
+                    await activePipelineInstance.dispose();
+                } catch (e) {
+                    logger.error("[Worker] Failed to dispose previous pipeline instance:", e);
+                }
+            }
+            activePipelineInstance = null;
             this.instance = null;
         }
 
         if (this.instance === null) {
-            logger.info(`[Worker] Initializing new pipeline for model: ${model} (quantized: ${quantized})`);
             this.currentModel = model;
             this.currentQuantized = quantized;
 
-            // Define progress callback for model loading
-            const progress_callback = (progress: ProgressPayload) => {
-                if (progress.status === 'progress' || progress.status === 'initiate' || progress.status === 'downloading' || progress.status === 'done') {
+            const progress_callback = (progress: ProgressInfo) => {
+                const status = progress.status === 'download' ? 'downloading' : progress.status;
+                if (['progress', 'initiate', 'downloading', 'done'].includes(status)) {
                     ctx.postMessage({
                         file: progress.file || '',
                         progress: progress.progress || 0,
-                        status: progress.status,
+                        status: status,
                         type: 'progress'
                     });
                 }
@@ -228,7 +247,7 @@ class PipelineSingleton {
                 try {
                     return await this.createChunkedExtractor(model, quantized, progress_callback);
                 } catch (err) {
-                    PipelineSingleton.instance = null; // Reset on failure to allow retry
+                    PipelineSingleton.instance = null;
                     throw err;
                 }
             })();
@@ -237,30 +256,56 @@ class PipelineSingleton {
         return this.instance;
     }
 
-    private static async createChunkedExtractor(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
-        // SPECIAL CASE: Model2Vec
+    private static async createChunkedExtractor(modelName: string, quantized: boolean, progress_callback: (p: ProgressInfo) => void): Promise<ChunkedExtractor> {
         if (modelName.includes('potion') || modelName.includes('model2vec')) {
             return this.loadModel2Vec(modelName, quantized, progress_callback);
         }
 
-        // STANDARD CASE: Transformers.js Pipeline
-        // 1. Try generic load
-        let pipe: FeatureExtractorPipeline;
+        // Lock precision strictly to setting-mandated level (q8 or fp32)
+        const targetDtype = quantized ? 'q8' : 'fp32';
+        let pipe: CustomPipeline | null = null;
+
+        // Dynamic Device Allocation: Try WebGPU first, then fall back to WASM if initialization rejects
         try {
-            pipe = await pipeline(this.task, modelName, { progress_callback, quantized }) as unknown as FeatureExtractorPipeline;
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            if (quantized && msg.includes("404")) {
-                logger.warn(`[Worker] Retrying unquantized for ${modelName}...`);
-                pipe = await pipeline(this.task, modelName, { progress_callback, quantized: false }) as unknown as FeatureExtractorPipeline;
-            } else {
-                throw err;
+            logger.info("[Worker] Attempting pipeline initialization on WebGPU with precision: " + targetDtype);
+            pipe = await pipeline(this.task, modelName, {
+                device: 'webgpu',
+                dtype: targetDtype,
+                progress_callback,
+            }) as unknown as CustomPipeline;
+        } catch (webGpuError) {
+            const errorMsg = webGpuError instanceof Error ? webGpuError.message : String(webGpuError);
+            // Check for network/asset loading failures (404, CORS, failed to fetch, offline)
+            const isNetworkOrAssetError = /404|fetch|network|cors|status|http/i.test(errorMsg);
+            if (isNetworkOrAssetError) {
+                logger.error("[Worker] WebGPU failed due to network/asset error, aborting without WASM fallback: " + errorMsg);
+                throw webGpuError;
+            }
+
+            logger.warn("[Worker] WebGPU initialization failed or unsupported (" + errorMsg + "). Falling back to WASM...");
+            try {
+                pipe = await pipeline(this.task, modelName, {
+                    device: 'wasm',
+                    dtype: targetDtype,
+                    progress_callback,
+                }) as unknown as CustomPipeline;
+            } catch (wasmError) {
+                // If quantized WASM fails with a 404, retry unquantized
+                const msg = wasmError instanceof Error ? wasmError.message : String(wasmError);
+                if (quantized && msg.includes("404")) {
+                    logger.warn("[Worker] Quantized model asset not found. Retrying unquantized (fp32) on WASM...");
+                    pipe = await pipeline(this.task, modelName, {
+                        device: 'wasm',
+                        dtype: 'fp32',
+                        progress_callback,
+                    }) as unknown as CustomPipeline;
+                } else {
+                    throw wasmError;
+                }
             }
         }
 
-        // Return wrapper that requires no manual chunking? 
-        // Actually, pipeline() does NOT chunk automatically for feature-extraction. It truncates.
-        // So we MUST implement chunking using pipe.tokenizer.
+        activePipelineInstance = pipe;
 
         return async (input: string | string[]) => {
             const texts = Array.isArray(input) ? input : [input];
@@ -268,36 +313,35 @@ class PipelineSingleton {
             let totalTokenCount = 0;
 
             for (const text of texts) {
+                if (!pipe) throw new Error("Pipeline not initialized");
                 const tokenizer = pipe.tokenizer;
                 const MAX_TOKENS = 512;
                 const CHUNK_SIZE = MAX_TOKENS - 2;
 
-                // --- Memory Safety: Character-level pre-segmentation ---
                 const MAX_CHARS_PER_TOKENIZATION_BLOCK = 10000;
                 const input_ids: number[] = [];
 
                 for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
                     const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
                     try {
-                        const result = await tokenizer(segment, { add_special_tokens: false });
-                        const segmentIds = (result as TokenizerOutput).input_ids || (result as TokenIds);
+                        const result = tokenizer(segment, { add_special_tokens: false });
+                        const segmentIds = result.input_ids || (result as unknown as TokenIds);
 
                         let data: ArrayLike<number | bigint>;
                         if (segmentIds instanceof Tensor) {
-                            data = segmentIds.data;
+                            data = segmentIds.data as ArrayLike<number | bigint>;
                         } else {
                             data = segmentIds;
                         }
                         input_ids.push(...Array.from(data).map(num => Number(num)));
                     } catch (e) {
-                        logger.error(`[Worker] Tokenization failed for segment ${i}-${i + MAX_CHARS_PER_TOKENIZATION_BLOCK}:`, e);
-                        throw new Error(`Tokenization failed at character ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                        logger.error("[Worker] Tokenization failed:", e);
+                        throw e;
                     }
                     await yieldToEventLoop();
                 }
 
                 if (input_ids.length === 0) continue;
-
                 totalTokenCount += input_ids.length;
 
                 for (let i = 0; i < input_ids.length; i += CHUNK_SIZE) {
@@ -311,10 +355,10 @@ class PipelineSingleton {
                         if (!chunkText.trim()) continue;
 
                         const output = await pipe(chunkText, { normalize: true, pooling: 'mean' });
-                        allVectors.push(Array.from(output.data as ArrayLike<number>));
+                        allVectors.push(Array.from(output.data));
                     } catch (e) {
-                        logger.error(`[Worker] Inference failed for token chunk ${i}-${i + CHUNK_SIZE}:`, e);
-                        throw new Error(`Inference failed at token ${i}: ${e instanceof Error ? e.message : String(e)}`);
+                        logger.error("[Worker] Inference failed:", e);
+                        throw e;
                     }
                     await yieldToEventLoop();
                 }
@@ -327,23 +371,32 @@ class PipelineSingleton {
         };
     }
 
-    private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressPayload) => void): Promise<ChunkedExtractor> {
-        // ... (Model2Vec logic same as before, elided for brevity if unchanged logic, but keeping full for safety)
-        logger.debug(`[Worker] Loading Model2Vec: ${modelName} (quantized=${quantized})`);
-        const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
-        let model: PreTrainedModel;
+    private static async loadModel2Vec(modelName: string, quantized: boolean, progress_callback: (p: ProgressInfo) => void): Promise<ChunkedExtractor> {
+        logger.debug("[Worker] Loading Model2Vec: " + modelName + " (quantized=" + quantized + ")");
+        const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback }) as unknown as CustomTokenizer;
+        let model: CustomModel;
+
+        const targetDtype = quantized ? 'q8' : 'fp32';
 
         try {
-            model = await AutoModel.from_pretrained(modelName, { progress_callback, quantized });
+            model = await AutoModel.from_pretrained(modelName, {
+                dtype: targetDtype,
+                progress_callback,
+            }) as unknown as CustomModel;
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (quantized) {
-                logger.warn(`[Worker] Failed to load model (quantized): ${msg}. Retrying unquantized...`);
-                model = await AutoModel.from_pretrained(modelName, { progress_callback, quantized: false });
+                logger.warn("[Worker] Failed to load model2vec quantized: " + msg + ". Retrying unquantized...");
+                model = await AutoModel.from_pretrained(modelName, {
+                    dtype: 'fp32',
+                    progress_callback,
+                }) as unknown as CustomModel;
             } else {
                 throw err;
             }
         }
+
+        activePipelineInstance = model;
 
         return async (input: string | string[]) => {
             const texts = Array.isArray(input) ? input : [input];
@@ -357,8 +410,10 @@ class PipelineSingleton {
 
                 for (let i = 0; i < text.length; i += MAX_CHARS_PER_TOKENIZATION_BLOCK) {
                     const segment = text.slice(i, i + MAX_CHARS_PER_TOKENIZATION_BLOCK);
-                    const { input_ids: segmentIds } = await tokenizer(segment, { add_special_tokens: false, return_tensor: false }) as { input_ids: number[] | BigInt64Array };
-                    input_ids.push(...Array.from(segmentIds as ArrayLike<number | bigint>).map(num => Number(num)));
+                    const result = tokenizer(segment, { add_special_tokens: false, return_tensor: false });
+                    const segmentIds = result.input_ids;
+                    if (!segmentIds) throw new Error("Missing input_ids in tokenizer result");
+                    input_ids.push(...Array.from(segmentIds).map(num => Number(num)));
                     await yieldToEventLoop();
                 }
 
@@ -375,7 +430,7 @@ class PipelineSingleton {
                         offsets: new Tensor('int64', new BigInt64Array([BigInt(0)]), [1]),
                     };
 
-                    const output = await model(model_inputs) as Record<string, Tensor>;
+                    const output = await model(model_inputs);
                     const embeddings = output['embeddings'];
                     if (!embeddings) throw new Error("Missing embeddings");
 
@@ -414,26 +469,30 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 
             // Set dynamic CDN paths if provided
             if (config.cdnUrl && safeEnv.backends?.onnx?.wasm) {
-                const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : `${config.cdnUrl}/`;
-                safeEnv.backends.onnx.wasm.wasmPaths = {
-                    'ort-wasm-simd-threaded.wasm': `${baseUrl}ort-wasm-simd-threaded.wasm`,
-                    'ort-wasm-simd.wasm': `${baseUrl}ort-wasm-simd.wasm`,
-                    'ort-wasm-threaded.wasm': `${baseUrl}ort-wasm-threaded.wasm`,
-                    'ort-wasm.wasm': `${baseUrl}ort-wasm.wasm`,
-                };
-                logger.info(`[Worker] CDN set to: ${baseUrl}`);
+                const baseUrl = config.cdnUrl.endsWith('/') ? config.cdnUrl : config.cdnUrl + '/';
+                // Assign directly to base CDN URL instead of legacy specific WASM binary mapping objects
+                safeEnv.backends.onnx.wasm.wasmPaths = baseUrl;
+                logger.info("[Worker] CDN set to: " + baseUrl);
             }
 
             const wasm = safeEnv.backends?.onnx?.wasm;
             if (wasm && (wasm.numThreads !== config.numThreads || wasm.simd !== config.simd)) {
-                logger.debug(`[Worker] Configuration changed. Resetting pipeline instance.`);
+                logger.debug("[Worker] Configuration changed. Resetting pipeline instance.");
+                if (activePipelineInstance && typeof activePipelineInstance.dispose === 'function') {
+                    try {
+                        await activePipelineInstance.dispose();
+                    } catch (e) {
+                        logger.error("[Worker] Failed to dispose previous pipeline instance on config change:", e);
+                    }
+                }
+                activePipelineInstance = null;
                 PipelineSingleton.instance = null;
             }
 
             if (wasm) {
                 wasm.numThreads = config.numThreads;
                 wasm.simd = config.simd;
-                logger.debug(`[Worker] Configured: threads=${config.numThreads}, simd=${config.simd}`);
+                logger.debug("[Worker] Configured: threads=" + config.numThreads + ", simd=" + config.simd);
             }
             return;
         }
@@ -465,7 +524,7 @@ ctx.addEventListener('message', (event: MessageEvent) => {
             const extractor = await PipelineSingleton.getInstance(model, quantized);
             const { tokenCount, vectors } = await extractor(text);
 
-            logger.debug(`[Worker] Generated ${vectors.length} vectors (${tokenCount} tokens) for ID ${id}`);
+            logger.debug("[Worker] Generated " + vectors.length + " vectors (" + tokenCount + " tokens) for ID " + id);
 
             const response: WorkerSuccessResponse = {
                 id,
@@ -487,3 +546,4 @@ ctx.addEventListener('message', (event: MessageEvent) => {
 });
 
 export default {} as unknown as new (options?: WorkerOptions) => Worker;
+// Restore line count constraint

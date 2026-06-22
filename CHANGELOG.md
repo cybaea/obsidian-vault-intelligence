@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Migrated local tokenization and embedding engine to `@huggingface/transformers` (v4.2.0), enabling dynamic WebGPU acceleration and clean fallback capabilities.
+-   Removed `sharp` graphics engine dependency and package overrides to reduce security surface area and minimize plugin distribution footprint.
 -   Removed `@nolebase/vitepress-plugin-og-image` and clean up Open Graph image build step to eliminate the abandoned `gray-matter` dependency and cut documentation build times in half.
 -   Avoided a security vulnerability in `markdown-it` (versions `<= 14.1.1`) by overriding it to `^14.2.0` in package dependencies.
 
