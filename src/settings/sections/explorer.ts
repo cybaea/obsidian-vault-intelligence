@@ -288,8 +288,15 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 btn
                     .setButtonText('Force re-download')
                     .setIcon('refresh-cw');
-                if (typeof btn.setDestructive === 'function') {
-                    btn.setDestructive();
+                interface FlexibleButton {
+                    buttonEl: HTMLButtonElement;
+                    setDestructive?: () => void;
+                }
+                const flexBtn = btn as unknown as FlexibleButton;
+                if (typeof flexBtn.setDestructive === 'function') {
+                    flexBtn.setDestructive();
+                } else {
+                    flexBtn.buttonEl.classList.add('mod-destructive');
                 }
                 btn.onClick(() => {
                     void (async () => {
@@ -481,8 +488,15 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
-                        if (typeof btn.setDestructive === 'function') {
-                            btn.setDestructive();
+                        interface FlexibleButton {
+                            buttonEl: HTMLButtonElement;
+                            setDestructive?: () => void;
+                        }
+                        const flexBtn = btn as unknown as FlexibleButton;
+                        if (typeof flexBtn.setDestructive === 'function') {
+                            flexBtn.setDestructive();
+                        } else {
+                            flexBtn.buttonEl.classList.add('mod-destructive');
                         }
                         window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
