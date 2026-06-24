@@ -30,10 +30,10 @@ export async function renderStorageSettings(context: SettingsTabContext): Promis
     new Setting(containerEl)
         .setName('Purge all data')
         .setDesc('Completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data.')
-        .addButton(btn => btn
-            .setButtonText('Purge and reset')
-            .setDestructive()
-            .onClick(() => {
+        .addButton(btn => {
+            btn.setButtonText('Purge and reset');
+            btn.buttonEl.classList.add('mod-destructive');
+            btn.onClick(() => {
                 // We'll use a simple Notice or custom modal here to avoid 'confirm' lint
                 const notice = new Notice("Purging all data... Click here to confirm or wait to cancel.", 10000);
                 (notice as { messageEl: HTMLElement }).messageEl.onclick = async () => {
@@ -52,7 +52,8 @@ export async function renderStorageSettings(context: SettingsTabContext): Promis
                         new Notice("Purge failed. Check console for details.");
                     }
                 };
-            }));
+            });
+        });
 }
 
 async function refreshStorageList(context: SettingsTabContext, container: HTMLElement): Promise<void> {

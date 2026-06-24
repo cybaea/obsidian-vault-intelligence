@@ -20,10 +20,10 @@ export class ConfirmationModal extends Modal {
 
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
 
-        new ButtonComponent(buttonContainer)
-            .setButtonText("Confirm")
-            .setDestructive()
-            .onClick(() => {
+        const confirmBtn = new ButtonComponent(buttonContainer)
+            .setButtonText("Confirm");
+        confirmBtn.buttonEl.classList.add("mod-destructive");
+        confirmBtn.onClick(() => {
                 this.onConfirm();
                 this.close();
             });

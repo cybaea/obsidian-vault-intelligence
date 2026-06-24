@@ -99,9 +99,7 @@ export function renderMcpSettings({ containerEl, plugin }: SettingsTabContext): 
 
                 const btn = new ButtonComponent(btnRow)
                     .setButtonText("Remove");
-                if (typeof btn.setDestructive == 'function') {
-                    btn.setDestructive();
-                }
+                btn.buttonEl.classList.add("mod-destructive");
                 btn.onClick(async () => {
                     plugin.settings.mcpServers.splice(index, 1);
                     await plugin.saveSettings(false);

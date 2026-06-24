@@ -288,9 +288,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 btn
                     .setButtonText('Force re-download')
                     .setIcon('refresh-cw');
-                if (typeof btn.setDestructive === 'function') {
-                    btn.setDestructive();
-                }
+                btn.buttonEl.classList.add('mod-destructive');
                 btn.onClick(() => {
                     void (async () => {
                         const pluginWithService = plugin as unknown as { embeddingService?: unknown };
@@ -481,9 +479,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     if (btn.buttonEl.textContent === 'Re-index vault') {
                         btn.setButtonText('Confirm re-scan?');
-                        if (typeof btn.setDestructive === 'function') {
-                            btn.setDestructive();
-                        }
+                        btn.buttonEl.classList.add('mod-destructive');
                         window.setTimeout(() => {
                             if (btn.buttonEl.textContent === 'Confirm re-scan?') {
                                 btn.setButtonText('Re-index vault');

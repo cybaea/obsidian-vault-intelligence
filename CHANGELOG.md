@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Reverted `minAppVersion` from `1.13.0` to `1.12.0` in `manifest.json` and `versions.json` to allow installation on standard public releases of the Obsidian App (such as the current version 1.12.7).
+
 ## [9.6.0] - 2026-06-24
 
 ### Developer features
