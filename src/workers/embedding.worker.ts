@@ -1,3 +1,5 @@
+import './shims.js';
+
 import { env } from '@huggingface/transformers/src/env.js';
 import { AutoModel } from '@huggingface/transformers/src/models/auto/modeling_auto.js';
 import { AutoTokenizer } from '@huggingface/transformers/src/models/auto/tokenization_auto.js';
