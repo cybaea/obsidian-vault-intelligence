@@ -11,6 +11,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ## [Unreleased]
 
+### User features
+
+### Developer features
+
+## [9.6.0] - 2026-06-24
+
 ### Developer features
 
 -   Migrated local tokenization and embedding engine to `@huggingface/transformers` (v4.2.0), enabling dynamic WebGPU acceleration and clean fallback capabilities. 
