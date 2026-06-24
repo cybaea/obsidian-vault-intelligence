@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.6.2] - 2026-06-24
+
+### User features
+
 -   Fix broken Obsidian version requirements.
 
 ### Developer features
