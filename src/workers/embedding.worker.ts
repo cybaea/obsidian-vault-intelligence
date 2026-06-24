@@ -1,5 +1,8 @@
-import { AutoModel, AutoTokenizer, env, Tensor } from '@huggingface/transformers';
+import { env } from '@huggingface/transformers/src/env.js';
+import { AutoModel } from '@huggingface/transformers/src/models/auto/modeling_auto.js';
+import { AutoTokenizer } from '@huggingface/transformers/src/models/auto/tokenization_auto.js';
 import { FeatureExtractionPipeline } from '@huggingface/transformers/src/pipelines/feature-extraction.js';
+import { Tensor } from '@huggingface/transformers/src/utils/tensor.js';
 
 import { WORKER_CONSTANTS } from '../constants';
 import {
