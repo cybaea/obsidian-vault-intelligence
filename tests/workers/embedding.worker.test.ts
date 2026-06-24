@@ -46,6 +46,27 @@ vi.mock('@huggingface/transformers', () => {
     };
 });
 
+vi.mock('@huggingface/transformers/src/pipelines/feature-extraction.js', () => {
+    const mockDispose = vi.fn();
+    const MockFeatureExtractionPipeline = vi.fn().mockImplementation(() => {
+        return Object.assign(
+            vi.fn().mockResolvedValue({
+                data: new Float32Array([0.1, 0.2, 0.3])
+            }),
+            {
+                dispose: mockDispose,
+                tokenizer: vi.fn().mockResolvedValue({
+                    input_ids: [1, 2, 3]
+                })
+            }
+        );
+    });
+
+    return {
+        FeatureExtractionPipeline: MockFeatureExtractionPipeline
+    };
+});
+
 const globalRef = globalThis as unknown as GlobalWorkerTestScope;
 const originalActiveWindow = globalRef.activeWindow;
 const originalSelf = globalRef.self;

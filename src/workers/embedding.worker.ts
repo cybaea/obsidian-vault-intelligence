@@ -1,12 +1,13 @@
-import { pipeline, env, PipelineType, AutoTokenizer, AutoModel, Tensor } from '@huggingface/transformers';
+import { AutoModel, AutoTokenizer, env, Tensor } from '@huggingface/transformers';
+import { FeatureExtractionPipeline } from '@huggingface/transformers/src/pipelines/feature-extraction.js';
 
 import { WORKER_CONSTANTS } from '../constants';
 import {
-    TransformersEnv,
     ConfigureMessage,
     EmbedMessage,
-    WorkerSuccessResponse,
-    WorkerErrorResponse
+    TransformersEnv,
+    WorkerErrorResponse,
+    WorkerSuccessResponse
 } from '../types/worker.types';
 import { logger } from '../utils/logger';
 import { isSafeUrl } from '../utils/url';
@@ -208,7 +209,7 @@ interface ProgressInfo {
 
 // --- Pipeline Singleton ---
 class PipelineSingleton {
-    static task: PipelineType = 'feature-extraction';
+    static task = 'feature-extraction' as const;
     static instance: Promise<ChunkedExtractor> | null = null;
     static currentModel: string = '';
     static currentQuantized: boolean = true;
@@ -265,44 +266,66 @@ class PipelineSingleton {
         const targetDtype = quantized ? 'q8' : 'fp32';
         let pipe: CustomPipeline | null = null;
 
-        // Dynamic Device Allocation: Try WebGPU first, then fall back to WASM if initialization rejects
         try {
-            logger.info("[Worker] Attempting pipeline initialization on WebGPU with precision: " + targetDtype);
-            pipe = await pipeline(this.task, modelName, {
-                device: 'webgpu',
-                dtype: targetDtype,
-                progress_callback,
-            }) as unknown as CustomPipeline;
-        } catch (webGpuError) {
-            const errorMsg = webGpuError instanceof Error ? webGpuError.message : String(webGpuError);
-            // Check for network/asset loading failures (404, CORS, failed to fetch, offline)
-            const isNetworkOrAssetError = /404|fetch|network|cors|status|http/i.test(errorMsg);
-            if (isNetworkOrAssetError) {
-                logger.error("[Worker] WebGPU failed due to network/asset error, aborting without WASM fallback: " + errorMsg);
-                throw webGpuError;
-            }
+            const tokenizer = await AutoTokenizer.from_pretrained(modelName, { progress_callback });
 
-            logger.warn("[Worker] WebGPU initialization failed or unsupported (" + errorMsg + "). Falling back to WASM...");
+            // Dynamic Device Allocation: Try WebGPU first, then fall back to WASM if initialization rejects
             try {
-                pipe = await pipeline(this.task, modelName, {
-                    device: 'wasm',
+                logger.info("[Worker] Attempting pipeline initialization on WebGPU with precision: " + targetDtype);
+                const model = await AutoModel.from_pretrained(modelName, {
+                    device: 'webgpu',
                     dtype: targetDtype,
                     progress_callback,
+                });
+                pipe = new FeatureExtractionPipeline({
+                    model: model,
+                    task: this.task,
+                    tokenizer: tokenizer
                 }) as unknown as CustomPipeline;
-            } catch (wasmError) {
-                // If quantized WASM fails with a 404, retry unquantized
-                const msg = wasmError instanceof Error ? wasmError.message : String(wasmError);
-                if (quantized && msg.includes("404")) {
-                    logger.warn("[Worker] Quantized model asset not found. Retrying unquantized (fp32) on WASM...");
-                    pipe = await pipeline(this.task, modelName, {
+            } catch (webGpuError) {
+                const errorMsg = webGpuError instanceof Error ? webGpuError.message : String(webGpuError);
+                // Check for network/asset loading failures (404, CORS, failed to fetch, offline)
+                const isNetworkOrAssetError = /404|fetch|network|cors|status|http/i.test(errorMsg);
+                if (isNetworkOrAssetError) {
+                    logger.error("[Worker] WebGPU failed due to network/asset error, aborting without WASM fallback: " + errorMsg);
+                    throw webGpuError;
+                }
+
+                logger.warn("[Worker] WebGPU initialization failed or unsupported (" + errorMsg + "). Falling back to WASM...");
+                try {
+                    const model = await AutoModel.from_pretrained(modelName, {
                         device: 'wasm',
-                        dtype: 'fp32',
+                        dtype: targetDtype,
                         progress_callback,
+                    });
+                    pipe = new FeatureExtractionPipeline({
+                        model: model,
+                        task: this.task,
+                        tokenizer: tokenizer
                     }) as unknown as CustomPipeline;
-                } else {
-                    throw wasmError;
+                } catch (wasmError) {
+                    // If quantized WASM fails with a 404, retry unquantized
+                    const msg = wasmError instanceof Error ? wasmError.message : String(wasmError);
+                    if (quantized && msg.includes("404")) {
+                        logger.warn("[Worker] Quantized model asset not found. Retrying unquantized (fp32) on WASM...");
+                        const model = await AutoModel.from_pretrained(modelName, {
+                            device: 'wasm',
+                            dtype: 'fp32',
+                            progress_callback,
+                        });
+                        pipe = new FeatureExtractionPipeline({
+                            model: model,
+                            task: this.task,
+                            tokenizer: tokenizer
+                        }) as unknown as CustomPipeline;
+                    } else {
+                        throw wasmError;
+                    }
                 }
             }
+        } catch (err) {
+            logger.error("[Worker] Failed to initialize pipeline components:", err);
+            throw err;
         }
 
         activePipelineInstance = pipe;

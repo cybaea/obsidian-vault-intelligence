@@ -5,3 +5,8 @@ declare module "*.worker" {
     }
     export default InlineWorker;
 }
+
+declare module "@huggingface/transformers/src/pipelines/feature-extraction.js" {
+    import { FeatureExtractionPipeline } from '@huggingface/transformers';
+    export { FeatureExtractionPipeline };
+}
