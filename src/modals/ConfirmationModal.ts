@@ -20,13 +20,24 @@ export class ConfirmationModal extends Modal {
 
         const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
 
-        new ButtonComponent(buttonContainer)
-            .setButtonText("Confirm")
-            .setDestructive()
-            .onClick(() => {
-                this.onConfirm();
-                this.close();
-            });
+        const confirmBtn = new ButtonComponent(buttonContainer)
+            .setButtonText("Confirm");
+        
+        interface FlexibleButton {
+            buttonEl: HTMLButtonElement;
+            setDestructive?: () => void;
+        }
+        const flexBtn = confirmBtn as unknown as FlexibleButton;
+        if (typeof flexBtn.setDestructive === "function") {
+            flexBtn.setDestructive();
+        } else {
+            flexBtn.buttonEl.classList.add("mod-destructive");
+        }
+
+        confirmBtn.onClick(() => {
+            this.onConfirm();
+            this.close();
+        });
 
         new ButtonComponent(buttonContainer)
             .setButtonText("Cancel")

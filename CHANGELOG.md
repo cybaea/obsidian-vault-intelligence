@@ -13,11 +13,17 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Fix broken Obsidian version requirements.
+
 ### Developer features
+
+-   To handle the upcoming `ButtonComponent.prototype.setDestructive()` while resolving the linting errors without hiding them behind `eslint-disable` overrides, we created a type-safe member-sorted interface called `FlexibleButton`.
 
 ## [9.6.1] - 2026-06-24
 
 ### User features
+
+-   This one was supposed to fix the broken Obsidian version requirement.
 
 ### Developer features
 
