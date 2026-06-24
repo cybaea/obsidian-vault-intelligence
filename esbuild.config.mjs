@@ -27,7 +27,6 @@ const mainExternalModules = [
 	"@lezer/common",
 	"@lezer/highlight",
 	"@lezer/lr",
-	"sharp",
 	"onnxruntime-node",
 	...builtinModules.filter(m => m !== 'events'),
 	...builtinModules.filter(m => m !== 'events').map(m => `node:${m}`)
@@ -45,7 +44,7 @@ const workerExternalModules = [
 const mockPlugin = {
 	name: 'mock-plugin',
 	setup(build) {
-		build.onResolve({ filter: /^(sharp|onnxruntime-node|fs|path|url|child_process|node:fs|node:path|node:url|node:child_process)$/ }, args => ({
+		build.onResolve({ filter: /^(sharp|onnxruntime-node|fs|path|url|child_process|stream|stream\/promises|node:fs|node:path|node:url|node:child_process|node:stream|node:stream\/promises)$/ }, args => ({
 			path: args.path,
 			namespace: 'mock-ns'
 		}));
@@ -64,6 +63,10 @@ const context = await esbuild.context({
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	external: mainExternalModules,
+	alias: {
+		"@huggingface/transformers/src": "./node_modules/@huggingface/transformers/src",
+		"@huggingface/transformers": "./node_modules/@huggingface/transformers/src/transformers.js"
+	},
 	format: "cjs",
 	target: "es2020",
 	logLevel: "info",
@@ -84,6 +87,10 @@ const context = await esbuild.context({
 			target: 'es2020',
 			minify: prod,
 			external: workerExternalModules,
+			alias: {
+				"@huggingface/transformers/src": "./node_modules/@huggingface/transformers/src",
+				"@huggingface/transformers": "./node_modules/@huggingface/transformers/src/transformers.js"
+			},
 			// [!code ++] CRITICAL FIX: Force library to detect "browser" environment
 			define: {
 				'process.release.name': '"browser"',

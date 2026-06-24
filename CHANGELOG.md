@@ -13,6 +13,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Migrated local tokenization and embedding engine to `@huggingface/transformers` (v4.2.0), enabling dynamic WebGPU acceleration and clean fallback capabilities. 
+    -   Changed quantization setting for default embedding model (Xenova/multilingual-e5-small) which now consumes 60% of the developer's GPU during re-embedding, confirming the WebGPU is working.
+-   Added a "Quantize local model" toggle setting for local (Transformers.js) embedding models, enabling power users to disable 8-bit quantization and run unquantized (fp32) models fully on the GPU (WebGPU) instead of falling back to CPU/WASM.
+-   Removed `sharp` graphics engine dependency and package overrides to reduce security surface area and minimize plugin distribution footprint.
 -   Removed `@nolebase/vitepress-plugin-og-image` and clean up Open Graph image build step to eliminate the abandoned `gray-matter` dependency and cut documentation build times in half.
 -   Avoided a security vulnerability in `markdown-it` (versions `<= 14.1.1`) by overriding it to `^14.2.0` in package dependencies.
 

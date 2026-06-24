@@ -156,11 +156,11 @@ export const WORKER_CONSTANTS = {
     /** Timeout for proxied asset fetch requests (2 minutes) */
     PROXY_TIMEOUT_MS: 120000,
 
-    /** Base URL for JS Delivr CDN for Transformers.js assets */
-    WASM_CDN_URL: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/',
+    /** Base URL for JS Delivr CDN for onnxruntime-web assets */
+    WASM_CDN_URL: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0-dev.20260416-b7804b056c/dist/',
 
-    /** Standard version for Xenova Transformers CDN */
-    WASM_VERSION: '2.17.2'
+    /** Standard version for onnxruntime-web CDN */
+    WASM_VERSION: '1.26.0-dev.20260416-b7804b056c'
 };
 
 export const MCP_CONSTANTS = {

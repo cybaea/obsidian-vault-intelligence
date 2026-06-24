@@ -324,7 +324,7 @@ export class LocalEmbeddingService implements IEmbeddingClient, IProvider {
         this.worker.postMessage({
             id: task.id,
             model: this.settings.embeddingModel.replace(/^local\//, ''),
-            quantized: modelDef?.quantized !== false, // Default to true unless explicitly false in registry
+            quantized: modelDef?.quantized !== false ? this.settings.embeddingLocalQuantized : false,
             text: task.text,
             type: 'embed'
         });

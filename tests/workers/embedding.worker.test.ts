@@ -6,15 +6,66 @@ type GlobalWorkerTestScope = {
     addEventListener?: typeof globalThis.addEventListener;
 };
 
-vi.mock('@xenova/transformers', () => ({
-    AutoModel: {},
-    AutoTokenizer: {},
-    env: {},
-    pipeline: vi.fn(),
-    PipelineType: {},
-    PreTrainedModel: class {},
-    Tensor: class {},
-}));
+vi.mock('@huggingface/transformers', () => {
+    const mockDispose = vi.fn();
+    const mockPipeline = vi.fn().mockImplementation(() => {
+        return Object.assign(
+            vi.fn().mockResolvedValue({
+                data: new Float32Array([0.1, 0.2, 0.3])
+            }),
+            {
+                dispose: mockDispose,
+                tokenizer: vi.fn().mockResolvedValue({
+                    input_ids: [1, 2, 3]
+                })
+            }
+        );
+    });
+
+    return {
+        AutoModel: {
+            from_pretrained: vi.fn().mockResolvedValue({
+                dispose: mockDispose
+            })
+        },
+        AutoTokenizer: {
+            from_pretrained: vi.fn().mockResolvedValue({
+                decode: vi.fn().mockReturnValue('mock text')
+            })
+        },
+        env: {},
+        pipeline: mockPipeline,
+        PipelineType: {},
+        PreTrainedModel: class {},
+        Tensor: class {
+            data: unknown;
+            constructor(type: string, data: unknown, dims?: unknown) {
+                this.data = data;
+            }
+        },
+    };
+});
+
+vi.mock('@huggingface/transformers/src/pipelines/feature-extraction.js', () => {
+    const mockDispose = vi.fn();
+    const MockFeatureExtractionPipeline = vi.fn().mockImplementation(() => {
+        return Object.assign(
+            vi.fn().mockResolvedValue({
+                data: new Float32Array([0.1, 0.2, 0.3])
+            }),
+            {
+                dispose: mockDispose,
+                tokenizer: vi.fn().mockResolvedValue({
+                    input_ids: [1, 2, 3]
+                })
+            }
+        );
+    });
+
+    return {
+        FeatureExtractionPipeline: MockFeatureExtractionPipeline
+    };
+});
 
 const globalRef = globalThis as unknown as GlobalWorkerTestScope;
 const originalActiveWindow = globalRef.activeWindow;

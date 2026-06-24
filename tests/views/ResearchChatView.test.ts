@@ -8,6 +8,7 @@ vi.hoisted(() => {
     
     // Mock navigator
     const mockNavigator = {
+        userAgent: '',
         clipboard: {
             writeText: () => Promise.resolve()
         }

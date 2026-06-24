@@ -2,6 +2,33 @@
 
 Common issues and fixes for Vault Intelligence.
 
+## Performance
+
+### Not using WebGPU for local Transformers.js embedding models
+
+If
+
+1.  you have installed Obsidian using flatpak (which usually means you are on Linux), and 
+2.  you are using Transformers.js, and 
+3.  you want to take full advantage of your GPU (via WebGPU), 
+
+then you need to start Obsidian with the flags:
+
+```bash
+flatpak run md.obsidian.Obsidian --enable-unsafe-webgpu --enable-features=Vulkan
+```
+
+You can make this permanent by running this once:
+
+```bash
+# Ensure the configuration directory exists
+mkdir -p ~/.var/app/md.obsidian.Obsidian/config/obsidian/
+
+# Append your flags to the user-flags file
+echo "--enable-unsafe-webgpu" >> ~/.var/app/md.obsidian.Obsidian/config/obsidian/user-flags.conf
+echo "--enable-features=Vulkan" >> ~/.var/app/md.obsidian.Obsidian/config/obsidian/user-flags.conf
+```
+
 ## API & connection issues
 
 ### "429 Too Many Requests"

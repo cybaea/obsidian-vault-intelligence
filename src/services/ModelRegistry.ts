@@ -124,14 +124,16 @@ export const LOCAL_EMBEDDING_MODELS: ModelDefinition[] = [
         id: 'local/Xenova/multilingual-e5-small',
         isDefault: true,
         label: 'Balanced (European languages E5 Small) - 384d [~30MB]',
-        provider: 'local'
+        provider: 'local',
+        quantized: false
     },
     {
         dimensions: 1024,
         id: 'local/Xenova/bge-m3',
         isDefault: false,
         label: 'Advanced (BGE M3) - 1024d [~220MB]',
-        provider: 'local'
+        provider: 'local',
+        quantized: true /* Too big to be unquantized in the webworker context */
     }
 ];
 

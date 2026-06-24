@@ -67,6 +67,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         // Language-aware defaults for chunk size
                         if (provider === 'local') {
                             plugin.settings.embeddingChunkSize = 512;
+                            // Set quantization default based on the model's recommended setting
+                            plugin.settings.embeddingLocalQuantized = modelDef?.quantized ?? true;
                         } else if (provider === 'voyage') {
                             plugin.settings.embeddingChunkSize = 1024;
                         } else {
@@ -208,6 +210,8 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         if (modelDef?.dimensions) {
                             plugin.settings.embeddingDimension = modelDef.dimensions;
                         }
+                        // Set quantization default based on the model's recommended setting
+                        plugin.settings.embeddingLocalQuantized = modelDef?.quantized ?? true;
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
                     }
@@ -307,6 +311,18 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     })();
                 })
             });
+
+        // Quantization Option (Local only)
+        new Setting(containerEl)
+            .setName('Quantize local model')
+            .setDesc('Enable 8-bit quantization to reduce memory usage and download size. Disable to run unquantized fp32 model fully on the gpu (much faster but uses more memory).')
+            .addToggle(toggle => toggle
+                .setValue(plugin.settings.embeddingLocalQuantized)
+                .onChange(async (value) => {
+                    plugin.settings.embeddingLocalQuantized = value;
+                    plugin.requiresIndexWipeOnExit = true;
+                    await plugin.saveSettings(false);
+                }));
     }
 
     // --- 3. Similarity Thresholds ---

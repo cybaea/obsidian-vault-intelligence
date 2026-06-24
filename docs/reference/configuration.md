@@ -55,6 +55,31 @@ Fine-tune how connections are discovered and how the semantic graph is visualise
 | Embedding dimension | `768` | Output vector size. Higher dimensions provide better accuracy but result in a larger search index on disk. |
 | Embedding chunk size | `1024` / `512` | Character count per vector segment. Automatically adjusts to `512` for complex scripts (Chinese, Japanese) or local models to improve retrieval quality. |
 
+#### Note for flatpak users
+
+If
+
+1.  you have installed Obsidian using flatpak (which usually means you are on Linux), and 
+2.  you are using Transformers.js, and 
+3.  you want to take full advantage of your GPU (via WebGPU), 
+
+then you need to start Obsidian with the flags:
+
+```bash
+flatpak run md.obsidian.Obsidian --enable-unsafe-webgpu --enable-features=Vulkan
+```
+
+You can make this permanent by running this once:
+
+```bash
+# Ensure the configuration directory exists
+mkdir -p ~/.var/app/md.obsidian.Obsidian/config/obsidian/
+
+# Append your flags to the user-flags file
+echo "--enable-unsafe-webgpu" >> ~/.var/app/md.obsidian.Obsidian/config/obsidian/user-flags.conf
+echo "--enable-features=Vulkan" >> ~/.var/app/md.obsidian.Obsidian/config/obsidian/user-flags.conf
+```
+
 ### Search Strategy
 
 | Setting | Default | Description |
