@@ -67,4 +67,45 @@ describe('LocalEmbeddingService', () => {
         
         expect(mockNotice.hide).toHaveBeenCalled();
     });
+
+    it('should respect embeddingLocalQuantized setting when generating embeddings', () => {
+        const mockWorker = {
+            postMessage: vi.fn(),
+            terminate: vi.fn(),
+        };
+        (service as unknown as { worker: unknown }).worker = mockWorker;
+
+        // Set model that defaults to quantized: local/Xenova/bge-m3
+        mockSettings.embeddingModel = 'local/Xenova/bge-m3';
+        
+        // 1. With embeddingLocalQuantized = true
+        mockSettings.embeddingLocalQuantized = true;
+        (service as unknown as { requestQueue: unknown[] }).requestQueue = [{
+            id: 1,
+            priority: 'high',
+            reject: vi.fn(),
+            resolve: vi.fn(),
+            text: 'test content'
+        }];
+        (service as unknown as { processQueue: () => void }).processQueue();
+        expect(mockWorker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+            quantized: true
+        }));
+
+        // 2. With embeddingLocalQuantized = false
+        mockWorker.postMessage.mockClear();
+        mockSettings.embeddingLocalQuantized = false;
+        (service as unknown as { isWorkerBusy: boolean }).isWorkerBusy = false;
+        (service as unknown as { requestQueue: unknown[] }).requestQueue = [{
+            id: 2,
+            priority: 'high',
+            reject: vi.fn(),
+            resolve: vi.fn(),
+            text: 'test content'
+        }];
+        (service as unknown as { processQueue: () => void }).processQueue();
+        expect(mockWorker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+            quantized: false
+        }));
+    });
 });
