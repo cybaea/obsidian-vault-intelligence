@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Add npm package override for `global-agent` to eliminate the deprecated `boolean` dependency warning from `@huggingface/transformers`/`onnxruntime-node`.
+
 ## [9.6.3] - 2026-06-24
 
 ### User features
