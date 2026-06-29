@@ -50,6 +50,7 @@ describe('WorkerLifecycleManager', () => {
         };
 
         mockSettings = {
+            charsPerTokenEstimate: 4,
             embeddingDimension: 768,
             embeddingModel: 'test-model',
         };

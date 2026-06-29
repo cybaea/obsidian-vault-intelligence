@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Add configurable "Token estimation ratio" setting (Advanced > Performance) so users with non-English (CJK) or code-heavy vaults can fine-tune character-to-token budgeting. Previously hardcoded at 4 chars/token. (Issue #386)
+
 ### Developer features
 
 -   Add npm package override for `global-agent` to eliminate the deprecated `boolean` dependency warning from `@huggingface/transformers`/`onnxruntime-node`.

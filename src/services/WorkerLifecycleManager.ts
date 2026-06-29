@@ -70,6 +70,7 @@ export class WorkerLifecycleManager {
         return {
             agentLanguage: this.settings.agentLanguage,
             authorName: this.settings.authorName,
+            charsPerTokenEstimate: this.settings.charsPerTokenEstimate,
             chatModel: this.settings.chatModel,
             contextAwareHeaderProperties: this.settings.contextAwareHeaderProperties,
             embeddingChunkSize: this.settings.embeddingChunkSize,
@@ -98,6 +99,7 @@ export class WorkerLifecycleManager {
             await api.updateConfig({
                 agentLanguage: settings.agentLanguage,
                 authorName: settings.authorName,
+                charsPerTokenEstimate: settings.charsPerTokenEstimate,
                 chatModel: settings.chatModel,
                 contextAwareHeaderProperties: settings.contextAwareHeaderProperties,
                 implicitFolderSemantics: settings.implicitFolderSemantics,

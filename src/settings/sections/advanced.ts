@@ -92,6 +92,30 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         );
     });
 
+    const tokenRatioDesc = createFragment();
+    tokenRatioDesc.appendText('Characters per token for budget estimation. Lower if you use CJK languages or dense code (e.g. 2 for Japanese, 3 for code-heavy vaults). ');
+    tokenRatioDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Incorrect values may cause context-window overflow or under-utilisation.' });
+    });
+
+    perfGroup.addSetting(setting => {
+        setting.setName('Token estimation ratio')
+        .setDesc(tokenRatioDesc)
+        .addText(text => text
+            .setPlaceholder(String(DEFAULT_SETTINGS.charsPerTokenEstimate))
+            .setValue(String(plugin.settings.charsPerTokenEstimate))
+            .onChange(async (value) => {
+                const num = parseFloat(value);
+                if (!isNaN(num) && num > 0 && num <= 10) {
+                    plugin.settings.charsPerTokenEstimate = num;
+                    await plugin.saveSettings();
+                    await plugin.graphSyncOrchestrator.updateConfig(plugin.settings);
+                }
+            })
+        );
+    });
+
     if (plugin.settings.embeddingProvider === 'local') {
         const maxThreads = Math.max(4, navigator.hardwareConcurrency || 4);
         perfGroup.addSetting(setting => {

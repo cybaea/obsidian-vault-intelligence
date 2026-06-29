@@ -84,6 +84,7 @@ export interface SynonymCandidate {
 export interface WorkerConfig {
     agentLanguage: string;
     authorName: string;
+    charsPerTokenEstimate?: number;
     chatModel: string;
     contextAwareHeaderProperties: string[];
     embeddingChunkSize: number;

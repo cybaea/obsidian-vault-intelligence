@@ -38,6 +38,14 @@ describe('indexer-utils', () => {
             expect(estimateTokens('1234')).toBe(1); // 4 / 4 = 1
             expect(estimateTokens('12345678')).toBe(2);
         });
+
+        test('respects custom charsPerToken ratio', () => {
+            // CJK languages: ~2 chars/token
+            expect(estimateTokens('1234', 2)).toBe(2); // 4 / 2 = 2
+            expect(estimateTokens('12345678', 2)).toBe(4); // 8 / 2 = 4
+            // Code-heavy: ~3 chars/token
+            expect(estimateTokens('123456', 3)).toBe(2); // 6 / 3 = 2
+        });
     });
 
     describe('sanitizeProperty', () => {
