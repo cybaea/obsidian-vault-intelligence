@@ -73,6 +73,7 @@ describe('GardenerService Payload and Budgeting', () => {
         } as unknown as GraphService;
 
         mockSettings = {
+            charsPerTokenEstimate: 4,
             excludedFolders: [],
             gardenerContextBudget: 1000,
             gardenerExcludedFolders: [],
@@ -137,7 +138,7 @@ describe('GardenerService Payload and Budgeting', () => {
             return Promise.resolve('');
         });
 
-        // charsPerToken is now 3.0 in the implementation.
+        // charsPerToken is now derived: 4 (default) * 0.75 (JSON overhead) = 3.0 in the implementation.
         // basePromptEstimate = (0 + 0 + 0 + 5000) / 3.0 = ~1667 tokens.
         // safetyMargin is 0.8.
         

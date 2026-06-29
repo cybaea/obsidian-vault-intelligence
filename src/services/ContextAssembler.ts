@@ -33,7 +33,8 @@ export class ContextAssembler {
      */
     public async assemble(results: VaultSearchResult[], query: string, budgetTokens: number): Promise<{ context: string; usedFiles: string[] }> {
         // Fallback for character estimation if needed
-        const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+        const charsPerToken = this.settings?.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+        const budgetChars = budgetTokens * charsPerToken;
         // Starvation Protection
         // If only one document, let it take the whole budget. If multiple, apply soft limit.
         const effectiveLimitRatio = results.length <= 1 ? 1.0 : SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO;
@@ -94,7 +95,7 @@ export class ContextAssembler {
 
                 if (relativeRelevance >= primaryThreshold) {
                     // Scenario: Primary relevance.
-                    const fullFileTokens = meta?.tokenCount || Math.ceil(content.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                    const fullFileTokens = meta?.tokenCount || Math.ceil(content.length / charsPerToken);
                     const isNotTooHuge = fullFileTokens < singleDocSoftLimitTokens;
                     const fitsInBudget = (currentUsageTokens + fullFileTokens) < budgetTokens;
 
@@ -104,27 +105,27 @@ export class ContextAssembler {
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${fullFileTokens} tokens)`);
                     } else if (doc.excerpt) {
                         contentToAdd = doc.excerpt;
-                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / charsPerToken);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) specific excerpt: ${file.path}`);
                     } else {
-                        const availableChars = Math.min(singleDocSoftLimitChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        const availableChars = Math.min(singleDocSoftLimitChars, (budgetTokens - currentUsageTokens) * charsPerToken);
                         contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
-                        addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        addedTokens = Math.ceil(contentToAdd.length / charsPerToken);
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) clipped: ${file.path}`);
                     }
                 } else if (relativeRelevance >= supportingThreshold) {
                     // Scenario: Supporting relevance.
                     if (doc.excerpt) {
                         contentToAdd = doc.excerpt;
-                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        addedTokens = doc.tokenCount || Math.ceil(contentToAdd.length / charsPerToken);
                         logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (from worker): ${file.path}`);
                     } else {
                         const supportWindowChars = Math.floor(singleDocSoftLimitChars / 2);
-                        const availableChars = Math.min(supportWindowChars, (budgetTokens - currentUsageTokens) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                        const availableChars = Math.min(supportWindowChars, (budgetTokens - currentUsageTokens) * charsPerToken);
 
                         if (availableChars > SEARCH_CONSTANTS.MIN_DOC_CONTEXT_CHARS) {
                             contentToAdd = this.clipContent(content, query, availableChars, !!doc.isKeywordMatch);
-                            addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                            addedTokens = Math.ceil(contentToAdd.length / charsPerToken);
                             logger.debug(`[ContextAssembler] [Accordion:SUPPORT] (${(relativeRelevance * 100).toFixed(0)}% rel) snippet (clipped): ${file.path}`);
                         }
                     }
@@ -145,7 +146,7 @@ export class ContextAssembler {
                         contentToAdd = "... (Note details available via search or tools if needed) ...";
                     }
                     structuralCount++;
-                    addedTokens = Math.ceil(contentToAdd.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                    addedTokens = Math.ceil(contentToAdd.length / charsPerToken);
                     logger.debug(`[ContextAssembler] [Accordion:STRUCTURAL] (${(relativeRelevance * 100).toFixed(0)}% rel) headers only: ${file.path}`);
                 } else {
                     // Scenario: Below threshold, skip entirely to avoid bloat.
@@ -158,7 +159,7 @@ export class ContextAssembler {
                     constructedContext += header + contentToAdd + "\n";
                     // Update usage
                     // Add header tokens approx
-                    currentUsageTokens += addedTokens + Math.ceil(header.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+                    currentUsageTokens += addedTokens + Math.ceil(header.length / charsPerToken);
                     includedCount++;
                 }
 

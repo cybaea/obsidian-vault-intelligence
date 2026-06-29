@@ -508,7 +508,7 @@ export class AgentService {
         const activeModel = modelId || this.settings.chatModel;
         const totalTokens = ModelRegistry.resolveContextBudget(activeModel, this.settings.modelContextOverrides, this.settings.contextWindowTokens);
         const budgetTokens = Math.floor(totalTokens * SEARCH_CONSTANTS.CONTEXT_SAFETY_MARGIN * 0.5); // 50% for folder context
-        const budgetChars = budgetTokens * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+        const budgetChars = budgetTokens * (this.settings.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
 
         // Starvation Protection
         // If only one document, let it take the whole budget. If multiple, apply soft limit.

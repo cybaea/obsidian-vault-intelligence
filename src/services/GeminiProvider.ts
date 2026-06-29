@@ -655,7 +655,7 @@ export class GeminiProvider implements IModelProvider, IReasoningClient, IEmbedd
         const count = res.usageMetadata?.totalTokenCount || res.usageMetadata?.promptTokenCount || res.embeddings?.[0]?.statistics?.tokenCount;
         return (typeof count === 'number' && !isNaN(count) && count > 0)
              ? count
-             : Math.ceil(fallbackText.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+             : Math.ceil(fallbackText.length / (this.settings.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE));
     }
 
     // --- Utility ---

@@ -30,6 +30,7 @@ export interface VaultIntelligenceSettings {
     agentLanguage: string;
     allowLocalNetworkAccess: boolean;
     authorName: string;
+    charsPerTokenEstimate: number;
     chatModel: string;
     codeModel: string;
     contextAwareHeaderProperties: string[];
@@ -168,6 +169,7 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     agentLanguage: 'English (US)',
     allowLocalNetworkAccess: false,
     authorName: 'Me',
+    charsPerTokenEstimate: SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE,
     chatModel: 'gemini-flash-latest',
     codeModel: 'gemini-flash-latest',
     contextAwareHeaderProperties: ['title', 'topic', 'tags', 'date', 'author', 'status'],

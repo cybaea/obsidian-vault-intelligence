@@ -212,7 +212,7 @@ const IndexerWorker: WorkerAPI = {
 
             if (candidate.type === 'vector') {
                 // Use actual token count from Orama if available, fallback to estimate
-                const tokens = (candidate as { tokenCount?: number }).tokenCount || (candidate.content ? estimateTokens(candidate.content) : 128);
+                const tokens = (candidate as { tokenCount?: number }).tokenCount || (candidate.content ? estimateTokens(candidate.content, config.charsPerTokenEstimate) : 128);
 
                 if (currentTokens + tokens <= LATENCY_BUDGET_TOKENS) {
                     payload.push({
@@ -1142,7 +1142,7 @@ const IndexerWorker: WorkerAPI = {
         const context = generateContextString(title, dir, parsedFM, config);
 
         const bodyOffset = cleanlyContent.indexOf(body);
-        let maxChunkChars = (config.embeddingChunkSize || 512) * SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+        let maxChunkChars = (config.embeddingChunkSize || 512) * (config.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
         maxChunkChars = Math.max(100, maxChunkChars - (config.embeddingPrefixReservedChars || 0));
         const chunks = semanticSplit(body, maxChunkChars);
 

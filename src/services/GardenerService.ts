@@ -212,8 +212,8 @@ Thinking... Gardening takes time. Please wait while I analyze your vault.
                 .join("\n");
 
             // 2. Token Estimation & Budgeting
-            // For Gardener we use a more conservative estimate (3 chars/token) due to JSON overhead
-            const charsPerToken = 3.0; 
+            // Gardener uses a more conservative estimate (75% of user's ratio) due to JSON overhead
+            const charsPerToken = (this.settings.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE) * 0.75;
             const rawBudget = ModelRegistry.resolveContextBudget(this.settings.gardenerModel, this.settings.modelContextOverrides, this.settings.gardenerContextBudget);
             
             // Apply safety margin (typically 0.8) to prevent API failures due to estimation errors

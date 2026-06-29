@@ -120,7 +120,7 @@ export class VoyageAIProvider implements IEmbeddingClient {
         let currentBatchTokens = 0;
 
         for (const text of texts) {
-            const estimatedTokens = Math.ceil(text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE);
+            const estimatedTokens = Math.ceil(text.length / (this.settings.charsPerTokenEstimate ?? SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE));
             
             if (currentBatch.length >= maxBatchSize || (currentBatchTokens + estimatedTokens > safeLimit)) {
                 if (currentBatch.length > 0) {

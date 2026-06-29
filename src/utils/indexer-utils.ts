@@ -108,8 +108,8 @@ export function calculateInheritedScore(parentScore: number, linkCount: number):
     return parentScore * (0.8 / dilution);
 }
 
-export function estimateTokens(text: string): number {
-    return text.length / SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE;
+export function estimateTokens(text: string, charsPerToken: number = SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE): number {
+    return text.length / charsPerToken;
 }
 
 export function recursiveCharacterSplitter(text: string, chunkSize: number, overlap: number): string[] {
