@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking private methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking private methods for unit testing adaptation logic */
 import { App, Notice } from 'obsidian';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -380,7 +376,3 @@ describe('GeminiProvider', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of mock-heavy test section */

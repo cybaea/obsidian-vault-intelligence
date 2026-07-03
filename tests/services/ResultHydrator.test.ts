@@ -15,7 +15,6 @@ describe("ResultHydrator", () => {
             vault: {
                 getAbstractFileByPath: vi.fn((path) => {
                     if (path === "test.md") {
-                        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- mocking internal obsidian behaviour
                         const fakeFile = Object.create(TFile.prototype) as TFile;
                         Object.defineProperty(fakeFile, 'path', { value: "test.md" });
                         return fakeFile;

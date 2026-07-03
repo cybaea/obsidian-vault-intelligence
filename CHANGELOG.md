@@ -18,6 +18,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### Developer features
 
 -   Add npm package override for `global-agent` to eliminate the deprecated `boolean` dependency warning from `@huggingface/transformers`/`onnxruntime-node`.
+-   Migrate ESLint config to typed linting: replace deprecated `tseslint.config()` with `defineConfig()` from `eslint/config`, fix unsafe plugin assignment with `TSESLint.FlatConfig.Plugin` casts, and add a tests-scoped override block relaxing type-safety and eslint-comments rules for mock-based test patterns. Exclude `vitest.config.mts` from linting (build-time only). Add `varsIgnorePattern`/`caughtErrorsIgnorePattern` to `@typescript-eslint/no-unused-vars` for underscore-prefixed names.
+-   Remove redundant `eslint-disable` comments from test files now covered by the tests-scoped config overrides.
 
 ## [9.6.3] - 2026-06-24
 

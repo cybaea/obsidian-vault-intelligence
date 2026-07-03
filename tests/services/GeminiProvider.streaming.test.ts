@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- We use any for complex model mocks in tests */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- We use any for complex model mocks in tests */
 import { App } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -176,6 +173,3 @@ describe('GeminiProvider Streaming', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of model mock section */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of model mock section */
