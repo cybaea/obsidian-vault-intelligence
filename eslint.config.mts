@@ -43,7 +43,6 @@ export default tseslint.config(
 	// Add parser options and our strict rules ONLY for TypeScript files
 	{
 		files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
-		ignores: ['eslint.config.mts'], // or use `files: ['src/**/*.ts', 'tests/**/*.ts'],` above.
 		languageOptions: {
 			parserOptions: {
 				projectService: {
