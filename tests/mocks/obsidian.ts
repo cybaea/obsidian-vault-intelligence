@@ -71,8 +71,82 @@ export class Plugin {
 }
 
 export class PluginSettingTab {
+    app: App = new App();
+    containerEl: HTMLElement = {} as HTMLElement;
+    settingItems: unknown[] = [];
     constructor(_app: App, _plugin: Plugin) { }
     display(): void { }
+    hide(): void { }
+    getSettingDefinitions(): unknown[] { return []; }
+    getControlValue(_key: string): unknown { return undefined; }
+    setControlValue(_key: string, _value: unknown): void | Promise<void> { }
+    refreshDomState(): void { }
+    update(): void { }
+}
+
+export class SettingGroup {
+    listEl: HTMLElement = {} as HTMLElement;
+    constructor(_containerEl: HTMLElement) { }
+    setHeading(_text: string | DocumentFragment): this { return this; }
+    addClass(..._classes: string[]): this { return this; }
+    addSetting(_cb: (setting: Setting) => void): this { return this; }
+    addSearch(_cb: (component: SearchComponent) => unknown): this { return this; }
+    addExtraButton(_cb: (component: ExtraButtonComponent) => unknown): this { return this; }
+}
+
+export class SettingPage {
+    rootEl: HTMLElement = {} as HTMLElement;
+    titlebarEl: HTMLElement = {} as HTMLElement;
+    containerEl: HTMLElement = {} as HTMLElement;
+    title: string = "";
+    constructor() { }
+    display(): void { }
+    hide(): void { }
+}
+
+export class SearchComponent {
+    inputEl: HTMLInputElement = {} as HTMLInputElement;
+    clearButtonEl: HTMLElement = {} as HTMLElement;
+    constructor(_containerEl: HTMLElement) { }
+    setValue(_value: string): this { return this; }
+    getValue(): string { return ""; }
+    setPlaceholder(_placeholder: string): this { return this; }
+    onChange(_cb: (value: string) => unknown): this { return this; }
+    onSearchChanged(_cb: (value: string) => unknown): this { return this; }
+}
+
+export class ExtraButtonComponent {
+    extraSettingsEl: HTMLElement = {} as HTMLElement;
+    constructor(_containerEl: HTMLElement) { }
+    setDisabled(_disabled: boolean): this { return this; }
+    setTooltip(_tooltip: string): this { return this; }
+    setIcon(_icon: string): this { return this; }
+    onClick(_cb: () => unknown): this { return this; }
+    setExtraButtonHidden(_hidden: boolean): this { return this; }
+}
+
+let mockApiVersion = "1.12.0";
+export function requireApiVersion(version: string): boolean {
+    // Semver-style comparison: returns true when the mocked Obsidian version
+    // is greater than or equal to the requested version.
+    // Default to "1.12.0" so tests use the imperative display() path unless
+    // a test explicitly raises the mocked version via setMockApiVersion.
+    return compareVersions(mockApiVersion, version) >= 0;
+}
+export function setMockApiVersion(v: string): void { mockApiVersion = v; }
+export function getMockApiVersion(): string { return mockApiVersion; }
+
+function compareVersions(a: string, b: string): number {
+    const pa = a.split(".").map(n => Number.parseInt(n, 10) || 0);
+    const pb = b.split(".").map(n => Number.parseInt(n, 10) || 0);
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+        const da = pa[i] ?? 0;
+        const db = pb[i] ?? 0;
+        if (da > db) return 1;
+        if (da < db) return -1;
+    }
+    return 0;
 }
 
 export class Setting {
