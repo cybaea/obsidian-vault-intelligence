@@ -1,10 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Test file does not require enable pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-return -- Mocking internal services for tests requires any */
-/* eslint-disable obsidianmd/no-tfile-tfolder-cast -- Mocking TFile requires casting */
 import { Events, TFile } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

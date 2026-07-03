@@ -1,6 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Mock file does not require enable pairs */
-/* eslint-disable eslint-comments/require-description -- Descriptions not required for comprehensive mock disable */
-/* eslint-disable */
 import { vi } from 'vitest';
 /**
  * Mock implementation of Obsidian API for Node.js test environment.
@@ -16,7 +13,7 @@ export class ItemView {
 }
 
 export class WorkspaceLeaf { }
-export class AbstractInputSuggest<T> {
+export class AbstractInputSuggest<_T = unknown> {
     constructor(_app: App, _inputEl: HTMLInputElement | HTMLTextAreaElement) { }
 }
 
@@ -52,7 +49,7 @@ export class TFile {
     extension: string = "";
     path: string = "";
     name: string = "";
-    stat = { mtime: 0, size: 0, ctime: 0 };
+    stat = { ctime: 0, mtime: 0, size: 0 };
 }
 export class TFolder { }
 export class App {
@@ -123,12 +120,12 @@ export function createFragment(callback?: (el: DocumentFragment) => void): Docum
 }
 
 export const Platform = {
-    isMobile: false,
-    isDesktopApp: true
+    isDesktopApp: true,
+    isMobile: false
 };
 
 // Global mocks for Node environment
-const g = typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : window);
+const g = globalThis;
 if (g) {
     (g as any).self = g;
     (g as any).addEventListener = () => { };
@@ -153,15 +150,15 @@ if (g) {
     (g as any).document = {
         body: mockEl(),
         createDiv: mockEl,
-        createEl: mockEl,
-        createSpan: mockEl,
-        createElement: mockEl,
         createDocumentFragment: () => ({
             appendChild: () => {},
             createDiv: mockEl,
             createEl: mockEl,
             createSpan: mockEl
-        })
+        }),
+        createEl: mockEl,
+        createElement: mockEl,
+        createSpan: mockEl
     };
 
     (g as any).activeDocument = (g as any).document;
@@ -171,8 +168,8 @@ if (g) {
 
     // Mock getComputedStyle for theme resolution tests
     (g as any).getComputedStyle = () => ({
-        getPropertyValue: () => "",
-        color: "rgb(0, 0, 0)"
+        color: "rgb(0, 0, 0)",
+        getPropertyValue: () => ""
     });
 
     (g as any).WebGL2RenderingContext = class { };

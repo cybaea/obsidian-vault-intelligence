@@ -1,9 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Test file does not require enable pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { GraphService } from '../../src/services/GraphService';

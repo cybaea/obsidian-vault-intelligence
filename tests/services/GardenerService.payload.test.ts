@@ -1,9 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Test file does not require enable pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
 import { App, TFile } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -98,7 +92,6 @@ describe('GardenerService Payload and Budgeting', () => {
     });
 
     it('should include file content in the payload sent to the LLM using compact JSON', async () => {
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
         const mockFile = { path: 'note.md', stat: { mtime: 100, size: 100 } } as unknown as TFile;
         (mockApp.vault.getMarkdownFiles as any).mockReturnValue([mockFile]);
         (mockApp.vault.cachedRead as any).mockResolvedValue('Note content with "quotes" and \n newlines.');
@@ -111,7 +104,6 @@ describe('GardenerService Payload and Budgeting', () => {
         await gardenerService.tidyVault();
 
         await vi.waitFor(() => {
-            // eslint-disable-next-line @typescript-eslint/unbound-method -- Vitest mock access is safe
             expect(mockReasoningClient.generateStructured).toHaveBeenCalled();
         }, { timeout: 1000 });
 
@@ -126,9 +118,7 @@ describe('GardenerService Payload and Budgeting', () => {
         const content1 = 'A'.repeat(500);
         const content2 = 'B'.repeat(500);
         
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
         const file1 = { path: 'file1.md', stat: { mtime: 200, size: 500 } } as unknown as TFile;
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
         const file2 = { path: 'file2.md', stat: { mtime: 100, size: 500 } } as unknown as TFile;
         
         (mockApp.vault.getMarkdownFiles as any).mockReturnValue([file1, file2]);
@@ -155,7 +145,6 @@ describe('GardenerService Payload and Budgeting', () => {
         await gardenerService.tidyVault();
 
         await vi.waitFor(() => {
-            // eslint-disable-next-line @typescript-eslint/unbound-method -- Vitest mock access is safe
             expect(mockReasoningClient.generateStructured).toHaveBeenCalled();
         }, { timeout: 1000 });
 
