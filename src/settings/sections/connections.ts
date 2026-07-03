@@ -5,15 +5,10 @@ import { ModelRegistry } from "../../services/ModelRegistry";
 import { validateHeaderKey } from "../../utils/headers";
 import { hasGoogleApiKey, resolveSecrets } from "../../utils/secrets";
 import { renderKeyValueEditor } from "../components";
+import { refreshSettings } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import "../components"; // Ensure prototype extensions load
 import { BANNER_BASE64 } from "./banner-data";
-
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
 
 interface InternalPlugin {
     manifest: {
@@ -66,8 +61,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 new Notice(`Reload ${obsidian} to retry migration.`);
 
                 // Refresh settings UI
-                const manifestId = (plugin as unknown as InternalPlugin).manifest.id;
-                (plugin.app as unknown as InternalApp).setting.openTabById(manifestId);
+                refreshSettings(context);
             })();
         }));
 
@@ -117,8 +111,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 const actualKey = await plugin.geminiService.getApiKey();
                 if (actualKey && actualKey.startsWith('AIza')) {
                     try {
-                        const app = plugin.app as unknown as InternalApp;
-                        const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                        const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
                         const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
                         
                         await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders);
@@ -262,8 +255,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                     const apiKey = await plugin.geminiService.getApiKey();
                     if (!apiKey) throw new Error("API key not found.");
 
-                    const app = plugin.app as unknown as InternalApp;
-                    const resolveSecret = (key: string) => app.secretStorage.getSecret(key);
+                    const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
                     const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
 
                     await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders);
@@ -280,8 +272,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 btn.setButtonText("Refresh models");
 
                 // Refresh the whole UI to update dropdowns
-                const manifestId = (plugin as unknown as InternalPlugin).manifest.id;
-                (plugin.app as unknown as InternalApp).setting.openTabById(manifestId);
+                refreshSettings(context);
             }));
 }
 

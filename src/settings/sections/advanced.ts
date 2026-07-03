@@ -4,6 +4,7 @@ import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { LogLevel, logger } from "../../utils/logger";
 import { resolveSecrets } from "../../utils/secrets";
+import { reRenderSection } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 export function renderAdvancedSettings(context: SettingsTabContext): void {
@@ -238,8 +239,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.contextPrimaryThreshold = DEFAULT_SETTINGS.contextPrimaryThreshold;
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });
@@ -261,8 +261,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.contextSupportingThreshold = DEFAULT_SETTINGS.contextSupportingThreshold;
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });
@@ -284,8 +283,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.contextStructuralThreshold = DEFAULT_SETTINGS.contextStructuralThreshold;
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });
@@ -307,8 +305,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.searchCentralityLimit = DEFAULT_SETTINGS.searchCentralityLimit;
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });
@@ -330,8 +327,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 plugin.settings.contextMaxFiles = DEFAULT_SETTINGS.contextMaxFiles;
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });
@@ -344,8 +340,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
             .onClick(async () => {
                 tuningReset();
                 await plugin.saveSettings();
-                context.containerEl.empty();
-                renderAdvancedSettings(context);
+                reRenderSection(context, renderAdvancedSettings);
             })
         );
     });

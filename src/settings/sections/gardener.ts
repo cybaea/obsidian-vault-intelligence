@@ -1,18 +1,13 @@
-import { Setting, App, Plugin, TextComponent } from "obsidian";
+import { Setting, TextComponent } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { renderModelDropdown } from "../components";
+import { refreshSettings } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
-
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
+import { DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
 
 export function renderGardenerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
@@ -49,7 +44,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             });
         });
@@ -89,7 +84,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }))
         .addText(text => {
@@ -127,7 +122,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.gardenerSystemInstruction = null;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }))
         .addTextArea(text => {
@@ -349,10 +344,4 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 plugin.settings.gardenerSemanticMergeThreshold = value;
                 await plugin.saveSettings();
             }));
-}
-
-function refreshSettings(plugin: IVaultIntelligencePlugin) {
-    const app = plugin.app as InternalApp;
-    const manifestId = (plugin as unknown as Plugin).manifest.id;
-    app.setting.openTabById(manifestId);
 }

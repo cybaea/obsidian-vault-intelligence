@@ -1,18 +1,13 @@
-import { Setting, App, Plugin } from "obsidian";
+import { Setting } from "obsidian";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
+import { refreshSettings } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
-
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
+import { DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
 export function renderResearcherSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
@@ -46,7 +41,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                         plugin.settings.chatModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             });
         });
@@ -103,11 +98,11 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                         }
 
                         await plugin.saveSettings();
-                        refreshSettings(plugin); // Hide text box if picking preset
+                        refreshSettings(context); // Hide text box if picking preset
                     } else {
                         plugin.settings.agentLanguage = 'custom';
                         await plugin.saveSettings();
-                        refreshSettings(plugin); // Show text box
+                        refreshSettings(context); // Show text box
                     }
                 })();
             });
@@ -142,7 +137,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.systemInstruction = null; // Set to null (reference mode)
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }))
         .addTextArea(text => {
@@ -180,7 +175,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }))
         .addText(text => {
@@ -264,7 +259,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.enableWebSearch = value;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }));
 
@@ -277,7 +272,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.enableUrlContext = value;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }));
 
@@ -292,7 +287,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                             plugin.settings.groundingModel = val;
                             await plugin.saveSettings();
                         }
-                        refreshSettings(plugin);
+                        refreshSettings(context);
                     })();
                 });
             });
@@ -323,7 +318,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.enableCodeExecution = value;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }));
 
@@ -336,7 +331,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.enableAgentWriteAccess = value;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshSettings(context);
                 })();
             }));
 
@@ -354,7 +349,7 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                             plugin.settings.codeModel = val;
                             await plugin.saveSettings();
                         }
-                        refreshSettings(plugin);
+                        refreshSettings(context);
                     })();
                 });
             });
@@ -391,10 +386,4 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
-}
-
-function refreshSettings(plugin: IVaultIntelligencePlugin) {
-    const app = plugin.app as InternalApp;
-    const manifestId = (plugin as unknown as Plugin).manifest.id;
-    app.setting.openTabById(manifestId);
 }

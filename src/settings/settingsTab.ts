@@ -90,7 +90,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             const context: SettingsTabContext = {
                 app: this.app,
                 containerEl: tabContainer,
-                plugin: this.plugin
+                plugin: this.plugin,
+                tabInstance: this,
             };
             definition.render(context);
             this.tabContentMap.set(id, tabContainer);

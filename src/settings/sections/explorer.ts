@@ -8,6 +8,7 @@ import { isComplexLanguage } from "../../utils/language-utils";
 import { logger } from "../../utils/logger";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
+import { reRenderSection } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 
@@ -78,8 +79,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
-                        containerEl.empty();
-                        renderExplorerSettings(context);
+                        reRenderSection(context, renderExplorerSettings);
                     })();
                 });
         });
@@ -115,8 +115,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                             plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
                         }
-                        containerEl.empty();
-                        renderExplorerSettings(context);
+                        reRenderSection(context, renderExplorerSettings);
                     })();
                 });
             });
@@ -194,8 +193,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                             plugin.requiresIndexWipeOnExit = true;
                             await plugin.saveSettings(false);
-                            containerEl.empty();
-                            renderExplorerSettings(context);
+                            reRenderSection(context, renderExplorerSettings);
                         }
                     });
             });
@@ -215,8 +213,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
                     }
-                    containerEl.empty();
-                    renderExplorerSettings(context);
+                    reRenderSection(context, renderExplorerSettings);
                 })();
             });
         });
@@ -254,8 +251,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                                     plugin.settings.embeddingDimension = result.recommendedDims;
                                     plugin.requiresIndexWipeOnExit = true;
                                     await plugin.saveSettings(false);
-                                    containerEl.empty();
-                                    renderExplorerSettings(context);
+                                    reRenderSection(context, renderExplorerSettings);
                                 }
                             } else {
                                 new Notice(`Invalid: ${result.reason}`, 5000);
