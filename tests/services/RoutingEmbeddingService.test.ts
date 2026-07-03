@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking private methods for unit testing provider routing */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking private methods for unit testing provider routing */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking private methods for unit testing provider routing */
- 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GeminiProvider } from "../../src/services/GeminiProvider";
@@ -100,7 +96,4 @@ describe('RoutingEmbeddingService', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of private method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of private method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of private method mocking */
  

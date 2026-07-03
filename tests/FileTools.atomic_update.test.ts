@@ -1,9 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Test file does not require enable pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/require-await -- Mocking async vault.process with sync callbacks triggers this */
-/* eslint-disable @typescript-eslint/unbound-method -- vitest expectations on mocked methods trigger this */
 import { App, TFile } from 'obsidian';
 import {
     beforeEach,

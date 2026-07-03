@@ -1,8 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Setup file doesn't need pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking global objects for tests requires any access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking global objects for tests requires any access */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking global objects for tests requires any access */
-/* eslint-disable @typescript-eslint/no-unsafe-return -- Mocking global objects for tests requires any access */
 import { vi } from 'vitest';
 
 const g = globalThis as any;

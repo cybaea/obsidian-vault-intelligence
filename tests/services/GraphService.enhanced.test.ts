@@ -1,7 +1,3 @@
-/* eslint-disable eslint-comments/disable-enable-pair -- Test file does not require enable pairs */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking internal services for tests requires any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking internal services for tests requires any */
 import { Plugin } from 'obsidian';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -52,7 +48,6 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         graphService.getNeighbors = vi.fn();
 
         // Inject mock hydrator
-        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mocking internal service */
         (graphService as any).hydrator = {
             hydrate: vi.fn().mockImplementation((results) => Promise.resolve({
                 driftDetected: [],
@@ -129,7 +124,6 @@ describe('GraphService.getGraphEnhancedSimilar', () => {
         vi.spyOn(graphService, 'getNeighbors').mockResolvedValue(neighborResults);
 
         // Mock hydrator to ensure it was called for the anchor
-        /* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mocking internal service */
         const hydrateSpy = vi.spyOn((graphService as any).hydrator, 'hydrate');
 
         const results = await graphService.getGraphEnhancedSimilar(filePath, 10);

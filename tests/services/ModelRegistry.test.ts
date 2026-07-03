@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking private static methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking private static methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking private static methods for unit testing adaptation logic */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking private static methods for unit testing adaptation logic */
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi, Mock } from 'vitest';
 
@@ -120,7 +116,3 @@ describe('ModelRegistry', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of private static method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of private static method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of private static method mocking */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of private static method mocking */

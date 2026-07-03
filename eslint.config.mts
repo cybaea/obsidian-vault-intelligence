@@ -1,11 +1,20 @@
+import type { Plugin as CorePlugin } from "@eslint/core";
+
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import perfectionist from "eslint-plugin-perfectionist";
-import { globalIgnores } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+// The third-party plugin packages ship structural types that are not directly
+// assignable to the FlatConfig.Plugin interface, which would widen to `any`.
+// Cast at the import boundary so the config object stays fully type-safe.
+const eslintCommentsPlugin = eslintComments as unknown as CorePlugin;
+const obsidianmdPlugin = obsidianmd as unknown as CorePlugin;
+const perfectionistPlugin = perfectionist as unknown as CorePlugin;
+
+export default defineConfig(
 	{
 		languageOptions: {
 			globals: {
@@ -54,12 +63,11 @@ export default tseslint.config(
 			},
 		},
 		plugins: {
-			'eslint-comments': eslintComments,
-			'obsidianmd': obsidianmd,
-			'perfectionist': perfectionist,
+			'eslint-comments': eslintCommentsPlugin,
+			'obsidianmd': obsidianmdPlugin,
+			'perfectionist': perfectionistPlugin,
 		},
 		rules: {
-			"@typescript-eslint/no-explicit-any": "error",
 			"@typescript-eslint/no-non-null-assertion": "error",
 			"@typescript-eslint/no-unnecessary-type-assertion": "error",
 			"@typescript-eslint/no-unsafe-argument": "error",
@@ -67,6 +75,12 @@ export default tseslint.config(
 			"@typescript-eslint/no-unsafe-call": "error",
 			"@typescript-eslint/no-unsafe-member-access": "error",
 			"@typescript-eslint/no-unsafe-return": "error",
+			"@typescript-eslint/no-unused-vars": ["error", {
+				"args": "none",
+				"caughtErrorsIgnorePattern": "^_",
+				"ignoreRestSiblings": true,
+				"varsIgnorePattern": "^_"
+			}],
 			"@typescript-eslint/require-await": "error",
 
 			"eslint-comments/disable-enable-pair": "error",
@@ -104,6 +118,31 @@ export default tseslint.config(
 			"obsidianmd/prefer-active-doc": "off", // Workers don't have an active document; see also https://github.com/obsidianmd/eslint-plugin/issues/150
 		}
 	},
+	// Test files use mocks that legitimately require `any` types, unsafe
+	// assignments for mock objects, and TFile/TFolder casting. The
+	// eslint-comments restricted-disable rules are also too strict for
+	// test-level disable comments. These overrides keep production code
+	// fully strict while allowing tests to use pragmatic mocking patterns.
+	{
+		files: ['tests/**/*.ts'],
+		rules: {
+			// Mocks require `any` and unsafe operations by nature
+			"@typescript-eslint/no-explicit-any": "off",
+			"@typescript-eslint/no-unsafe-argument": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+			"@typescript-eslint/require-await": "off",
+			"@typescript-eslint/unbound-method": "off",
+			// Tests need to disable specific rules for mock-based patterns
+			"eslint-comments/no-restricted-disable": "off",
+			"eslint-comments/no-unlimited-disable": "off",
+			"eslint-comments/require-description": "off",
+			// Mocking Obsidian's TFile/TFolder requires casting
+			"obsidianmd/no-tfile-tfolder-cast": "off",
+		}
+	},
 	globalIgnores([
 		".tmp",
 		"node_modules",
@@ -117,6 +156,7 @@ export default tseslint.config(
 		"main.js",
 		"worker.js",
 		"scripts/**",
-		"src/**/*.d.ts"
+		"src/**/*.d.ts",
+		"vitest.config.mts",
 	]),
 );

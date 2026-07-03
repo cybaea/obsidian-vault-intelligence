@@ -1,4 +1,3 @@
-/* eslint-disable -- This file uses deep mocks that are incompatible with production lint rules */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.hoisted(() => {
@@ -8,10 +7,10 @@ vi.hoisted(() => {
     
     // Mock navigator
     const mockNavigator = {
-        userAgent: '',
         clipboard: {
             writeText: () => Promise.resolve()
-        }
+        },
+        userAgent: ''
     };
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: mockNavigator, writable: true });
 
@@ -125,10 +124,6 @@ vi.mock('obsidian', async (importOriginal) => {
     const actual = await importOriginal() as any;
     return {
         ...actual,
-        Component: class {
-            load() { return this; }
-            unload() { return this; }
-        },
         ButtonComponent: class {
             buttonEl = new MockElement();
             onClick() { return this; }
@@ -136,6 +131,10 @@ vi.mock('obsidian', async (importOriginal) => {
             setCta() { return this; }
             setIcon() { return this; }
             setTooltip() { return this; }
+        },
+        Component: class {
+            load() { return this; }
+            unload() { return this; }
         },
         DropdownComponent: class {
             selectEl = new MockElement();
@@ -149,15 +148,15 @@ vi.mock('obsidian', async (importOriginal) => {
                 return Promise.resolve();
             })
         },
-        TextComponent: class { inputEl = new MockElement(); setPassword() { return this; } },
+        setIcon: vi.fn(),
         TextAreaComponent: class {
             inputEl = new MockElement();
             getValue() { return 'test prompt'; }
             setPlaceholder() { return this; }
             setValue() {}
         },
-        VIEW_TYPES: { RESEARCH_CHAT: 'research-chat' },
-        setIcon: vi.fn()
+        TextComponent: class { inputEl = new MockElement(); setPassword() { return this; } },
+        VIEW_TYPES: { RESEARCH_CHAT: 'research-chat' }
     };
 });
 
@@ -264,4 +263,3 @@ describe('ResearchChatView Rendering', () => {
         expect(thoughtEl).toBeUndefined(); // Temporary thoughts are cleared on completion
     });
 });
-/* eslint-enable */

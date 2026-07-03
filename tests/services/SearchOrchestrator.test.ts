@@ -1,9 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Mocking complex internal objects */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Mocking complex internal objects */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Mocking complex internal objects */
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Mocking complex internal objects */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Mocking complex internal objects */
-/* eslint-disable @typescript-eslint/unbound-method -- Mocking complex internal objects */
 import { App } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -142,9 +136,3 @@ describe('SearchOrchestrator', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-argument -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- End of mock-heavy test section */
-/* eslint-enable @typescript-eslint/unbound-method -- End of mock-heavy test section */

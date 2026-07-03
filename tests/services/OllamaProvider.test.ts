@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Required */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Required */
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Required */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Required */
 import { requestUrl, type App } from 'obsidian';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
@@ -140,7 +136,3 @@ describe('OllamaProvider', () => {
     });
 });
 
-/* eslint-enable @typescript-eslint/no-explicit-any -- end */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment -- end */
-/* eslint-enable @typescript-eslint/no-unsafe-call -- end */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- end */

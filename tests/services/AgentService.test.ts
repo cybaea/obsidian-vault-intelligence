@@ -119,12 +119,10 @@ describe('AgentService Integration', () => {
         }));
         
         // Ensure generateMessageStream was called twice (once for the prompt, once with the tool result)
-        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
         expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(2);
 
         const gm = mockReasoningClient.generateMessageStream as unknown as { mock: { calls: unknown[][] } };
         const calls = gm.mock.calls;
-        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         const secondCall = calls[1] as unknown[];
         if (!secondCall) throw new Error("Second call to generateMessage not made");
         const secondCallArgs = secondCall[0] as unknown[];
@@ -157,7 +155,6 @@ describe('AgentService Integration', () => {
         const result = await agentService.chat([], "Keep calling tools", [], {});
         
         // It should eventually abort and return the final tool call content due to max turns logic in AgentService
-        // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest mock access
         expect(mockReasoningClient.generateMessageStream).toHaveBeenCalledTimes(5);
         expect(result.text).toContain('reached the step limit');
     });
@@ -176,9 +173,7 @@ describe('AgentService Integration', () => {
             })();
         });
 
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
         const mockFile1 = { path: 'file1.md', stat: { size: 100 } } as unknown as TFile;
-        // eslint-disable-next-line obsidianmd/no-tfile-tfolder-cast -- Mocking TFile for tests
         const mockFile2 = { path: 'file2.md', stat: { size: 100 } } as unknown as TFile;
 
         const result = await agentService.chat([], "Hello", [mockFile1, mockFile2], { modelId: 'local/test-local-model' });
@@ -186,9 +181,7 @@ describe('AgentService Integration', () => {
         expect(result.files).toEqual(['file1.md']); // Verifying DOM blowout fix prevents file2.md being added
         expect(assemblerSpy).toHaveBeenCalled();
 
-        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
         const gm = mockReasoningClient.generateMessageStream;
-        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         
         const firstCall = gm.mock.calls[0] as unknown[];
         const firstCallHistory = firstCall[0] as UnifiedMessage[];
@@ -215,9 +208,7 @@ describe('AgentService Integration', () => {
         const stream = agentService.chatStream(history, currentPrompt, [], {});
         await stream.next();
 
-        /* eslint-disable @typescript-eslint/unbound-method -- vitest mock access is safe here */
         const gm = mockReasoningClient.generateMessageStream;
-        /* eslint-enable @typescript-eslint/unbound-method -- restore check */
         
         const firstCall = gm.mock.calls[0] as unknown[] | undefined;
         const sentHistory = firstCall?.[0] as UnifiedMessage[] | undefined;
