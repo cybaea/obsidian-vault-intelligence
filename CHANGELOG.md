@@ -13,10 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Add settings search compatibility for Obsidian v1.13.0+ users. Plugin settings are now indexed and searchable in Obsidian's global settings search. The existing settings tab UI is preserved for users on older versions. (Issue #595)
 -   Add configurable "Token estimation ratio" setting (Advanced > Performance) so users with non-English (CJK) or code-heavy vaults can fine-tune character-to-token budgeting. Previously hardcoded at 4 chars/token. (Issue #386)
 
 ### Developer features
 
+-   Implement declarative settings API (`getSettingDefinitions`) via Hybrid Bridge pattern: 7 `SettingDefinitionPage` entries with fine-grained per-field `SettingDefinitionRender` closures delegating to existing imperative section building blocks. Override `setControlValue` as comprehensive type-safe catch-all with deferred-commit flag interception. Activate previously-dead `requiresWorkerRestartOnExit` flag for chat model changes. (Issue #595)
 -   Add npm package override for `global-agent` to eliminate the deprecated `boolean` dependency warning from `@huggingface/transformers`/`onnxruntime-node`.
 -   Migrate ESLint config to typed linting: replace deprecated `tseslint.config()` with `defineConfig()` from `eslint/config`, fix unsafe plugin assignment with `TSESLint.FlatConfig.Plugin` casts, and add a tests-scoped override block relaxing type-safety and eslint-comments rules for mock-based test patterns. Exclude `vitest.config.mts` from linting (build-time only). Add `varsIgnorePattern`/`caughtErrorsIgnorePattern` to `@typescript-eslint/no-unused-vars` for underscore-prefixed names.
 -   Remove redundant `eslint-disable` comments from test files now covered by the tests-scoped config overrides.
