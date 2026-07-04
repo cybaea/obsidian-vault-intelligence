@@ -111,6 +111,8 @@ import {
     configureSystemInstructionField,
     configureVaultReadingLimitField,
     configureWebSearchModelField,
+    COMMON_LANGUAGES,
+    DEFAULT_LANGUAGE,
     renderResearcherSettings,
 } from "./sections/researcher";
 import { configurePurgeDataField, configureStorageList, renderStorageSettings } from "./sections/storage";
@@ -123,6 +125,48 @@ interface TabDefinition {
     label: string;
     render: (context: SettingsTabContext) => void;
 }
+
+/**
+ * Custom SettingPage for the MCP settings sub-page.
+ *
+ * Used by the declarative settings engine on Obsidian v1.13.0+ to render
+ * the MCP server configuration imperatively (the MCP page uses a `page`
+ * factory instead of inline `items` because it has a list↔editor navigation
+ * pattern that does not map cleanly to declarative definitions).
+ *
+ * The class is defined at module level for stable identity. The version
+ * guard is at the call site in {@link VaultIntelligenceSettingTab.buildDeclarativeDefinitions}.
+ * Defined as a class expression assigned to a const because the
+ * `obsidianmd/no-unsupported-api` lint rule only inspects `ClassDeclaration`
+ * superclasses for version gating; the actual v1.13 `SettingPage` reference
+ * (instantiation) is guarded by `requireApiVersion` at the call site.
+ */
+const McpSettingPage = class extends SettingPage {
+    private readonly plugin: IVaultIntelligencePlugin;
+    private readonly app: App;
+    private readonly tabInstance: VaultIntelligenceSettingTab;
+
+    constructor(app: App, plugin: IVaultIntelligencePlugin, tabInstance: VaultIntelligenceSettingTab) {
+        super();
+        this.app = app;
+        this.plugin = plugin;
+        this.tabInstance = tabInstance;
+    }
+
+    override display(): void {
+        const { containerEl } = this;
+        containerEl.empty();
+
+        const context: SettingsTabContext = {
+            app: this.app,
+            containerEl,
+            plugin: this.plugin,
+            tabInstance: this.tabInstance,
+        };
+
+        renderMcpSettings(context);
+    }
+};
 
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
     plugin: IVaultIntelligencePlugin;
@@ -166,44 +210,14 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
      * Build the declarative setting definitions for Obsidian v1.13.0+.
      *
      * Called from {@link getSettingDefinitions} inside a
-     * `requireApiVersion("1.13.0")` guard. The local `McpSettingPage`
-     * class extends `SettingPage` (v1.13.0+); the guard ensures the
-     * linter recognizes the version gate and that at runtime on v1.12
-     * the class is never evaluated.
+     * `requireApiVersion("1.13.0")` guard. The `McpSettingPage` class is
+     * defined at module level (see top of file); the version guard is at
+     * the call site (`page: () => new McpSettingPage(...)`).
      */
     private buildDeclarativeDefinitions(): SettingDefinitionItem[] {
         const plugin = this.plugin;
 
         if (requireApiVersion("1.13.0")) {
-            // McpSettingPage extends SettingPage (v1.13.0+). Defined inside
-            // a requireApiVersion guard so the linter recognizes the gate.
-            class McpSettingPage extends SettingPage {
-                private readonly plugin: IVaultIntelligencePlugin;
-                private readonly app: App;
-                private readonly tabInstance: VaultIntelligenceSettingTab;
-
-                constructor(app: App, plugin: IVaultIntelligencePlugin, tabInstance: VaultIntelligenceSettingTab) {
-                    super();
-                    this.app = app;
-                    this.plugin = plugin;
-                    this.tabInstance = tabInstance;
-                }
-
-                override display(): void {
-                    const { containerEl } = this;
-                    containerEl.empty();
-
-                    const context: SettingsTabContext = {
-                        app: this.app,
-                        containerEl,
-                        plugin: this.plugin,
-                        tabInstance: this.tabInstance,
-                    };
-
-                    renderMcpSettings(context);
-                }
-            }
-
             return [
                 {
                     desc: 'Configure LLM provider endpoints and private API credentials.',
@@ -280,6 +294,22 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         return undefined;
     }
 
+    /**
+     * Override for Obsidian's declarative settings engine.
+     *
+     * This method is ONLY invoked by Obsidian for `SettingDefinitionControl`-type
+     * definitions (native declarative controls with a `control` field). This
+     * implementation uses exclusively `SettingDefinitionRender` entries (custom
+     * render closures), so this override is currently a safety net / fallback
+     * for potential future native control definitions.
+     *
+     * The render closures' own `onChange` handlers are the single source of truth
+     * for side-effects (deferred-commit flags like `requiresIndexWipeOnExit` and
+     * `requiresWorkerRestartOnExit` are set in the section files, not here).
+     * This method performs pure persistence: assign the value, save settings.
+     *
+     * @see {@link https://docs.obsidian.md/Plugins/User+interface/Settings}
+     */
     override async setControlValue(key: string, value: unknown): Promise<void> {
         const settings = this.plugin.settings;
 
@@ -289,7 +319,6 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         }
 
         const settingsKey = key as keyof typeof settings;
-        const oldValue = settings[settingsKey];
 
         // Perform type-safe assignment.
         // The single cast here is the pragmatic escape hatch for heterogeneous
@@ -298,20 +327,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         // or a discriminated-union settings type, which is beyond this issue's scope.
         (settings as unknown as Record<string, unknown>)[settingsKey] = value;
 
-        // Determine if a deferred background process is needed
-        let requiresWorkerRestart = false;
-        if (oldValue !== value) {
-            if (key === 'embeddingProvider' || key === 'embeddingModel') {
-                this.plugin.requiresIndexWipeOnExit = true;
-            }
-            if (key === 'chatModel') {
-                this.plugin.requiresWorkerRestartOnExit = true;
-                requiresWorkerRestart = true;
-            }
-        }
-
-        // Route through our unified save lifecycle instead of raw saveData
-        await this.plugin.saveSettings(requiresWorkerRestart);
+        // Route through our unified save lifecycle instead of raw saveData.
+        // No deferred-commit flag interception here — side-effects are owned by
+        // the render closures' onChange handlers in the section files.
+        await this.plugin.saveSettings();
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -985,13 +1004,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
     }
 
     private isCustomLanguage(plugin: IVaultIntelligencePlugin): boolean {
-        const commonLanguages = [
-            'English (US)', 'English (GB)', 'German', 'French', 'Japanese',
-            'Spanish', 'Chinese (Simplified)', 'Chinese (Traditional)',
-            'Russian', 'Portuguese (Brazil)',
-        ];
-        const current = plugin.settings.agentLanguage || "English (US)";
-        return !commonLanguages.includes(current);
+        const current = plugin.settings.agentLanguage || DEFAULT_LANGUAGE;
+        return !COMMON_LANGUAGES.includes(current);
     }
 
     private isOnlineEmbeddingProvider(plugin: IVaultIntelligencePlugin): boolean {
@@ -1025,7 +1039,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
     override display(): void {
         // On v1.13+, the declarative engine handles rendering; display() is not called.
         // This guard is a safety net for edge cases.
-        if (requireApiVersion("1.13.0") && this.getSettingDefinitions().length > 0) {
+        if (requireApiVersion("1.13.0")) {
             return;
         }
 

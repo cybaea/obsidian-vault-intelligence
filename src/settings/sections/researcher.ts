@@ -16,6 +16,24 @@ const gemini = "Gemini";
 const python = "Python";
 
 /**
+ * Fallback language used when {@link VaultIntelligenceSettings.agentLanguage}
+ * is empty or unset. Also the first entry in {@link COMMON_LANGUAGES}.
+ */
+export const DEFAULT_LANGUAGE = 'English (US)';
+
+/**
+ * Common languages offered as presets in the language dropdown.
+ * Used by {@link configureLanguageField}, {@link renderResearcherSettings},
+ * and the {@link VaultIntelligenceSettingTab.isCustomLanguage} visibility
+ * predicate in `settingsTab.ts`.
+ */
+export const COMMON_LANGUAGES: readonly string[] = [
+    'English (US)', 'English (GB)', 'German', 'French', 'Japanese',
+    'Spanish', 'Chinese (Simplified)', 'Chinese (Traditional)',
+    'Russian', 'Portuguese (Brazil)',
+] as const;
+
+/**
  * Chat model dropdown — the main reasoning engine selector.
  */
 export function configureChatModelField(
@@ -29,7 +47,6 @@ export function configureChatModelField(
 
     const chatModelCurrent = plugin.settings.chatModel;
     const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
-    const isChatPreset = chatModels.some(m => m.id === chatModelCurrent);
 
     setting
         .setName('Chat model')
@@ -46,9 +63,6 @@ export function configureChatModelField(
                 })();
             });
         });
-
-    // Store visibility state for the imperative render function to check
-    (setting as unknown as { _showCustom: boolean })._showCustom = canUseChat && !isChatPreset;
 }
 
 /**
@@ -84,19 +98,14 @@ export function configureLanguageField(
     plugin: IVaultIntelligencePlugin,
     context: SettingsTabContext
 ): void {
-    const commonLanguages = [
-        'English (US)', 'English (GB)', 'German', 'French', 'Japanese',
-        'Spanish', 'Chinese (Simplified)', 'Chinese (Traditional)',
-        'Russian', 'Portuguese (Brazil)'
-    ];
-    const currentLang = plugin.settings.agentLanguage || "English (US)";
-    const isCustomLang = !commonLanguages.includes(currentLang);
+    const currentLang = plugin.settings.agentLanguage || DEFAULT_LANGUAGE;
+    const isCustomLang = !COMMON_LANGUAGES.includes(currentLang);
 
     setting
         .setName('Language')
         .setDesc('The language the agent should respond in.')
         .addDropdown(dropdown => {
-            commonLanguages.forEach(lang => {
+            COMMON_LANGUAGES.forEach(lang => {
                 dropdown.addOption(lang, lang);
             });
             dropdown.addOption('custom', 'Other');
@@ -129,8 +138,6 @@ export function configureLanguageField(
                 })();
             });
         });
-
-    (setting as unknown as { _showCustom: boolean })._showCustom = isCustomLang;
 }
 
 /**
@@ -141,7 +148,7 @@ export function configureCustomLanguageCodeField(
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
-    const currentLang = plugin.settings.agentLanguage || "English (US)";
+    const currentLang = plugin.settings.agentLanguage || DEFAULT_LANGUAGE;
 
     setting
         .setName('Custom language code')
@@ -172,7 +179,6 @@ export function configureSystemInstructionField(
         .addExtraButton(btn => btn
             .setIcon('reset')
             .setTooltip("Restore the default system instruction")
-            .setDisabled(plugin.settings.systemInstruction === null)
             .setDisabled(plugin.settings.systemInstruction === null)
             .onClick(() => {
                 void (async () => {
@@ -564,13 +570,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     }
 
     // --- 2. Language ---
-    const currentLang = plugin.settings.agentLanguage || "English (US)";
-    const commonLanguages = [
-        'English (US)', 'English (GB)', 'German', 'French', 'Japanese',
-        'Spanish', 'Chinese (Simplified)', 'Chinese (Traditional)',
-        'Russian', 'Portuguese (Brazil)'
-    ];
-    const isCustomLang = !commonLanguages.includes(currentLang);
+    const currentLang = plugin.settings.agentLanguage || DEFAULT_LANGUAGE;
+    const isCustomLang = !COMMON_LANGUAGES.includes(currentLang);
 
     const languageSetting = new Setting(containerEl);
     configureLanguageField(languageSetting, plugin, context);

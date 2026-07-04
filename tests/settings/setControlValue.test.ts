@@ -28,6 +28,8 @@ describe('VaultIntelligenceSettingTab.setControlValue', () => {
             app: mockApp,
             requiresIndexWipeOnExit: false,
             requiresWorkerRestartOnExit: false,
+            // Mimic the real saveSettings(requiresWorkerRestart = false) default
+            // so that calls without an argument are recorded as `false`.
             saveSettings: vi.fn().mockResolvedValue(undefined),
             settings: mockSettings,
         } as unknown as IVaultIntelligencePlugin;
@@ -47,34 +49,36 @@ describe('VaultIntelligenceSettingTab.setControlValue', () => {
         await tab.setControlValue('embeddingDimension', 1024);
 
         expect(mockSettings.embeddingDimension).toBe(1024);
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
     });
 
-    it('should set requiresIndexWipeOnExit when embeddingProvider changes', async () => {
+    it('should not set requiresIndexWipeOnExit when embeddingProvider changes (interception removed)', async () => {
         await tab.setControlValue('embeddingProvider', 'ollama');
 
-        expect(mockPlugin.requiresIndexWipeOnExit).toBe(true);
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(false);
+        // Interception removed — flags are now set in the render closures'
+        // onChange handlers in the section files, not in setControlValue.
+        expect(mockPlugin.requiresIndexWipeOnExit).toBe(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
     });
 
-    it('should set requiresIndexWipeOnExit when embeddingModel changes', async () => {
+    it('should not set requiresIndexWipeOnExit when embeddingModel changes (interception removed)', async () => {
         await tab.setControlValue('embeddingModel', 'text-embedding-004');
 
-        expect(mockPlugin.requiresIndexWipeOnExit).toBe(true);
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(false);
+        expect(mockPlugin.requiresIndexWipeOnExit).toBe(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
     });
 
-    it('should set requiresWorkerRestartOnExit and call saveSettings(true) when chatModel changes', async () => {
+    it('should not set requiresWorkerRestartOnExit when chatModel changes (interception removed)', async () => {
         await tab.setControlValue('chatModel', 'gemini-pro');
 
-        expect(mockPlugin.requiresWorkerRestartOnExit).toBe(true);
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(true);
+        expect(mockPlugin.requiresWorkerRestartOnExit).toBe(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
     });
 
-    it('should call saveSettings(false) for non-intercepted keys', async () => {
+    it('should persist non-intercepted keys without setting flags', async () => {
         await tab.setControlValue('embeddingDimension', 1024);
 
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
         expect(mockPlugin.requiresIndexWipeOnExit).toBe(false);
         expect(mockPlugin.requiresWorkerRestartOnExit).toBe(false);
     });
@@ -84,6 +88,6 @@ describe('VaultIntelligenceSettingTab.setControlValue', () => {
         await tab.setControlValue('chatModel', currentModel);
 
         expect(mockPlugin.requiresWorkerRestartOnExit).toBe(false);
-        expect(mockPlugin.saveSettings).toHaveBeenCalledWith(false);
+        expect(mockPlugin.saveSettings).toHaveBeenCalledTimes(1);
     });
 });

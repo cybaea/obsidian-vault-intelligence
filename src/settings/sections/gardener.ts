@@ -301,8 +301,6 @@ export function configureExcludedFoldersList(
                 .addExtraButton(btn => btn
                     .setIcon('trash')
                     .setTooltip('Remove')
-                    .setIcon('trash')
-                    .setTooltip('Remove')
                     .onClick(() => {
                         void (async () => {
                             plugin.settings.gardenerExcludedFolders.splice(index, 1);
