@@ -3,7 +3,7 @@ import { Setting, SettingGroup, setIcon } from "obsidian";
 import type { IVaultIntelligencePlugin } from "../types";
 
 import { DOCUMENTATION_URLS } from "../../constants";
-import { ModelRegistry } from "../../services/ModelRegistry";
+import { type ModelDefinition, ModelRegistry } from "../../services/ModelRegistry";
 import { LogLevel, logger } from "../../utils/logger";
 import { resolveSecrets } from "../../utils/secrets";
 import { reRenderSection } from "../refreshSettings";
@@ -488,45 +488,58 @@ export function configureAllowLocalNetworkAccessField(
 // --- Filter group ---
 
 /**
+ * Configure a single hidden-model toggle on a Setting instance.
+ */
+export function configureModelToggle(
+    setting: Setting,
+    model: ModelDefinition,
+    plugin: IVaultIntelligencePlugin
+): void {
+    const isHidden = plugin.settings.hiddenModels.includes(model.id);
+    setting.setName(model.label)
+        .setDesc(model.id)
+        .addToggle(toggle => toggle
+            .setValue(!isHidden)
+            .setTooltip(isHidden ? "Currently hidden" : "Currently visible")
+            .onChange(async (value) => {
+                if (value) {
+                    plugin.settings.hiddenModels = plugin.settings.hiddenModels.filter(id => id !== model.id);
+                } else {
+                    if (!plugin.settings.hiddenModels.includes(model.id)) {
+                        plugin.settings.hiddenModels.push(model.id);
+                    }
+                }
+                await plugin.saveSettings();
+                plugin.app.workspace.trigger('vault-intelligence:models-updated');
+            })
+        );
+}
+
+/**
  * Hidden models toggle list — dynamic list of toggles to hide/show
- * specific models from dropdown menus. Takes a SettingGroup to add
- * settings to.
+ * specific models from dropdown menus. Renders one Setting row per
+ * known model into the provided container element.
+ *
+ * Accepts an HTMLElement container (e.g. `group.listEl` or
+ * `filterGroup` itself) so it works in both the imperative path
+ * (v1.12, SettingGroup) and the declarative path (v1.13+,
+ * SettingDefinitionRender with `group.listEl`).
  */
 export function configureHiddenModelsList(
-    filterGroup: SettingGroup,
+    container: HTMLElement,
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
     const allModels = ModelRegistry.getAllKnownModels();
     if (allModels.length > 0) {
         allModels.forEach((model) => {
-            const isHidden = plugin.settings.hiddenModels.includes(model.id);
-            filterGroup.addSetting(setting => {
-                setting.setName(model.label)
-                    .setDesc(model.id)
-                    .addToggle(toggle => toggle
-                        .setValue(!isHidden)
-                        .setTooltip(isHidden ? "Currently hidden" : "Currently visible")
-                        .onChange(async (value) => {
-                            if (value) {
-                                plugin.settings.hiddenModels = plugin.settings.hiddenModels.filter(id => id !== model.id);
-                            } else {
-                                if (!plugin.settings.hiddenModels.includes(model.id)) {
-                                    plugin.settings.hiddenModels.push(model.id);
-                                }
-                            }
-                            await plugin.saveSettings();
-                            plugin.app.workspace.trigger('vault-intelligence:models-updated');
-                        })
-                    );
-            });
+            configureModelToggle(new Setting(container), model, plugin);
         });
     } else {
-        filterGroup.addSetting(setting => {
-            setting.setName('No models available')
-                .setDesc('Configure a provider and fetch models to filter them.')
-                .setDisabled(true);
-        });
+        new Setting(container)
+            .setName('No models available')
+            .setDesc('Configure a provider and fetch models to filter them.')
+            .setDisabled(true);
     }
 }
 
@@ -635,5 +648,5 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
     });
     const filterGroup = new SettingGroup(containerEl).setHeading(filterHeading);
 
-    configureHiddenModelsList(filterGroup, plugin, context);
+    configureHiddenModelsList(filterGroup.listEl, plugin, context);
 }

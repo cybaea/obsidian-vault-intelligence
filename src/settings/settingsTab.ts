@@ -1,11 +1,14 @@
 import {
     App,
     ButtonComponent,
+    EventRef,
+    Events,
     Plugin,
     PluginSettingTab,
     requireApiVersion,
     Setting,
     SettingDefinitionItem,
+    SettingDefinitionRender,
     SettingGroup,
     SettingPage,
 } from "obsidian";
@@ -18,7 +21,7 @@ import {
     configureEmbeddingChunkSizeField,
     configureFullModelListDebugField,
     configureGeminiApiRetriesField,
-    configureHiddenModelsList,
+    configureModelToggle,
     configureIndexingDelayField,
     configureIndexingThrottleField,
     configureLocalWorkerThreadsField,
@@ -122,12 +125,24 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
     private tabContentMap: Map<TabId, HTMLElement> = new Map();
     private tabButtons: Map<TabId, ButtonComponent> = new Map();
     private lastActiveTabId: TabId | null = null;
+    private modelsUpdatedRef: EventRef | undefined;
 
     constructor(app: App, plugin: IVaultIntelligencePlugin) {
         // We cast to 'Plugin' because the parent class expects the strict Obsidian Plugin type,
         // but we know our interface is compatible at runtime.
         super(app, plugin as unknown as Plugin);
         this.plugin = plugin;
+
+        // When models are fetched asynchronously, rebuild the declarative
+        // definitions so the hidden-models list reflects all available models.
+        // Guard against undefined workspace (e.g. in test mocks).
+        if (this.app.workspace) {
+            this.modelsUpdatedRef = (this.app.workspace as Events).on('vault-intelligence:models-updated', () => {
+                if (requireApiVersion("1.13.0")) {
+                    this.update();
+                }
+            });
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -861,18 +876,35 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             },
             {
                 heading: 'Model filtering',
-                items: [
-                    {
-                        desc: 'Hide specific models from dropdown menus to reduce clutter.',
-                        name: 'Hidden models',
-                        render: (_setting: Setting, group: SettingGroup) => {
-                            configureHiddenModelsList(group, plugin, context);
-                        },
-                    },
-                ],
+                items: this.getHiddenModelDefinitions(plugin, context),
                 type: 'group',
             },
         ];
+    }
+
+    private getHiddenModelDefinitions(
+        plugin: IVaultIntelligencePlugin,
+        _context: SettingsTabContext
+    ): SettingDefinitionRender[] {
+        const allModels = ModelRegistry.getAllKnownModels();
+
+        if (allModels.length === 0) {
+            return [
+                {
+                    desc: 'Configure a provider and fetch models to filter them.',
+                    name: 'No models available',
+                    render: (setting: Setting) => {
+                        setting.setDisabled(true);
+                    },
+                },
+            ];
+        }
+
+        return allModels.map((model): SettingDefinitionRender => ({
+            desc: model.id,
+            name: model.label,
+            render: (setting: Setting) => configureModelToggle(setting, model, plugin),
+        }));
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -989,6 +1021,9 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
     override hide(): void {
         super.hide();
+        if (this.modelsUpdatedRef) {
+            this.app.workspace.offref(this.modelsUpdatedRef);
+        }
         if (this.plugin.requiresIndexWipeOnExit) {
             this.plugin.requiresWorkerRestartOnExit = false;
             this.plugin.requiresIndexWipeOnExit = false;
