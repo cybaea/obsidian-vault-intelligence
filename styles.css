@@ -1103,3 +1103,37 @@ a.similar-notes-link:hover {
 .vi-text-warning {
     color: var(--text-warning);
 }
+
+/*
+ * Ollama connection status badge.
+ *
+ * Rendered inside the setting row's control element (setting.controlEl),
+ * which is a flex row containing the text input and the "Test connection"
+ * button. The badge wraps to its own line below the input row.
+ */
+.vi-ollama-status {
+    flex-basis: 100%;
+    margin-top: 0.5em;
+}
+
+.vi-ollama-status.vi-status-success {
+    color: var(--interactive-success);
+}
+
+.vi-ollama-status.vi-status-error {
+    color: var(--text-error);
+}
+
+/*
+ * Gardener excluded-folders wrapper.
+ *
+ * In the declarative settings path, the folder list and add-field are
+ * rendered into a wrapper div below the setting row's info area.
+ * The setting row uses a flex layout; this wrapper breaks out to
+ * full width below the flex content.
+ */
+.vi-excluded-folders {
+    flex-basis: 100%;
+    margin-top: 0.75em;
+    padding-left: 0;
+}

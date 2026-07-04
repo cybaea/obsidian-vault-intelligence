@@ -7,7 +7,7 @@ import { ModelRegistry } from "../../services/ModelRegistry";
 import { isComplexLanguage } from "../../utils/language-utils";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
-import { refreshSettings } from "../refreshSettings";
+import { refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT } from "../types";
 
@@ -39,9 +39,10 @@ export function configureChatModelField(
                 void (async () => {
                     if (val !== 'custom') {
                         plugin.settings.chatModel = val;
-                        await plugin.saveSettings();
+                        plugin.requiresWorkerRestartOnExit = true;
+                        await plugin.saveSettings(true);
                     }
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             });
         });
@@ -119,11 +120,11 @@ export function configureLanguageField(
                         }
 
                         await plugin.saveSettings();
-                        refreshSettings(context); // Hide text box if picking preset
+                        refreshVisibility(context); // Hide text box if picking preset
                     } else {
                         plugin.settings.agentLanguage = 'custom';
                         await plugin.saveSettings();
-                        refreshSettings(context); // Show text box
+                        refreshVisibility(context); // Show text box
                     }
                 })();
             });
@@ -177,7 +178,7 @@ export function configureSystemInstructionField(
                 void (async () => {
                     plugin.settings.systemInstruction = null; // Set to null (reference mode)
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }))
         .addTextArea(text => {
@@ -223,7 +224,7 @@ export function configureContextWindowBudgetField(
                 void (async () => {
                     delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }))
         .addText(text => {
@@ -333,7 +334,7 @@ export function configureEnableWebSearchField(
                 void (async () => {
                     plugin.settings.enableWebSearch = value;
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }));
 }
@@ -355,7 +356,7 @@ export function configureEnableLinkContextField(
                 void (async () => {
                     plugin.settings.enableUrlContext = value;
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }));
 }
@@ -383,7 +384,7 @@ export function configureWebSearchModelField(
                         plugin.settings.groundingModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             });
         });
@@ -430,7 +431,7 @@ export function configureEnableComputationalSolverField(
                 void (async () => {
                     plugin.settings.enableCodeExecution = value;
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }));
 }
@@ -452,7 +453,7 @@ export function configureEnableAgentWriteAccessField(
                 void (async () => {
                     plugin.settings.enableAgentWriteAccess = value;
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }));
 }
@@ -481,7 +482,7 @@ export function configureCodeExecutionModelField(
                         plugin.settings.codeModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             });
         });

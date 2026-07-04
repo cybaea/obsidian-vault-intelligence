@@ -117,11 +117,12 @@ export function configureGoogleApiKeyField(
 export function configureOllamaEndpointField(
     setting: Setting,
     plugin: IVaultIntelligencePlugin,
-    context: SettingsTabContext
+    _context: SettingsTabContext
 ): void {
-    const { containerEl } = context;
-
-    const statusEl = containerEl.createDiv({ cls: 'vi-ollama-status' });
+    // Render the status badge into the setting row's control area, not the
+    // root container. In declarative mode, context.containerEl is the root
+    // tab container; rendering there detaches the badge from its setting.
+    const statusEl = setting.controlEl.createDiv({ cls: 'vi-ollama-status' });
     const updateStatus = async (url: string) => {
         if (!url) {
             statusEl.setText("");
@@ -348,7 +349,7 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 /**
  * Helper for API Key Description
  */
-function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
+export function getApiKeyDescription(app: App, storeFailure: boolean, onRetry: () => void): DocumentFragment {
     const configDir = app.vault.configDir;
     const fragment = createFragment();
 

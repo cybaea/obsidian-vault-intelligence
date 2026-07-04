@@ -10,7 +10,7 @@ import { isComplexLanguage } from "../../utils/language-utils";
 import { logger } from "../../utils/logger";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
-import { reRenderSection } from "../refreshSettings";
+import { reRenderSection, refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 
@@ -114,7 +114,13 @@ export function configureEmbeddingModelField(
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
                     }
-                    reRenderSection(context, renderExplorerSettings);
+                    // Visibility-only: shows/hides custom embedding model field.
+                    // Note: refreshDomState() does not re-invoke render closures,
+                    // so the dimension dropdown's displayed value may show the
+                    // previous value until the next structural refresh. The
+                    // underlying setting is correct; only the rendered value
+                    // lags. Acceptable trade-off to preserve input focus.
+                    refreshVisibility(context);
                 })();
             });
         });
@@ -244,7 +250,8 @@ export function configureLocalEmbeddingModelField(
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
                     }
-                    reRenderSection(context, renderExplorerSettings);
+                    // Visibility-only: shows/hides custom local model and dimension fields.
+                    refreshVisibility(context);
                 })();
             });
         });
@@ -406,7 +413,8 @@ export function configureEnableDualLoopField(
             .onChange(async (value) => {
                 plugin.settings.enableDualLoop = value;
                 await plugin.saveSettings();
-                renderExplorerSettings(context); // Refresh to show model selector
+                // Visibility-only: shows/hides re-ranking model and custom re-ranking model fields.
+                refreshVisibility(context);
             }));
 }
 
@@ -431,7 +439,8 @@ export function configureReRankingModelField(
                         plugin.settings.reRankingModel = val;
                         await plugin.saveSettings();
                     }
-                    renderExplorerSettings(context);
+                    // Visibility-only: shows/hides custom re-ranking model field.
+                    refreshVisibility(context);
                 })();
             });
         });

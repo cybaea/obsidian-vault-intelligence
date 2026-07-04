@@ -3,10 +3,12 @@ import {
     ButtonComponent,
     EventRef,
     Events,
+    Notice,
     Plugin,
     PluginSettingTab,
     requireApiVersion,
     Setting,
+    SettingDefinition,
     SettingDefinitionItem,
     SettingDefinitionRender,
     SettingGroup,
@@ -16,6 +18,7 @@ import {
 import type { IVaultIntelligencePlugin } from "./types";
 
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "../services/ModelRegistry";
+import { refreshSettings } from "./refreshSettings";
 import {
     configureAllowLocalNetworkAccessField,
     configureEmbeddingChunkSizeField,
@@ -44,6 +47,7 @@ import {
     configureOllamaHeadersField,
     configureRefreshModelListField,
     configureVoyageApiKeyField,
+    getApiKeyDescription,
     renderConnectionSettings,
 } from "./sections/connections";
 import {
@@ -203,36 +207,56 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             return [
                 {
                     desc: 'Configure LLM provider endpoints and private API credentials.',
+                    displayValue: () => {
+                        if (plugin.settings.googleApiKey || plugin.settings.googleApiKeySecret) return 'Google Gemini';
+                        if (plugin.settings.ollamaEndpoint) return 'Ollama';
+                        if (plugin.settings.voyageApiKey || plugin.settings.voyageApiKeySecret) return 'Voyage AI';
+                        return 'Not configured';
+                    },
                     items: this.getConnectionsDefinitions(plugin),
                     name: 'Connections',
+                    status: () => {
+                        const hasKey = plugin.settings.googleApiKey || plugin.settings.googleApiKeySecret
+                            || plugin.settings.ollamaEndpoint || plugin.settings.voyageApiKey || plugin.settings.voyageApiKeySecret;
+                        return hasKey ? null : 'warning';
+                    },
                     type: 'page',
                 },
                 {
                     desc: 'Configure chat model, language, context, and agent capabilities.',
+                    displayValue: () => plugin.settings.chatModel || 'Not set',
                     items: this.getResearcherDefinitions(plugin),
                     name: 'Researcher',
                     type: 'page',
                 },
                 {
                     desc: 'Configure embedding models, search ranking, and graph settings.',
+                    displayValue: () => plugin.settings.embeddingModel || 'Not set',
                     items: this.getExplorerDefinitions(plugin),
                     name: 'Explorer',
+                    status: () => plugin.requiresIndexWipeOnExit === true ? 'warning' : null,
                     type: 'page',
                 },
                 {
                     desc: 'Configure vault hygiene automation and ontology maintenance.',
+                    displayValue: () => plugin.settings.gardenerModel ? 'Configured' : 'Not configured',
                     items: this.getGardenerDefinitions(plugin),
                     name: 'Gardener',
                     type: 'page',
                 },
                 {
                     desc: 'Manage local vector databases and sharded storage.',
+                    displayValue: () => plugin.settings.embeddingModel ? `Shard: ${plugin.settings.embeddingModel}` : 'No active shard',
                     items: this.getStorageDefinitions(plugin),
                     name: 'Storage',
                     type: 'page',
                 },
                 {
                     desc: 'Configure external MCP server connections.',
+                    displayValue: () => {
+                        const count = (plugin.settings.mcpServers || []).length;
+                        return count > 0 ? `${count} server${count !== 1 ? 's' : ''}` : 'Disabled';
+                    },
                     name: 'MCP Tools',
                     page: () => new McpSettingPage(this.app, plugin, this),
                     type: 'page',
@@ -311,16 +335,34 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                 heading: 'Connection settings',
                 items: [
                     {
+                        desc: 'Secure storage is unavailable. Click to retry migration after reloading Obsidian.',
+                        name: 'Secure storage status',
+                        render: (setting: Setting) => {
+                            setting.setDesc(getApiKeyDescription(plugin.app, plugin.settings.secretStorageFailure, () => {
+                                void (async () => {
+                                    plugin.settings.secretStorageFailure = false;
+                                    await plugin.saveSettings();
+                                    const obsidian = "Obsidian";
+                                    new Notice(`Reload ${obsidian} to retry migration.`);
+                                    refreshSettings(context);
+                                })();
+                            }));
+                        },
+                        visible: () => plugin.settings.secretStorageFailure === true,
+                    },
+                    {
                         desc: 'Learn how to use the plugin and explore advanced features.',
                         name: 'Documentation',
                         render: (setting: Setting) => configureDocumentationField(setting, plugin, context),
                     },
                     {
+                        aliases: ['credential', 'token', 'secret'],
                         desc: 'Secure credential for connecting to Google Gemini models.',
                         name: 'Google API key',
                         render: (setting: Setting) => configureGoogleApiKeyField(setting, plugin, context),
                     },
                     {
+                        aliases: ['url', 'server', 'local model'],
                         desc: 'Server url for local model provider.',
                         name: 'Ollama endpoint',
                         render: (setting: Setting) => configureOllamaEndpointField(setting, plugin, context),
@@ -357,6 +399,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
         return [
             {
+                aliases: ['llm', 'ai', 'engine'],
                 desc: 'The main engine used for reasoning and answering questions.',
                 name: 'Chat model',
                 render: (setting: Setting) => configureChatModelField(setting, plugin, context),
@@ -472,6 +515,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
         return [
             {
+                aliases: ['vector', 'index'],
                 desc: 'Choose which provider generates vector embeddings.',
                 name: 'Embedding provider',
                 render: (setting: Setting) => configureEmbeddingProviderField(setting, plugin, context),
@@ -528,6 +572,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                 heading: 'Search',
                 items: [
                     {
+                        aliases: ['rerank', 'reranking', 'two-loop'],
                         desc: 'Combine fast local vector search with deep AI re-ranking for maximum accuracy.',
                         name: 'Enable dual-loop search',
                         render: (setting: Setting) => configureEnableDualLoopField(setting, plugin, context),
@@ -656,28 +701,20 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                 heading: 'Exclusions',
                 items: [
                     {
-                        desc: 'Folders ignored by the gardener during analysis.',
+                        desc: 'Folders ignored by the gardener during analysis. Use the search field to add new exclusions.',
                         name: 'Excluded folders',
-                        render: (_setting: Setting, group: SettingGroup) => {
-                            configureExcludedFoldersList(group.listEl, plugin, context);
-                        },
-                    },
-                    {
-                        desc: 'Search for a folder to ignore.',
-                        name: 'Add excluded folder',
-                        render: (setting: Setting) => {
-                            // The add-excluded-folder field needs the render function returned
-                            // by configureExcludedFoldersList. In the declarative path, the
-                            // list is rendered into group.listEl by the sibling definition above.
-                            // We create a container within the setting's parent for the list
-                            // and wire up the interdependent render function.
-                            const listContainer = setting.settingEl.parentElement;
-                            if (listContainer) {
-                                const renderFn = configureExcludedFoldersList(listContainer, plugin, context);
-                                configureAddExcludedFolderField(setting, plugin, context, renderFn);
-                            } else {
-                                configureAddExcludedFolderField(setting, plugin, context, () => { });
-                            }
+                        render: (setting: Setting, _group: SettingGroup) => {
+                            // Render both the list and the add-field below the setting's
+                            // info row, sharing a single renderFn — matching the
+                            // imperative path (gardener.ts:511-513).
+                            //
+                            // The list is isolated in its own child div so that
+                            // renderExcludedFolders (which calls containerEl.empty())
+                            // only wipes the list area, not the setting row.
+                            const wrapperEl = setting.settingEl.createDiv({ cls: 'vi-excluded-folders' });
+                            const excludedFoldersEl = wrapperEl.createDiv();
+                            const renderExcludedFolders = configureExcludedFoldersList(excludedFoldersEl, plugin, context);
+                            configureAddExcludedFolderField(new Setting(wrapperEl), plugin, context, renderExcludedFolders);
                         },
                     },
                 ],
@@ -877,6 +914,15 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
             {
                 heading: 'Model filtering',
                 items: this.getHiddenModelDefinitions(plugin, context),
+                search: {
+                    match: (def: SettingDefinition, query: string): boolean => {
+                        const lowerQuery = query.toLowerCase();
+                        const name = def.name?.toLowerCase() ?? '';
+                        const desc = typeof def.desc === 'string' ? def.desc.toLowerCase() : '';
+                        return name.includes(lowerQuery) || desc.includes(lowerQuery);
+                    },
+                    placeholder: 'Filter models...',
+                },
                 type: 'group',
             },
         ];

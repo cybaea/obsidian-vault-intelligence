@@ -1,7 +1,7 @@
 import { App } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { reRenderSection, refreshSettings } from '../../src/settings/refreshSettings';
+import { reRenderSection, refreshSettings, refreshVisibility } from '../../src/settings/refreshSettings';
 import { VaultIntelligenceSettingTab } from '../../src/settings/settingsTab';
 import { SettingsTabContext } from '../../src/settings/SettingsTabContext';
 import { IVaultIntelligencePlugin, VaultIntelligenceSettings } from '../../src/settings/types';
@@ -105,5 +105,53 @@ describe('reRenderSection', () => {
 
         expect(mockContainerEl.empty).toHaveBeenCalledOnce();
         expect(renderFn).toHaveBeenCalledWith(context);
+    });
+});
+
+describe('refreshVisibility', () => {
+    let mockPlugin: IVaultIntelligencePlugin;
+    let mockSettings: VaultIntelligenceSettings;
+    let mockApp: App;
+    let context: SettingsTabContext;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockSettings = {} as unknown as VaultIntelligenceSettings;
+        mockApp = {} as unknown as App;
+
+        mockPlugin = {
+            app: mockApp,
+            manifest: { id: 'vault-intelligence' },
+            saveSettings: vi.fn().mockResolvedValue(undefined),
+            settings: mockSettings,
+        } as unknown as IVaultIntelligencePlugin;
+
+        context = {
+            app: mockApp,
+            containerEl: { empty: vi.fn() } as unknown as HTMLElement,
+            plugin: mockPlugin,
+        };
+    });
+
+    it('should call tabInstance.refreshDomState() when v1.13+ is available', () => {
+        setMockApiVersion('1.13.0');
+        const refreshDomStateSpy = vi.fn();
+        context.tabInstance = { refreshDomState: refreshDomStateSpy } as unknown as VaultIntelligenceSettingTab;
+
+        refreshVisibility(context);
+
+        expect(refreshDomStateSpy).toHaveBeenCalledOnce();
+    });
+
+    it('should fall back to refreshSettings (openTabById) when v1.13+ is not available', () => {
+        setMockApiVersion('1.12.0');
+        const openTabById = vi.fn();
+        mockPlugin.app = {
+            setting: { openTabById },
+        } as unknown as App;
+
+        refreshVisibility(context);
+
+        expect(openTabById).toHaveBeenCalledWith('vault-intelligence');
     });
 });

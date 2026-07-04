@@ -7,7 +7,7 @@ import { ModelRegistry } from "../../services/ModelRegistry";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { renderModelDropdown } from "../components";
-import { refreshSettings } from "../refreshSettings";
+import { refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
 
@@ -40,7 +40,7 @@ export function configureGardenerModelField(
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             });
         });
@@ -99,7 +99,7 @@ export function configureGardenerContextBudgetField(
                 void (async () => {
                     delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }))
         .addText(text => {
@@ -145,7 +145,7 @@ export function configureGardenerRulesField(
                 void (async () => {
                     plugin.settings.gardenerSystemInstruction = null;
                     await plugin.saveSettings();
-                    refreshSettings(context);
+                    refreshVisibility(context);
                 })();
             }))
         .addTextArea(text => {
