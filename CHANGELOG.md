@@ -15,6 +15,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   Add settings search compatibility for Obsidian v1.13.0+ users. Plugin settings are now indexed and searchable in Obsidian's global settings search. The existing settings tab UI is preserved for users on older versions. (Issue #595)
 -   Add configurable "Token estimation ratio" setting (Advanced > Performance) so users with non-English (CJK) or code-heavy vaults can fine-tune character-to-token budgeting. Previously hardcoded at 4 chars/token. (Issue #386)
+-   **Note** that you may need to rebuild the index after upgrade. You can find the button for this at the bottom of the Explorer tab in the plugin settings.
 
 ### Developer features
 
