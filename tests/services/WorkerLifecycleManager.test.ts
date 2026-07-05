@@ -90,6 +90,15 @@ describe('WorkerLifecycleManager', () => {
         expect(mockPersistenceManager.saveState).toHaveBeenCalledWith(expect.any(Uint8Array), 'test-model', 768);
     });
 
+    it('should use executeMutation (not executeQuery) for saveState to serialize with index mutations', async () => {
+        // This prevents graph.export() from capturing a half-updated graph
+        // when a concurrent updateFiles mutation is in progress.
+        await lifecycle.saveState();
+
+        expect(mockWorkerManager.executeMutation).toHaveBeenCalled();
+        expect(mockWorkerManager.executeQuery).not.toHaveBeenCalled();
+    });
+
     it('should handle commitRestart', async () => {
         await lifecycle.commitRestart();
 

@@ -285,6 +285,8 @@ const IndexerWorker: WorkerAPI = {
     async deleteFile(path: string) {
         const normalizedPath = workerNormalizePath(path);
         if (graph.hasNode(normalizedPath)) {
+            const caller = new Error().stack?.split('\n')[2]?.trim() || 'unknown';
+            workerLogger.debug(`[deleteFile] Deleting graph node: ${normalizedPath} (caller: ${caller})`);
             graph.dropNode(normalizedPath);
         }
         await IndexerWorker.deleteOramaRecord(normalizedPath);
@@ -927,6 +929,11 @@ const IndexerWorker: WorkerAPI = {
 
         if (parsed.graph) graph.import(parsed.graph);
 
+        // Count restored nodes for diagnostics
+        let restoredFileNodes = 0;
+        graph.forEachNode((_, attr) => { if ((attr as GraphNodeData).type === 'file') restoredFileNodes++; });
+        workerLogger.debug(`[loadIndex] Graph restored with ${graph.order} total nodes, ${restoredFileNodes} file nodes.`);
+
         if (parsed.orama) {
             const loadedDimension = parsed.embeddingDimension;
             const expectedDimension = config.embeddingDimension;
@@ -975,6 +982,11 @@ const IndexerWorker: WorkerAPI = {
             if (a.type === 'file' && !validSet.has(node)) orphans.push(node);
         });
 
+        if (orphans.length > 0) {
+            workerLogger.debug(`[pruneOrphans] Pruning ${orphans.length} orphan nodes: ${orphans.join(', ')}`);
+            workerLogger.debug(`[pruneOrphans] validSet has ${validSet.size} entries. First 5: ${[...validSet].slice(0, 5).join(', ')}`);
+        }
+
         for (const orphan of orphans) {
             await IndexerWorker.deleteFile(orphan);
         }
@@ -991,6 +1003,11 @@ const IndexerWorker: WorkerAPI = {
         } catch (e) {
             workerLogger.warn("[saveIndex] Hot Store update failed:", e);
         }
+
+        // Count file nodes in graph for diagnostics
+        let fileNodeCount = 0;
+        graph.forEachNode((_, attr) => { if ((attr as GraphNodeData).type === 'file') fileNodeCount++; });
+        workerLogger.debug(`[saveIndex] Graph has ${graph.order} total nodes, ${fileNodeCount} file nodes.`);
 
         // 2. Prepare SLIM index for "Cold Store" (Vault File)
         // We create a SLIM COPY of the documents record to avoid modifying the IDB data in-place
@@ -1022,6 +1039,10 @@ const IndexerWorker: WorkerAPI = {
             graph: graph.export(),
             orama: oramaData,
         };
+
+        // Count nodes in exported graph
+        const exportedGraph = serialized.graph as { nodes?: unknown[] };
+        workerLogger.debug(`[saveIndex] Exported graph has ${exportedGraph?.nodes?.length ?? 'unknown'} nodes in serialized data.`);
 
         const encoded = encode(serialized, { maxDepth: GRAPH_CONSTANTS.MAX_SERIALIZATION_DEPTH }) as unknown as Uint8Array;
         return encoded;
@@ -1129,6 +1150,7 @@ const IndexerWorker: WorkerAPI = {
         updateGraphEdges(normalizedPath, content, links);
 
         if (content.trim().length === 0) {
+            workerLogger.debug(`[updateFile] Empty content, deleting: ${normalizedPath} (content length: ${content.length})`);
             await IndexerWorker.deleteFile(normalizedPath);
             return;
         }
@@ -1298,7 +1320,12 @@ function updateGraphNode(path: string, content: string, mtime: number, size: num
     if (!graph.hasNode(path)) {
         graph.addNode(path, { hash, headers, mtime, path, size, title, tokenCount, topics, type: 'file' });
     } else {
-        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount, topics }));
+        // Always set type: 'file' — the node may have been previously added as
+        // type: 'topic' by updateGraphEdges (when another file links to it
+        // before it has been indexed). Without this, getFileStates() skips it
+        // (it only returns type: 'file' nodes), causing the file to appear
+        // "no graph node" and be re-embedded on every restart.
+        graph.updateNodeAttributes(path, (attr: unknown) => ({ ...(attr as GraphNodeData), hash, headers, mtime, size, title, tokenCount, topics, type: 'file' }));
     }
 }
 
@@ -1340,7 +1367,7 @@ function updateGraphEdges(path: string, content: string, resolvedLinks: string[]
             if (!item) continue;
 
             const resolved = resolvePath(item, aliasMap, dir);
-            if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'file' });
+            if (!graph.hasNode(resolved)) graph.addNode(resolved, { mtime: 0, path: resolved, size: 0, type: 'topic' });
             if (!graph.hasEdge(path, resolved)) {
                 graph.addEdge(path, resolved, {
                     source: 'frontmatter-property',

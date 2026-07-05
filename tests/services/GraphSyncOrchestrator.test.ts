@@ -115,6 +115,24 @@ describe('GraphSyncOrchestrator (Facade)', () => {
         expect(mockWorkerApi.updateFiles).toHaveBeenCalled();
     });
 
+    it('should call saveState directly at the end of scanAll to guarantee persistence', async () => {
+        // This ensures the complete graph state — including all updated
+        // mtime/size values — is persisted before scanAll returns, rather
+        // than relying on requestIdleCallback which may not fire before unload.
+        const mockFile = { basename: 'test', path: 'test.md', stat: { size: 100 } } as unknown as TFile;
+        mockVaultManager.getMarkdownFiles.mockReturnValue([mockFile]);
+        mockVaultManager.getFileByPath.mockReturnValue(mockFile);
+        mockWorkerApi.getFileStates.mockResolvedValue({});
+
+        const lifecycleManager = (orchestrator as any).lifecycleManager;
+        const saveStateSpy = vi.spyOn(lifecycleManager, 'saveState').mockResolvedValue(undefined);
+
+        await orchestrator.scanAll();
+
+        // saveState should have been called directly (not just scheduled via requestSave)
+        expect(saveStateSpy).toHaveBeenCalled();
+    });
+
     it('should handle commitConfigChange by pausing, flushing, restarting, and resuming', async () => {
         const eventDebouncer = (orchestrator as any).eventDebouncer;
         const pauseSpy = vi.spyOn(eventDebouncer, 'pause');

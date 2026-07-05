@@ -1,45 +1,36 @@
-import { Setting, App, Plugin, TextComponent } from "obsidian";
+import { Setting, TextComponent } from "obsidian";
+
+import type { IVaultIntelligencePlugin } from "../types";
 
 import { DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { FolderSuggest } from "../../views/FolderSuggest";
 import { renderModelDropdown } from "../components";
+import { refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
-import { IVaultIntelligencePlugin, DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
+import { DEFAULT_SETTINGS, DEFAULT_GARDENER_SYSTEM_PROMPT } from "../types";
 
-interface InternalApp extends App {
-    setting: {
-        openTabById: (id: string) => void;
-    };
-}
+const gardener = "Gardener";
+const gemini = "Gemini";
+const ontology = "Ontology";
+const archive = "Archive";
 
-export function renderGardenerSettings(context: SettingsTabContext): void {
-    const { containerEl, plugin } = context;
-    const gardener = "Gardener";
-    const gemini = "Gemini";
-    const ontology = "Ontology";
-    const archive = "Archive";
-
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.createSpan({ text: `Configure the ${gardener.toLowerCase()} to maintain your vault’s ontology and hygiene. ` });
-        div.createEl('a', {
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' },
-            text: 'View documentation'
-        });
-    });
-
+/**
+ * Gardener model dropdown — the model used for analysis and suggestions.
+ */
+export function configureGardenerModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
     const canUseChat = hasApiKey || hasOllama;
-
-
-    // --- 1. Model & Limits ---
     const gardenerModelCurrent = plugin.settings.gardenerModel;
     const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
-    const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
 
-    new Setting(containerEl)
+    setting
         .setName(`${gardener} model`)
         .setDesc('The model used for analysis and suggesting improvements.')
         .addDropdown(dropdown => {
@@ -49,37 +40,56 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                         plugin.settings.gardenerModel = val;
                         await plugin.saveSettings();
                     }
-                    refreshSettings(plugin);
+                    refreshVisibility(context);
                 })();
             });
         });
+}
 
-    if (canUseChat && !isGardenerPreset) {
-        new Setting(containerEl)
-            .setName(`Custom ${gardener.toLowerCase()} model`)
-            .setDesc(`Enter the specific ${gemini} model ID.`)
-            .addText(text => text
-                .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
-                .setValue(gardenerModelCurrent)
-                .onChange((value) => {
-                    void (async () => {
-                        plugin.settings.gardenerModel = value;
-                        await plugin.saveSettings();
-                    })();
-                }));
-    }
+/**
+ * Custom gardener model text input — shown when "custom" is selected.
+ */
+export function configureCustomGardenerModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    const gardenerModelCurrent = plugin.settings.gardenerModel;
 
+    setting
+        .setName(`Custom ${gardener.toLowerCase()} model`)
+        .setDesc(`Enter the specific ${gemini} model ID.`)
+        .addText(text => text
+            .setPlaceholder(DEFAULT_SETTINGS.gardenerModel)
+            .setValue(gardenerModelCurrent)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.gardenerModel = value;
+                    await plugin.saveSettings();
+                })();
+            }));
+}
+
+/**
+ * Context budget (tokens) — max tokens for a single analysis, with
+ * per-model override support.
+ */
+export function configureGardenerContextBudgetField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
     const currentModelId = plugin.settings.gardenerModel;
     const gardenerModelLimit = ModelRegistry.getModelById(currentModelId)?.inputTokenLimit ?? 1048576;
     const hasOverride = currentModelId in plugin.settings.modelContextOverrides;
     const resolvedBudget = ModelRegistry.resolveContextBudget(currentModelId, plugin.settings.modelContextOverrides, plugin.settings.gardenerContextBudget);
-    
+
     const displayValue = Math.min(resolvedBudget, gardenerModelLimit);
 
-    new Setting(containerEl)
+    setting
         .setName("Context budget (tokens)")
-        .setDesc(hasOverride 
-            ? `Max tokens allowed for a single analysis. Currently overridden for **${currentModelId}**. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)` 
+        .setDesc(hasOverride
+            ? `Max tokens allowed for a single analysis. Currently overridden for **${currentModelId}**. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`
             : `Max tokens allowed for a single analysis. Currently using provider default. (Model limit: ${gardenerModelLimit.toLocaleString()} tokens)`
         )
         .addExtraButton(btn => btn
@@ -89,7 +99,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     delete plugin.settings.modelContextOverrides[currentModelId];
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshVisibility(context);
                 })();
             }))
         .addText(text => {
@@ -110,9 +120,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 });
             text.inputEl.type = 'number';
         });
+}
 
-    // --- 2. System Instruction ---
-    new Setting(containerEl)
+/**
+ * Gardener rules textarea — base persona and hygiene rules.
+ */
+export function configureGardenerRulesField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    setting
         .setName(`${gardener} rules`)
         .setDesc('The base persona and hygiene rules. Use {{ONTOLOGY_FOLDERS}} and {{NOTE_COUNT}} as placeholders.')
         .setClass('vault-intelligence-system-instruction-setting')
@@ -127,7 +145,7 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 void (async () => {
                     plugin.settings.gardenerSystemInstruction = null;
                     await plugin.saveSettings();
-                    refreshSettings(plugin);
+                    refreshVisibility(context);
                 })();
             }))
         .addTextArea(text => {
@@ -141,11 +159,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 });
             text.inputEl.rows = 10;
         });
+}
 
-    // --- 3. Paths & Retention ---
-    new Setting(containerEl).setName('Paths and retention').setHeading();
-
-    new Setting(containerEl)
+/**
+ * Ontology path text input — folder for concepts, entities, and MOCs.
+ */
+export function configureOntologyPathField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Ontology path')
         .setDesc('Folder where concepts, entities, and MOCs are stored.')
         .addText(text => {
@@ -159,8 +183,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 });
             new FolderSuggest(plugin.app, text.inputEl);
         });
+}
 
-    new Setting(containerEl)
+/**
+ * Gardener plans path text input — folder for proposed plans.
+ */
+export function configureGardenerPlansPathField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName(`${gardener} plans path`)
         .setDesc(`Folder where proposed ${gardener.toLowerCase()} plans are saved.`)
         .addText(text => {
@@ -174,8 +207,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 });
             new FolderSuggest(plugin.app, text.inputEl);
         });
+}
 
-    new Setting(containerEl)
+/**
+ * Plans retention (days) — duration to keep plan files before purging.
+ */
+export function configurePlansRetentionField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Plans retention (days)")
         .setDesc('Duration to keep plan files before purging.')
         .addText(text => text
@@ -190,10 +232,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
 
-    new Setting(containerEl).setName('Orphan management').setHeading();
-
-    new Setting(containerEl)
+/**
+ * Archive folder path — where pruned/deleted notes are moved.
+ */
+export function configureArchiveFolderPathField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Archive folder path')
         .setDesc(`Where to move notes that are pruned or deleted by the ${gardener}.`)
         .addText(text => {
@@ -205,8 +254,18 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                 });
             new FolderSuggest(plugin.app, text.inputEl);
         });
+}
 
-    new Setting(containerEl)
+/**
+ * Orphan grace period (days) — how long a note must be unlinked before
+ * the gardener suggests pruning it.
+ */
+export function configureOrphanGracePeriodField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Orphan grace period (days)")
         .setDesc(`Number of days a note must be unlinked/orphaned before the ${gardener} suggests pruning it.`)
         .addText(text => text
@@ -219,22 +278,27 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     await plugin.saveSettings();
                 }
             }));
+}
 
-    // --- 4. Exclusions ---
-    new Setting(containerEl).setName('Exclusions').setHeading();
-
-    const excludedFoldersEl = containerEl.createDiv();
+/**
+ * Excluded folders list — a dynamic list builder that renders each
+ * excluded folder with a remove button. Takes a container element
+ * since it builds multiple Setting rows dynamically.
+ */
+export function configureExcludedFoldersList(
+    containerEl: HTMLElement,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): () => void {
     const renderExcludedFolders = () => {
-        excludedFoldersEl.empty();
+        containerEl.empty();
         if (plugin.settings.gardenerExcludedFolders.length === 0) {
-            excludedFoldersEl.createEl('i', { text: 'No folders excluded.' });
+            containerEl.createEl('i', { text: 'No folders excluded.' });
         }
         plugin.settings.gardenerExcludedFolders.forEach((folder, index) => {
-            new Setting(excludedFoldersEl)
+            new Setting(containerEl)
                 .setName(folder)
                 .addExtraButton(btn => btn
-                    .setIcon('trash')
-                    .setTooltip('Remove')
                     .setIcon('trash')
                     .setTooltip('Remove')
                     .onClick(() => {
@@ -247,14 +311,25 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
         });
     };
     renderExcludedFolders();
+    return renderExcludedFolders;
+}
 
+/**
+ * Add excluded folder — text input with FolderSuggest and add button.
+ */
+export function configureAddExcludedFolderField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext,
+    renderExcludedFolders: () => void
+): void {
     let addFolderText: TextComponent;
-    new Setting(containerEl)
+    setting
         .setName('Add excluded folder')
         .setDesc('Search for a folder to ignore.')
         .addText(text => {
             addFolderText = text;
-            text.setPlaceholder('Search...')
+            text.setPlaceholder('Search...');
             new FolderSuggest(plugin.app, text.inputEl);
             text.inputEl.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -283,11 +358,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
 
-    // --- 5. Advanced Tuning ---
-    new Setting(containerEl).setName('Analysis tuning').setHeading();
-
-    new Setting(containerEl)
+/**
+ * Recent note limit — max number of recent notes to scan.
+ */
+export function configureRecentNoteLimitField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Recent note limit")
         .setDesc('Max number of recent notes to scan for improvements.')
         .addText(text => text
@@ -302,8 +383,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Re-check cooldown (days) — wait duration before re-examining files.
+ */
+export function configureRecheckCooldownField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Re-check cooldown (days)")
         .setDesc('Wait duration before re-examining unchanged files.')
         .addText(text => text
@@ -320,8 +410,17 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Skip retention (days) — how long to remember skipped files.
+ */
+export function configureSkipRetentionField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Skip retention (days)")
         .setDesc('How long to remember skipped files.')
         .addText(text => text
@@ -338,8 +437,18 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Semantic merge threshold slider — similarity score required to merge
+ * two isolated topics.
+ */
+export function configureSemanticMergeThresholdField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName("Semantic merge threshold")
         .setDesc('Similarity score required to merge two isolated topics (from 0.5 to 1.0). Set to 1.0 to disable semantic merging.')
         .addSlider(slider => slider
@@ -351,8 +460,61 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
             }));
 }
 
-function refreshSettings(plugin: IVaultIntelligencePlugin) {
-    const app = plugin.app as InternalApp;
-    const manifestId = (plugin as unknown as Plugin).manifest.id;
-    app.setting.openTabById(manifestId);
+export function renderGardenerSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const canUseChat = hasApiKey || hasOllama;
+
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+        div.createSpan({ text: `Configure the ${gardener.toLowerCase()} to maintain your vault’s ontology and hygiene. ` });
+        div.createEl('a', {
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.GARDENER, target: '_blank' },
+            text: 'View documentation'
+        });
+    });
+
+    // --- 1. Model & Limits ---
+    const gardenerModelCurrent = plugin.settings.gardenerModel;
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
+    const isGardenerPreset = chatModels.some(m => m.id === gardenerModelCurrent);
+
+    configureGardenerModelField(new Setting(containerEl), plugin, context);
+
+    if (canUseChat && !isGardenerPreset) {
+        configureCustomGardenerModelField(new Setting(containerEl), plugin, context);
+    }
+
+    configureGardenerContextBudgetField(new Setting(containerEl), plugin, context);
+
+    // --- 2. System Instruction ---
+    configureGardenerRulesField(new Setting(containerEl), plugin, context);
+
+    // --- 3. Paths & Retention ---
+    new Setting(containerEl).setName('Paths and retention').setHeading();
+
+    configureOntologyPathField(new Setting(containerEl), plugin, context);
+    configureGardenerPlansPathField(new Setting(containerEl), plugin, context);
+    configurePlansRetentionField(new Setting(containerEl), plugin, context);
+
+    new Setting(containerEl).setName('Orphan management').setHeading();
+
+    configureArchiveFolderPathField(new Setting(containerEl), plugin, context);
+    configureOrphanGracePeriodField(new Setting(containerEl), plugin, context);
+
+    // --- 4. Exclusions ---
+    new Setting(containerEl).setName('Exclusions').setHeading();
+
+    const excludedFoldersEl = containerEl.createDiv();
+    const renderExcludedFolders = configureExcludedFoldersList(excludedFoldersEl, plugin, context);
+
+    configureAddExcludedFolderField(new Setting(containerEl), plugin, context, renderExcludedFolders);
+
+    // --- 5. Advanced Tuning ---
+    new Setting(containerEl).setName('Analysis tuning').setHeading();
+
+    configureRecentNoteLimitField(new Setting(containerEl), plugin, context);
+    configureRecheckCooldownField(new Setting(containerEl), plugin, context);
+    configureSkipRetentionField(new Setting(containerEl), plugin, context);
+    configureSemanticMergeThresholdField(new Setting(containerEl), plugin, context);
 }

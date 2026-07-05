@@ -1,72 +1,20 @@
 import { Notice, Setting, setIcon } from "obsidian";
 
+import type { IVaultIntelligencePlugin } from "../types";
+
 import { logger } from "../../utils/logger";
 import { SettingsTabContext } from "../SettingsTabContext";
 
-export async function renderStorageSettings(context: SettingsTabContext): Promise<void> {
-    const { containerEl, plugin } = context;
-
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
-        div.setText('Manage local vector databases and sharded storage.');
-    });
-
-    // --- 1. Database Index ---
-    new Setting(containerEl)
-        .setName('Active database shards')
-        .setHeading();
-
-    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
-        div.setText('The plugin stores separate indexes for different embedding models to prevent data corruption. Below are the shards currently stored in your vault.');
-    });
-
-    const listContainer = containerEl.createDiv("vi-storage-list");
-    await refreshStorageList(context, listContainer);
-
-    // --- 2. Maintenance ---
-    new Setting(containerEl)
-        .setName('Maintenance')
-        .setHeading();
-
-    new Setting(containerEl)
-        .setName('Purge all data')
-        .setDesc('Completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data.')
-        .addButton(btn => {
-            btn.setButtonText('Purge and reset');
-            interface FlexibleButton {
-                buttonEl: HTMLButtonElement;
-                setDestructive?: () => void;
-            }
-            const flexBtn = btn as unknown as FlexibleButton;
-            if (typeof flexBtn.setDestructive === 'function') {
-                flexBtn.setDestructive();
-            } else {
-                flexBtn.buttonEl.classList.add('mod-destructive');
-            }
-            btn.onClick(() => {
-                // We'll use a simple Notice or custom modal here to avoid 'confirm' lint
-                const notice = new Notice("Purging all data... Click here to confirm or wait to cancel.", 10000);
-                (notice as { messageEl: HTMLElement }).messageEl.onclick = async () => {
-                    try {
-                        await plugin.persistenceManager.purgeAllData();
-                        new Notice("All data purged. Reloading plugin...");
-                        // Reload via internal API if possible, or just notice
-                        const pluginId = plugin.manifest.id;
-                        const app = plugin.app as { plugins?: { disablePlugin: (id: string) => Promise<void>; enablePlugin: (id: string) => Promise<void> } };
-                        if (app.plugins) {
-                            await app.plugins.disablePlugin(pluginId);
-                            await app.plugins.enablePlugin(pluginId);
-                        }
-                    } catch (e) {
-                        logger.error("Purge failed", e);
-                        new Notice("Purge failed. Check console for details.");
-                    }
-                };
-            });
-        });
-}
-
-async function refreshStorageList(context: SettingsTabContext, container: HTMLElement): Promise<void> {
-    const { plugin } = context;
+/**
+ * Storage shard list — a dynamic async list builder that fetches and
+ * renders available database shards. Takes a container element since
+ * it builds multiple DOM rows dynamically.
+ */
+export async function configureStorageList(
+    container: HTMLElement,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): Promise<void> {
     container.empty();
 
     try {
@@ -110,7 +58,7 @@ async function refreshStorageList(context: SettingsTabContext, container: HTMLEl
                     delBtn.onclick = async () => {
                         await plugin.persistenceManager.deleteState(stateFile);
                         new Notice(`Deleted ${stateFile}`);
-                        await refreshStorageList(context, container);
+                        await configureStorageList(container, plugin, _context);
                     };
                 };
             }
@@ -119,4 +67,78 @@ async function refreshStorageList(context: SettingsTabContext, container: HTMLEl
         logger.error("Failed to list storage states", e);
         container.createDiv({ cls: "vi-storage-error", text: "Error loading storage list." });
     }
+}
+
+/**
+ * Purge all data button — completely removes all local indexes, cached
+ * models, and stored states, with a confirmation notice.
+ */
+export function configurePurgeDataField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName('Purge all data')
+        .setDesc('Completely removes all local indexes, cached models, and stored states. Use this if you encounter persistent errors or wish to clean up all plugin data.')
+        .addButton(btn => {
+            btn.setButtonText('Purge and reset');
+            interface FlexibleButton {
+                buttonEl: HTMLButtonElement;
+                setDestructive?: () => void;
+            }
+            const flexBtn = btn as unknown as FlexibleButton;
+            if (typeof flexBtn.setDestructive === 'function') {
+                flexBtn.setDestructive();
+            } else {
+                flexBtn.buttonEl.classList.add('mod-destructive');
+            }
+            btn.onClick(() => {
+                // We'll use a simple Notice or custom modal here to avoid 'confirm' lint
+                const notice = new Notice("Purging all data... Click here to confirm or wait to cancel.", 10000);
+                (notice as { messageEl: HTMLElement }).messageEl.onclick = async () => {
+                    try {
+                        await plugin.persistenceManager.purgeAllData();
+                        new Notice("All data purged. Reloading plugin...");
+                        // Reload via internal API if possible, or just notice
+                        const pluginId = plugin.manifest.id;
+                        const app = plugin.app as { plugins?: { disablePlugin: (id: string) => Promise<void>; enablePlugin: (id: string) => Promise<void> } };
+                        if (app.plugins) {
+                            await app.plugins.disablePlugin(pluginId);
+                            await app.plugins.enablePlugin(pluginId);
+                        }
+                    } catch (e) {
+                        logger.error("Purge failed", e);
+                        new Notice("Purge failed. Check console for details.");
+                    }
+                };
+            });
+        });
+}
+
+export async function renderStorageSettings(context: SettingsTabContext): Promise<void> {
+    const { containerEl, plugin } = context;
+
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
+        div.setText('Manage local vector databases and sharded storage.');
+    });
+
+    // --- 1. Database Index ---
+    new Setting(containerEl)
+        .setName('Active database shards')
+        .setHeading();
+
+    containerEl.createDiv({ cls: 'setting-item-description' }, (div) => {
+        div.setText('The plugin stores separate indexes for different embedding models to prevent data corruption. Below are the shards currently stored in your vault.');
+    });
+
+    const listContainer = containerEl.createDiv("vi-storage-list");
+    await configureStorageList(listContainer, plugin, context);
+
+    // --- 2. Maintenance ---
+    new Setting(containerEl)
+        .setName('Maintenance')
+        .setHeading();
+
+    configurePurgeDataField(new Setting(containerEl), plugin, context);
 }

@@ -1,5 +1,7 @@
 import { Notice, Setting, setIcon } from "obsidian";
 
+import type { IVaultIntelligencePlugin } from "../types";
+
 import { DOCUMENTATION_URLS } from "../../constants";
 import { LocalEmbeddingService } from "../../services/LocalEmbeddingService";
 import { ModelRegistry, LOCAL_EMBEDDING_MODELS } from "../../services/ModelRegistry";
@@ -8,32 +10,25 @@ import { isComplexLanguage } from "../../utils/language-utils";
 import { logger } from "../../utils/logger";
 import { hasGoogleApiKey } from "../../utils/secrets";
 import { renderModelDropdown } from "../components";
+import { reRenderSection, refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
 import { DEFAULT_SETTINGS } from "../types";
 
+const gemini = "Gemini";
+const ollama = "Ollama";
+const voyage = "Voyage AI";
+const analyst = "Analyst";
+const loop = "Loop";
 
-
-export function renderExplorerSettings(context: SettingsTabContext): void {
-    const { containerEl, plugin } = context;
-
-    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
-        div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
-        div.createEl('a', {
-            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
-            text: 'View documentation'
-        });
-    });
-
-    const hasApiKey = hasGoogleApiKey(plugin.settings);
-    const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
-    const gemini = "Gemini";
-    const ollama = "Ollama";
-    const voyage = "Voyage AI";
-    const analyst = "Analyst";
-    const loop = "Loop";
-
-
+/**
+ * Embedding provider dropdown — selects where document vectors are
+ * calculated. Changing this triggers a full vault re-embedding on exit.
+ */
+export function configureEmbeddingProviderField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
     const providerDesc = createFragment();
     providerDesc.appendText('Choose where your document vectors are calculated.');
     providerDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
@@ -41,14 +36,14 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
     });
 
-    new Setting(containerEl)
+    setting
         .setName('Embedding provider')
         .setDesc(providerDesc)
         .addDropdown(dropdown => {
             const google = "Google";
-            const gemini = "Gemini";
+            const geminiLocal = "Gemini";
             const transformers = "Transformers.js";
-            dropdown.addOption('gemini', `${google} ${gemini} (cloud)`)
+            dropdown.addOption('gemini', `${google} ${geminiLocal} (cloud)`)
                 .addOption('ollama', 'Ollama (local server)')
                 .addOption('voyage', `${voyage} (cloud)`)
                 .addOption('local', `${transformers} (local)`)
@@ -78,130 +73,170 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
-                        containerEl.empty();
-                        renderExplorerSettings(context);
+                        reRenderSection(context, renderExplorerSettings);
                     })();
                 });
         });
+}
 
-    if (plugin.settings.embeddingProvider === 'local') {
-        const warning = containerEl.createDiv({ cls: 'vault-intelligence-settings-warning' });
-        setIcon(warning.createSpan(), 'lucide-download-cloud');
-        warning.createSpan({ text: " Local embeddings download model weights (~25MB - 150MB) once. Analysis is performed 100% offline." });
-    }
+/**
+ * Embedding model dropdown — shown for gemini, ollama, and voyage providers.
+ * Changing this triggers a full vault re-embedding on exit.
+ */
+export function configureEmbeddingModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
+    const providerName = plugin.settings.embeddingProvider;
+    const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
+    const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
 
-    // --- 2. Embedding Model ---
-    const embeddingSetting = new Setting(containerEl)
+    setting
         .setName('Embedding model')
         .setDesc(`The specific model used to generate vector embeddings.`);
 
-    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama' || plugin.settings.embeddingProvider === 'voyage') {
-        const providerName = plugin.settings.embeddingProvider;
-        const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
-        const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
-
-        if (providerEnabled) {
-            embeddingSetting.addDropdown(dropdown => {
-                renderModelDropdown(dropdown, onlineEmbeddingModels, plugin.settings.embeddingModel, providerEnabled, hasOllama, (val) => {
-                    void (async () => {
-                        if (val !== 'custom') {
-                            const modelDef = ModelRegistry.getModelById(val);
-                            plugin.settings.embeddingModel = val;
-                            if (modelDef?.dimensions) {
-                                plugin.settings.embeddingDimension = modelDef.dimensions;
-                            } else if (val === 'gemini-embedding-2') {
-                                plugin.settings.embeddingDimension = 768;
-                            }
-                            plugin.requiresIndexWipeOnExit = true;
-                            await plugin.saveSettings(false);
+    if (providerEnabled) {
+        setting.addDropdown(dropdown => {
+            renderModelDropdown(dropdown, onlineEmbeddingModels, plugin.settings.embeddingModel, providerEnabled, hasOllama, (val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        const modelDef = ModelRegistry.getModelById(val);
+                        plugin.settings.embeddingModel = val;
+                        if (modelDef?.dimensions) {
+                            plugin.settings.embeddingDimension = modelDef.dimensions;
+                        } else if (val === 'gemini-embedding-2') {
+                            plugin.settings.embeddingDimension = 768;
                         }
-                        containerEl.empty();
-                        renderExplorerSettings(context);
-                    })();
-                });
-            });
-
-            const current = plugin.settings.embeddingModel;
-            const isPreset = onlineEmbeddingModels.some(m => m.id === current);
-            if (!isPreset) {
-                const labelName = providerName === 'gemini' ? "Gemini" : (providerName === 'voyage' ? "Voyage" : "Ollama");
-                new Setting(containerEl)
-                    .setName(`Custom ${labelName} model`)
-                    .setDesc(`Enter the specific ${labelName} embedding model ID.`)
-                    .addText(text => text
-                        .setValue(current)
-                        .onChange(async (val) => {
-                            plugin.settings.embeddingModel = val;
-                            plugin.requiresIndexWipeOnExit = true;
-                            await plugin.saveSettings(false);
-                        }));
-            }
-        } else {
-            const labelName = providerName === 'gemini' ? 'API key' : (providerName === 'ollama' ? 'Ollama endpoint' : 'Voyage API key');
-            embeddingSetting.addText(text => text
-                .setPlaceholder(`Configure ${labelName} to enable selection`)
-                .setDisabled(true));
-        }
-
-        const dimensionDesc = createFragment();
-        dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
-        dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
-            setIcon(div.createSpan(), 'lucide-alert-triangle');
-            div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
-        });
-
-        new Setting(containerEl)
-            .setName('Embedding dimension')
-            .setDesc(dimensionDesc)
-            .addDropdown(dropdown => {
-                const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
-                const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
-
-                if (providerName === 'voyage') {
-                    dropdown.addOption('1024', '1024 (Standard)')
-                        .addOption('512', '512 (Matryoshka)')
-                        .addOption('256', '256 (Matryoshka)')
-                        .addOption('128', '128 (Matryoshka)')
-                        .addOption('2048', '2048 (Large)');
-                } else if (providerName === 'ollama') {
-                    const nativeDim = currentModel?.dimensions || 768;
-                    dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
-
-                    if (plugin.settings.embeddingModel.includes('nomic')) {
-                        // Nomic models support Matryoshka compression
-                        const name = 'Matryoshka';
-                        if (nativeDim > 512) dropdown.addOption('512', `512 (${name})`);
-                        if (nativeDim > 256) dropdown.addOption('256', `256 (${name})`);
-                        if (nativeDim > 128) dropdown.addOption('128', `128 (${name})`);
-                        dropdown.addOption('64', `64 (${name})`);
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
                     }
-                } else {
-                    dropdown.addOption('768', '768 (Flash / standard)')
-                        .addOption('1536', '1536 (Balanced)')
-                        .addOption('3072', '3072 (Max / v4 default)');
-                }
-
-                dropdown.setValue(String(plugin.settings.embeddingDimension))
-                    .onChange(async (value) => {
-                        const num = parseInt(value);
-                        if (num !== plugin.settings.embeddingDimension) {
-                            plugin.settings.embeddingDimension = num;
-
-                            // Proactive: If they select high dims but are on an old model, suggest the upgrade
-                            if (num > 768 && !isModern && providerName === 'gemini') {
-                                new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
-                            }
-
-                            plugin.requiresIndexWipeOnExit = true;
-                            await plugin.saveSettings(false);
-                            containerEl.empty();
-                            renderExplorerSettings(context);
-                        }
-                    });
+                    // Visibility-only: shows/hides custom embedding model field.
+                    // Note: refreshDomState() does not re-invoke render closures,
+                    // so the dimension dropdown's displayed value may show the
+                    // previous value until the next structural refresh. The
+                    // underlying setting is correct; only the rendered value
+                    // lags. Acceptable trade-off to preserve input focus.
+                    refreshVisibility(context);
+                })();
             });
+        });
     } else {
-        // Local Provider Models
-        embeddingSetting.addDropdown(dropdown => {
+        const labelName = providerName === 'gemini' ? 'API key' : (providerName === 'ollama' ? 'Ollama endpoint' : 'Voyage API key');
+        setting.addText(text => text
+            .setPlaceholder(`Configure ${labelName} to enable selection`)
+            .setDisabled(true));
+    }
+}
+
+/**
+ * Custom embedding model text input — shown when the selected model
+ * is not in the preset list.
+ */
+export function configureCustomEmbeddingModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    const providerName = plugin.settings.embeddingProvider;
+    const labelName = providerName === 'gemini' ? "Gemini" : (providerName === 'voyage' ? "Voyage" : "Ollama");
+    const current = plugin.settings.embeddingModel;
+
+    setting
+        .setName(`Custom ${labelName} model`)
+        .setDesc(`Enter the specific ${labelName} embedding model ID.`)
+        .addText(text => text
+            .setValue(current)
+            .onChange(async (val) => {
+                plugin.settings.embeddingModel = val;
+                plugin.requiresIndexWipeOnExit = true;
+                await plugin.saveSettings(false);
+            }));
+}
+
+/**
+ * Embedding dimension dropdown — controls vector size.
+ * Changing this triggers a full vault re-embedding on exit.
+ */
+export function configureEmbeddingDimensionField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    const providerName = plugin.settings.embeddingProvider;
+
+    const dimensionDesc = createFragment();
+    dimensionDesc.appendText('Control the size of the vector. Higher dimensions mean better search but larger index.');
+    dimensionDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
+        setIcon(div.createSpan(), 'lucide-alert-triangle');
+        div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
+    });
+
+    setting
+        .setName('Embedding dimension')
+        .setDesc(dimensionDesc)
+        .addDropdown(dropdown => {
+            const currentModel = ModelRegistry.getModelById(plugin.settings.embeddingModel);
+            const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
+
+            if (providerName === 'voyage') {
+                dropdown.addOption('1024', '1024 (Standard)')
+                    .addOption('512', '512 (Matryoshka)')
+                    .addOption('256', '256 (Matryoshka)')
+                    .addOption('128', '128 (Matryoshka)')
+                    .addOption('2048', '2048 (Large)');
+            } else if (providerName === 'ollama') {
+                const nativeDim = currentModel?.dimensions || 768;
+                dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
+
+                if (plugin.settings.embeddingModel.includes('nomic')) {
+                    // Nomic models support Matryoshka compression
+                    const name = 'Matryoshka';
+                    if (nativeDim > 512) dropdown.addOption('512', `512 (${name})`);
+                    if (nativeDim > 256) dropdown.addOption('256', `256 (${name})`);
+                    if (nativeDim > 128) dropdown.addOption('128', `128 (${name})`);
+                    dropdown.addOption('64', `64 (${name})`);
+                }
+            } else {
+                dropdown.addOption('768', '768 (Flash / standard)')
+                    .addOption('1536', '1536 (Balanced)')
+                    .addOption('3072', '3072 (Max / v4 default)');
+            }
+
+            dropdown.setValue(String(plugin.settings.embeddingDimension))
+                .onChange(async (value) => {
+                    const num = parseInt(value);
+                    if (num !== plugin.settings.embeddingDimension) {
+                        plugin.settings.embeddingDimension = num;
+
+                        // Proactive: If they select high dims but are on an old model, suggest the upgrade
+                        if (num > 768 && !isModern && providerName === 'gemini') {
+                            new Notice("This dimension works best with modern models like `gemini-embedding-001`. Please check your model selection.");
+                        }
+
+                        plugin.requiresIndexWipeOnExit = true;
+                        await plugin.saveSettings(false);
+                        reRenderSection(context, renderExplorerSettings);
+                    }
+                });
+        });
+}
+
+/**
+ * Local embedding model dropdown — for the Transformers.js provider.
+ */
+export function configureLocalEmbeddingModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    setting
+        .setName('Embedding model')
+        .setDesc(`The specific model used to generate vector embeddings.`)
+        .addDropdown(dropdown => {
             renderModelDropdown(dropdown, LOCAL_EMBEDDING_MODELS, plugin.settings.embeddingModel, true, false, (val) => {
                 void (async () => {
                     if (val !== 'custom') {
@@ -215,127 +250,162 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                         plugin.requiresIndexWipeOnExit = true;
                         await plugin.saveSettings(false);
                     }
-                    containerEl.empty();
-                    renderExplorerSettings(context);
+                    // Visibility-only: shows/hides custom local model and dimension fields.
+                    refreshVisibility(context);
                 })();
             });
         });
+}
 
-        const currentModel = plugin.settings.embeddingModel;
-        const isCustom = !LOCAL_EMBEDDING_MODELS.some(m => m.id === currentModel);
+/**
+ * Custom local model ID text input — for custom HuggingFace ONNX models.
+ */
+export function configureCustomLocalModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    const huggingFace = "HuggingFace";
+    const onnx = "ONNX";
+    const id = "ID";
 
-        if (isCustom) {
-            const huggingFace = "HuggingFace";
-            const onnx = "ONNX";
-            const id = "ID";
-            new Setting(containerEl)
-                .setName(`Custom model ${id}`)
-                .setDesc(`${huggingFace} model id (must be ${onnx} compatible).`)
-                .addText(text => text
-                    .setValue(plugin.settings.embeddingModel)
-                    .onChange((value) => {
-                        void (async () => {
-                            plugin.settings.embeddingModel = value;
-                            plugin.requiresIndexWipeOnExit = true;
-                            await plugin.saveSettings(false);
-                        })();
-                    }))
-                .addButton(btn => btn
-                    .setButtonText("Validate")
-                    .onClick(() => {
-                        void (async () => {
-                            btn.setDisabled(true);
-                            btn.setButtonText("Checking...");
-                            const { validateModel } = await import("../../utils/validation");
-                            const result = await validateModel(plugin.settings.embeddingModel);
-                            if (result.valid) {
-                                new Notice(`Valid! Dims: ${result.recommendedDims}`);
-                                if (result.recommendedDims) {
-                                    plugin.settings.embeddingDimension = result.recommendedDims;
-                                    plugin.requiresIndexWipeOnExit = true;
-                                    await plugin.saveSettings(false);
-                                    containerEl.empty();
-                                    renderExplorerSettings(context);
-                                }
-                            } else {
-                                new Notice(`Invalid: ${result.reason}`, 5000);
-                            }
-                            btn.setDisabled(false);
-                            btn.setButtonText("Validate");
-                        })();
-                    }));
-
-            new Setting(containerEl)
-                .setName('Model dimensions')
-                .setDesc('The output vector size. Incorrect values break search.')
-                .addText(text => text
-                    .setValue(String(plugin.settings.embeddingDimension))
-                    .onChange(async (value) => {
-                        const num = parseInt(value);
-                        if (!isNaN(num)) {
-                            plugin.settings.embeddingDimension = num;
-                            plugin.requiresIndexWipeOnExit = true;
-                            await plugin.saveSettings(false);
-                        }
-                    }));
-        }
-
-        // Force Redownload (Local only)
-        new Setting(containerEl)
-            .setName('Local model status')
-            .setDesc(`Manage the local weights for ${plugin.settings.embeddingModel}.`)
-            .addButton(btn => {
-                btn
-                    .setButtonText('Force re-download')
-                    .setIcon('refresh-cw');
-                interface FlexibleButton {
-                    buttonEl: HTMLButtonElement;
-                    setDestructive?: () => void;
-                }
-                const flexBtn = btn as unknown as FlexibleButton;
-                if (typeof flexBtn.setDestructive === 'function') {
-                    flexBtn.setDestructive();
-                } else {
-                    flexBtn.buttonEl.classList.add('mod-destructive');
-                }
-                btn.onClick(() => {
-                    void (async () => {
-                        const pluginWithService = plugin as unknown as { embeddingService?: unknown };
-                        const service = pluginWithService.embeddingService;
-                        if (service instanceof RoutingEmbeddingService) {
-                            btn.setDisabled(true);
-                            btn.setButtonText("Downloading...");
-                            await service.forceRedownload();
-                            btn.setDisabled(false);
-                            btn.setButtonText("Force re-download");
-                        } else if (service instanceof LocalEmbeddingService) {
-                            btn.setDisabled(true);
-                            btn.setButtonText("Downloading...");
-                            await service.forceRedownload();
-                            btn.setDisabled(false);
-                            btn.setButtonText("Force re-download");
-                        }
-                    })();
-                })
-            });
-
-        // Quantization Option (Local only)
-        new Setting(containerEl)
-            .setName('Quantize local model')
-            .setDesc('Enable 8-bit quantization to reduce memory usage and download size. Disable to run unquantized fp32 model fully on the gpu (much faster but uses more memory).')
-            .addToggle(toggle => toggle
-                .setValue(plugin.settings.embeddingLocalQuantized)
-                .onChange(async (value) => {
-                    plugin.settings.embeddingLocalQuantized = value;
+    setting
+        .setName(`Custom model ${id}`)
+        .setDesc(`${huggingFace} model id (must be ${onnx} compatible).`)
+        .addText(text => text
+            .setValue(plugin.settings.embeddingModel)
+            .onChange((value) => {
+                void (async () => {
+                    plugin.settings.embeddingModel = value;
                     plugin.requiresIndexWipeOnExit = true;
                     await plugin.saveSettings(false);
-                }));
-    }
+                })();
+            }))
+        .addButton(btn => btn
+            .setButtonText("Validate")
+            .onClick(() => {
+                void (async () => {
+                    btn.setDisabled(true);
+                    btn.setButtonText("Checking...");
+                    const { validateModel } = await import("../../utils/validation");
+                    const result = await validateModel(plugin.settings.embeddingModel);
+                    if (result.valid) {
+                        new Notice(`Valid! Dims: ${result.recommendedDims}`);
+                        if (result.recommendedDims) {
+                            plugin.settings.embeddingDimension = result.recommendedDims;
+                            plugin.requiresIndexWipeOnExit = true;
+                            await plugin.saveSettings(false);
+                            reRenderSection(context, renderExplorerSettings);
+                        }
+                    } else {
+                        new Notice(`Invalid: ${result.reason}`, 5000);
+                    }
+                    btn.setDisabled(false);
+                    btn.setButtonText("Validate");
+                })();
+            }));
+}
 
-    // --- 3. Similarity Thresholds ---
-    new Setting(containerEl).setName('Search').setHeading();
+/**
+ * Local model dimensions text input — for custom local models.
+ */
+export function configureLocalModelDimensionsField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName('Model dimensions')
+        .setDesc('The output vector size. Incorrect values break search.')
+        .addText(text => text
+            .setValue(String(plugin.settings.embeddingDimension))
+            .onChange(async (value) => {
+                const num = parseInt(value);
+                if (!isNaN(num)) {
+                    plugin.settings.embeddingDimension = num;
+                    plugin.requiresIndexWipeOnExit = true;
+                    await plugin.saveSettings(false);
+                }
+            }));
+}
 
-    new Setting(containerEl)
+/**
+ * Local model status — force re-download button for local embedding weights.
+ */
+export function configureLocalModelStatusField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName('Local model status')
+        .setDesc(`Manage the local weights for ${plugin.settings.embeddingModel}.`)
+        .addButton(btn => {
+            btn
+                .setButtonText('Force re-download')
+                .setIcon('refresh-cw');
+            interface FlexibleButton {
+                buttonEl: HTMLButtonElement;
+                setDestructive?: () => void;
+            }
+            const flexBtn = btn as unknown as FlexibleButton;
+            if (typeof flexBtn.setDestructive === 'function') {
+                flexBtn.setDestructive();
+            } else {
+                flexBtn.buttonEl.classList.add('mod-destructive');
+            }
+            btn.onClick(() => {
+                void (async () => {
+                    const pluginWithService = plugin as unknown as { embeddingService?: unknown };
+                    const service = pluginWithService.embeddingService;
+                    if (service instanceof RoutingEmbeddingService) {
+                        btn.setDisabled(true);
+                        btn.setButtonText("Downloading...");
+                        await service.forceRedownload();
+                        btn.setDisabled(false);
+                        btn.setButtonText("Force re-download");
+                    } else if (service instanceof LocalEmbeddingService) {
+                        btn.setDisabled(true);
+                        btn.setButtonText("Downloading...");
+                        await service.forceRedownload();
+                        btn.setDisabled(false);
+                        btn.setButtonText("Force re-download");
+                    }
+                })();
+            });
+        });
+}
+
+/**
+ * Quantize local model toggle — enables 8-bit quantization.
+ */
+export function configureQuantizeLocalModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName('Quantize local model')
+        .setDesc('Enable 8-bit quantization to reduce memory usage and download size. Disable to run unquantized fp32 model fully on the gpu (much faster but uses more memory).')
+        .addToggle(toggle => toggle
+            .setValue(plugin.settings.embeddingLocalQuantized)
+            .onChange(async (value) => {
+                plugin.settings.embeddingLocalQuantized = value;
+                plugin.requiresIndexWipeOnExit = true;
+                await plugin.saveSettings(false);
+            }));
+}
+
+/**
+ * Enable dual-loop search toggle — combines fast local vector search
+ * with deep AI re-ranking.
+ */
+export function configureEnableDualLoopField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    setting
         .setName('Enable dual-loop search')
         .setDesc(`Combine fast local vector search (${loop} 1) with deep AI re-ranking (${loop} 2) for maximum accuracy.`)
         .addToggle(toggle => toggle
@@ -343,44 +413,70 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
             .onChange(async (value) => {
                 plugin.settings.enableDualLoop = value;
                 await plugin.saveSettings();
-                renderExplorerSettings(context); // Refresh to show model selector
+                // Visibility-only: shows/hides re-ranking model and custom re-ranking model fields.
+                refreshVisibility(context);
             }));
+}
 
-    if (plugin.settings.enableDualLoop) {
-        const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
-        const reRankingModelCurrent = plugin.settings.reRankingModel;
-        const isReRankingPreset = chatModels.some(m => m.id === reRankingModelCurrent);
+/**
+ * Re-ranking model dropdown — the AI engine for the second search loop.
+ */
+export function configureReRankingModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
+    const reRankingModelCurrent = plugin.settings.reRankingModel;
 
-        new Setting(containerEl)
-            .setName('Re-ranking model')
-            .setDesc(`The AI engine used for the second loop (${analyst}) to verify and rank search results.`)
-            .addDropdown(dropdown => {
-                renderModelDropdown(dropdown, chatModels, reRankingModelCurrent, hasGoogleApiKey(plugin.settings) || !!plugin.settings.ollamaEndpoint, !!plugin.settings.ollamaEndpoint, (val) => {
-                    void (async () => {
-                        if (val !== 'custom') {
-                            plugin.settings.reRankingModel = val;
-                            await plugin.saveSettings();
-                        }
-                        renderExplorerSettings(context);
-                    })();
-                });
-            });
-
-        if (!isReRankingPreset) {
-            new Setting(containerEl)
-                .setName('Custom re-ranking model')
-                .setDesc(`Enter the specific ${gemini} or ${ollama} model ID.`)
-                .addText(text => text
-                    .setPlaceholder(DEFAULT_SETTINGS.reRankingModel)
-                    .setValue(reRankingModelCurrent)
-                    .onChange(async (value) => {
-                        plugin.settings.reRankingModel = value;
+    setting
+        .setName('Re-ranking model')
+        .setDesc(`The AI engine used for the second loop (${analyst}) to verify and rank search results.`)
+        .addDropdown(dropdown => {
+            renderModelDropdown(dropdown, chatModels, reRankingModelCurrent, hasGoogleApiKey(plugin.settings) || !!plugin.settings.ollamaEndpoint, !!plugin.settings.ollamaEndpoint, (val) => {
+                void (async () => {
+                    if (val !== 'custom') {
+                        plugin.settings.reRankingModel = val;
                         await plugin.saveSettings();
-                    }));
-        }
-    }
+                    }
+                    // Visibility-only: shows/hides custom re-ranking model field.
+                    refreshVisibility(context);
+                })();
+            });
+        });
+}
 
-    new Setting(containerEl)
+/**
+ * Custom re-ranking model text input — shown when "custom" is selected.
+ */
+export function configureCustomReRankingModelField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    const reRankingModelCurrent = plugin.settings.reRankingModel;
+
+    setting
+        .setName('Custom re-ranking model')
+        .setDesc(`Enter the specific ${gemini} or ${ollama} model ID.`)
+        .addText(text => text
+            .setPlaceholder(DEFAULT_SETTINGS.reRankingModel)
+            .setValue(reRankingModelCurrent)
+            .onChange(async (value) => {
+                plugin.settings.reRankingModel = value;
+                await plugin.saveSettings();
+            }));
+}
+
+/**
+ * Minimum similarity score slider — relevance threshold.
+ */
+export function configureMinSimilarityScoreField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Minimum similarity score')
         .setDesc('Relevance threshold. Results below this are hidden.')
         .addSlider(slider => slider
@@ -390,8 +486,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 plugin.settings.minSimilarityScore = value;
                 await plugin.saveSettings();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Similar notes limit text input — max results in the sidebar.
+ */
+export function configureSimilarNotesLimitField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Similar notes limit')
         .setDesc('Max results displayed in the sidebar.')
         .addText(text => text
@@ -404,8 +509,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     await plugin.saveSettings();
                 }
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Semantic graph node limit slider — max nodes in galaxy view.
+ */
+export function configureSemanticGraphNodeLimitField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Semantic graph node limit')
         .setDesc('Maximum number of nodes to render in the semantic galaxy view.')
         .addSlider(slider => slider
@@ -415,8 +529,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 plugin.settings.semanticGraphNodeLimit = value;
                 await plugin.saveSettings();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Structural edge thickness slider — visual weight of wikilinks.
+ */
+export function configureStructuralEdgeThicknessField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Structural edge thickness')
         .setDesc('Visual weight of explicit wikilinks in the semantic galaxy.')
         .addSlider(slider => slider
@@ -426,8 +549,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 plugin.settings.structuralEdgeThickness = value;
                 await plugin.saveSettings();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Semantic edge thickness slider — visual weight of AI relationships.
+ */
+export function configureSemanticEdgeThicknessField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Semantic edge thickness')
         .setDesc('Visual weight of implied AI relationships in the semantic galaxy.')
         .addSlider(slider => slider
@@ -437,8 +569,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 plugin.settings.semanticEdgeThickness = value;
                 await plugin.saveSettings();
             }));
+}
 
-    new Setting(containerEl)
+/**
+ * Keyword match weight slider — calibration for keyword vs vector search.
+ */
+export function configureKeywordMatchWeightField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Keyword match weight')
         .setDesc('Calibration for keyword vs vector search. Higher values make keyword matches more conservative.')
         .addSlider(slider => slider
@@ -448,7 +589,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                 plugin.settings.keywordWeight = value;
                 await plugin.saveSettings();
             }));
+}
 
+/**
+ * Implicit folder semantics dropdown — controls how folder paths map to
+ * semantic topics. Changing this triggers a full vault re-scan on exit.
+ */
+export function configureImplicitFolderSemanticsField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
     const folderSemDesc = createFragment();
     folderSemDesc.appendText('Controls how physical folder paths are mapped to semantic topics. ');
     folderSemDesc.createEl('a', { attr: { href: DOCUMENTATION_URLS.SECTIONS.FOLDER_SEMANTICS, target: '_blank' }, text: 'Read the guide' });
@@ -462,7 +613,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
         div.createSpan({ text: ' Changing this triggers a full vault re-scan on exit.' });
     });
 
-    new Setting(containerEl)
+    setting
         .setName('Implicit folder semantics')
         .setDesc(folderSemDesc)
         .addDropdown(dropdown => dropdown
@@ -477,9 +628,17 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     await plugin.saveSettings();
                 }
             }));
+}
 
-    // --- 4. Re-index Button ---
-    new Setting(containerEl)
+/**
+ * Re-index vault button — wipes and rebuilds all embeddings.
+ */
+export function configureReIndexVaultField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
         .setName('Re-index vault')
         .setDesc('Wipe and rebuild all embeddings. Required after changing models.')
         .addButton(btn => btn
@@ -518,4 +677,93 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
                     }
                 })();
             }));
+}
+
+export function renderExplorerSettings(context: SettingsTabContext): void {
+    const { containerEl, plugin } = context;
+
+    containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div: HTMLDivElement) => {
+        div.createSpan({ text: 'Configure how the explorer finds connections and similar notes in your vault. ' });
+        div.createEl('a', {
+            attr: { href: DOCUMENTATION_URLS.SECTIONS.EXPLORER, target: '_blank' },
+            text: 'View documentation'
+        });
+    });
+
+    const hasApiKey = hasGoogleApiKey(plugin.settings);
+    const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
+
+    // --- 1. Embedding Provider ---
+    configureEmbeddingProviderField(new Setting(containerEl), plugin, context);
+
+    if (plugin.settings.embeddingProvider === 'local') {
+        const warning = containerEl.createDiv({ cls: 'vault-intelligence-settings-warning' });
+        setIcon(warning.createSpan(), 'lucide-download-cloud');
+        warning.createSpan({ text: " Local embeddings download model weights (~25MB - 150MB) once. Analysis is performed 100% offline." });
+    }
+
+    // --- 2. Embedding Model ---
+    const embeddingSetting = new Setting(containerEl);
+
+    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama' || plugin.settings.embeddingProvider === 'voyage') {
+        const providerName = plugin.settings.embeddingProvider;
+        const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
+        const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
+
+        configureEmbeddingModelField(embeddingSetting, plugin, context);
+
+        const current = plugin.settings.embeddingModel;
+        const isPreset = onlineEmbeddingModels.some(m => m.id === current);
+        if (providerEnabled && !isPreset) {
+            configureCustomEmbeddingModelField(new Setting(containerEl), plugin, context);
+        }
+
+        configureEmbeddingDimensionField(new Setting(containerEl), plugin, context);
+    } else {
+        // Local Provider Models
+        configureLocalEmbeddingModelField(embeddingSetting, plugin, context);
+
+        const currentModel = plugin.settings.embeddingModel;
+        const isCustom = !LOCAL_EMBEDDING_MODELS.some(m => m.id === currentModel);
+
+        if (isCustom) {
+            configureCustomLocalModelField(new Setting(containerEl), plugin, context);
+            configureLocalModelDimensionsField(new Setting(containerEl), plugin, context);
+        }
+
+        // Force Redownload (Local only)
+        configureLocalModelStatusField(new Setting(containerEl), plugin, context);
+
+        // Quantization Option (Local only)
+        configureQuantizeLocalModelField(new Setting(containerEl), plugin, context);
+    }
+
+    // --- 3. Similarity Thresholds ---
+    new Setting(containerEl).setName('Search').setHeading();
+
+    configureEnableDualLoopField(new Setting(containerEl), plugin, context);
+
+    if (plugin.settings.enableDualLoop) {
+        const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
+        const reRankingModelCurrent = plugin.settings.reRankingModel;
+        const isReRankingPreset = chatModels.some(m => m.id === reRankingModelCurrent);
+
+        configureReRankingModelField(new Setting(containerEl), plugin, context);
+
+        if (!isReRankingPreset) {
+            configureCustomReRankingModelField(new Setting(containerEl), plugin, context);
+        }
+    }
+
+    configureMinSimilarityScoreField(new Setting(containerEl), plugin, context);
+    configureSimilarNotesLimitField(new Setting(containerEl), plugin, context);
+    configureSemanticGraphNodeLimitField(new Setting(containerEl), plugin, context);
+    configureStructuralEdgeThicknessField(new Setting(containerEl), plugin, context);
+    configureSemanticEdgeThicknessField(new Setting(containerEl), plugin, context);
+    configureKeywordMatchWeightField(new Setting(containerEl), plugin, context);
+    configureImplicitFolderSemanticsField(new Setting(containerEl), plugin, context);
+
+    // --- 4. Re-index Button ---
+    configureReIndexVaultField(new Setting(containerEl), plugin, context);
 }
