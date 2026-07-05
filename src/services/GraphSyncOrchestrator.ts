@@ -78,6 +78,7 @@ export class GraphSyncOrchestrator {
             const needsForcedScan = await this.lifecycleManager.initializeWorker(forceWipe);
             
             this.eventDebouncer.registerEvents((path) => {
+                logger.debug(`[GraphSyncOrchestrator] EventDebouncer onDelete callback fired for: ${path}`);
                 void this.workerManager.executeMutation(api => api.deleteFile(path));
                 this.lifecycleManager.requestSave();
             });
@@ -182,6 +183,10 @@ export class GraphSyncOrchestrator {
                 const { mtime, size } = this.vaultManager.getFileStat(file);
 
                 if (!state || state.mtime !== mtime || state.size !== size) {
+                    const reason = !state ? 'no graph node'
+                        : state.mtime !== mtime ? `mtime mismatch: graph=${state.mtime} vs file=${mtime}`
+                        : `size mismatch: graph=${state.size} vs file=${size}`;
+                    logger.debug(`[GraphSyncOrchestrator] Re-indexing ${file.path}: ${reason}`);
                     filesToProcess.push(file);
                 }
             }
