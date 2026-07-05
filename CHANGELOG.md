@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   chore(deps-dev): bump js-yaml from 4.1.1 to 4.3.0 in the npm_and_yarn group across 1 directory --PR [#599](https://github.com/cybaea/obsidian-vault-intelligence/pull/599).
+
 ## [9.7.0] - 2026-07-05
 
 ### User features
