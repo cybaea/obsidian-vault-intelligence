@@ -142,7 +142,7 @@ export class WorkerLifecycleManager {
         const { dimension, id: modelId } = this.workerManager.activeModel;
         if (!dimension || !modelId) return;
 
-        this.savePromise = this.workerManager.executeQuery(async (api) => {
+        this.savePromise = this.workerManager.executeMutation(async (api) => {
             try {
                 const stateBuffer = await api.saveIndex();
                 await this.persistenceManager.saveState(stateBuffer, modelId, dimension);

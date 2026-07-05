@@ -4,6 +4,39 @@ import { vi } from 'vitest';
  * This file is aliased in vitest.config.mts.
  */
 
+/**
+ * Creates a recursive mock DOM element. Each call returns a fresh object
+ * with chained create* methods that return nested mocks, so deeply
+ * nested DOM construction (e.g. `el.createDiv().createSpan()`) works
+ * without throwing. `vi.fn()` spies are used so tests can assert on
+ * calls when needed.
+ */
+function mockElement(): any {
+    const el: any = {
+        addClass: vi.fn(),
+        addEventListener: vi.fn(),
+        appendChild: vi.fn(),
+        children: [],
+        classList: { add: vi.fn(), contains: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+        className: '',
+        createDiv: vi.fn().mockImplementation(() => mockElement()),
+        createEl: vi.fn().mockImplementation(() => mockElement()),
+        createSpan: vi.fn().mockImplementation(() => mockElement()),
+        empty: vi.fn(),
+        options: { item: vi.fn(), length: 0 },
+        querySelector: vi.fn().mockReturnValue(null),
+        remove: vi.fn(),
+        setAttribute: vi.fn(),
+        setText: vi.fn(),
+        style: {},
+        textContent: '',
+        title: '',
+        value: '',
+    };
+    return el;
+}
+
+
 export class ItemView {
     contentEl: HTMLElement = {} as HTMLElement;
     icon: string = "";
@@ -72,7 +105,7 @@ export class Plugin {
 
 export class PluginSettingTab {
     app: App = new App();
-    containerEl: HTMLElement = {} as HTMLElement;
+    containerEl: HTMLElement = mockElement();
     settingItems: unknown[] = [];
     constructor(_app: App, _plugin: Plugin) { }
     display(): void { }
@@ -95,9 +128,9 @@ export class SettingGroup {
 }
 
 export class SettingPage {
-    rootEl: HTMLElement = {} as HTMLElement;
-    titlebarEl: HTMLElement = {} as HTMLElement;
-    containerEl: HTMLElement = {} as HTMLElement;
+    rootEl: HTMLElement = mockElement();
+    titlebarEl: HTMLElement = mockElement();
+    containerEl: HTMLElement = mockElement();
     title: string = "";
     constructor() { }
     display(): void { }
@@ -150,14 +183,107 @@ function compareVersions(a: string, b: string): number {
 }
 
 export class Setting {
-    constructor(_containerEl: HTMLElement) { }
-    setName(_name: string): this { return this; }
-    setDesc(_desc: string): this { return this; }
-    addText(_cb: (text: any) => any): this { return this; }
-    addToggle(_cb: (toggle: any) => any): this { return this; }
+    componentsEl: HTMLElement = mockElement();
+    controlEl: HTMLElement = mockElement();
+    descEl: HTMLElement = mockElement();
+    infoEl: HTMLElement = mockElement();
+    nameEl: HTMLElement = mockElement();
+    settingEl: HTMLElement = mockElement();
+    tabEl: HTMLElement = mockElement();
+    constructor(_containerEl: any) { }
+    addClass(_cls: string): this { return this; }
+    addComponent(_cb: (el: HTMLElement) => any): this { return this; }
     addButton(_cb: (button: any) => any): this { return this; }
     addDropdown(_cb: (dropdown: any) => any): this { return this; }
+    addExtraButton(_cb: (button: any) => any): this { return this; }
     addSlider(_cb: (slider: any) => any): this { return this; }
+    addText(_cb: (text: any) => any): this { return this; }
+    addToggle(_cb: (toggle: any) => any): this { return this; }
+    setClass(_cls: string): this { return this; }
+    setDesc(_desc: string | DocumentFragment): this { return this; }
+    setDisabled(_disabled: boolean): this { return this; }
+    setHeading(_text?: string | DocumentFragment): this { return this; }
+    setName(_name: string): this { return this; }
+    setTooltip(_tooltip: string): this { return this; }
+}
+
+export class ButtonComponent {
+    buttonEl: HTMLElement = mockElement();
+    constructor(_containerEl: any) { }
+    addClass(_cls: string): this { return this; }
+    onClick(_cb: () => void): this { return this; }
+    removeCta(): this { return this; }
+    setButtonText(_text: string): this { return this; }
+    setCta(): this { return this; }
+    setDisabled(_disabled: boolean): this { return this; }
+    setIcon(_icon: string): this { return this; }
+    setTooltip(_tooltip: string): this { return this; }
+}
+
+export class TextComponent {
+    inputEl: HTMLInputElement = mockElement();
+    constructor(_containerEl: any) { }
+    onChange(_cb: (value: string) => void | Promise<void>): this { return this; }
+    setPlaceholder(_placeholder: string): this { return this; }
+    setValue(_value: string): this { return this; }
+    setPassword(): this { return this; }
+}
+
+export class DropdownComponent {
+    selectEl: HTMLSelectElement = mockElement();
+    constructor(_containerEl: any) { }
+    addOption(_value: string, _label: string): this { return this; }
+    onChange(_cb: (value: string) => void | Promise<void>): this { return this; }
+    setDisabled(_disabled: boolean): this { return this; }
+    setValue(_value: string): this { return this; }
+}
+
+export class ToggleComponent {
+    toggleEl: HTMLElement = mockElement();
+    constructor(_containerEl: any) { }
+    onChange(_cb: (value: boolean) => void | Promise<void>): this { return this; }
+    setDisabled(_disabled: boolean): this { return this; }
+    setTooltip(_tooltip: string): this { return this; }
+    setValue(_value: boolean): this { return this; }
+}
+
+export class SecretComponent {
+    constructor(_app: any, _el: any) { }
+    onChange(_cb: (value: string) => void | Promise<void>): this { return this; }
+    setDisabled(_disabled: boolean): this { return this; }
+    setPlaceholder(_placeholder: string): this { return this; }
+    setValue(_value: string): this { return this; }
+}
+
+export function setIcon(_el: HTMLElement, _icon: string): void { }
+
+export async function requestUrl(_opts: any): Promise<{ json: any; status: number; text: string }> {
+    return { json: {}, status: 200, text: '' };
+}
+
+export type EventRef = unknown;
+
+// Type stubs for Obsidian's declarative settings definitions. These exist
+// so that imports from 'obsidian' resolve in tests; they are structural
+// types with no runtime behaviour.
+export interface SettingDefinition {
+    desc?: string | DocumentFragment;
+    name?: string;
+    visible?: () => boolean;
+}
+
+export type SettingDefinitionItem =
+    | { heading: string; items: SettingDefinitionItem[]; type: 'group'; search?: unknown }
+    | { desc: string; name: string; render: (setting: Setting, group?: SettingGroup) => void; visible?: () => boolean; aliases?: string[]; search?: unknown }
+    | { desc: string; name: string; page: () => unknown; type: 'page' }
+    | { desc: string; name: string; type: 'page' };
+
+export interface SettingDefinitionRender {
+    aliases?: string[];
+    desc: string;
+    name: string;
+    render: (setting: Setting, group?: SettingGroup) => void;
+    visible?: () => boolean;
 }
 
 export class Notice {

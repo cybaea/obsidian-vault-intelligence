@@ -202,7 +202,13 @@ export class GraphSyncOrchestrator {
 
                 logger.info("[GraphSyncOrchestrator] Scan complete. Triggering index-ready.");
                 this._isScanning = false;
-                this.lifecycleManager.requestSave();
+                // Direct save (not requestSave) to guarantee the complete graph
+                // state — including all updated mtime/size values — is persisted
+                // before scanAll returns. requestSave uses requestIdleCallback
+                // which may not fire before the plugin is unloaded, causing
+                // stale mtime/size values to remain in the persisted state and
+                // triggering unnecessary re-embedding on the next restart.
+                await this.lifecycleManager.saveState();
                 this.eventBus.trigger('graph:index-ready');
             }
         } catch (error) {

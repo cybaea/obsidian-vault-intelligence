@@ -127,4 +127,22 @@ describe('VaultIntelligenceSettingTab.getSettingDefinitions', () => {
 
         expect(hasRenderEntries).toBe(true);
     });
+
+    it('should invoke renderMcpSettings when the MCP page factory display() is called (T2)', () => {
+        setMockApiVersion('1.13.0');
+        const definitions = tab.getSettingDefinitions() as unknown as TestDefinitionPage[];
+        const mcpPage = definitions.find(d => d.name === 'MCP Tools');
+
+        expect(mcpPage).toBeDefined();
+        expect(mcpPage?.page).toBeInstanceOf(Function);
+
+        // Invoke the page factory; it returns a McpSettingPage instance.
+        const pageInstance = mcpPage?.page?.() as { display: () => void; containerEl: HTMLElement };
+        expect(pageInstance).toBeDefined();
+        expect(typeof pageInstance.display).toBe('function');
+
+        // display() calls containerEl.empty() and then builds DOM imperatively.
+        // With the strengthened mock containerEl, display() should not throw.
+        expect(() => pageInstance.display()).not.toThrow();
+    });
 });
