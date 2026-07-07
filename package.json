@@ -66,7 +66,7 @@
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.56.0",
     "vite": "^8.0.14",
-    "vitepress": "2.0.0-alpha.17",
+    "vitepress": "2.0.0-alpha.18",
     "vitepress-plugin-mermaid": "^2.0.17",
     "vitest": "^4.1.6"
   },
@@ -97,7 +97,7 @@
     "smol-toml": "^1.6.1",
     "vite": "$vite",
     "@vitejs/plugin-vue": "^6.0.6",
-    "vitepress": "2.0.0-alpha.17",
+    "vitepress": "2.0.0-alpha.18",
     "protobufjs": "$protobufjs",
     "uuid": "^14.0.0",
     "fetch-blob": "^4.0.0",
