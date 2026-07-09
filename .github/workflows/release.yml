@@ -29,6 +29,11 @@ jobs:
         run: |
           npm ci
           npm run build
+        env:
+          npm_config_fetch_timeout: 120000
+          npm_config_fetch_retry_mintimeout: 20000
+          npm_config_fetch_retry_maxtimeout: 120000
+          npm_config_fetch_retries: 5
 
       - name: Create release
         env:

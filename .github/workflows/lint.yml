@@ -74,6 +74,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          npm_config_fetch_timeout: 120000
+          npm_config_fetch_retry_mintimeout: 20000
+          npm_config_fetch_retry_maxtimeout: 120000
+          npm_config_fetch_retries: 5
 
       - name: Run Tests
         run: npm run test
