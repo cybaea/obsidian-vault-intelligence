@@ -69,6 +69,23 @@ describe('VaultIntelligenceSettingTab.getSettingDefinitions', () => {
         expect(definitions).toHaveLength(0);
     });
 
+    it('should not evaluate the MCP page factory on v1.12 (regression: lazy class extends)', () => {
+        // Regression test for issue where `class extends SettingPage` was
+        // evaluated at module load time, throwing on Obsidian v1.12.x where
+        // SettingPage does not exist. The class is now lazily instantiated
+        // inside createMcpSettingPage(), which is only called within the
+        // requireApiVersion("1.13.0") guard in buildDeclarativeDefinitions().
+        // On v1.12, getSettingDefinitions() returns [] and never calls the
+        // factory, so `extends SettingPage` is never evaluated.
+        setMockApiVersion('1.12.0');
+        const definitions = tab.getSettingDefinitions();
+        expect(definitions).toHaveLength(0);
+        // Verify no page factories were created or invoked.
+        for (const def of definitions as unknown as TestDefinitionPage[]) {
+            expect(def.page).toBeUndefined();
+        }
+    });
+
     it('should return pages with the expected names', () => {
         setMockApiVersion('1.13.0');
         const definitions = tab.getSettingDefinitions() as unknown as TestDefinitionPage[];
@@ -137,6 +154,9 @@ describe('VaultIntelligenceSettingTab.getSettingDefinitions', () => {
         expect(mcpPage?.page).toBeInstanceOf(Function);
 
         // Invoke the page factory; it returns a McpSettingPage instance.
+        // The class expression `extends SettingPage` is evaluated lazily
+        // inside the factory method, not at module load time. This test
+        // verifies the factory can be called without error.
         const pageInstance = mcpPage?.page?.() as { display: () => void; containerEl: HTMLElement };
         expect(pageInstance).toBeDefined();
         expect(typeof pageInstance.display).toBe('function');
