@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.7.1] - 2026-07-09
+
+### User features
+
 -   Fix plugin failing to load on Obsidian 1.12.x with `TypeError: Class extends value undefined is not a constructor or null`. The `McpSettingPage` class (which extends the v1.13-only `SettingPage` API) was defined at module level and evaluated eagerly during module load, before the `requireApiVersion` guard could protect it. The class is now lazily instantiated inside a factory method that is only called within the version-guarded declarative definitions builder. (Issue #607)
 
 ### Developer features
