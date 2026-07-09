@@ -126,48 +126,6 @@ interface TabDefinition {
     render: (context: SettingsTabContext) => void;
 }
 
-/**
- * Custom SettingPage for the MCP settings sub-page.
- *
- * Used by the declarative settings engine on Obsidian v1.13.0+ to render
- * the MCP server configuration imperatively (the MCP page uses a `page`
- * factory instead of inline `items` because it has a list↔editor navigation
- * pattern that does not map cleanly to declarative definitions).
- *
- * The class is defined at module level for stable identity. The version
- * guard is at the call site in {@link VaultIntelligenceSettingTab.buildDeclarativeDefinitions}.
- * Defined as a class expression assigned to a const because the
- * `obsidianmd/no-unsupported-api` lint rule only inspects `ClassDeclaration`
- * superclasses for version gating; the actual v1.13 `SettingPage` reference
- * (instantiation) is guarded by `requireApiVersion` at the call site.
- */
-const McpSettingPage = class extends SettingPage {
-    private readonly plugin: IVaultIntelligencePlugin;
-    private readonly app: App;
-    private readonly tabInstance: VaultIntelligenceSettingTab;
-
-    constructor(app: App, plugin: IVaultIntelligencePlugin, tabInstance: VaultIntelligenceSettingTab) {
-        super();
-        this.app = app;
-        this.plugin = plugin;
-        this.tabInstance = tabInstance;
-    }
-
-    override display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-
-        const context: SettingsTabContext = {
-            app: this.app,
-            containerEl,
-            plugin: this.plugin,
-            tabInstance: this.tabInstance,
-        };
-
-        renderMcpSettings(context);
-    }
-};
-
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
     plugin: IVaultIntelligencePlugin;
     private tabContentMap: Map<TabId, HTMLElement> = new Map();
@@ -210,9 +168,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
      * Build the declarative setting definitions for Obsidian v1.13.0+.
      *
      * Called from {@link getSettingDefinitions} inside a
-     * `requireApiVersion("1.13.0")` guard. The `McpSettingPage` class is
-     * defined at module level (see top of file); the version guard is at
-     * the call site (`page: () => new McpSettingPage(...)`).
+     * `requireApiVersion("1.13.0")` guard. The MCP page uses a lazy
+     * factory ({@link createMcpSettingPage}) that evaluates the
+     * `extends SettingPage` binding only when called, which is
+     * exclusively within this version-guarded method.
      */
     private buildDeclarativeDefinitions(): SettingDefinitionItem[] {
         const plugin = this.plugin;
@@ -272,7 +231,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         return count > 0 ? `${count} server${count !== 1 ? 's' : ''}` : 'Disabled';
                     },
                     name: 'MCP Tools',
-                    page: () => new McpSettingPage(this.app, plugin, this),
+                    page: () => this.createMcpSettingPage(plugin),
                     type: 'page',
                 },
                 {
@@ -336,6 +295,61 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
     // ──────────────────────────────────────────────────────────────
     // Per-page definition builders
     // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Lazy factory for the MCP settings sub-page.
+     *
+     * Returns a `SettingPage` subclass instance for the declarative settings
+     * engine on Obsidian v1.13.0+. The class expression is defined inside this
+     * method so that the `extends SettingPage` binding is evaluated lazily at
+     * call time — exclusively within the {@link buildDeclarativeDefinitions}
+     * method which is guarded by `requireApiVersion("1.13.0")`.
+     *
+     * Defining the class at module level would evaluate `extends SettingPage`
+     * eagerly during module load, which throws on Obsidian v1.12.x where
+     * `SettingPage` does not exist (it resolves to `undefined`).
+     *
+     * Defined as a class expression (not a class declaration) because the
+     * `obsidianmd/no-unsupported-api` lint rule only inspects `ClassDeclaration`
+     * superclasses for version gating; the actual v1.13 `SettingPage` reference
+     * (evaluation of `extends`) is guarded by `requireApiVersion` at the call
+     * site in {@link buildDeclarativeDefinitions}.
+     */
+    private createMcpSettingPage(plugin: IVaultIntelligencePlugin): SettingPage {
+        // Capture outer app in a closure variable to pass into the constructor.
+        // `this` is passed directly in the `new` expression below to avoid
+        // aliasing `this` to a local variable (no-this-alias lint rule).
+        const outerApp = this.app;
+
+        const McpSettingPage = class extends SettingPage {
+            private readonly plugin: IVaultIntelligencePlugin;
+            private readonly app: App;
+            private readonly tabInstance: VaultIntelligenceSettingTab;
+
+            constructor(app: App, plugin: IVaultIntelligencePlugin, tabInstance: VaultIntelligenceSettingTab) {
+                super();
+                this.app = app;
+                this.plugin = plugin;
+                this.tabInstance = tabInstance;
+            }
+
+            override display(): void {
+                const { containerEl } = this;
+                containerEl.empty();
+
+                const context: SettingsTabContext = {
+                    app: this.app,
+                    containerEl,
+                    plugin: this.plugin,
+                    tabInstance: this.tabInstance,
+                };
+
+                renderMcpSettings(context);
+            }
+        };
+
+        return new McpSettingPage(outerApp, plugin, this);
+    }
 
     private buildContext(plugin: IVaultIntelligencePlugin): SettingsTabContext {
         return {
