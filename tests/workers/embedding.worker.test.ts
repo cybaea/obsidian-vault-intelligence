@@ -6,6 +6,13 @@ type GlobalWorkerTestScope = {
     addEventListener?: typeof globalThis.addEventListener;
 };
 
+// vi.mock calls are hoisted above imports, so we use vi.hoisted to create a
+// shared env object that both the main package mock and the deep-path env.js
+// mock can reference. The worker imports env from
+// @huggingface/transformers/src/env.js, so both paths must return the same
+// instance for the test to verify that env.fetch was assigned.
+const sharedEnv = vi.hoisted<Record<string, unknown>>(() => ({}));
+
 vi.mock('@huggingface/transformers', () => {
     const mockDispose = vi.fn();
     const mockPipeline = vi.fn().mockImplementation(() => {
@@ -33,7 +40,7 @@ vi.mock('@huggingface/transformers', () => {
                 decode: vi.fn().mockReturnValue('mock text')
             })
         },
-        env: {},
+        env: sharedEnv,
         pipeline: mockPipeline,
         PipelineType: {},
         PreTrainedModel: class {},
@@ -45,6 +52,10 @@ vi.mock('@huggingface/transformers', () => {
         },
     };
 });
+
+vi.mock('@huggingface/transformers/src/env.js', () => ({
+    env: sharedEnv
+}));
 
 vi.mock('@huggingface/transformers/src/pipelines/feature-extraction.js', () => {
     const mockDispose = vi.fn();
@@ -110,5 +121,34 @@ describe('Embedding worker timer fallback', () => {
 
         expect(workerModule.timer.setTimeout).toBe(globalThis.setTimeout);
         expect(workerModule.timer.clearTimeout).toBe(globalThis.clearTimeout);
+    });
+});
+
+describe('Embedding worker env.fetch proxy assignment', () => {
+    beforeEach(() => {
+        vi.resetModules();
+
+        globalRef.self = globalThis;
+        globalRef.addEventListener = vi.fn();
+        globalThis.fetch = vi.fn(() => Promise.resolve(new Response('ok')));
+    });
+
+    afterEach(() => {
+        globalRef.self = originalSelf;
+        globalRef.addEventListener = originalAddEventListener;
+        globalThis.fetch = originalFetch;
+    });
+
+    it('assigns the proxy function to env.fetch so Transformers.js uses the CORS-bypassing proxy', async () => {
+        // The mock for @huggingface/transformers provides `env: {}`.
+        // After the worker module loads, it should set env.fetch to our proxy.
+        const transformersModule = await import('@huggingface/transformers');
+        await import('../../src/workers/embedding.worker');
+
+        const env = (transformersModule as unknown as { env: Record<string, unknown> }).env;
+        expect(env.fetch).toBeDefined();
+        expect(typeof env.fetch).toBe('function');
+        // env.fetch should be the proxiedFetch function, not the original native fetch
+        expect(env.fetch).not.toBe(originalFetch);
     });
 });

@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Fix local embedding model download failing with CORS errors on restricted/corporate networks (e.g. Windows 11 with stricter proxy/firewall rules). Transformers.js v4 captures `globalThis.fetch` at module import time and routes all network requests through `env.fetch`, not `self.fetch`. The previous CORS-bypass proxy override only replaced `self.fetch`, leaving `env.fetch` still calling the native fetch directly — which HuggingFace CDN blocks for `app://obsidian.md` origins. The proxy is now also assigned to `env.fetch` so the library's model/tokenizer downloads go through the main-thread `requestUrl` bypass.
+
 ### Developer features
 
 ## [9.7.1] - 2026-07-09

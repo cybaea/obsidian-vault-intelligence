@@ -51,8 +51,18 @@ export const timer = (() => {
 })();
 
 // Override global fetch to proxy through main thread (bypasses Obsidian CSP/CORS)
+// Keep a reference to the original native fetch for non-HTTP requests (e.g. cached
+// WASM paths) that do not need CORS bypass.
 const originalFetch = self.fetch;
-self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+
+// Extracted as a named function so it can be assigned to BOTH self.fetch and
+// env.fetch. Transformers.js v4 captures globalThis.fetch at module import time
+// (env.js: DEFAULT_FETCH = globalThis.fetch.bind(globalThis)) and routes all
+// network requests through env.fetch, NOT self.fetch. If we only override
+// self.fetch, the library still calls the original native fetch directly,
+// causing CORS failures on restricted/corporate networks (e.g. HuggingFace CDN
+// has no Access-Control-Allow-Origin for app://obsidian.md origins).
+async function proxiedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const url = input instanceof Request ? input.url : input.toString();
 
     // Only proxy HuggingFace or remote calls. Local WASM paths should use original fetch (cached)
@@ -129,7 +139,14 @@ self.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Respo
             url
         });
     });
-};
+}
+
+// Apply the proxy override to BOTH the global fetch and env.fetch so that:
+// 1. self.fetch - covers any code that references the global fetch directly.
+// 2. safeEnv.fetch - covers Transformers.js which routes through env.fetch
+//    (captured at import time, so the assignment must happen after import).
+self.fetch = proxiedFetch;
+safeEnv.fetch = proxiedFetch;
 
 // --- Strict Types ---
 interface TokenizerResult {
