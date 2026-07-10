@@ -63,6 +63,11 @@ export interface TransformersEnv {
             }
         }
     }
+    // Transformers.js routes all network requests through env.fetch. The library
+    // captures globalThis.fetch at import time (env.js: DEFAULT_FETCH), so
+    // overriding self.fetch alone does not intercept its calls. We must assign
+    // our CORS-bypassing proxy directly to env.fetch for it to take effect.
+    fetch?: (input: string | URL | RequestInfo, init?: RequestInit) => Promise<Response>;
     useBrowserCache: boolean;
     useFS: boolean;
 }
