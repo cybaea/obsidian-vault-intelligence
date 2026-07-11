@@ -1,12 +1,12 @@
 version: 1.0.0
 title: "Review Renovate Pull Request"
-description: "Carefully review, research, and verify a Renovate dependency pull request."
+description: "Carefully review, research, rebase, and verify a Renovate dependency pull request."
 parameters:
   - key: pr_number
     input_type: string
     requirement: required
     description: "The GitHub pull request number to review."
-prompt: "Please review, verify, and summarize PR {{ pr_number }}"
+prompt: "Please review, rebase and push, verify, and summarize PR {{ pr_number }}"
 extensions:
   - type: builtin
     name: developer
