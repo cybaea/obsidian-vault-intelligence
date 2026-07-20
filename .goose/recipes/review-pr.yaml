@@ -1,6 +1,6 @@
 version: 1.0.0
 title: "Review Renovate Pull Request"
-description: "Carefully review, research, rebase, and verify a Renovate dependency pull request."
+description: "Carefully review, research, rebase, fix (where needed) and verify a Renovate dependency pull request."
 parameters:
   - key: pr_number
     input_type: string
