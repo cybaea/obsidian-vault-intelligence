@@ -53,7 +53,7 @@ export const timer = (() => {
 // Override global fetch to proxy through main thread (bypasses Obsidian CSP/CORS)
 // Keep a reference to the original native fetch for non-HTTP requests (e.g. cached
 // WASM paths) that do not need CORS bypass.
-const originalFetch = self.fetch;
+const originalFetch = self.fetch.bind(self);
 
 // Extracted as a named function so it can be assigned to BOTH self.fetch and
 // env.fetch. Transformers.js v4 captures globalThis.fetch at module import time
