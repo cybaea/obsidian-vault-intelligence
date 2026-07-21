@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   chore(deps): update dependency typescript-eslint to v8.65.0 --PR [#626](https://github.com/cybaea/obsidian-vault-intelligence/pull/626). Bind `self.fetch` reference in `embedding.worker.ts` to resolve a new `@typescript-eslint/unbound-method` lint error surfaced by the updated rule analysis.
+
 ## [9.7.2] - 2026-07-10
 
 ### User features
