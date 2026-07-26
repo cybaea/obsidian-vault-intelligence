@@ -100,6 +100,8 @@
     "fetch-blob": "^4.0.0",
     "ip-address": "10.3.1",
     "node-domexception": "file:./scripts/stubs/node-domexception",
-    "markdown-it": "^14.2.0"
+    "markdown-it": "^14.2.0",
+    "brace-expansion": "^5.0.8",
+    "js-yaml": "^5.2.2"
   }
 }
