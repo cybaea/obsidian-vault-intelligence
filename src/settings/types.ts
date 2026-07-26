@@ -13,6 +13,23 @@ export type EmbeddingProvider = 'gemini' | 'local' | 'ollama' | 'voyage';
 
 export type ImplicitFolderSemanticsMode = 'none' | 'ontology' | 'all';
 
+export interface MCPOAuthConfig {
+    readonly clientId: string;
+    /**
+     * Optional confidential-client secret.
+     *
+     * The actual secret value is persisted in the device keychain via
+     * `SecretStorage` (key `mcp-<serverId>-oauth-client-secret`) and never
+     * inlined in the sync-persisted config. When the user enters a secret
+     * via the settings UI, this field holds a `vi-secret:` placeholder so
+     * the config round-trips across sync without leaking the value. The
+     * trust hash records only a boolean presence flag (see
+     * `McpClientManager.generateTrustHash`).
+     */
+    readonly clientSecret?: string;
+    readonly scopes: readonly string[];
+}
+
 export interface MCPServerConfig {
     args?: string[];
     command?: string;
@@ -20,6 +37,15 @@ export interface MCPServerConfig {
     env?: string;
     id: string;
     name: string;
+    /**
+     * OAuth 2.0 configuration for remote servers (Streamable HTTP and SSE).
+     *
+     * Parsed on all platforms for sync compatibility but only activated on
+     * desktop (`Platform.isDesktopApp`). On mobile, OAuth-gated servers
+     * surface as "Not supported on mobile" and are skipped during
+     * initialization (see `McpClientManager.connectServer`).
+     */
+    oauth?: MCPOAuthConfig;
     remoteHeaders?: string;
     requireExplicitConfirmation: boolean;
     type: "stdio" | "sse" | "streamable_http";

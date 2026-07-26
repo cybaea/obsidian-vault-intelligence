@@ -1,4 +1,4 @@
-import { ButtonComponent, SettingGroup, ToggleComponent } from "obsidian";
+import { ButtonComponent, Platform, SettingGroup, ToggleComponent } from "obsidian";
 
 import type { IVaultIntelligencePlugin } from "../types";
 
@@ -236,6 +236,102 @@ export function configureMcpServerEditor(
             secretKeyPrefix: `mcp-${currentConfig.id}-headers-`,
             title: "HTTP headers"
         });
+
+        // OAuth 2.0 sub-section (desktop only). On mobile the field is
+        // parsed for sync compatibility but never activated, so we hide
+        // the editor to avoid presenting an unusable configuration.
+        if (Platform.isDesktopApp) {
+            // The config is mutated in place as the user types; the
+            // declared `readonly` fields keep the public type safe but
+            // the editor needs a mutable view of the in-progress draft.
+            interface MutableMCPOAuthConfig {
+                clientId: string;
+                clientSecret?: string;
+                scopes: string[];
+            }
+            const oauth: MutableMCPOAuthConfig = currentConfig.oauth as unknown as MutableMCPOAuthConfig ?? (currentConfig.oauth = { clientId: "", scopes: [] });
+
+            editorGroup.addSetting(setting => {
+                setting.setName("OAuth client ID")
+                    .setDesc("The OAuth client ID for this server, such as one from Google Cloud Console.")
+                    .addText(text => text
+                        .setValue(oauth.clientId)
+                        .onChange(v => { oauth.clientId = v; })
+                    );
+            });
+
+            editorGroup.addSetting(setting => {
+                setting.setName("OAuth client secret (optional)")
+                    .setDesc("If your server uses a confidential client, enter the secret. Stored in the device keychain, never synced.")
+                    .addText(text => text
+                        .setValue(oauth.clientSecret ? "********" : "")
+                        .onChange(v => {
+                            if (v && v !== "********") {
+                                oauth.clientSecret = `vi-secret:mcp-${currentConfig.id}-oauth-client-secret`;
+                                const storage = plugin.app.secretStorage as unknown as { setSecret?: (k: string, v: string) => void };
+                                if (storage && storage.setSecret) {
+                                    storage.setSecret(`mcp-${currentConfig.id}-oauth-client-secret`, v);
+                                }
+                            }
+                        })
+                    );
+            });
+
+            editorGroup.addSetting(setting => {
+                setting.setName("OAuth scopes")
+                    .setDesc("Space-separated list of scopes to request, such as https://www.googleapis.com/auth/drive.readonly.")
+                    .addTextArea(text => text
+                        .setValue(oauth.scopes.join(" "))
+                        .onChange(v => {
+                            oauth.scopes = v.split(" ").map(s => s.trim()).filter(s => s.length > 0);
+                        })
+                    );
+            });
+
+            // Connect/Reconnect/Disconnect buttons and a status line.
+            // The buttons call the public OAuth actions on
+            // mcpClientManager; the status reflects the connection
+            // state (auth-pending / connected / error / disconnected).
+            const manager = plugin.mcpClientManager as {
+                connectOAuthServer(serverId: string): Promise<void>;
+                disconnectOAuthServer(serverId: string): Promise<void>;
+            };
+            const connections = (plugin.mcpClientManager as { connections?: Map<string, { status: string; errorMessage?: string }> }).connections;
+            const conn = connections ? connections.get(currentConfig.id) : undefined;
+            const oauthStatus = conn ? conn.status : (currentConfig.enabled ? 'disconnected' : 'disabled');
+
+            const oauthStatusDiv = containerEl.createDiv("mcp-oauth-status");
+            oauthStatusDiv.addClass("mcp-oauth-status");
+            const statusBadge = oauthStatusDiv.createSpan("mcp-status");
+            statusBadge.textContent = oauthStatus.toUpperCase();
+            statusBadge.addClass("mcp-status");
+            if (oauthStatus === 'connected') statusBadge.addClass("is-connected");
+            else if (oauthStatus === 'error' || oauthStatus === 'untrusted') statusBadge.addClass(oauthStatus === 'error' ? "is-error" : "is-untrusted");
+
+            const errMessage = conn?.errorMessage;
+            if (oauthStatus === 'error' && errMessage) {
+                const err = oauthStatusDiv.createEl("p", { cls: "setting-item-description", text: `Error: ${errMessage}` });
+                err.addClass("vi-text-error");
+            }
+
+            const oauthBtnRow = containerEl.createDiv("mcp-server-actions");
+            oauthBtnRow.addClass("mcp-server-actions");
+
+            new ButtonComponent(oauthBtnRow)
+                .setButtonText(oauthStatus === 'connected' ? "Reconnect" : "Connect")
+                .setCta()
+                .onClick(async () => {
+                    await manager.connectOAuthServer(currentConfig.id);
+                    reRenderEditor();
+                });
+
+            new ButtonComponent(oauthBtnRow)
+                .setButtonText("Disconnect")
+                .onClick(async () => {
+                    await manager.disconnectOAuthServer(currentConfig.id);
+                    reRenderEditor();
+                });
+        }
     }
 
     editorGroup.addSetting(setting => {

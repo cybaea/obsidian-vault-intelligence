@@ -1,13 +1,18 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { App } from "obsidian";
+import { App, Platform } from "obsidian";
 
 import { MCP_CONSTANTS, SANITIZATION_CONSTANTS, SEARCH_CONSTANTS } from "../constants";
 import { MCPServerConfig, VaultIntelligenceSettings } from "../settings/types";
 import { IProvider, IToolDefinition, ProviderError } from "../types/providers";
 import { JsonValue, truncateJsonStrings } from "../utils/json";
 import { logger } from "../utils/logger";
-import { IMcpTransportStrategy } from "./mcp/IMcpTransportStrategy";
+import { IMcpTransportStrategy, OAuthConnectOptions } from "./mcp/IMcpTransportStrategy";
+import { createDesktopOAuthReceiver } from "./mcp/oauth/DesktopOAuthReceiver";
+import { OAuthFlowOrchestrator } from "./mcp/oauth/OAuthFlowOrchestrator";
+import { DefaultOAuthTokenStore } from "./mcp/oauth/OAuthTokenStore";
+import { createObsidianFetch } from "./mcp/oauth/ObsidianFetchAdapter";
+import { ObsidianOAuthClientProvider } from "./mcp/oauth/ObsidianOAuthClientProvider";
 import { SseTransportStrategy } from "./mcp/SseTransportStrategy";
 import { StdioTransportStrategy } from "./mcp/StdioTransportStrategy";
 import { StreamableHttpTransportStrategy } from "./mcp/StreamableHttpTransportStrategy";
@@ -24,7 +29,7 @@ interface McpConnection {
     config: MCPServerConfig;
     errorMessage?: string;
     pid?: number;
-    status: 'connecting' | 'connected' | 'error' | 'untrusted';
+    status: 'auth-pending' | 'connected' | 'connecting' | 'disconnected' | 'error' | 'untrusted';
     strategy?: IMcpTransportStrategy;
     transport: unknown; // StdioClientTransport or SSEClientTransport
 }
@@ -85,6 +90,18 @@ export class McpClientManager implements IProvider {
             args: config.args,
             command: config.command,
             env: config.env,
+            oauth: config.oauth ? {
+                clientId: config.oauth.clientId,
+                // Represent the secret as a presence flag, never the
+                // value itself. The secret lives in SecretStorage, not
+                // in the sync-persisted config. A `vi-secret:` placeholder
+                // string is truthy; an absent secret is undefined/false.
+                hasClientSecret: Boolean(config.oauth.clientSecret),
+                // Sort scopes so a user reordering them (or a sync with
+                // a different array order) does not produce a false
+                // positive trust-hash mismatch.
+                scopes: [...config.oauth.scopes].sort(),
+            } : undefined,
             remoteHeaders: config.remoteHeaders,
             requireExplicitConfirmation: config.requireExplicitConfirmation,
             url: config.url
@@ -136,6 +153,25 @@ export class McpClientManager implements IProvider {
         const secretResolver = (key: string) => this.getSecretValue(key);
         let strategy: IMcpTransportStrategy;
 
+        // OAuth-gated remote servers are desktop-only (the loopback
+        // receiver requires Node's http module, unavailable on mobile).
+        // The oauth config field is parsed on mobile for sync
+        // compatibility, but never activated. Mirrors the untrusted
+        // parking pattern: set an error status and return before
+        // strategy selection so non-OAuth remote servers still work
+        // on mobile.
+        if (server.oauth && !Platform.isDesktopApp) {
+            logger.info(`MCP server ${server.name} requires OAuth, which is desktop-only. Skipping on mobile.`);
+            this.connections.set(server.id, {
+                client: null as unknown as Client,
+                config: server,
+                errorMessage: 'OAuth-gated remote servers are only supported on desktop.',
+                status: 'error',
+                transport: null
+            });
+            return;
+        }
+
         if (server.type === 'stdio') {
             strategy = new StdioTransportStrategy();
         } else if (server.type === 'sse') {
@@ -148,11 +184,33 @@ export class McpClientManager implements IProvider {
         }
 
         try {
-            const { client, transport } = await strategy.connect(
-                server, 
-                secretResolver, 
-                this.settings.allowLocalNetworkAccess
+            // For OAuth-gated remote servers, build the OAuth provider
+            // and fetch adapter so the transport strategy forwards
+            // them to the SDK transport constructor. The SDK then
+            // attaches Authorization headers and reports `needsAuth`
+            // (via UnauthorizedError caught inside the strategy) when
+            // an interactive flow is required.
+            const oauthOptions = server.oauth
+                ? this.buildOAuthConnectOptions(server)
+                : undefined;
+
+            const { client, needsAuth, transport } = await strategy.connect(
+                server,
+                secretResolver,
+                this.settings.allowLocalNetworkAccess,
+                oauthOptions,
             );
+
+            if (needsAuth && server.oauth && oauthOptions) {
+                // SDK transport reported no usable token. Hand control
+                // to the interactive flow (loopback receiver + browser
+                // consent + token exchange + connect retry). The client
+                // and transport built here are reused by the orchestrator.
+                logger.info(`MCP server ${server.name} requires OAuth authorization. Starting interactive flow.`);
+                await this.runOAuthFlow(server, strategy, client, transport, oauthOptions);
+                return;
+            }
+
             this.connections.set(server.id, {
                 client,
                 config: server,
@@ -172,6 +230,156 @@ export class McpClientManager implements IProvider {
                 transport: null
             });
         }
+    }
+
+    /**
+     * Builds the {@link OAuthConnectOptions} (provider + fetch adapter)
+     * passed to the transport strategy for an OAuth-gated remote server.
+     *
+     * The provider is constructed eagerly so the SDK transport can read
+     * any stored tokens on the initial connect attempt (enabling silent
+     * token reuse and refresh without opening a browser). The fetch
+     * adapter routes all SDK HTTP through Obsidian's `requestUrl` and
+     * the SSRF guard.
+     */
+    private buildOAuthConnectOptions(server: MCPServerConfig): OAuthConnectOptions {
+        const store = new DefaultOAuthTokenStore(this.app.secretStorage);
+        const provider = new ObsidianOAuthClientProvider(server.id, store);
+        const fetchFn = createObsidianFetch({
+            allowLocalNetworkAccess: this.settings.allowLocalNetworkAccess,
+        });
+        return { authProvider: provider, fetch: fetchFn };
+    }
+
+    /**
+     * Drives the interactive OAuth flow after a transport strategy
+     * reported `needsAuth` (UnauthorizedError from the SDK transport's
+     * initial connect attempt).
+     *
+     * Reuses the provider/fetch built for the initial attempt so the
+     * loopback receiver, the SDK `auth()` helper, and the transport's
+     * `finishAuth` share a single token store and redirect URL. On
+     * success, the connection is marked `'connected'`; on failure,
+     * `'error'` with a user-presentable message.
+     */
+    private async runOAuthFlow(
+        server: MCPServerConfig,
+        strategy: IMcpTransportStrategy,
+        client: Client,
+        transport: unknown,
+        oauthOptions: OAuthConnectOptions,
+    ): Promise<void> {
+        const provider = oauthOptions.authProvider as ObsidianOAuthClientProvider | undefined;
+        const fetchFn = oauthOptions.fetch;
+        if (!provider || !fetchFn || !server.url) {
+            this.connections.set(server.id, {
+                client: null as unknown as Client,
+                config: server,
+                errorMessage: 'OAuth configuration is incomplete.',
+                status: 'error',
+                strategy,
+                transport: null,
+            });
+            return;
+        }
+
+        // Park the connection as auth-pending so the UI can show the
+        // user that a browser consent flow is in progress.
+        this.connections.set(server.id, {
+            client: null as unknown as Client,
+            config: server,
+            status: 'auth-pending',
+            strategy,
+            transport: null,
+        });
+
+        try {
+            const receiver = createDesktopOAuthReceiver();
+            const orchestrator = new OAuthFlowOrchestrator(
+                provider,
+                receiver,
+                transport as { finishAuth(code: string): Promise<void> },
+                client,
+                transport,
+                server.url,
+                fetchFn,
+            );
+            const result = await orchestrator.authorize();
+            if (result.status === 'authorized') {
+                this.connections.set(server.id, {
+                    client,
+                    config: server,
+                    status: 'connected',
+                    strategy,
+                    transport,
+                });
+                logger.info(`MCP Server ${server.name} connected via OAuth.`);
+            } else {
+                this.connections.set(server.id, {
+                    client: null as unknown as Client,
+                    config: server,
+                    errorMessage: result.errorMessage ?? 'OAuth authorization failed.',
+                    status: 'error',
+                    strategy,
+                    transport: null,
+                });
+            }
+        } catch (error) {
+            logger.error(`MCP Server ${server.name} OAuth flow failed.`, error);
+            this.connections.set(server.id, {
+                client: null as unknown as Client,
+                config: server,
+                errorMessage: String(error),
+                status: 'error',
+                strategy,
+                transport: null,
+            });
+        }
+    }
+
+    /**
+     * Public entry point for the settings UI "Connect/Reconnect" button
+     * for an OAuth-gated remote server.
+     *
+     * Re-runs {@link connectServer}, which performs the trust check,
+     * the mobile guard, the initial connect attempt, and (on
+     * UnauthorizedError) the interactive flow via {@link runOAuthFlow}.
+     */
+    public async connectOAuthServer(serverId: string): Promise<void> {
+        const server = (this.settings.mcpServers || []).find(s => s.id === serverId);
+        if (!server || !server.oauth || !Platform.isDesktopApp) {
+            return;
+        }
+        await this.connectServer(server);
+    }
+
+    /**
+     * Public entry point for the settings UI "Disconnect" button for an
+     * OAuth-gated remote server.
+     *
+     * Invalidates the persisted OAuth credentials (tokens, verifier,
+     * client info, discovery state) so a subsequent connect requires a
+     * fresh browser consent. Closes the SDK client and marks the
+     * connection `'disconnected'`.
+     */
+    public async disconnectOAuthServer(serverId: string): Promise<void> {
+        const connection = this.connections.get(serverId);
+        const server = (this.settings.mcpServers || []).find(s => s.id === serverId);
+        if (!connection || !server?.oauth) {
+            return;
+        }
+
+        const store = new DefaultOAuthTokenStore(this.app.secretStorage);
+        const provider = new ObsidianOAuthClientProvider(serverId, store);
+        await provider.invalidateCredentials('all');
+
+        if (connection.strategy) {
+            await connection.strategy.terminate(connection.client, connection.transport).catch(() => {});
+        } else if (connection.client) {
+            await connection.client.close().catch(() => {});
+        }
+
+        this.connections.delete(serverId);
     }
 
     private sanitizeMcpSchema(schema: unknown): unknown {
