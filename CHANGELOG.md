@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.7.3] - 2026-08-19
+
+### User features
+
 ### Security
 
 -   chore(deps): resolve `npm audit` vulnerabilities for `brace-expansion` (GHSA-mh99-v99m-4gvg, DoS via unbounded expansion) and `js-yaml` (GHSA-pm4m-ph32-ghv5, exponential parsing time DoS) by adding npm `overrides` forcing `brace-expansion@^5.0.8` and `js-yaml@^5.2.2` across the dependency tree. Reduces the audit report from 9 to 6 vulnerabilities. The remaining `adm-zip` (GHSA-xcpc-8h2w-3j85), `sharp` (GHSA-f88m-g3jw-g9cj), and `@hono/node-server` (GHSA-frvp-7c67-39w9) findings are documented in GitHub issue #627 and require upstream fixes.
