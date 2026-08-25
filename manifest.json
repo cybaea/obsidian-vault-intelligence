@@ -3,7 +3,7 @@
 	"name": "Vault Intelligence",
 	"version": "9.7.3",
 	"minAppVersion": "1.11.4",
-	"description": "Research your vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
+	"description": "An active AI research partner for your vault. Dual-loop semantic search, graph-augmented relevance, and vault hygiene, with Google Gemini, Ollama, local, and Voyage AI providers.",
 	"author": "Allan Engelhardt",
 	"authorUrl": "https://github.com/cybaea",
 	"fundingUrl": "https://github.com/sponsors/cybaea",

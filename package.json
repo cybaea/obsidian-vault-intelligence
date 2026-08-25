@@ -1,7 +1,7 @@
 {
   "name": "obsidian-vault-intelligence",
   "version": "9.7.3",
-  "description": "Research your vault with an AI agent powered by Google Gemini, discover related notes through semantic search, and analyze specific documents with contextual note referencing.",
+  "description": "Turn your Obsidian vault into an active knowledge partner. Dual-loop semantic search with graph-augmented relevance scoring, an interactive semantic galaxy view, and an AI gardener that keeps your notes organized. Supports Google Gemini, Ollama, Voyage AI, and local embedding models, with Model Context Protocol (MCP) tool integration.",
   "author": "Allan Engelhardt",
   "main": "main.js",
   "type": "module",
