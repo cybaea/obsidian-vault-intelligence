@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Update plugin descriptions in `package.json` and `manifest.json` to reflect current multi-provider support (Google Gemini, Ollama, Voyage AI, local embeddings) and headline features (dual-loop search, graph-augmented relevance, semantic galaxy view, AI gardener, MCP tool integration).
+
 ### Developer features
 
 ## [9.7.3] - 2026-08-19
