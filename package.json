@@ -90,7 +90,6 @@
     "minimatch": "^10.0.0",
     "glob": "^13.0.0",
     "katex": "0.18.4",
-    "flatted": "^3.4.2",
     "smol-toml": "^1.6.1",
     "vite": "$vite",
     "@vitejs/plugin-vue": "^6.0.6",
