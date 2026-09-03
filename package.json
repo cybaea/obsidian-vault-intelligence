@@ -43,8 +43,8 @@
     "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@types/node": "^24.12.4",
-    "@vitest/coverage-v8": "^4.1.6",
-    "@vitest/ui": "^4.1.6",
+    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/ui": "^5.0.0",
     "esbuild": "0.28.2",
     "esbuild-plugin-inline-worker": "0.1.1",
     "eslint": "^10.0.0",
@@ -65,7 +65,7 @@
     "vite": "^8.0.14",
     "vitepress": "2.0.0-alpha.19",
     "vitepress-plugin-mermaid": "^2.0.17",
-    "vitest": "^4.1.6"
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@google/genai": "^2.3.0",
