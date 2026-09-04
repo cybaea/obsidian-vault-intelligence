@@ -14,6 +14,11 @@
         "/prettier/",
         "/@typescript-eslint/"
       ]
+    },
+    {
+      "description": "Bump `overrides` entries in package.json instead of lockfile-only updates. npm install with an explicit package argument fails with EOVERRIDE when the package is overridden but is not a direct dependency (see PR #658).",
+      "matchDepTypes": ["overrides"],
+      "rangeStrategy": "bump"
     }
   ]
 }
