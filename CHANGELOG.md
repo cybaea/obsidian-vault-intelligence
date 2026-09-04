@@ -17,6 +17,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Add a Renovate `packageRules` entry (in `renovate.json`) that applies `rangeStrategy: "bump"` to `matchDepTypes: ["overrides"]`. Renovate's default `update-lockfile` strategy regenerates `package-lock.json` by running `npm install <package>@<version>` with explicit arguments, which npm rejects with `EOVERRIDE` ("Override for js-yaml@5.4.1 conflicts with direct dependency") whenever the updated package is covered by `package.json` `overrides` but is not a direct dependency — the situation for the security overrides for `js-yaml` (GHSA-pm4m-ph32-ghv5) and `brace-expansion` (GHSA-mh99-v99m-4gvg). This blocked artifact (lockfile) generation on PRs #652, #653, and #658. With the bump strategy, in-range override updates edit `package.json` and the lockfile regenerates with a plain `npm install`, which succeeds.
+
 ## [9.7.3] - 2026-08-19
 
 ### User features
