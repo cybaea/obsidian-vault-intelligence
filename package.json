@@ -63,7 +63,7 @@
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.56.0",
     "vite": "^8.0.14",
-    "vitepress": "2.0.0-alpha.19",
+    "vitepress": "2.0.0-alpha.20",
     "vitepress-plugin-mermaid": "^2.0.17",
     "vitest": "^5.0.0"
   },
@@ -88,19 +88,19 @@
     "esbuild": "0.28.2",
     "lodash-es": "4.18.1",
     "minimatch": "^10.2.6",
-    "glob": "^13.0.0",
-    "katex": "0.18.5",
+    "glob": "^13.0.6",
+    "katex": "0.18.6",
     "smol-toml": "^1.8.0",
     "vite": "$vite",
-    "@vitejs/plugin-vue": "^6.0.6",
-    "vitepress": "2.0.0-alpha.19",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vitepress": "2.0.0-alpha.20",
     "protobufjs": "$protobufjs",
     "uuid": "^14.0.2",
     "fetch-blob": "^4.0.0",
     "ip-address": "10.7.0",
     "node-domexception": "file:./scripts/stubs/node-domexception",
     "markdown-it": "^15.0.1",
-    "brace-expansion": "^5.0.8",
+    "brace-expansion": "^5.0.9",
     "js-yaml": "^5.4.1"
   }
 }
