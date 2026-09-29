@@ -1,7 +1,7 @@
 {
 	"id": "vault-intelligence",
 	"name": "Vault Intelligence",
-	"version": "9.7.3",
+	"version": "9.7.4",
 	"minAppVersion": "1.11.4",
 	"description": "An active AI research partner for your vault. Dual-loop semantic search, graph-augmented relevance, and vault hygiene, with Google Gemini, Ollama, local, and Voyage AI providers.",
 	"author": "Allan Engelhardt",
