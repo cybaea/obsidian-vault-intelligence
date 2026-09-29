@@ -40,7 +40,10 @@ const workerExternalModules = [
 ];
 
 // 3. Mock Plugin
-// Replaces Node.js dependencies with empty objects to prevent 'Module not found' errors
+// Replaces Node.js dependencies with empty objects to prevent 'Module not found' errors.
+// File mocks: whole modules whose top-level body is unsafe for browser bundles
+// (they use `node:` imports or bare `process` access at module scope and are
+// dead code in-plugin, selected only when IS_NODE_ENV is true).
 const mockPlugin = {
 	name: 'mock-plugin',
 	setup(build) {
@@ -49,6 +52,18 @@ const mockPlugin = {
 			namespace: 'mock-ns'
 		}));
 		
+		// Transformers.js >= 4.3 ships `src/backends/onnx-node.js`: a Node-only ONNX
+		// backend whose module body imports 'node:module' and touches bare `process.env`
+		// at the top level. `src/backends/onnx.js` statically imports it, so specifier
+		// mocks alone cannot keep it safe: the evaluated expression `import.meta.url ??
+		// __filename` would still ship to the worker bundle. Instead, resolve the whole
+		// file into the mock namespace: it is dead code in-plugin (only reachable when
+		// IS_NODE_ENV is true, which the `define` overrides below make impossible).
+		build.onResolve({ filter: /onnx-node\.js$/ }, args => ({
+			path: args.path,
+			namespace: 'mock-ns'
+		}));
+
 		build.onLoad({ filter: /.*/, namespace: 'mock-ns' }, () => ({
 			contents: 'module.exports = {};',
 			loader: 'js'

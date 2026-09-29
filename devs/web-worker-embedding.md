@@ -45,6 +45,7 @@ Loading large models or indexing thousands of files can pressure the 4GB V8 heap
 ## Remaining 'hacks' and future maintenance
 
 -   **`mockPlugin` in esbuild**: We mock Node modules (`fs`, `path`, etc.) to empty objects to satisfy esbuild. If Transformers.js adds new Node-specific dependencies, this list may need updating.
+-   **Whole-file mocks (since Transformers.js 4.3)**: `src/backends/onnx-node.js` imports `node:module` and touches bare `process.env` in its module body, so specifier mock entries cannot make it safe: esbuild emits the evaluated `import.meta.url ?? __filename` expression into the bundle, which throws in a worker. The build config resolves this file into the mock namespace wholesale (`module.exports = {}`) because it is Node-only dead code in-plugin: `onnx.js` selects it only when `IS_NODE_ENV` is true, and our `define` overrides force browser detection. Future Node-only backend files with top-level Node usage should be added to the same file-mock list in `esbuild.config.mjs`.
 -   **Hardcoded CDN Versions**: The WASM paths are pinned to `@2.17.2`. When upgrading `@xenova/transformers`, these URLs **must** be updated manually in `embedding.worker.ts`.
 -   **Manual Offsets**: The Model2Vec offset logic is a workaround for a limitation in Transformers.js v2. It should be re-evaluated when upgrading to v3 (Hugging Face Transformers.js).
 
