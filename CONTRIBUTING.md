@@ -27,6 +27,12 @@ Use `npm ci` to install dependencies deterministically.
 npm ci
 ```
 
+On Linux x64, the `onnxruntime-node` package (installed transitively via `@huggingface/transformers` for local embedding support) normally downloads approximately 272 MB of CUDA and TensorRT execution-provider binaries from a NuGet feed during `npm ci`. The plugin never loads them: embeddings run through `onnxruntime-web` (WebAssembly) inside a web worker, so the project sets `onnxruntime-node-install=skip` in `.npmrc` to skip that download. To test GPU execution providers in Node.js, opt back in per command:
+
+```bash
+ONNXRUNTIME_NODE_INSTALL=cuda12 npm ci
+```
+
 ## Development
 
 Read [devs/ARCHITECTURE_AND_STANDARDS.md](devs/ARCHITECTURE_AND_STANDARDS.md) FIRST before doing any work on the plugin: it contains detailed information on the development process and architecture.
