@@ -15,11 +15,11 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Security
 
--   Resolve the `npm audit` vulnerabilities for `moment` (3 × moderate, CVE-2026-17495 / GHSA-4p3w-j4w9-5jqw, Path Traversal via crafted non-string locale name, affecting 2.29.2–2.30.1) by adding an npm `override` forcing `moment@^2.31.0` across the dependency tree, reducing the audit report from 9 to 6 vulnerabilities. The fix is upstream (`moment` 2.31.0, released 2026-09-15) but cannot flow in naturally because `obsidian` pins `moment@2.29.4` exactly; the plugin itself never imports `moment` (it enters only through the `obsidian` typings used by `tsc` and `eslint-plugin-obsidianmd`), and the entire affected chain is dev-only (`npm audit --omit=dev` reports 0 findings; `esbuild` marks `obsidian` external, so `moment` is never bundled). Verified: full quality pipeline (`npm run lint`, `npm run build`, `npm run test`, `npm ci`) passes with the override. The remaining 6 high findings are the single `braces` issue (CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm, stack-exhaustion DoS via deeply nested glob patterns, affecting every published release with no patched version) reached through `micromatch` → `fast-glob`/`stylelint`/`markdownlint-cli2`; it has no safe override target, the residual exposure is dev-only and not attacker-controlled (glob patterns come from our own lint configs), and it is watched for an upstream fix alongside the other findings in GitHub issue #627. Do not run `npm audit fix --force`: its proposed resolution downgrades `markdownlint-cli2` to 0.0.4 and `obsidian` to 0.14.5.
+-   Resolve `npm audit` vulnerabilities for `moment` (CVE-2026-17495) with an npm override to `^2.31.0`; affected chain is dev-only and the upstream fix (2.31.0) cannot flow in because `obsidian` pins `moment@2.29.4`. The remaining `braces` finding (CVE-2026-93687) is dev-only with no patched version and is tracked in issue #627. Do not run `npm audit fix --force`.
 
 ### Developer features
 
--   Fix intermittent CI failures (`ETIMEDOUT` from `internalConnectMultiple`) during the `npm ci` step of the `build` job: the onnxruntime-node postinstall script (`node ./script/install`) downloads approximately 272 MB of CUDA/TensorRT execution-provider binaries from the NuGet feed for linux/x64 using raw Node `https.get` calls with no retry or timeout logic. The npm fetch-retry environment variables added in the July mitigation (`npm_config_fetch_*`, lint job only) never applied to it, because lifecycle scripts make their own network connections outside npm's configuration. The project does not need these binaries: the plugin uses onnxruntime-web (WASM, loaded from CDN per `src/constants.ts`), esbuild mocks `onnxruntime-node` out of the bundle entirely, and the CPU binding ships bundled inside the npm tarball (verified: the binding loads and creates sessions fine with the CUDA/TensorRT `.so` files absent, and no source, test, or script references them). The package's documented opt-out `onnxruntime-node-install=skip` is now set in `.npmrc` and reaches the script as `npm_config_onnxruntime_node_install`, eliminating all install-time NuGet traffic in CI and local installs. Contributors who actually need CUDA can opt back in per command with `ONNXRUNTIME_NODE_INSTALL=cuda12`, which takes precedence over the config file. The skip and the opt-in are documented for contributors in `CONTRIBUTING.md`.
+-   Fix intermittent CI `npm ci` failures (`ETIMEDOUT`) by setting the documented `onnxruntime-node-install=skip` opt-out in `.npmrc`, eliminating install-time downloads of unneeded CUDA/TensorRT binaries for the plugin's build-time onnxruntime-node dependency; contributors can opt back in with `ONNXRUNTIME_NODE_INSTALL=cuda12` (see `CONTRIBUTING.md`).
 
 ## [9.7.4] - 2026-09-29
 
@@ -29,7 +29,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
--   Add a Renovate `packageRules` entry (in `renovate.json`) that applies `rangeStrategy: "bump"` to `matchDepTypes: ["overrides"]`. Renovate's default `update-lockfile` strategy regenerates `package-lock.json` by running `npm install <package>@<version>` with explicit arguments, which npm rejects with `EOVERRIDE` ("Override for js-yaml@5.4.1 conflicts with direct dependency") whenever the updated package is covered by `package.json` `overrides` but is not a direct dependency — the situation for the security overrides for `js-yaml` (GHSA-pm4m-ph32-ghv5) and `brace-expansion` (GHSA-mh99-v99m-4gvg). This blocked artifact (lockfile) generation on PRs #652, #653, and #658. With the bump strategy, in-range override updates edit `package.json` and the lockfile regenerates with a plain `npm install`, which succeeds.
+-   Add a Renovate `packageRules` entry applying `rangeStrategy: "bump"` to dependency overrides, because the default `update-lockfile` strategy regenerates `package-lock.json` with `npm install <package>@<version>`, which npm rejects with `EOVERRIDE` for override-covered packages, blocking lockfile generation on PRs #652, #653, and #658.
 
 ## [9.7.3] - 2026-08-19
 
@@ -37,7 +37,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Security
 
--   chore(deps): resolve `npm audit` vulnerabilities for `brace-expansion` (GHSA-mh99-v99m-4gvg, DoS via unbounded expansion) and `js-yaml` (GHSA-pm4m-ph32-ghv5, exponential parsing time DoS) by adding npm `overrides` forcing `brace-expansion@^5.0.8` and `js-yaml@^5.2.2` across the dependency tree. Reduces the audit report from 9 to 6 vulnerabilities. The remaining `adm-zip` (GHSA-xcpc-8h2w-3j85), `sharp` (GHSA-f88m-g3jw-g9cj), and `@hono/node-server` (GHSA-frvp-7c67-39w9) findings are documented in GitHub issue #627 and require upstream fixes.
+-   chore(deps): resolve `npm audit` vulnerabilities for `brace-expansion` (GHSA-mh99-v99m-4gvg) and `js-yaml` (GHSA-pm4m-ph32-ghv5) with npm `overrides` forcing `brace-expansion@^5.0.8` and `js-yaml@^5.2.2`, reducing the audit report from 9 to 6 vulnerabilities. The remaining `adm-zip`, `sharp`, and `@hono/node-server` findings are tracked in issue #627 and require upstream fixes.
 
 ### Developer features
 
@@ -47,7 +47,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
--   Fix local embedding model download failing with CORS errors on restricted/corporate networks (e.g. Windows 11 with stricter proxy/firewall rules). Transformers.js v4 captures `globalThis.fetch` at module import time and routes all network requests through `env.fetch`, not `self.fetch`. The previous CORS-bypass proxy override only replaced `self.fetch`, leaving `env.fetch` still calling the native fetch directly — which HuggingFace CDN blocks for `app://obsidian.md` origins. The proxy is now also assigned to `env.fetch` so the library's model/tokenizer downloads go through the main-thread `requestUrl` bypass.
+-   Fix local embedding model download failing with CORS errors on restricted or corporate networks; the CORS-bypass proxy now covers the Transformers.js `env.fetch` path used for model and tokenizer downloads.
 
 ### Developer features
 
@@ -55,7 +55,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
--   Fix plugin failing to load on Obsidian 1.12.x with `TypeError: Class extends value undefined is not a constructor or null`. The `McpSettingPage` class (which extends the v1.13-only `SettingPage` API) was defined at module level and evaluated eagerly during module load, before the `requireApiVersion` guard could protect it. The class is now lazily instantiated inside a factory method that is only called within the version-guarded declarative definitions builder. (Issue #607)
+-   Fix plugin failing to load on Obsidian 1.12.x by lazily instantiating the `McpSettingPage` class inside the version guard, instead of defining it eagerly at module level. (Issue #607)
 
 ### Developer features
 
@@ -71,7 +71,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Display summary values (model name, provider status, shard info) and warning indicators on settings page entries for Obsidian v1.13.1+, making it easier to see current configuration at a glance. (Issue #595)
 -   Fix input focus loss when toggling visibility-dependent settings on Obsidian v1.13+: text fields retain focus while conditional fields update around them. (Issue #595)
 -   Fix Ollama connection status badge rendering detached from its setting row on Obsidian v1.13+: the Online/Offline indicator now appears inline with the endpoint field. (Issue #595)
--   Fix unnecessary re-embedding of indexed notes on every plugin restart. Graph nodes for files that were linked to before being indexed were stuck with `type: 'topic'` instead of being promoted to `type: 'file'`, causing the indexer to think they were missing and re-embed them on each startup. Also fixes a related issue where frontmatter tag nodes were incorrectly typed as `type: 'file'` and pruned on every scan, and hardens the persistence save to serialize through the mutation queue and complete before scan returns.
+-   Fix unnecessary re-embedding of indexed notes on every plugin restart, caused by linked-before-indexed graph nodes being stuck with `type: 'topic'` and incorrectly typed frontmatter tag nodes; persistence saves now serialize through the mutation queue.
 
 ### Developer features
 
