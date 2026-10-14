@@ -46,6 +46,7 @@ export class MockSetting {
     private dropdownCallback?: (value: string) => void | Promise<void>;
     private textCallback?: (value: string) => void | Promise<void>;
     private buttonCallback?: () => void | Promise<void>;
+    private component?: { fireChange?: (value: string | null) => Promise<void> };
 
     setName(name: string): this {
         (this as any).name = name;
@@ -128,7 +129,16 @@ export class MockSetting {
 
     addExtraButton(_cb: (button: any) => void): this { return this; }
     addSlider(_cb: (slider: any) => void): this { return this; }
-    addComponent(_cb: (el: any) => void): this { return this; }
+
+    /**
+     * Mirrors the real `Setting.addComponent`, which invokes the callback to
+     * build the component. The returned component is captured so behavioural
+     * tests can fire its onChange handler (e.g. SecretComponent on 1.14+).
+     */
+    addComponent(cb: (el: any) => any): this {
+        this.component = cb(mockEl());
+        return this;
+    }
 
     async fireToggle(value: boolean): Promise<void> {
         if (this.toggleCallback) await this.toggleCallback(value);
@@ -144,5 +154,9 @@ export class MockSetting {
 
     async fireButton(): Promise<void> {
         if (this.buttonCallback) await this.buttonCallback();
+    }
+
+    async fireSecretChange(value: string | null): Promise<void> {
+        if (this.component?.fireChange) await this.component.fireChange(value);
     }
 }

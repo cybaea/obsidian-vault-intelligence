@@ -248,11 +248,25 @@ export class ToggleComponent {
 }
 
 export class SecretComponent {
+    private changeCallback?: (value: string | null) => unknown;
+
     constructor(_app: any, _el: any) { }
-    onChange(_cb: (value: string) => void | Promise<void>): this { return this; }
+
+    // Obsidian 1.14 types the callback value as `string | null`; null is
+    // emitted when the secret input is cleared.
+    onChange(cb: (value: string | null) => unknown): this {
+        this.changeCallback = cb;
+        return this;
+    }
+
     setDisabled(_disabled: boolean): this { return this; }
     setPlaceholder(_placeholder: string): this { return this; }
     setValue(_value: string): this { return this; }
+
+    /** Test helper: fires the captured onChange callback. */
+    async fireChange(value: string | null): Promise<void> {
+        if (this.changeCallback) await this.changeCallback(value);
+    }
 }
 
 export function setIcon(_el: HTMLElement, _icon: string): void { }
