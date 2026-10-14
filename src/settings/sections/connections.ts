@@ -73,19 +73,21 @@ export function configureGoogleApiKeyField(
         setting.addComponent(el => new SecretComponent(plugin.app, el)
             .setValue(plugin.settings.googleApiKeySecret || plugin.settings.googleApiKey || '')
             .onChange(async (value) => {
+                // Obsidian 1.14 emits null when the secret input is cleared; normalise to an empty string so clearing still removes the stored key.
+                const keyInput = value ?? '';
                 // Strengthen validation: Google API keys are 39 characters, start with 'AIza', and are alphanumeric
-                const isRawKey = value.length === 39 && value.startsWith('AIza') && /^[A-Za-z0-9]+$/.test(value);
+                const isRawKey = keyInput.length === 39 && keyInput.startsWith('AIza') && /^[A-Za-z0-9]+$/.test(keyInput);
                 if (isRawKey) {
-                    plugin.settings.googleApiKey = value;
+                    plugin.settings.googleApiKey = keyInput;
                     plugin.settings.googleApiKeySecret = '';
                 } else {
-                    plugin.settings.googleApiKeySecret = value;
+                    plugin.settings.googleApiKeySecret = keyInput;
                     plugin.settings.googleApiKey = '';
                 }
                 await plugin.saveSettings();
 
                 // Warn if input starts with 'AIza' but doesn't match full key format
-                if (value.startsWith('AIza') && !isRawKey) {
+                if (keyInput.startsWith('AIza') && !isRawKey) {
                     new Notice("Warning: This input starts with 'AIza' but doesn't match the expected Google API key format (39 alphanumeric characters). If this is a raw API key, please verify its format. Otherwise, it will be treated as a secret reference.");
                 }
 
@@ -227,13 +229,15 @@ export function configureVoyageApiKeyField(
         setting.addComponent(el => new SecretComponent(plugin.app, el)
             .setValue(plugin.settings.voyageApiKeySecret || plugin.settings.voyageApiKey || '')
             .onChange(async (value) => {
+                // Obsidian 1.14 emits null when the secret input is cleared; normalise to an empty string so clearing still removes the stored key.
+                const keyInput = value ?? '';
                 // Voyage keys start with 'pa-' or 'al-'
-                const isRawKey = value.startsWith('pa-') || value.startsWith('al-');
+                const isRawKey = keyInput.startsWith('pa-') || keyInput.startsWith('al-');
                 if (isRawKey) {
-                    plugin.settings.voyageApiKey = value;
+                    plugin.settings.voyageApiKey = keyInput;
                     plugin.settings.voyageApiKeySecret = '';
                 } else {
-                    plugin.settings.voyageApiKeySecret = value;
+                    plugin.settings.voyageApiKeySecret = keyInput;
                     plugin.settings.voyageApiKey = '';
                 }
                 await plugin.saveSettings();

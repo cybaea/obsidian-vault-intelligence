@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { refreshSettings, refreshVisibility, reRenderSection } from '../../src/settings/refreshSettings';
-import { configureOllamaEndpointField } from '../../src/settings/sections/connections';
+import { configureGoogleApiKeyField, configureOllamaEndpointField, configureVoyageApiKeyField } from '../../src/settings/sections/connections';
 import { configureEnableDualLoopField, configureEmbeddingProviderField } from '../../src/settings/sections/explorer';
 import { configureChatModelField } from '../../src/settings/sections/researcher';
 import { VaultIntelligenceSettingTab } from '../../src/settings/settingsTab';
@@ -206,6 +206,80 @@ describe('render closures (T1)', () => {
             await setting.fireText('localhost:11434');
 
             expect(plugin.settings.ollamaEndpoint).toBe('http://localhost:11434');
+        });
+    });
+
+    describe('configureGoogleApiKeyField (SecretComponent)', () => {
+        const RAW_KEY = `AIza${'a'.repeat(35)}`;
+
+        it('should store a raw Google API key and clear the secret reference', async () => {
+            const plugin = makePlugin({ googleApiKey: '', googleApiKeySecret: '', hiddenModels: [] });
+            (plugin as any).geminiService = { getApiKey: vi.fn() };
+            const context = makeContext(plugin);
+            const setting = new MockSetting();
+
+            configureGoogleApiKeyField(setting as any, plugin, context);
+            await setting.fireSecretChange(RAW_KEY);
+
+            expect(plugin.settings.googleApiKey).toBe(RAW_KEY);
+            expect(plugin.settings.googleApiKeySecret).toBe('');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should store a non-key value as a secret reference and clear the raw key', async () => {
+            const plugin = makePlugin({ googleApiKey: RAW_KEY, googleApiKeySecret: '', hiddenModels: [] });
+            (plugin as any).geminiService = { getApiKey: vi.fn() };
+            const context = makeContext(plugin);
+            const setting = new MockSetting();
+
+            configureGoogleApiKeyField(setting as any, plugin, context);
+            await setting.fireSecretChange('my-secret-ref');
+
+            expect(plugin.settings.googleApiKeySecret).toBe('my-secret-ref');
+            expect(plugin.settings.googleApiKey).toBe('');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should treat null (cleared secret input on Obsidian 1.14+) as empty, clearing key and secret reference', async () => {
+            const plugin = makePlugin({ googleApiKey: RAW_KEY, googleApiKeySecret: 'stored-secret-ref', hiddenModels: [] });
+            (plugin as any).geminiService = { getApiKey: vi.fn() };
+            const context = makeContext(plugin);
+            const setting = new MockSetting();
+
+            configureGoogleApiKeyField(setting as any, plugin, context);
+            await setting.fireSecretChange(null);
+
+            expect(plugin.settings.googleApiKey).toBe('');
+            expect(plugin.settings.googleApiKeySecret).toBe('');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('configureVoyageApiKeyField (SecretComponent)', () => {
+        it('should store a raw Voyage key and clear the secret reference', async () => {
+            const plugin = makePlugin({ hiddenModels: [], voyageApiKey: '', voyageApiKeySecret: '' });
+            const context = makeContext(plugin);
+            const setting = new MockSetting();
+
+            configureVoyageApiKeyField(setting as any, plugin, context);
+            await setting.fireSecretChange('pa-abcdef123456');
+
+            expect(plugin.settings.voyageApiKey).toBe('pa-abcdef123456');
+            expect(plugin.settings.voyageApiKeySecret).toBe('');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should treat null (cleared secret input on Obsidian 1.14+) as empty, clearing key and secret reference', async () => {
+            const plugin = makePlugin({ hiddenModels: [], voyageApiKey: 'pa-abcdef123456', voyageApiKeySecret: 'stored-secret-ref' });
+            const context = makeContext(plugin);
+            const setting = new MockSetting();
+
+            configureVoyageApiKeyField(setting as any, plugin, context);
+            await setting.fireSecretChange(null);
+
+            expect(plugin.settings.voyageApiKey).toBe('');
+            expect(plugin.settings.voyageApiKeySecret).toBe('');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
     });
 });
