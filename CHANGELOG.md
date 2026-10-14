@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Fix clearing the Google and Voyage AI API key fields on Obsidian 1.14+, where the secret input emits `null` when cleared: the change handler now treats `null` as an empty value and clears the stored API key and secret reference, instead of failing and leaving the old key active.
+
 ### Security
 
 -   Resolve `npm audit` vulnerabilities for `moment` (CVE-2026-17495) with an npm override to `^2.31.0`; affected chain is dev-only and the upstream fix (2.31.0) cannot flow in because `obsidian` pins `moment@2.29.4`. The remaining `braces` finding (CVE-2026-93687) is dev-only with no patched version and is tracked in issue #627. Do not run `npm audit fix --force`.
