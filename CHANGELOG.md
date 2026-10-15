@@ -14,7 +14,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### User features
 
 -   Fix clearing the Google and Voyage AI API key fields on Obsidian 1.14+, where the secret input emits `null` when cleared: the change handler now treats `null` as an empty value and clears the stored API key and secret reference, instead of failing and leaving the old key active.
--   Migrate the Semantic Galaxy view to sigma.js v4 (PR #687). Theming, hover emphasis and backdrops, RAG context dimming, topic coloring, and click and hover interactions are preserved. Visible differences: node labels now render at their intended size and weight (24px semi-bold interface font) because the previous `var(--font-interface)` font setting never resolved in the canvas renderer; edge hover annotations render at the sigma v4 default label size because edge label font and size are no longer configurable; and the renderer now requires WebGL 2, which current Obsidian desktop and mobile web views support.
+-   Migrate the Semantic Galaxy view to sigma.js v4 (PR #687). Theming, hover emphasis and backdrops, RAG context dimming, topic coloring, and click and hover interactions are preserved. Visible differences: node labels now render in the resolved interface font at 14px semi-bold, about 60% of the 24px the old settings intended (that size never applied in v3 because the `var(--font-interface)` font string was invalid, and it reads far too large on the v4 renderer); edge hover annotations render at the sigma v4 default label size because edge label font and size are no longer configurable; and the renderer now requires WebGL 2, which current Obsidian desktop and mobile web views support.
 
 ### Security
 

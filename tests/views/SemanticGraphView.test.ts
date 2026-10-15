@@ -272,7 +272,7 @@ describe('SemanticGraphView sigma v4 reducers', () => {
         expect(result.labelColor).toBe('#ffffff');
         // The interface font falls back when it cannot be resolved (mocked DOM)
         expect(result.labelFont).toBe('600 Inter, sans-serif');
-        expect(result.labelSize).toBe(24);
+        expect(result.labelSize).toBe(14);
     });
 
     it('should override node colors by topic', async () => {

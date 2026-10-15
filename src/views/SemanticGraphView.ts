@@ -28,8 +28,12 @@ const GRAPH_VIEW_CONSTANTS = {
     LABEL_FONT_WEIGHT: "600",
     /** Minimum on-screen node size (pixels) for its label to be rendered. */
     LABEL_RENDERED_SIZE_THRESHOLD: 2,
-    /** Node label font size, in pixels. */
-    LABEL_SIZE: 24,
+    /**
+     * Node label font size, in pixels. The v3 settings intended 24px, but that
+     * size never applied (the font config was broken) and reads far too large
+     * on the v4 renderer, so labels are scaled to roughly 60% after feedback.
+     */
+    LABEL_SIZE: 14,
     /** Maximum node label length before truncation with an ellipsis. */
     LABEL_TRUNCATION_LENGTH: 30
 };
