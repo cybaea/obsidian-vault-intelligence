@@ -14,6 +14,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### User features
 
 -   Fix clearing the Google and Voyage AI API key fields on Obsidian 1.14+, where the secret input emits `null` when cleared: the change handler now treats `null` as an empty value and clears the stored API key and secret reference, instead of failing and leaving the old key active.
+-   Migrate the Semantic Galaxy view to sigma.js v4 (PR #687). Theming, hover emphasis and backdrops, RAG context dimming, topic coloring, and click and hover interactions are preserved. Visible differences: node labels now render in the resolved interface font at 14px semi-bold, about 60% of the 24px the old settings intended (that size never applied in v3 because the `var(--font-interface)` font string was invalid, and it reads far too large on the v4 renderer); edge hover annotations render at the sigma v4 default label size because edge label font and size are no longer configurable; and the renderer now requires WebGL 2, which current Obsidian desktop and mobile web views support.
 
 ### Security
 
@@ -22,6 +23,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### Developer features
 
 -   Fix intermittent CI `npm ci` failures (`ETIMEDOUT`) by setting the documented `onnxruntime-node-install=skip` opt-out in `.npmrc`, eliminating install-time downloads of unneeded CUDA/TensorRT binaries for the plugin's build-time onnxruntime-node dependency; contributors can opt back in with `ONNXRUNTIME_NODE_INSTALL=cuda12` (see `CONTRIBUTING.md`).
+-   Migrate `SemanticGraphView` off the sigma v3 APIs removed in v4: reducers become constructor options with the new `(key, data, attrs, …)` signature that reads custom attributes (`nodeType`, `topics`, `edgeType`, `score`) from `attrs`; flat display options move into `settings` (including `itemSizesReference: "screen"` to preserve screen-space sizing against the changed v4 default); label font, size, and color become per-item display data applied by the reducers (with `--font-interface` resolved via computed style, since SDF WebGL labels cannot use CSS variables); `labelVisibility` replaces clearing `label`; the `defaultDrawNodeHover` canvas hook is replaced by v4 built-in per-node backdrops; and `camera.animatedReset` becomes `camera.reset`. As a side effect, the reducers now apply from the first render, whereas in v3 they were only registered when the theme first changed. The sigma mock and constructor assertions in the view tests are updated and reducer and event-handler logic is covered by new tests.
 
 ## [9.7.4] - 2026-09-29
 

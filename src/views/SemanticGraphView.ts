@@ -1,3 +1,5 @@
+import type { EdgeReducer, NodeReducer } from "sigma/types";
+
 import Graph from "graphology";
 import { ItemView, Menu, TFile, WorkspaceLeaf, debounce } from "obsidian";
 import Sigma from "sigma";
@@ -7,20 +9,34 @@ import { GraphService } from "../services/GraphService";
 import { IVaultIntelligencePlugin } from "../settings/types";
 import { logger } from "../utils/logger";
 
-interface SigmaHoverData {
-    color: string;
-    label?: string | null;
-    size: number;
-    x: number;
-    y: number;
-}
-
-interface SigmaHoverSettings {
-    labelColor: { attribute?: string; color?: string };
-    labelFont: string;
-    labelSize: number;
-    labelWeight: string;
-}
+/**
+ * Rendering constants for the Semantic Galaxy view, targeting the sigma v4
+ * settings, reducers, and per-item label display data API.
+ */
+const GRAPH_VIEW_CONSTANTS = {
+    /** Padding between node or label and the hover backdrop, in pixels. */
+    BACKDROP_PADDING: 2,
+    /** Blur radius of the hover backdrop shadow, in pixels. */
+    BACKDROP_SHADOW_BLUR: 8,
+    /** Size multiplier applied to edges adjacent to the hovered node. */
+    HOVER_EDGE_SIZE_BOOST: 1.5,
+    /** Size multiplier applied to the hovered node. */
+    HOVER_SIZE_BOOST: 1.8,
+    /** Font family used when `--font-interface` cannot be resolved. */
+    INTERFACE_FONT_FALLBACK: "Inter, sans-serif",
+    /** Font weight used for node labels. */
+    LABEL_FONT_WEIGHT: "600",
+    /** Minimum on-screen node size (pixels) for its label to be rendered. */
+    LABEL_RENDERED_SIZE_THRESHOLD: 2,
+    /**
+     * Node label font size, in pixels. The v3 settings intended 24px, but that
+     * size never applied (the font config was broken) and reads far too large
+     * on the v4 renderer, so labels are scaled to roughly 60% after feedback.
+     */
+    LABEL_SIZE: 14,
+    /** Maximum node label length before truncation with an ellipsis. */
+    LABEL_TRUNCATION_LENGTH: 30
+};
 
 /**
  * Semantic Galaxy View: High-performance WebGL graph of vault relationships.
@@ -40,8 +56,142 @@ export class SemanticGraphView extends ItemView {
     private contextPaths: Set<string> = new Set();
     private hoveredNode: string | null = null;
     private themeColors: Record<string, string> = {};
+    private themeFontFamily: string = "";
     private wrapperEl!: HTMLElement;
     public attractionMultiplier: number = 1.0;
+
+    /**
+     * Sigma v4 node reducer. Applies theme colors, topic coloring, RAG context
+     * dimming, hover emphasis, and per-item label styling. In v4, labels are
+     * WebGL SDF text, so label font, size, and color are per-node display data,
+     * and hidden labels are expressed with `labelVisibility` rather than
+     * clearing the `label` value.
+     */
+    private readonly nodeReducer: NodeReducer = (node, data, attrs) => {
+        const res = { ...data };
+
+        // Per-item label styling (replaces the v3 labelColor/labelFont/labelSize settings)
+        res.labelColor = this.themeColors.label || "#fff";
+        res.labelFont = `${GRAPH_VIEW_CONSTANTS.LABEL_FONT_WEIGHT} ${this.themeFontFamily}`;
+        res.labelSize = GRAPH_VIEW_CONSTANTS.LABEL_SIZE;
+
+        // Core type-based coloring
+        const nodeType = attrs.nodeType as string | undefined;
+        res.color = this.themeColors[nodeType ?? ""] || this.themeColors.structural || "#888";
+
+        // Topic Coloring Override
+        const topics = attrs.topics as string[] | undefined;
+        if (topics && topics.length > 0) {
+            const topic = topics[0];
+            if (topic && topic !== "default") {
+                // Generate a stable color based on string hash
+                let hashStr = 0;
+                for (let i = 0; i < topic.length; i++) {
+                    hashStr = topic.charCodeAt(i) + ((hashStr << 5) - hashStr);
+                }
+                const hue = Math.abs(hashStr) % 360;
+                res.color = `hsl(${hue}, 65%, 55%)`; // Vibrant but readable
+            }
+        }
+
+        // Visual RAG Highlighting logic
+        if (this.contextPaths.size > 0 && !this.contextPaths.has(node)) {
+            res.color = this.adjustAlpha(res.color, 0.2); // Dim others
+            res.labelVisibility = "hidden"; // Hide labels for non-context nodes
+        }
+
+        // Interactive Node Hovering
+        if (this.hoveredNode) {
+            if (node === this.hoveredNode || this.graph.hasEdge(node, this.hoveredNode) || this.graph.hasEdge(this.hoveredNode, node)) {
+                res.highlighted = true;
+            } else {
+                res.color = this.adjustAlpha(res.color, 0.2);
+                res.labelVisibility = "hidden";
+                res.highlighted = false;
+            }
+        }
+
+        // --- Label Truncation ---
+        if (res.label && !res.highlighted && res.label.length > GRAPH_VIEW_CONSTANTS.LABEL_TRUNCATION_LENGTH) {
+            res.label = `${res.label.substring(0, GRAPH_VIEW_CONSTANTS.LABEL_TRUNCATION_LENGTH)}...`;
+        }
+
+        // --- Enhanced Hover State ---
+        if (res.highlighted) {
+            res.color = this.themeColors.highlight || "#ff0";
+            res.size = (res.size || 5) * GRAPH_VIEW_CONSTANTS.HOVER_SIZE_BOOST; // Boost size on hover
+            res.zIndex = 20;
+            res.label = data.label; // Show full label
+            // Force label display (replaces the v3 highlighted-label exemption)
+            res.labelVisibility = "visible";
+        }
+
+        // --- Themed Hover Backdrop (replaces the v3 defaultDrawNodeHover box) ---
+        if (node === this.hoveredNode) {
+            res.backdropArea = "both";
+            res.backdropColor = this.themeColors.background || "#000";
+            res.backdropPadding = GRAPH_VIEW_CONSTANTS.BACKDROP_PADDING;
+            res.backdropShadowBlur = GRAPH_VIEW_CONSTANTS.BACKDROP_SHADOW_BLUR;
+            res.backdropShadowColor = this.themeColors.shadow || "rgba(0, 0, 0, 0.5)";
+            res.backdropVisibility = "visible";
+        }
+
+        return res;
+    };
+
+    /**
+     * Sigma v4 edge reducer. Applies theme colors, RAG context dimming, and
+     * hover annotations. Edge label colour is per-item display data in v4; the
+     * edge label font and size are not configurable and render at the default.
+     */
+    private readonly edgeReducer: EdgeReducer = (edge, data, attrs) => {
+        const res = { ...data };
+        const extremities = this.graph.extremities(edge);
+        const u = extremities[0];
+        const v = extremities[1];
+        const edgeType = attrs.edgeType as string | undefined;
+
+        // Edge labels inherit the theme label colour (replaces the v3 edgeLabelColor setting)
+        res.labelColor = this.themeColors.label || "#fff";
+
+        // Ensure semantic edges are subtle by default to prevent dominating the display
+        if (edgeType === 'semantic') {
+            res.color = this.adjustAlpha(this.themeColors.semantic || "#888", 0.4);
+        } else {
+            res.color = this.themeColors.edge || "#888";
+        }
+
+        // Dim edges not connected to global highlighted nodes
+        if (this.contextPaths.size > 0) {
+            if (!this.contextPaths.has(u) && !this.contextPaths.has(v)) {
+                res.color = this.adjustAlpha(res.color, 0.1);
+            }
+        }
+
+        // Local Neighborhood Edge Hover Annotations
+        if (this.hoveredNode) {
+            if (u === this.hoveredNode || v === this.hoveredNode) {
+                // Show context label for the active edge
+                if (edgeType === 'semantic') {
+                    const score = attrs.score as number | undefined;
+                    const scorePart = score ? ` (${Math.round(score * 100)}%)` : '';
+                    res.label = `Semantic Match${scorePart}`;
+                    res.color = this.themeColors.highlight || "#ff0";
+                } else {
+                    res.label = `Linked`;
+                    res.color = this.themeColors.edge || "#888";
+                }
+                res.size = (res.size || 1) * GRAPH_VIEW_CONSTANTS.HOVER_EDGE_SIZE_BOOST;
+                res.zIndex = 10;
+            } else {
+                // Dim edges safely away from hover
+                res.color = this.adjustAlpha(res.color, 0.1);
+                res.labelVisibility = "hidden";
+            }
+        }
+
+        return res;
+    };
 
     constructor(leaf: WorkspaceLeaf, plugin: IVaultIntelligencePlugin, graphService: GraphService) {
         super(leaf);
@@ -145,20 +295,21 @@ export class SemanticGraphView extends ItemView {
         this.resolveThemeColors();
 
         // Initialize Sigma with the graphology instance
+        // Sigma v4: reducers are constructor options, and the flat v3 display
+        // settings moved into the nested `settings` object. Per-item label
+        // styling (color, font, size) is applied by the reducers above.
         this.sigmaInstance = new Sigma(this.graph, this.wrapperEl, {
-            allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
-            defaultEdgeType: "line",
-            defaultNodeType: "circle",
-            edgeLabelColor: { color: this.themeColors.label || "#fff" }, // Brighter text for dark mode
-            edgeLabelFont: "var(--font-interface)",
-            edgeLabelSize: 18, // Extra large size for easy reading on all resolutions
-            labelColor: { color: this.themeColors.label || "#fff" }, // Use normal text color for better contrast
-            labelFont: "var(--font-interface)",
-            labelRenderedSizeThreshold: 2, // CRITICAL FIX: Render labels much earlier when zoomed out
-            labelSize: 24, // Significantly larger text per user request
-            labelWeight: "600", // Semi-bold for readability
-            renderEdgeLabels: true,
-            renderLabels: true
+            edgeReducer: this.edgeReducer,
+            nodeReducer: this.nodeReducer,
+            settings: {
+                allowInvalidContainer: true, // CRITICAL FIX: Prevents WebGL crash if tab is hidden (0x0)
+                // CRITICAL FIX: v4 defaults to "positions" (sizes scale with zoom);
+                // keep the v3 constant screen-space sizing.
+                itemSizesReference: "screen",
+                labelRenderedSizeThreshold: GRAPH_VIEW_CONSTANTS.LABEL_RENDERED_SIZE_THRESHOLD, // CRITICAL FIX: Render labels much earlier when zoomed out
+                renderEdgeLabels: true,
+                renderLabels: true
+            }
         });
 
         // Container resize observer to keep WebGL viewport matched
@@ -197,8 +348,7 @@ export class SemanticGraphView extends ItemView {
             this.app.workspace.on("css-change", () => {
                 if (this.sigmaInstance) {
                     this.resolveThemeColors();
-                    this.sigmaInstance.setSetting("labelColor", { color: this.themeColors.label || "#fff" });
-                    this.sigmaInstance.setSetting("edgeLabelColor", { color: this.themeColors.label || "#fff" });
+                    // The reducers re-apply theme colors (and label colors) on refresh.
                     this.sigmaInstance.refresh();
                 }
             })
@@ -206,8 +356,7 @@ export class SemanticGraphView extends ItemView {
 
         // --- Restore Missing Sigma Event Listeners ---
         this.sigmaInstance.on("clickNode", (event) => {
-            const nodeEvent = event as { node: string };
-            const file = this.app.vault.getAbstractFileByPath(nodeEvent.node);
+            const file = this.app.vault.getAbstractFileByPath(event.node);
             if (file instanceof TFile) {
                 const leaf = this.app.workspace.getLeaf(false);
                 void leaf.openFile(file);
@@ -215,9 +364,7 @@ export class SemanticGraphView extends ItemView {
         });
 
         this.sigmaInstance.on("enterNode", (event) => {
-            // Sigma v3 event payload extraction
-            const nodeEvent = event as unknown as { event: { original?: MouseEvent } | MouseEvent; node: string };
-            const path = nodeEvent.node;
+            const path = event.node;
 
             if (this.hoveredNode !== path) {
                 this.hoveredNode = path;
@@ -226,12 +373,9 @@ export class SemanticGraphView extends ItemView {
 
             const file = this.app.vault.getAbstractFileByPath(path);
 
-            let nativeEvent: MouseEvent | undefined;
-            if (nodeEvent.event && 'original' in nodeEvent.event) {
-                nativeEvent = (nodeEvent.event as { original: MouseEvent }).original;
-            } else if (nodeEvent.event instanceof MouseEvent) {
-                nativeEvent = nodeEvent.event;
-            }
+            // Sigma v4 event payloads are fully typed; MouseCoords.original
+            // carries the native DOM event.
+            const nativeEvent = event.event.original instanceof MouseEvent ? event.event.original : undefined;
 
             if (file instanceof TFile && nativeEvent) {
                 // Trigger native Obsidian hover preview
@@ -279,7 +423,8 @@ export class SemanticGraphView extends ItemView {
                 item.setTitle("Fit graph to view")
                     .setIcon("maximize")
                     .onClick(() => {
-                        void this.sigmaInstance?.getCamera().animatedReset({ duration: 500 });
+                        // Sigma v4: reset animates back to the default camera state.
+                        void this.sigmaInstance?.getCamera().reset({ duration: 500 });
                     });
             });
 
@@ -325,111 +470,20 @@ export class SemanticGraphView extends ItemView {
             structural: getComputedColor("--text-muted", "rgb(200, 200, 200)")
         };
 
-        // Apply updated label color to settings
-        this.sigmaInstance?.setSetting("labelColor", { color: this.themeColors.label || "#888" });
-        this.sigmaInstance?.setSetting("defaultDrawNodeHover", this.drawCustomNodeHover.bind(this));
+        // Resolve the interface font family the same way. Sigma v4 renders
+        // labels as WebGL SDF text, so CSS variables cannot be used directly
+        // (the v3 code passed `var(--font-interface)` to a canvas font, which
+        // silently never resolved).
+        const getComputedFont = (cssVar: string, fallback: string) => {
+            const tempEl = activeDocument.body.createDiv();
+            tempEl.style.fontFamily = `var(${cssVar})`;
+            activeDocument.body.appendChild(tempEl);
+            const computedFont = getComputedStyle(tempEl).fontFamily;
+            tempEl.remove();
+            return computedFont || fallback;
+        };
 
-        // Apply visual logic via Sigma reducers (state-driven rendering)
-        this.sigmaInstance?.setSetting("nodeReducer", (node, data) => {
-            const res = { ...data };
-            const type = data.nodeType as string;
-
-            // Core type-based coloring
-            res.color = this.themeColors[type] || this.themeColors.structural || "#888";
-
-            // Topic Coloring Override
-            if (data.topics && Array.isArray(data.topics) && data.topics.length > 0) {
-                const topic = data.topics[0] as string;
-                if (topic !== "default") {
-                    // Generate a stable color based on string hash
-                    let hashStr = 0;
-                    for (let i = 0; i < topic.length; i++) {
-                        hashStr = topic.charCodeAt(i) + ((hashStr << 5) - hashStr);
-                    }
-                    const hue = Math.abs(hashStr) % 360;
-                    res.color = `hsl(${hue}, 65%, 55%)`; // Vibrant but readable
-                }
-            }
-
-            // Visual RAG Highlighting logic
-            if (this.contextPaths.size > 0 && !this.contextPaths.has(node)) {
-                res.color = this.adjustAlpha(res.color as string, 0.2); // Dim others
-                res.label = undefined; // Hide labels for non-context nodes
-            }
-
-            // Interactive Node Hovering
-            if (this.hoveredNode) {
-                if (node === this.hoveredNode || this.graph.hasEdge(node, this.hoveredNode) || this.graph.hasEdge(this.hoveredNode, node)) {
-                    res.highlighted = true;
-                } else {
-                    res.color = this.adjustAlpha(res.color as string, 0.2);
-                    res.label = undefined;
-                    res.highlighted = false;
-                }
-            }
-
-            // --- Label Truncation ---
-            if (res.label && !res.highlighted) {
-                const lbl = res.label as string;
-                if (lbl.length > 30) {
-                    res.label = lbl.substring(0, 30) + '...';
-                }
-            }
-
-            // --- Enhanced Hover State ---
-            if (res.highlighted) {
-                res.color = this.themeColors.highlight || "#ff0";
-                res.size = ((res.size as number) || 5) * 1.8; // Boost size on hover
-                res.zIndex = 20;
-                res.label = data.label as string | undefined; // Safe cast, show full label
-            }
-
-            return res;
-        });
-
-        this.sigmaInstance?.setSetting("edgeReducer", (edge, data) => {
-            const res = { ...data };
-            const extremities = this.graph.extremities(edge);
-            const u = extremities[0];
-            const v = extremities[1];
-
-            // Ensure semantic edges are subtle by default to prevent dominating the display
-            if (data.edgeType === 'semantic') {
-                res.color = this.adjustAlpha(this.themeColors.semantic || "#888", 0.4);
-            } else {
-                res.color = this.themeColors.edge || "#888";
-            }
-
-            // Dim edges not connected to global highlighted nodes
-            if (this.contextPaths.size > 0) {
-                if (!this.contextPaths.has(u) && !this.contextPaths.has(v)) {
-                    res.color = this.adjustAlpha(res.color as string, 0.1);
-                }
-            }
-
-            // Local Neighborhood Edge Hover Annotations
-            if (this.hoveredNode) {
-                if (u === this.hoveredNode || v === this.hoveredNode) {
-                    // Show context label for the active edge
-                    if (data.edgeType === 'semantic') {
-                        const scorePart = data.score ? ` (${Math.round((data.score as number) * 100)}%)` : '';
-                        res.label = `Semantic Match${scorePart}`;
-                        res.color = this.themeColors.highlight;
-                    } else {
-                        res.label = `Linked`;
-                        res.color = this.themeColors.edge;
-                    }
-                    res.size = (res.size as number || 1) * 1.5;
-                    res.zIndex = 10;
-                } else {
-                    // Dim edges safely away from hover
-                    res.color = this.adjustAlpha(res.color as string, 0.1);
-                    res.label = undefined;
-                }
-            }
-
-            return res;
-        });
+        this.themeFontFamily = getComputedFont("--font-interface", GRAPH_VIEW_CONSTANTS.INTERFACE_FONT_FALLBACK);
     }
 
     /**
@@ -525,7 +579,8 @@ export class SemanticGraphView extends ItemView {
                 if (this.graph.hasNode(file.path)) {
                     const camera = this.sigmaInstance?.getCamera();
                     if (camera) {
-                        void camera.animatedReset({ duration: 500 });
+                        // Sigma v4: reset animates back to the default camera state.
+                        void camera.reset({ duration: 500 });
                     }
                 }
             } catch (e) {
@@ -540,54 +595,5 @@ export class SemanticGraphView extends ItemView {
         this.visibilityObserver?.disconnect();
         this.sigmaInstance?.kill();
         this.sigmaInstance = null;
-    }
-
-    private drawCustomNodeHover(context: CanvasRenderingContext2D, data: SigmaHoverData, settings: SigmaHoverSettings) {
-        const PADDING = 2;
-        const size = settings.labelSize;
-        const font = settings.labelFont;
-        const weight = settings.labelWeight;
-
-        context.font = `${weight} ${size}px ${font}`;
-        // Set the style for the hover box background
-        context.fillStyle = this.themeColors.background || "#000";
-        context.shadowOffsetX = 0;
-        context.shadowOffsetY = 0;
-        context.shadowBlur = 8;
-        context.shadowColor = this.themeColors.shadow || "rgba(0,0,0,0.5)";
-
-        if (typeof data.label === "string") {
-            const textWidth = context.measureText(data.label).width;
-            const boxWidth = Math.round(textWidth + 5);
-            const boxHeight = Math.round(size + 2 * PADDING);
-            const radius = Math.max(data.size, size / 2) + PADDING;
-
-            const angleRadian = Math.asin(boxHeight / 2 / radius);
-            const xDeltaCoord = Math.sqrt(Math.abs(Math.pow(radius, 2) - Math.pow(boxHeight / 2, 2)));
-
-            context.beginPath();
-            context.moveTo(data.x + xDeltaCoord, data.y + boxHeight / 2);
-            context.lineTo(data.x + radius + boxWidth, data.y + boxHeight / 2);
-            context.lineTo(data.x + radius + boxWidth, data.y - boxHeight / 2);
-            context.lineTo(data.x + xDeltaCoord, data.y - boxHeight / 2);
-            context.arc(data.x, data.y, radius, angleRadian, -angleRadian);
-            context.closePath();
-            context.fill();
-        } else {
-            context.beginPath();
-            context.arc(data.x, data.y, data.size + PADDING, 0, Math.PI * 2);
-            context.closePath();
-            context.fill();
-        }
-
-        context.shadowOffsetX = 0;
-        context.shadowOffsetY = 0;
-        context.shadowBlur = 0;
-
-        // And finally we draw the label text using the correct color
-        if (data.label) {
-            context.fillStyle = settings.labelColor.color || this.themeColors.label || "#000";
-            context.fillText(data.label, data.x + data.size + 3, data.y + size / 3);
-        }
     }
 }
