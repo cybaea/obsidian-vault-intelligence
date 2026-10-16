@@ -471,7 +471,10 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     {
                         desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
                         name: 'OpenAI-compatible headers',
-                        render: (setting: Setting, _group: SettingGroup) => renderRowEditorHost(setting, (host) => configureOpenAICompatHeadersField(host, plugin, context)),
+                        render: (setting: Setting) => {
+                            setting.setName('').setDesc('').setClass('vi-standalone-kv-editor');
+                            configureOpenAICompatHeadersField(setting.controlEl, plugin, context);
+                        },
                     },
                     {
                         desc: 'Secure credential for connecting to Voyage AI models.',

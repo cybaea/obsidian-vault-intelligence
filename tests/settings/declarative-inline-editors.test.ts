@@ -104,22 +104,20 @@ describe('declarative inline editors are hosted inside their setting row', () =>
         expect(cleanup).toBeUndefined();
     });
 
-    it('renders the OpenAI-compatible headers editor into the row, not the group list', () => {
+    it('renders the OpenAI-compatible headers editor without the redundant settings label and description', () => {
         const { listEl, tab } = makeTabs();
         const pages = tab.getSettingDefinitions() as unknown as TestPage[];
         const definition = findItemByName(pages, 'Connections', 'Connection settings', 'OpenAI-compatible headers');
         expect(definition?.render).toBeTypeOf('function');
 
         const setting = new MockSetting();
-        const settingElCreate = setting.settingEl.createDiv as Mock;
         const cleanup = (definition?.render as RenderFn)(setting as unknown as Setting, makeGroup(listEl));
 
         expect(listEl.createDiv).not.toHaveBeenCalled();
-        expect(settingElCreate).toHaveBeenCalledWith(expect.objectContaining({ cls: 'vi-kv-editor-host' }));
-        const host = settingElCreate.mock.results[0]?.value;
-        expect(cleanup).toBeTypeOf('function');
-        (cleanup as () => void)();
-        expect(host.remove).toHaveBeenCalledOnce();
+        expect(setting.name).toBe('');
+        expect(setting.desc).toBe('');
+        expect(setting.controlEl.createDiv).toHaveBeenCalledWith('vi-kv-editor-wrapper');
+        expect(cleanup).toBeUndefined();
     });
 
     it('renders the storage shards list into the row, not the group list', async () => {
