@@ -606,12 +606,12 @@ export class ResearchChatView extends ItemView {
         }
 
         if (ollamaModels.length > 0) {
-            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Ollama' } });
             for (const m of ollamaModels) {
                 group.createEl('option', { text: m.label, value: m.id });
             }
         } else if (this.plugin.settings.ollamaEndpoint) {
-            const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Ollama' } });
             group.createEl('option', {
                 attr: { disabled: 'true' },
                 text: 'No models found',
@@ -621,12 +621,12 @@ export class ResearchChatView extends ItemView {
 
         const openaiCompatModels = chatModels.filter(m => m.provider === 'openai-compat');
         if (openaiCompatModels.length > 0) {
-            const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+            const group = selectEl.createEl('optgroup', { attr: { label: 'OpenAI-compatible' } });
             for (const m of openaiCompatModels) {
                 group.createEl('option', { text: m.label, value: m.id });
             }
         } else if (this.plugin.settings.openaiCompatEndpoint) {
-            const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+            const group = selectEl.createEl('optgroup', { attr: { label: 'OpenAI-compatible' } });
             group.createEl('option', {
                 attr: { disabled: 'true' },
                 text: 'No models found',

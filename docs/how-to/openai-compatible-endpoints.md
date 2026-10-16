@@ -1,4 +1,4 @@
-# Using OpenAI-compatible endpoints (2026 edition)
+# Using OpenAI-compatible endpoints (2026 Edition)
 
 Vault Intelligence can reason against any server that speaks the OpenAI Chat Completions protocol: the Kilo Gateway, LM Studio, llama.cpp server, vLLM, OpenRouter, and the OpenAI API itself. This guide covers connecting, authenticating, and pairing embeddings, as of our October 2026 updates.
 
@@ -20,13 +20,13 @@ In settings, open **Connections** and either pick a preset or fill in the **Open
 
 Most servers require an API key sent as an `Authorization: Bearer <your_api_key>` header. The **Connection preset** dropdown fills in the endpoint and a secure, keychain-backed header for common providers; the **OpenAI-compatible headers** editor handles any other header-based scheme, with a Secret toggle that stores values in your device keychain instead of your synced settings.
 
-The **Test connection** button probes the server's `GET /models` list and reports Online or Offline.
+The **Test connection** button probes the server's `GET /models` list and reports Online, Offline, or "Unauthorized (check your API key)" when the server answered but rejected the credentials.
 
 ### Kilo Gateway walkthrough
 
 1. In **Connections**, pick **Kilo.ai (OpenAI-compatible)** from the **Connection preset** dropdown.
 2. Paste your key into the **Kilo API key** field. It is stored in the device keychain and sent as the Bearer header automatically.
-3. Click **Test connection**. When the status shows Online, refresh the model list and pick a model in the Researcher settings.
+3. Click **Test connection**. When the status shows Online, refresh the model list (the preset fetches it for you; use the **Refresh model list** button if you changed things manually) and pick a model in the Researcher settings.
 
 ## 2. Embeddings: know what your server offers
 
@@ -42,7 +42,7 @@ If your reasoning server has no embeddings, pair it with one of the other provid
 
 ## 3. Selecting models
 
-After a successful connection, models appear in every model dropdown under the **Custom (OpenAI-compatible)** group. Model IDs carry the `openai-compat/` namespace prefix, and vendor slashes inside the name are preserved: the Kilo model `anthropic/claude-sonnet-4.5` becomes `openai-compat/anthropic/claude-sonnet-4.5`. When typing a custom model ID, enter it with the prefix.
+After a successful connection, models appear in every model dropdown under the **OpenAI-compatible** group. Model IDs carry the `openai-compat/` namespace prefix, and vendor slashes inside the name are preserved: the Kilo model `anthropic/claude-sonnet-4.5` becomes `openai-compat/anthropic/claude-sonnet-4.5`. When typing a custom model ID, enter it with the prefix.
 
 If the dropdown shows no models, the server either did not respond to `GET /models` or requires authentication; check the headers and use **Test connection**.
 

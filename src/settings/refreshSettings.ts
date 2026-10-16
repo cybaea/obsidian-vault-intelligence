@@ -63,16 +63,29 @@ export function reRenderSection(
  * On v1.12.x and earlier (imperative), falls back to `refreshSettings`
  * (reopening the tab) since there is no in-place visibility refresh.
  *
+ * The legacy fallback rebuilds the whole tab, which can swallow a mouse
+ * click that immediately follows the change (the reopened tab replaces the
+ * pressed element between mousedown and mouseup). Callers that run during a
+ * blur-to-click interaction can pass `{ legacyRebuild: false }` to skip the
+ * rebuild on legacy versions; visibility predicates then only apply at the
+ * next render there.
+ *
  * Use this instead of {@link refreshSettings} or {@link reRenderSection}
  * when only visibility predicates change. Reserve those utilities for
  * structural changes (added/removed DOM elements, slider value updates).
+ *
+ * @param context The settings tab context.
+ * @param options `legacyRebuild: false` skips the legacy open-tab fallback.
  */
-export function refreshVisibility(context: SettingsTabContext): void {
+export function refreshVisibility(
+    context: SettingsTabContext,
+    options: { legacyRebuild?: boolean } = {}
+): void {
     const { tabInstance } = context;
 
     if (requireApiVersion("1.13.0") && tabInstance) {
         tabInstance.refreshDomState();
-    } else {
+    } else if (options.legacyRebuild !== false) {
         refreshSettings(context);
     }
 }

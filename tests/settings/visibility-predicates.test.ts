@@ -417,6 +417,47 @@ describe('visibility predicates (T3)', () => {
             expect(findConnectionDefinition('OpenAI-compatible endpoint')?.visible).toBeUndefined();
             expect(findConnectionDefinition('OpenAI-compatible headers')?.visible).toBeUndefined();
         });
+
+        it('shows the Kilo API key field for a trailing-slash variant of the preset endpoint', () => {
+            buildPlugin({ openaiCompatEndpoint: 'https://ai-gateway.kilo.ai/api/v1/' });
+            const def = findConnectionDefinition('Kilo API key');
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('shows the Ollama Cloud API key field for a trailing-slash variant of the preset endpoint', () => {
+            buildPlugin({ ollamaEndpoint: 'https://ollama.com/' });
+            const def = findConnectionDefinition('Ollama Cloud API key');
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('hides the Ollama Cloud API key field when the endpoint points elsewhere', () => {
+            buildPlugin({ ollamaEndpoint: 'https://my-remote-ollama.example.com' });
+            const def = findConnectionDefinition('Ollama Cloud API key');
+            expect(def?.visible?.()).toBe(false);
+        });
+    });
+
+    describe('connections definition order', () => {
+        const collectNames = (items: DefinitionItem[] | undefined): string[] => (items ?? []).flatMap((item) => {
+            if (isGroup(item)) return collectNames(item.items);
+            return isRender(item) && item.name ? [item.name] : [];
+        });
+
+        it('places each API key field directly under its endpoint, before the headers editor', () => {
+            buildPlugin({});
+            const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
+            const connectionsPage = defs.find(d => d.name === 'Connections');
+            const connectionGroup = (connectionsPage as DefinitionGroup | undefined)?.items
+                ?.find(item => isGroup(item) && item.heading === 'Connection settings') as DefinitionGroup | undefined;
+            const names = collectNames(connectionGroup?.items);
+            const indexOf = (name: string) => names.indexOf(name);
+
+            expect(indexOf('Ollama endpoint')).toBeGreaterThanOrEqual(0);
+            expect(indexOf('Ollama endpoint')).toBeLessThan(indexOf('Ollama Cloud API key'));
+            expect(indexOf('Ollama Cloud API key')).toBeLessThan(indexOf('Ollama headers'));
+            expect(indexOf('OpenAI-compatible endpoint')).toBeLessThan(indexOf('Kilo API key'));
+            expect(indexOf('Kilo API key')).toBeLessThan(indexOf('OpenAI-compatible headers'));
+        });
     });
 
     describe('openai-compat custom model predicates', () => {

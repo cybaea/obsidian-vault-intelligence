@@ -97,12 +97,12 @@ export function renderModelDropdown(
     }
 
     if (ollamaModels.length > 0) {
-        const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+        const group = selectEl.createEl('optgroup', { attr: { label: 'Ollama' } });
         for (const m of ollamaModels) {
             group.createEl('option', { text: m.label, value: m.id });
         }
     } else if (hasOllamaSetting) {
-        const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+        const group = selectEl.createEl('optgroup', { attr: { label: 'Ollama' } });
         group.createEl('option', {
             attr: { disabled: 'true' },
             text: 'No models found',
@@ -111,12 +111,12 @@ export function renderModelDropdown(
     }
 
     if (openaiCompatModels.length > 0) {
-        const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+        const group = selectEl.createEl('optgroup', { attr: { label: 'OpenAI-compatible' } });
         for (const m of openaiCompatModels) {
             group.createEl('option', { text: m.label, value: m.id });
         }
     } else if (hasOpenAICompatSetting) {
-        const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+        const group = selectEl.createEl('optgroup', { attr: { label: 'OpenAI-compatible' } });
         group.createEl('option', {
             attr: { disabled: 'true' },
             text: 'No models found',

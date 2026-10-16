@@ -70,8 +70,8 @@ The "Embedding chunk size" setting (found in Advanced Settings) controls how lar
 Ollama Cloud runs frontier-scale models on Ollama's infrastructure while keeping the same API your local instance uses, so it works through the existing Ollama connection today:
 
 1. Create an API key on [ollama.com](https://ollama.com) and set the **Ollama endpoint** to `https://ollama.com`, or pick **Ollama Cloud** from the **Connection preset** dropdown, which also wires up a secure Bearer header.
-2. Paste the key into the **Ollama Cloud API key** field; it is stored in your device keychain and sent as the `Authorization: Bearer <your_api_key>` header.
-3. Refresh the model list and select a cloud model for the Researcher or Gardener.
+2. Paste the key into the **Ollama Cloud API key** field; it is stored in your device keychain and sent as the `Authorization: Bearer <your_api_key>` header. Entering a key wires the Bearer header automatically, so the field works even when you typed the endpoint by hand instead of using the preset.
+3. The preset refreshes the model list for you; use the **Refresh model list** button if you configured the connection manually, and select a cloud model for the Researcher or Gardener.
 
 Cloud model names come from the model list exposed by the API, so use exactly the IDs shown in the dropdown. Context budgets stay local-safe by default; raise them per model in **Advanced → Model context overrides** if your cloud model supports more.
 

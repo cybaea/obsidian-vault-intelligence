@@ -14,13 +14,13 @@ Manage your core intelligence providers and credentials.
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Google API key | `None` | Your secret key from [Google AI Studio](https://aistudio.google.com/). Stored securely in your system keychain (or masked in `data.json` if secure storage is unavailable). Required for all Gemini models and embeddings. |
-| Connection preset | `None` | Quick-fill for common providers: local Ollama, Ollama Cloud, and the Kilo Gateway. Fills in the endpoint and a secure, keychain-backed API key header where the provider needs one. |
-| Ollama Cloud API key | `None` | Sent as the `Authorization: Bearer` header for Ollama Cloud requests. Stored in your device keychain, never synced. Only shown when the Ollama endpoint points at Ollama Cloud. |
+| Connection preset | `None` | Quick-fill for common providers: local Ollama, Ollama Cloud, and the Kilo Gateway. Fills in the endpoint and a secure, keychain-backed API key header where the provider needs one, then refreshes the model list. |
 | Ollama endpoint | `http://localhost:11434` | Server URL for your Ollama connection: a local instance or Ollama Cloud (`https://ollama.com`). Required for Ollama-based chat and embeddings. |
+| Ollama Cloud API key | `None` | Sent as the `Authorization: Bearer` header for Ollama Cloud requests; entering a key also wires that header automatically. Stored in your device keychain, never synced. Only shown when the Ollama endpoint points at Ollama Cloud. |
 | Ollama headers | `None` | Custom HTTP headers for Ollama API requests, for example an `Authorization: Bearer` key. Values marked as Secret are stored in the device keychain. |
-| OpenAI-compatible endpoint | `None` | Base URL of an OpenAI Chat Completions API, such as the Kilo Gateway (`https://ai-gateway.kilo.ai/api/v1`), LM Studio, llama.cpp, vLLM, or OpenRouter. See the [OpenAI-compatible endpoints guide](/docs/how-to/openai-compatible-endpoints). |
+| OpenAI-compatible endpoint | `None` | Base URL of an OpenAI Chat Completions API, such as the Kilo Gateway (`https://ai-gateway.kilo.ai/api/v1`), LM Studio, llama.cpp, vLLM, or OpenRouter. Local servers are matched with `http://` automatically when you type the address without a scheme. See the [OpenAI-compatible endpoints guide](/docs/how-to/openai-compatible-endpoints). |
+| Kilo API key | `None` | Sent as the `Authorization: Bearer` header for Kilo Gateway requests; entering a key also wires that header automatically. Stored in your device keychain, never synced. Only shown when the OpenAI-compatible endpoint points at the Kilo Gateway. |
 | OpenAI-compatible headers | `None` | Custom HTTP headers for OpenAI-compatible API requests, for example an `Authorization: Bearer` key. Values marked as Secret are stored in the device keychain. |
-| Kilo API key | `None` | Sent as the `Authorization: Bearer` header for Kilo Gateway requests. Stored in your device keychain, never synced. Only shown when the OpenAI-compatible endpoint points at the Kilo Gateway. |
 | Refresh model list | `None` | A manual trigger to fetch available models from the Gemini API, your Ollama server, and any OpenAI-compatible endpoint. |
 
 ---
@@ -31,7 +31,7 @@ Customise your primary research assistant’s intelligence and writing style.
 
 | Setting | Default | Description |
 | :--- | :--- | :--- |
-| Chat model | `gemini-3-flash-preview` | The primary reasoning engine. <br>• _Cloud (Gemini):_ High quality, zero local overhead. <br>• _Local (Ollama):_ Fully private and free to run. <br>• _OpenAI-compatible:_ Any OpenAI Chat Completions server (Kilo Gateway, LM Studio, vLLM, OpenRouter). |
+| Chat model | `gemini-3-flash-preview` | The primary reasoning engine. <br>• _Cloud (Gemini):_ High quality, zero local overhead. <br>• _Ollama:_ Fully private or free to run (local or Ollama Cloud). <br>• _OpenAI-compatible:_ Any OpenAI Chat Completions server (Kilo Gateway, LM Studio, vLLM, OpenRouter). |
 | Agent language | `English (US)` | The primary language for agent responses. This affects the default system prompt and output style. |
 | System instruction | `Default (Managed)` | The core personality and rules for the Researcher. Leave as default to receive automatic improvements in future updates. |
 | Context window budget | `200,000` tokens | The maximum volume of notes the AI can "read" at once. Higher budgets allow for broader research but may hit API limits. <br><br>> [!TIP]<br>> If you experience "429 Too Many Requests" errors, try lowering this budget. See the [Troubleshooting Guide](file:///home/allane/Code/GitHub/obsidian-vault-intelligence/docs/reference/troubleshooting.md#429-too-many-requests) for details. |

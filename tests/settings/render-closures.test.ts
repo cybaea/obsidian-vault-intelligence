@@ -197,15 +197,22 @@ describe('render closures (T1)', () => {
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
 
-        it('should prefix http:// when the URL has no scheme', async () => {
+        it('should normalize the scheme on blur when the URL has no scheme', async () => {
             const plugin = makePlugin({ hiddenModels: [], ollamaEndpoint: '' });
             const context = makeContext(plugin);
             const setting = new MockSetting();
 
             configureOllamaEndpointField(setting as any, plugin, context);
+            // Typed value is persisted as typed while the field is being edited.
             await setting.fireText('localhost:11434');
 
+            expect(plugin.settings.ollamaEndpoint).toBe('localhost:11434');
+
+            // Leaving the field completes the canonical form (localhost => http://).
+            await setting.fireTextEvent('blur');
+
             expect(plugin.settings.ollamaEndpoint).toBe('http://localhost:11434');
+            expect(setting.textComponents[0]?.setValue).toHaveBeenCalledWith('http://localhost:11434');
         });
     });
 

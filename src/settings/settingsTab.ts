@@ -54,6 +54,7 @@ import {
     configureRefreshModelListField,
     configureVoyageApiKeyField,
     getApiKeyDescription,
+    isConnectionAtPresetEndpoint,
     renderConnectionSettings,
 } from "./sections/connections";
 import {
@@ -408,17 +409,17 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         render: (setting: Setting) => configureConnectionPresetField(setting, plugin, context),
                     },
                     {
-                        aliases: ['credential', 'token', 'secret'],
-                        desc: 'Sent with every request to Ollama Cloud and stored in your device keychain; never synced.',
-                        name: 'Ollama Cloud API key',
-                        render: (setting: Setting) => configureOllamaCloudApiKeyField(setting, plugin, context),
-                        visible: () => plugin.settings.ollamaEndpoint === CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
-                    },
-                    {
                         aliases: ['url', 'server', 'local model'],
                         desc: 'Server url for your Ollama connection: a local instance or Ollama Cloud.',
                         name: 'Ollama endpoint',
                         render: (setting: Setting) => configureOllamaEndpointField(setting, plugin, context),
+                    },
+                    {
+                        aliases: ['credential', 'token', 'secret'],
+                        desc: 'Sent with every request to Ollama Cloud and stored in your device keychain; never synced.',
+                        name: 'Ollama Cloud API key',
+                        render: (setting: Setting) => configureOllamaCloudApiKeyField(setting, plugin, context),
+                        visible: () => isConnectionAtPresetEndpoint(plugin.settings.ollamaEndpoint, CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT),
                     },
                     {
                         desc: 'Custom HTTP headers for Ollama API requests.',
@@ -432,16 +433,16 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         render: (setting: Setting) => configureOpenAICompatEndpointField(setting, plugin, context),
                     },
                     {
-                        desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
-                        name: 'OpenAI-compatible headers',
-                        render: (_setting: Setting, group: SettingGroup) => configureOpenAICompatHeadersField(group.listEl, plugin, context),
-                    },
-                    {
                         aliases: ['credential', 'token', 'secret'],
                         desc: 'Sent with every request to the Kilo gateway and stored in your device keychain; never synced.',
                         name: 'Kilo API key',
                         render: (setting: Setting) => configureKiloApiKeyField(setting, plugin, context),
-                        visible: () => plugin.settings.openaiCompatEndpoint === CONNECTION_PRESETS.KILO.ENDPOINT,
+                        visible: () => isConnectionAtPresetEndpoint(plugin.settings.openaiCompatEndpoint, CONNECTION_PRESETS.KILO.ENDPOINT),
+                    },
+                    {
+                        desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
+                        name: 'OpenAI-compatible headers',
+                        render: (_setting: Setting, group: SettingGroup) => configureOpenAICompatHeadersField(group.listEl, plugin, context),
                     },
                     {
                         desc: 'Secure credential for connecting to Voyage AI models.',

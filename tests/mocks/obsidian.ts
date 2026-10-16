@@ -351,6 +351,7 @@ if (g) {
 
     const mockEl = () => ({
         addClass: () => {},
+        append: () => {},
         appendChild: () => {},
         createDiv: mockEl,
         createEl: mockEl,
@@ -365,6 +366,7 @@ if (g) {
         body: mockEl(),
         createDiv: mockEl,
         createDocumentFragment: () => ({
+            append: () => {},
             appendChild: () => {},
             createDiv: mockEl,
             createEl: mockEl,
