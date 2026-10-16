@@ -1125,6 +1125,19 @@ a.similar-notes-link:hover {
 }
 
 /*
+ * Key-value editor host (HTTP headers editors) and storage shards list.
+ *
+ * In the declarative settings path, these inline editors are rendered
+ * into a wrapper div below the setting row's info area. The setting row
+ * uses a flex layout; this wrapper breaks out to full width below the
+ * flex content.
+ */
+.vi-kv-editor-host {
+    flex-basis: 100%;
+    margin-top: 0.75em;
+}
+
+/*
  * Gardener excluded-folders wrapper.
  *
  * In the declarative settings path, the folder list and add-field are

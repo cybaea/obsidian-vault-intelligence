@@ -26,6 +26,7 @@ function mockElement(): any {
         options: { item: vi.fn(), length: 0 },
         querySelector: vi.fn().mockReturnValue(null),
         remove: vi.fn(),
+        setAttr: vi.fn(),
         setAttribute: vi.fn(),
         setText: vi.fn(),
         style: {},

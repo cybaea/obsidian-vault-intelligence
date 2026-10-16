@@ -24,6 +24,7 @@ function mockEl(): any {
         empty: vi.fn(),
         querySelector: vi.fn().mockReturnValue(null),
         remove: vi.fn(),
+        setAttr: vi.fn(),
         setAttribute: vi.fn(),
         setText: vi.fn(),
         style: {},

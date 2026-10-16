@@ -133,6 +133,32 @@ interface TabDefinition {
     render: (context: SettingsTabContext) => void;
 }
 
+/**
+ * Render-closure helper for settings that host an inline editor (the HTTP
+ * headers key-value editors, the storage shards list) below the setting
+ * row on Obsidian v1.13+.
+ *
+ * The declarative settings renderer builds each row inside the group's
+ * list element, then rewrites that list to contain only the tracked
+ * setting rows, so anything a render callback appends directly to
+ * `group.listEl` is detached within the same render pass — which silently
+ * swallowed the inline headers editors while their rows kept showing name
+ * and description. Host the editor inside the row instead (a full-width
+ * wrapper under the info area, styled by `.vi-kv-editor-host`), and return
+ * the cleanup the renderer contract expects: it runs before the row is
+ * torn down, and again on every `update()` re-render (where
+ * `Setting.clear()` only empties the control area), so re-renders cannot
+ * stack copies of the editor.
+ */
+function renderRowEditorHost(
+    setting: Setting,
+    renderEditor: (host: HTMLElement) => void
+): () => void {
+    const host = setting.settingEl.createDiv({ cls: "vi-kv-editor-host" });
+    renderEditor(host);
+    return () => host.remove();
+}
+
 export class VaultIntelligenceSettingTab extends PluginSettingTab {
     plugin: IVaultIntelligencePlugin;
     private tabContentMap: Map<TabId, HTMLElement> = new Map();
@@ -424,7 +450,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     {
                         desc: 'Custom HTTP headers for Ollama API requests.',
                         name: 'Ollama headers',
-                        render: (_setting: Setting, group: SettingGroup) => configureOllamaHeadersField(group.listEl, plugin, context),
+                        render: (setting: Setting, _group: SettingGroup) => renderRowEditorHost(setting, (host) => configureOllamaHeadersField(host, plugin, context)),
                     },
                     {
                         aliases: ['url', 'server', 'gateway', 'kilo', 'lm studio', 'vllm'],
@@ -442,7 +468,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     {
                         desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
                         name: 'OpenAI-compatible headers',
-                        render: (_setting: Setting, group: SettingGroup) => configureOpenAICompatHeadersField(group.listEl, plugin, context),
+                        render: (setting: Setting, _group: SettingGroup) => renderRowEditorHost(setting, (host) => configureOpenAICompatHeadersField(host, plugin, context)),
                     },
                     {
                         desc: 'Secure credential for connecting to Voyage AI models.',
@@ -831,14 +857,16 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     {
                         desc: 'The plugin stores separate indexes for different embedding models to prevent data corruption.',
                         name: 'Database shards',
-                        render: (_setting: Setting, group: SettingGroup) => {
+                        render: (setting: Setting, _group: SettingGroup) => renderRowEditorHost(setting, (host) => {
                             // Synchronous execution constraint: the render closure must not
                             // await the async configureStorageList. Paint a skeleton container
                             // synchronously, then fire a floating async promise to populate it.
-                            const listContainer = group.listEl.createDiv("vi-storage-list");
+                            // Hosted in-row via renderRowEditorHost: the declarative renderer
+                            // wipes direct group.listEl children after each render pass.
+                            const listContainer = host.createDiv("vi-storage-list");
                             listContainer.createDiv({ cls: "vi-storage-empty", text: "Loading shards..." });
                             void configureStorageList(listContainer, plugin, context);
-                        },
+                        }),
                     },
                 ],
                 type: 'group',
