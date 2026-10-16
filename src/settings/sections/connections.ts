@@ -279,6 +279,48 @@ export function hasSecretAuthorizationReference(currentJson: string | undefined)
 }
 
 /**
+ * Shared by the two API key fields' change handlers: wires the stored key
+ * into the Authorization header when the headers have no Authorization
+ * entry (the preset path plants the reference itself), and otherwise
+ * surfaces a kept PLAIN-TEXT entry once per header state. The memo
+ * (`noticeMemo.value`) holds the stored headers the notice was last shown
+ * for; because a text field's onChange fires per keystroke and Obsidian
+ * stacks notices, a nine-keystroke key would otherwise stack nine
+ * identical notices. The memo re-arms whenever the stored headers change,
+ * so re-entering a plain-text value after removing it is surfaced again.
+ *
+ * A stored `vi-secret:` reference is already wired (it resolves through
+ * the same keychain slot the field writes) and stays silent. A
+ * hand-edited reference naming a different keychain slot also stays
+ * silent-unwired: that state is only reachable by editing `data.json`
+ * directly, since the headers editor derives the slot from the header
+ * key, and is accepted rather than complicating the check.
+ */
+export async function wireOrNoticeUnwiredAuthorization(
+    headersKey: 'ollamaHeaders' | 'openaiCompatHeaders',
+    plugin: IVaultIntelligencePlugin,
+    noticeMemo: { value: string | null }
+): Promise<void> {
+    const current = plugin.settings[headersKey];
+    const wired = withAuthorizationSecretIfAbsent(current);
+    if (wired !== null) {
+        plugin.settings[headersKey] = wired;
+        await plugin.saveSettings();
+        return;
+    }
+    if (hasSecretAuthorizationReference(current)) {
+        return;
+    }
+    // The kept entry is plain text, so the stored key genuinely stays
+    // unwired until the user resolves the collision.
+    if ((current || '') === noticeMemo.value) {
+        return;
+    }
+    noticeMemo.value = current || '';
+    new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
+}
+
+/**
  * Normalizes a connection endpoint: trims surrounding whitespace and strips
  * trailing slashes and, when the user typed no scheme, prefixes the scheme
  * the host plausibly serves — `http://` for localhost and private addresses
@@ -456,6 +498,9 @@ export function configureOllamaCloudApiKeyField(
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
+    // The unwired notice must not stack on the per-keystroke onChange; the
+    // memo caps it at once per header state (see the helper's docstring).
+    const unwiredNoticeMemo: { value: string | null } = { value: null };
     setting
         .setName(`${ollama} Cloud API key`)
         .setDesc(`Sent with every request to ${ollamaCloud} and stored in your device keychain; never synced.`)
@@ -470,17 +515,9 @@ export function configureOllamaCloudApiKeyField(
                     if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, keyInput);
                     // Make the field self-sufficient for manually typed endpoints:
                     // wire the stored key into the Authorization header when the
-                    // headers have no Authorization entry. The preset path already
-                    // plants this reference; a user-authored header is not clobbered.
-                    const wired = withAuthorizationSecretIfAbsent(plugin.settings.ollamaHeaders);
-                    if (wired !== null) {
-                        plugin.settings.ollamaHeaders = wired;
-                        await plugin.saveSettings();
-                    } else if (!hasSecretAuthorizationReference(plugin.settings.ollamaHeaders)) {
-                        // The kept entry is plain text, so the stored key genuinely
-                        // stays unwired until the user resolves the collision.
-                        new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
-                    }
+                    // headers have no Authorization entry; otherwise surface (once
+                    // per header state) a kept plain-text entry.
+                    await wireOrNoticeUnwiredAuthorization('ollamaHeaders', plugin, unwiredNoticeMemo);
                 } else if (storage && storage.deleteSecret) {
                     storage.deleteSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
                 }
@@ -592,6 +629,9 @@ export function configureKiloApiKeyField(
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
+    // The unwired notice must not stack on the per-keystroke onChange; the
+    // memo caps it at once per header state (see the helper's docstring).
+    const unwiredNoticeMemo: { value: string | null } = { value: null };
     setting
         .setName('Kilo API key')
         .setDesc(`Sent with every request to the ${kilo} gateway and stored in your device keychain; never synced.`)
@@ -606,17 +646,9 @@ export function configureKiloApiKeyField(
                     if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.KILO.SECRET_NAME, keyInput);
                     // Make the field self-sufficient for manually typed endpoints:
                     // wire the stored key into the Authorization header when the
-                    // headers have no Authorization entry. The preset path already
-                    // plants this reference; a user-authored header is not clobbered.
-                    const wired = withAuthorizationSecretIfAbsent(plugin.settings.openaiCompatHeaders);
-                    if (wired !== null) {
-                        plugin.settings.openaiCompatHeaders = wired;
-                        await plugin.saveSettings();
-                    } else if (!hasSecretAuthorizationReference(plugin.settings.openaiCompatHeaders)) {
-                        // The kept entry is plain text, so the stored key genuinely
-                        // stays unwired until the user resolves the collision.
-                        new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
-                    }
+                    // headers have no Authorization entry; otherwise surface (once
+                    // per header state) a kept plain-text entry.
+                    await wireOrNoticeUnwiredAuthorization('openaiCompatHeaders', plugin, unwiredNoticeMemo);
                 } else if (storage && storage.deleteSecret) {
                     storage.deleteSecret(CONNECTION_PRESETS.KILO.SECRET_NAME);
                 }

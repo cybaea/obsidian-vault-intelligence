@@ -187,6 +187,30 @@ describe('connection endpoint and API key fields', () => {
             expect(plugin.saveSettings).not.toHaveBeenCalled();
         });
 
+        it('should show the unwired notice once per header state, not once per keystroke', async () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'Bearer user-token' })
+            });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireText('k');
+            await setting.fireText('kil');
+            await setting.fireText('kilo-key-123');
+
+            // onChange fires per keystroke and Obsidian stacks notices, so
+            // the plain-text "left unwired" notice must not stack with it.
+            expect(Notice).toHaveBeenCalledTimes(1);
+
+            // A changed header state re-arms the notice: a hand-edited new
+            // plain-text entry is a new surface-worthy collision.
+            plugin.settings.openaiCompatHeaders = JSON.stringify({ Authorization: 'Bearer rotated-token' });
+            await setting.fireText('kilo-key-123x');
+
+            expect(Notice).toHaveBeenCalledTimes(2);
+        });
+
         it('should delete the stored key on clear', async () => {
             const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
             const setting = new MockSetting();
@@ -260,6 +284,30 @@ describe('connection endpoint and API key fields', () => {
             // freshly stored key, so no "left unwired" feedback may fire.
             expect(Notice).not.toHaveBeenCalled();
             expect(plugin.saveSettings).not.toHaveBeenCalled();
+        });
+
+        it('should show the unwired notice once per header state, not once per keystroke', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: JSON.stringify({ Authorization: 'Bearer user-token' })
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireText('c');
+            await setting.fireText('clo');
+            await setting.fireText('cloud-key-123');
+
+            // onChange fires per keystroke and Obsidian stacks notices, so
+            // the plain-text "left unwired" notice must not stack with it.
+            expect(Notice).toHaveBeenCalledTimes(1);
+
+            // A changed header state re-arms the notice: a hand-edited new
+            // plain-text entry is a new surface-worthy collision.
+            plugin.settings.ollamaHeaders = JSON.stringify({ Authorization: 'Bearer rotated-token' });
+            await setting.fireText('cloud-key-123x');
+
+            expect(Notice).toHaveBeenCalledTimes(2);
         });
 
         it('should delete the stored key on clear', async () => {
