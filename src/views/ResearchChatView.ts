@@ -586,7 +586,8 @@ export class ResearchChatView extends ItemView {
         const chatModels = ModelRegistry.getChatModels(this.plugin.settings.hiddenModels);
         const hasApiKey = hasGoogleApiKey(this.plugin.settings);
         const hasOllama = !!this.plugin.settings.ollamaEndpoint;
-        const canUseChat = hasApiKey || hasOllama;
+        const hasOpenAICompat = !!this.plugin.settings.openaiCompatEndpoint;
+        const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
 
         if (!canUseChat) {
             modelDropdown.addOption('none', 'Configure provider to enable selection...');
@@ -611,6 +612,21 @@ export class ResearchChatView extends ItemView {
             }
         } else if (this.plugin.settings.ollamaEndpoint) {
             const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+            group.createEl('option', {
+                attr: { disabled: 'true' },
+                text: 'No models found',
+                value: 'none'
+            });
+        }
+
+        const openaiCompatModels = chatModels.filter(m => m.provider === 'openai-compat');
+        if (openaiCompatModels.length > 0) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+            for (const m of openaiCompatModels) {
+                group.createEl('option', { text: m.label, value: m.id });
+            }
+        } else if (this.plugin.settings.openaiCompatEndpoint) {
+            const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
             group.createEl('option', {
                 attr: { disabled: 'true' },
                 text: 'No models found',

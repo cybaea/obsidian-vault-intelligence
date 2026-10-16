@@ -65,6 +65,19 @@ The "Embedding chunk size" setting (found in Advanced Settings) controls how lar
 * **Document Scale (4096 - 8192)**: Useful for finding broad themes across entire documents and speeding up vault indexing. **Only use this** if your selected embedding model explicitly supports massive context windows (e.g., `nomic-embed-text`).
 * **The Risk**: If you set the chunk size larger than your model's maximum context window, Ollama will silently truncate the text, leading to missing information and poor search quality.
 
+## Using Ollama Cloud (hosted)
+
+Ollama Cloud runs frontier-scale models on Ollama's infrastructure while keeping the same API your local instance uses, so it works through the existing Ollama connection today:
+
+1. Create an API key on [ollama.com](https://ollama.com) and set the **Ollama endpoint** to `https://ollama.com`, or pick **Ollama Cloud** from the **Connection preset** dropdown, which also wires up a secure Bearer header.
+2. Paste the key into the **Ollama Cloud API key** field; it is stored in your device keychain and sent as the `Authorization: Bearer <your_api_key>` header.
+3. Refresh the model list and select a cloud model for the Researcher or Gardener.
+
+Cloud model names come from the model list exposed by the API, so use exactly the IDs shown in the dropdown. Context budgets stay local-safe by default; raise them per model in **Advanced → Model context overrides** if your cloud model supports more.
+
+> [!NOTE]
+> Whether embedding models are available in the cloud depends on the current model list. If you do not see an embedding model, keep a local Ollama instance running, or use another embedding provider for the Explorer.
+
 ## 4. Debugging & Common Issues
 
 * **Plugin cannot connect to Ollama**: Ensure Ollama is running and your `Ollama endpoint` in Vault Intelligence is correct (default: `http://localhost:11434`). If Obsidian and Ollama are on different machines, you must set `OLLAMA_HOST=0.0.0.0` on the Ollama server.

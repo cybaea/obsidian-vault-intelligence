@@ -128,6 +128,17 @@ export const OLLAMA_CONSTANTS = {
     SOCKET_TIMEOUT_MS: 30000
 };
 
+export const OPENAI_COMPAT_CONSTANTS = {
+    /** Maximum safe buffer size for SSE streaming (1MB) */
+    MAX_BUFFER_SIZE: 1048576,
+
+    /** Socket timeout for Node HTTP connections (30s) */
+    SOCKET_TIMEOUT_MS: 30000
+};
+
+/** Model ID namespace for models served by the OpenAI-compatible connection. */
+export const OPENAI_COMPAT_MODEL_PREFIX = 'openai-compat/';
+
 export const WORKER_CONSTANTS = {
     /** Timeout for standard API requests (30 seconds) */
     API_REQUEST_TIMEOUT_MS: 30000,
@@ -419,10 +430,44 @@ export const DOCUMENTATION_URLS = {
         FOLDER_SEMANTICS: `${DOCS_BASE}docs/how-to/explorer-connections.html#folders-as-semantic-topics`,
         GARDENER: `${DOCS_CONFIG}#gardener`,
         OLLAMA_DEBUG: `${DOCS_BASE}docs/how-to/ollama.html#debugging-common-issues`,
+        OPENAI_COMPAT: `${DOCS_BASE}docs/how-to/openai-compatible-endpoints.html`,
         PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
         RESEARCHER: `${DOCS_CONFIG}#researcher`,
     },
     SPONSOR: "https://github.com/sponsors/cybaea"
+};
+
+/**
+ * Quick-fill presets for the connections settings page. Each preset pins an
+ * endpoint on the matching connection and, where needed, stores the API key
+ * under a namespaced SecretStorage key that the connection resolves as an
+ * Authorization Bearer header.
+ */
+export interface ConnectionPreset {
+    /** Endpoint URL the preset writes into the matching connection. */
+    ENDPOINT: string;
+    /** Human-readable preset label for the settings UI. */
+    LABEL: string;
+    /** SecretStorage key for the API key. Empty when the preset needs no key. */
+    SECRET_NAME: string;
+}
+
+export const CONNECTION_PRESETS: Record<'KILO' | 'OLLAMA_CLOUD' | 'OLLAMA_LOCAL', ConnectionPreset> = {
+    KILO: {
+        ENDPOINT: 'https://ai-gateway.kilo.ai/api/v1',
+        LABEL: 'Kilo.ai (OpenAI-compatible)',
+        SECRET_NAME: 'openai-compat-headers-Authorization'
+    },
+    OLLAMA_CLOUD: {
+        ENDPOINT: 'https://ollama.com',
+        LABEL: 'Ollama Cloud',
+        SECRET_NAME: 'ollama-headers-Authorization'
+    },
+    OLLAMA_LOCAL: {
+        ENDPOINT: 'http://localhost:11434',
+        LABEL: 'Ollama (local)',
+        SECRET_NAME: ''
+    }
 };
 
 export const VALIDATION_CONSTANTS = {

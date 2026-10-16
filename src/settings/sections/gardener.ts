@@ -26,7 +26,8 @@ export function configureGardenerModelField(
 ): void {
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const canUseChat = hasApiKey || hasOllama;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+    const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
     const gardenerModelCurrent = plugin.settings.gardenerModel;
     const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
 
@@ -42,7 +43,7 @@ export function configureGardenerModelField(
                     }
                     refreshVisibility(context);
                 })();
-            });
+            }, hasOpenAICompat);
         });
 }
 
@@ -464,7 +465,8 @@ export function renderGardenerSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const canUseChat = hasApiKey || hasOllama;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+    const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: `Configure the ${gardener.toLowerCase()} to maintain your vault’s ontology and hygiene. ` });

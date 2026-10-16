@@ -2,7 +2,7 @@ import { App, Notice, SecretComponent, Setting, requestUrl, setIcon } from "obsi
 
 import type { IVaultIntelligencePlugin } from "../types";
 
-import { DOCUMENTATION_URLS } from "../../constants";
+import { CONNECTION_PRESETS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { validateHeaderKey } from "../../utils/headers";
 import { hasGoogleApiKey, resolveSecrets } from "../../utils/secrets";
@@ -22,7 +22,18 @@ interface InternalPlugin {
 const google = "Google";
 const gemini = "Gemini";
 const ollama = "Ollama";
+const openaiCompat = "OpenAI-compatible";
 const voyage = "Voyage AI";
+const kilo = "Kilo";
+const lmStudio = "LM Studio";
+const ollamaCloud = "Ollama Cloud";
+
+const AUTHORIZATION_HEADER = "Authorization";
+const PRESET_KILO = "kilo";
+const PRESET_NONE = "none";
+const PRESET_OLLAMA_CLOUD = "ollama-cloud";
+const PRESET_OLLAMA_LOCAL = "ollama-local";
+const VI_SECRET_PREFIX = "vi-secret:";
 
 /**
  * Documentation link setting — opens the plugin documentation site.
@@ -96,8 +107,9 @@ export function configureGoogleApiKeyField(
                     try {
                         const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
                         const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+                        const resolvedOpenAICompatHeaders = plugin.settings.openaiCompatHeaders ? await resolveSecrets(plugin.settings.openaiCompatHeaders, resolveSecret, "openai-compat-headers-") : {};
 
-                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders);
+                        await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, actualKey, 0, false, false, false, resolvedOllamaHeaders, false, resolvedOpenAICompatHeaders);
                         new Notice("API key valid. Models loaded.");
                     } catch {
                         if (actualKey.length > 30) new Notice("Failed to load models.");
@@ -148,7 +160,7 @@ export function configureOllamaEndpointField(
 
     setting
         .setName(`${ollama} endpoint`)
-        .setDesc('Server url for local model provider.')
+        .setDesc(`Server url for your ${ollama} connection: a local instance or ${ollamaCloud}.`)
         .addText(text => text
             .setPlaceholder('Enter endpoint (e.g., http://localhost:11434)')
             .setValue(plugin.settings.ollamaEndpoint || '')
@@ -201,6 +213,216 @@ export function configureOllamaHeadersField(
         title: "Ollama HTTP headers",
         validateKey: (key: string) => validateHeaderKey(key)
     });
+}
+
+/**
+ * Adds (or replaces) the Authorization header with a secret-backed reference.
+ * The reference stores the bare header key; resolvers prepend the
+ * connection's namespace prefix when reading the keychain.
+ */
+export function withAuthorizationSecret(currentJson: string | undefined): string {
+    let headers: Record<string, string> = {};
+    try {
+        headers = JSON.parse(currentJson || "{}") as Record<string, string>;
+    } catch {
+        headers = {};
+    }
+    headers[AUTHORIZATION_HEADER] = `${VI_SECRET_PREFIX}Authorization`;
+    return JSON.stringify(headers);
+}
+
+/**
+ * Applies a connection preset: pins the endpoint on the matching connection
+ * and wires a secret-backed Authorization Bearer header where the provider
+ * needs an API key.
+ */
+export async function applyConnectionPreset(presetId: string, plugin: IVaultIntelligencePlugin): Promise<void> {
+    if (presetId === PRESET_OLLAMA_LOCAL) {
+        plugin.settings.ollamaEndpoint = CONNECTION_PRESETS.OLLAMA_LOCAL.ENDPOINT;
+    } else if (presetId === PRESET_OLLAMA_CLOUD) {
+        plugin.settings.ollamaEndpoint = CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT;
+        plugin.settings.ollamaHeaders = withAuthorizationSecret(plugin.settings.ollamaHeaders);
+    } else if (presetId === PRESET_KILO) {
+        plugin.settings.openaiCompatEndpoint = CONNECTION_PRESETS.KILO.ENDPOINT;
+        plugin.settings.openaiCompatHeaders = withAuthorizationSecret(plugin.settings.openaiCompatHeaders);
+    } else {
+        return;
+    }
+    new Notice("Preset applied. Test the connection, then save your API key below if the preset needs one.");
+    await plugin.saveSettings();
+}
+
+/**
+ * Connection preset dropdown — quick-fills a common provider configuration.
+ */
+export function configureConnectionPresetField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    context: SettingsTabContext
+): void {
+    setting
+        .setName('Connection preset')
+        .setDesc('Quickly configure a common provider: sets the endpoint and stores the API key securely where the provider needs one.')
+        .addDropdown(dropdown => {
+            dropdown.addOption(PRESET_NONE, 'Choose a preset...')
+                .addOption(PRESET_OLLAMA_LOCAL, CONNECTION_PRESETS.OLLAMA_LOCAL.LABEL)
+                .addOption(PRESET_OLLAMA_CLOUD, CONNECTION_PRESETS.OLLAMA_CLOUD.LABEL)
+                .addOption(PRESET_KILO, CONNECTION_PRESETS.KILO.LABEL)
+                .setValue(PRESET_NONE)
+                .onChange((value) => {
+                    void (async () => {
+                        await applyConnectionPreset(value, plugin);
+                        dropdown.setValue(PRESET_NONE);
+                        refreshSettings(context);
+                    })();
+                });
+        });
+}
+
+/**
+ * Ollama Cloud API key — stored in the device keychain and sent as the
+ * Authorization Bearer header on every Ollama request. Rendered when the
+ * Ollama endpoint points at Ollama Cloud.
+ */
+export function configureOllamaCloudApiKeyField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName(`${ollama} Cloud API key`)
+        .setDesc(`Sent with every request to ${ollamaCloud} and stored in your device keychain; never synced.`)
+        .addText(text => text
+            .setPlaceholder('API key')
+            .setPassword()
+            .setValue('')
+            .onChange((value) => {
+                const keyInput = value.trim();
+                const storage = plugin.app.secretStorage as unknown as { deleteSecret?: (k: string) => void; setSecret?: (k: string, v: string) => void };
+                if (keyInput) {
+                    if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, keyInput);
+                } else if (storage && storage.deleteSecret) {
+                    storage.deleteSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
+                }
+            }));
+}
+
+/**
+ * OpenAI-compatible endpoint setting — URL input plus a "Test connection"
+ * button that probes the endpoint's model list and shows online/offline status.
+ */
+export function configureOpenAICompatEndpointField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    const statusEl = setting.controlEl.createDiv({ cls: 'vi-ollama-status' });
+    const updateStatus = async (url: string) => {
+        if (!url) {
+            statusEl.setText("");
+            return;
+        }
+        try {
+            const endpoint = url.replace(/\/+$/, '');
+            const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
+            const headers = plugin.settings.openaiCompatHeaders ? await resolveSecrets(plugin.settings.openaiCompatHeaders, resolveSecret, 'openai-compat-headers-') : {};
+            const response = await requestUrl({ headers, url: `${endpoint}/models` });
+            if (response.status === 200) {
+                statusEl.setText("Online");
+                statusEl.className = 'vi-ollama-status vi-status-success';
+            } else {
+                statusEl.setText("Offline");
+                statusEl.className = 'vi-ollama-status vi-status-error';
+            }
+        } catch {
+            statusEl.setText("Offline");
+            statusEl.className = 'vi-ollama-status vi-status-error';
+        }
+    };
+
+    setting
+        .setName(`${openaiCompat} endpoint`)
+        .setDesc(`Base url of an ${openaiCompat} API, such as the ${kilo} gateway, ${lmStudio}, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.`)
+        .addText(text => text
+            .setPlaceholder(`Enter endpoint (e.g., ${CONNECTION_PRESETS.KILO.ENDPOINT})`)
+            .setValue(plugin.settings.openaiCompatEndpoint || '')
+            .onChange(async (value) => {
+                let url = value.trim();
+                if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = `https://${url}`;
+                    text.setValue(url);
+                }
+                plugin.settings.openaiCompatEndpoint = url;
+                await plugin.saveSettings();
+            }))
+        .addButton(btn => btn
+            .setButtonText("Test connection")
+            .onClick(async () => {
+                btn.setButtonText("Testing...");
+                btn.setDisabled(true);
+                await updateStatus(plugin.settings.openaiCompatEndpoint);
+                btn.setDisabled(false);
+                btn.setButtonText("Test connection");
+            }));
+}
+
+/**
+ * OpenAI-compatible HTTP headers editor — custom key-value editor for
+ * authentication or proxy configuration headers.
+ */
+export function configureOpenAICompatHeadersField(
+    containerEl: HTMLElement,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    renderKeyValueEditor({
+        app: plugin.app,
+        container: containerEl,
+        currentJson: plugin.settings.openaiCompatHeaders,
+        description: "Optional HTTP headers for authentication (for example, a Bearer token) or proxy configuration. Use 'Secret' to securely store tokens in the device keychain.",
+        onChange: (value: string) => {
+            plugin.settings.openaiCompatHeaders = value;
+            void plugin.saveSettings();
+        },
+        onError: (error: string) => new Notice(error),
+        onSaveSecret: (key: string, value: string) => {
+            const storage = plugin.app.secretStorage as unknown as { setSecret?: (k: string, v: string) => void };
+            if (storage && storage.setSecret) {
+                storage.setSecret(key, value);
+            }
+        },
+        secretKeyPrefix: `openai-compat-headers-`,
+        title: "OpenAI-compatible HTTP headers",
+        validateKey: (key: string) => validateHeaderKey(key)
+    });
+}
+
+/**
+ * Kilo API key — stored in the device keychain and sent as the
+ * Authorization Bearer header on every OpenAI-compatible request. Rendered
+ * when the OpenAI-compatible endpoint points at the Kilo Gateway.
+ */
+export function configureKiloApiKeyField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    setting
+        .setName('Kilo API key')
+        .setDesc(`Sent with every request to the ${kilo} gateway and stored in your device keychain; never synced.`)
+        .addText(text => text
+            .setPlaceholder('API key')
+            .setPassword()
+            .setValue('')
+            .onChange((value) => {
+                const keyInput = value.trim();
+                const storage = plugin.app.secretStorage as unknown as { deleteSecret?: (k: string) => void; setSecret?: (k: string, v: string) => void };
+                if (keyInput) {
+                    if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.KILO.SECRET_NAME, keyInput);
+                } else if (storage && storage.deleteSecret) {
+                    storage.deleteSecret(CONNECTION_PRESETS.KILO.SECRET_NAME);
+                }
+            }));
 }
 
 /**
@@ -275,8 +497,9 @@ export function configureRefreshModelListField(
 
                     const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
                     const resolvedOllamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
+                    const resolvedOpenAICompatHeaders = plugin.settings.openaiCompatHeaders ? await resolveSecrets(plugin.settings.openaiCompatHeaders, resolveSecret, "openai-compat-headers-") : {};
 
-                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders);
+                    await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey, 0, true, false, false, resolvedOllamaHeaders, false, resolvedOpenAICompatHeaders);
                     new Notice("Model list refreshed");
                 } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : String(e);
@@ -335,9 +558,19 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
     configureGoogleApiKeyField(new Setting(containerEl), plugin, context);
 
+    configureConnectionPresetField(new Setting(containerEl), plugin, context);
+
+    configureOllamaCloudApiKeyField(new Setting(containerEl), plugin, context);
+
     configureOllamaEndpointField(new Setting(containerEl), plugin, context);
 
     configureOllamaHeadersField(containerEl, plugin, context);
+
+    configureOpenAICompatEndpointField(new Setting(containerEl), plugin, context);
+
+    configureOpenAICompatHeadersField(containerEl, plugin, context);
+
+    configureKiloApiKeyField(new Setting(containerEl), plugin, context);
 
     // --- 2b. Voyage AI API Key ---
     configureVoyageApiKeyField(new Setting(containerEl), plugin, context);

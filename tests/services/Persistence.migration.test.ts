@@ -105,4 +105,51 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
         expect(plugin.settings.googleApiKeySecret).toBe('vault-intelligence-api-key');
         expect(plugin.settings.googleApiKey).toBe('');
     });
+
+    it('should normalise legacy double-prefixed secret references', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        const legacyData = {
+            mcpServers: [{
+                env: '{"API_KEY": "vi-secret:mcp-server1-env-API_KEY"}',
+                id: 'server1',
+                name: 'Test server',
+                remoteHeaders: '{"Authorization": "vi-secret:mcp-server1-headers-Authorization"}',
+                requireExplicitConfirmation: true,
+                type: 'streamable_http'
+            }],
+            ollamaHeaders: '{"Authorization": "vi-secret:ollama-headers-Authorization"}'
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        // Resolvers prepend the namespace prefix at lookup time, so references
+        // must store the bare key for the stored secrets to resolve.
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+        expect(plugin.settings.mcpServers[0]?.env).toBe('{"API_KEY": "vi-secret:API_KEY"}');
+        expect(plugin.settings.mcpServers[0]?.remoteHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+        expect(plugin.saveData).toHaveBeenCalled();
+    });
+
+    it('should leave already-normalised secret references untouched', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        const legacyData = {
+            ollamaHeaders: '{"Authorization": "vi-secret:Authorization"}'
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+    });
 });

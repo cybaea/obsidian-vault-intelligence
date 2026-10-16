@@ -169,13 +169,14 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		void this.mcpClientManager.initialize();
 
 		// 1b. Fetch available models asynchronously (Now uses getApiKey resolver)
-		if (hasGoogleApiKey(this.settings) || hasVoyageApiKey(this.settings) || this.settings.ollamaEndpoint) {
+		if (hasGoogleApiKey(this.settings) || hasVoyageApiKey(this.settings) || this.settings.ollamaEndpoint || this.settings.openaiCompatEndpoint) {
 			void (async () => {
 				const apiKey = await this.geminiService.getApiKey() || ""; 
 				const ollamaProvider = this.providerRegistry.getOllamaProvider() as unknown as InternalOllamaProvider;
 				const ollamaHeaders = ollamaProvider?.getHeaders ? ollamaProvider.getHeaders() : {};
-				// Pass skipOllamaFetch=true so we exclusively use the Ollama cache on startup to save costs
-				await ModelRegistry.fetchModels(this.app, this.manifest.dir || `${this.app.vault.configDir}/plugins/vault-intelligence`, this.settings, apiKey, this.settings.modelCacheDurationDays, false, false, true, ollamaHeaders);
+				const openaiCompatHeaders = await this.providerRegistry.getOpenAICompatProvider().getResolvedHeaders();
+				// Pass skipOllamaFetch=true so we exclusively use the local caches on startup to save costs
+				await ModelRegistry.fetchModels(this.app, this.manifest.dir || `${this.app.vault.configDir}/plugins/vault-intelligence`, this.settings, apiKey, this.settings.modelCacheDurationDays, false, false, true, ollamaHeaders, true, openaiCompatHeaders);
 				// Re-sanitize after fetch completes in case dynamic limits are different
 				await this.sanitizeBudgets();
 			})();
@@ -466,7 +467,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		// --- Tiered Context Control Migration (v8.2.0) ---
 		// Migrate legacy local context budgets to explicitly overridden model budgets
 		// Ensures users who heavily customized their local VRAM budget don't lose it on upgrade.
-		if ((this.settings.chatModel?.includes('ollama') || this.settings.chatModel?.includes('local') || this.settings.embeddingProvider === 'local' || this.settings.embeddingProvider === 'ollama') && this.settings.contextWindowTokens !== DEFAULT_SETTINGS.contextWindowTokens) {
+		if ((this.settings.chatModel?.includes('ollama') || this.settings.chatModel?.includes('local') || this.settings.chatModel?.includes('openai-compat') || this.settings.embeddingProvider === 'local' || this.settings.embeddingProvider === 'ollama') && this.settings.contextWindowTokens !== DEFAULT_SETTINGS.contextWindowTokens) {
 			if (this.settings.chatModel && typeof this.settings.contextWindowTokens === 'number') {
 				this.settings.modelContextOverrides[this.settings.chatModel] = this.settings.contextWindowTokens;
 				this.settings.contextWindowTokens = DEFAULT_SETTINGS.contextWindowTokens;
@@ -474,7 +475,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			}
 		}
 
-		if ((this.settings.gardenerModel?.includes('ollama') || this.settings.gardenerModel?.includes('local')) && this.settings.gardenerContextBudget !== DEFAULT_SETTINGS.gardenerContextBudget) {
+		if ((this.settings.gardenerModel?.includes('ollama') || this.settings.gardenerModel?.includes('local') || this.settings.gardenerModel?.includes('openai-compat')) && this.settings.gardenerContextBudget !== DEFAULT_SETTINGS.gardenerContextBudget) {
 			if (this.settings.gardenerModel && typeof this.settings.gardenerContextBudget === 'number') {
 				this.settings.modelContextOverrides[this.settings.gardenerModel] = this.settings.gardenerContextBudget;
 				this.settings.gardenerContextBudget = DEFAULT_SETTINGS.gardenerContextBudget;
@@ -550,7 +551,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 								if (!v.startsWith('vi-secret:') && (k.toLowerCase().includes('key') || k.toLowerCase().includes('token') || k.toLowerCase().includes('secret') || k.toLowerCase().includes('password'))) {
 									const secretKey = `mcp-${server.id}-env-${k}`;
 									storage.setSecret(secretKey, v);
-									parsed[k] = `vi-secret:${secretKey}`;
+									parsed[k] = `vi-secret:${k}`;
 									modified = true;
 								}
 							}
@@ -572,7 +573,7 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 								if (!v.startsWith('vi-secret:') && (k.toLowerCase().includes('authorization') || k.toLowerCase().includes('token') || k.toLowerCase().includes('key') || k.toLowerCase().includes('api'))) {
 									const secretKey = `mcp-${server.id}-headers-${k}`;
 									storage.setSecret(secretKey, v);
-									parsed[k] = `vi-secret:${secretKey}`;
+									parsed[k] = `vi-secret:${k}`;
 									modified = true;
 								}
 							}
@@ -594,6 +595,35 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			await this.saveData(this.settings);
 		}
 
+		// --- Secret Reference Normalisation (v9.5.0) ---
+		// Legacy writers embedded the storage namespace inside vi-secret
+		// references, while resolvers prepend the namespace prefix again at
+		// lookup time. Rewrite historical references to the bare key so the
+		// stored secrets resolve again.
+		let secretReferencesNormalised = false;
+		if (this.settings.ollamaHeaders?.includes("vi-secret:ollama-headers-")) {
+			this.settings.ollamaHeaders = this.settings.ollamaHeaders.split("vi-secret:ollama-headers-").join("vi-secret:");
+			secretReferencesNormalised = true;
+		}
+		if (this.settings.mcpServers) {
+			for (const server of this.settings.mcpServers) {
+				const envPrefix = `vi-secret:mcp-${server.id}-env-`;
+				const headersPrefix = `vi-secret:mcp-${server.id}-headers-`;
+				if (server.env?.includes(envPrefix)) {
+					server.env = server.env.split(envPrefix).join("vi-secret:");
+					secretReferencesNormalised = true;
+				}
+				if (server.remoteHeaders?.includes(headersPrefix)) {
+					server.remoteHeaders = server.remoteHeaders.split(headersPrefix).join("vi-secret:");
+					secretReferencesNormalised = true;
+				}
+			}
+		}
+		if (secretReferencesNormalised) {
+			logger.info("[SecretStorage] Normalised legacy secret references to the resolver-compatible format.");
+			await this.saveData(this.settings);
+		}
+
 		await this.sanitizeBudgets();
 
 		// --- Model ID Prefix Migration (v8.1.0) ---
@@ -603,6 +633,9 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 			prefixChanged = true;
 		} else if (this.settings.embeddingProvider === 'ollama' && !this.settings.embeddingModel.startsWith('ollama/')) {
 			this.settings.embeddingModel = `ollama/${this.settings.embeddingModel}`;
+			prefixChanged = true;
+		} else if (this.settings.embeddingProvider === 'openai-compat' && !this.settings.embeddingModel.startsWith('openai-compat/')) {
+			this.settings.embeddingModel = `openai-compat/${this.settings.embeddingModel}`;
 			prefixChanged = true;
 		}
 

@@ -9,7 +9,7 @@ import { PersistenceManager } from "../services/PersistenceManager";
 import { IEmbeddingClient } from "../types/providers";
 import { LogLevel } from "../utils/logger";
 
-export type EmbeddingProvider = 'gemini' | 'local' | 'ollama' | 'voyage';
+export type EmbeddingProvider = 'gemini' | 'local' | 'ollama' | 'openai-compat' | 'voyage';
 
 export type ImplicitFolderSemanticsMode = 'none' | 'ontology' | 'all';
 
@@ -83,6 +83,8 @@ export interface VaultIntelligenceSettings {
     ollamaEndpoint: string;
     ollamaHeaders?: string;
     ontologyPath: string;
+    openaiCompatEndpoint: string;
+    openaiCompatHeaders?: string;
     plansRetentionDays: number;
     previousVersion: string;
     queueDelayMs: number;
@@ -222,6 +224,8 @@ export const DEFAULT_SETTINGS: VaultIntelligenceSettings = {
     ollamaEndpoint: 'http://localhost:11434',
     ollamaHeaders: undefined,
     ontologyPath: 'Ontology',
+    openaiCompatEndpoint: '',
+    openaiCompatHeaders: undefined,
     plansRetentionDays: 7,
     previousVersion: '0.0.0',
     queueDelayMs: 100,

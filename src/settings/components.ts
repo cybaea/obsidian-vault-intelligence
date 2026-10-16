@@ -46,7 +46,8 @@ export function renderModelDropdown(
     currentValue: string,
     hasProvider: boolean,
     hasOllamaSetting: boolean,
-    onSelect: (val: string) => void
+    onSelect: (val: string) => void,
+    hasOpenAICompatSetting: boolean = false
 ): void {
     if (!hasProvider) {
         dropdown.addOption('none', 'Configure provider to enable selection...');
@@ -79,6 +80,7 @@ export function renderModelDropdown(
     const localModels = models.filter(m => m.provider === 'local');
 
     const voyageModels = models.filter(m => m.provider === 'voyage');
+    const openaiCompatModels = models.filter(m => m.provider === 'openai-compat');
 
     if (googleModels.length > 0) {
         const group = selectEl.createEl('optgroup', { attr: { label: 'Cloud (Gemini)' } });
@@ -101,6 +103,20 @@ export function renderModelDropdown(
         }
     } else if (hasOllamaSetting) {
         const group = selectEl.createEl('optgroup', { attr: { label: 'Local (Ollama)' } });
+        group.createEl('option', {
+            attr: { disabled: 'true' },
+            text: 'No models found',
+            value: 'none'
+        });
+    }
+
+    if (openaiCompatModels.length > 0) {
+        const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
+        for (const m of openaiCompatModels) {
+            group.createEl('option', { text: m.label, value: m.id });
+        }
+    } else if (hasOpenAICompatSetting) {
+        const group = selectEl.createEl('optgroup', { attr: { label: 'Custom (OpenAI-compatible)' } });
         group.createEl('option', {
             attr: { disabled: 'true' },
             text: 'No models found',
@@ -188,7 +204,7 @@ export function renderKeyValueEditor({
                 if (p.value !== '********') {
                     onSaveSecret(secretKey, p.value);
                 }
-                result[p.key] = `vi-secret:${secretKey}`;
+                result[p.key] = `vi-secret:${p.key}`;
                 p.value = '********'; // Mask in memory
             } else {
                 result[p.key] = p.value;

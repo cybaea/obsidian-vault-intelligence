@@ -367,4 +367,81 @@ describe('visibility predicates (T3)', () => {
             expect(def?.visible?.()).toBe(false);
         });
     });
+
+    describe('openai-compat connection visibility', () => {
+        const findConnectionDefinition = (settingName: string) => {
+            const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
+            const connections = defs.find(d => d.name === 'Connections');
+            return findDefinition(connections, settingName);
+        };
+
+        it('shows the Kilo API key field only when the endpoint matches the Kilo preset', () => {
+            buildPlugin({
+                openaiCompatEndpoint: 'https://ai-gateway.kilo.ai/api/v1'
+            });
+            const def = findConnectionDefinition('Kilo API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('hides the Kilo API key field when the endpoint points elsewhere', () => {
+            buildPlugin({
+                openaiCompatEndpoint: 'http://localhost:1234/v1'
+            });
+            const def = findConnectionDefinition('Kilo API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(false);
+        });
+
+        it('shows the Ollama Cloud API key field only when the endpoint matches the cloud preset', () => {
+            buildPlugin({
+                ollamaEndpoint: 'https://ollama.com'
+            });
+            const def = findConnectionDefinition('Ollama Cloud API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('hides the Ollama Cloud API key field for the default local endpoint', () => {
+            buildPlugin({
+                ollamaEndpoint: 'http://localhost:11434'
+            });
+            const def = findConnectionDefinition('Ollama Cloud API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(false);
+        });
+
+        it('always shows the preset and endpoint fields', () => {
+            buildPlugin({});
+            expect(findConnectionDefinition('Connection preset')?.visible).toBeUndefined();
+            expect(findConnectionDefinition('OpenAI-compatible endpoint')?.visible).toBeUndefined();
+            expect(findConnectionDefinition('OpenAI-compatible headers')?.visible).toBeUndefined();
+        });
+    });
+
+    describe('openai-compat custom model predicates', () => {
+        it('shows the custom chat model field when only the OpenAI-compatible endpoint is configured', () => {
+            buildPlugin({
+                chatModel: 'some-unknown-model',
+                googleApiKey: '',
+                hiddenModels: [],
+                openaiCompatEndpoint: 'https://ai-gateway.kilo.ai/api/v1'
+            });
+            const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
+            const researcher = defs.find(d => d.name === 'Researcher');
+            const def = findDefinition(researcher, 'Custom chat model');
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('treats openai-compat as an online embedding provider', () => {
+            buildPlugin({
+                embeddingProvider: 'openai-compat'
+            });
+            const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
+            const explorer = defs.find(d => d.name === 'Explorer');
+            const def = findDefinition(explorer, 'Embedding model');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(true);
+        });
+    });
 });

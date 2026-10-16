@@ -17,6 +17,7 @@ import {
 
 import type { IVaultIntelligencePlugin } from "./types";
 
+import { CONNECTION_PRESETS } from "../constants";
 import { LOCAL_EMBEDDING_MODELS, ModelRegistry } from "../services/ModelRegistry";
 import { refreshSettings } from "./refreshSettings";
 import {
@@ -41,10 +42,15 @@ import {
     renderAdvancedSettings,
 } from "./sections/advanced";
 import {
+    configureConnectionPresetField,
     configureDocumentationField,
     configureGoogleApiKeyField,
+    configureKiloApiKeyField,
+    configureOllamaCloudApiKeyField,
     configureOllamaEndpointField,
     configureOllamaHeadersField,
+    configureOpenAICompatEndpointField,
+    configureOpenAICompatHeadersField,
     configureRefreshModelListField,
     configureVoyageApiKeyField,
     getApiKeyDescription,
@@ -183,6 +189,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     displayValue: () => {
                         if (plugin.settings.googleApiKey || plugin.settings.googleApiKeySecret) return 'Google Gemini';
                         if (plugin.settings.ollamaEndpoint) return 'Ollama';
+                        if (plugin.settings.openaiCompatEndpoint) return 'OpenAI-compatible';
                         if (plugin.settings.voyageApiKey || plugin.settings.voyageApiKeySecret) return 'Voyage AI';
                         return 'Not configured';
                     },
@@ -190,7 +197,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                     name: 'Connections',
                     status: () => {
                         const hasKey = plugin.settings.googleApiKey || plugin.settings.googleApiKeySecret
-                            || plugin.settings.ollamaEndpoint || plugin.settings.voyageApiKey || plugin.settings.voyageApiKeySecret;
+                            || plugin.settings.ollamaEndpoint || plugin.settings.openaiCompatEndpoint || plugin.settings.voyageApiKey || plugin.settings.voyageApiKeySecret;
                         return hasKey ? null : 'warning';
                     },
                     type: 'page',
@@ -395,8 +402,21 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         render: (setting: Setting) => configureGoogleApiKeyField(setting, plugin, context),
                     },
                     {
+                        aliases: ['preset', 'provider', 'gateway', 'cloud'],
+                        desc: 'Quickly configure a common provider: sets the endpoint and stores the API key securely where the provider needs one.',
+                        name: 'Connection preset',
+                        render: (setting: Setting) => configureConnectionPresetField(setting, plugin, context),
+                    },
+                    {
+                        aliases: ['credential', 'token', 'secret'],
+                        desc: 'Sent with every request to Ollama Cloud and stored in your device keychain; never synced.',
+                        name: 'Ollama Cloud API key',
+                        render: (setting: Setting) => configureOllamaCloudApiKeyField(setting, plugin, context),
+                        visible: () => plugin.settings.ollamaEndpoint === CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                    },
+                    {
                         aliases: ['url', 'server', 'local model'],
-                        desc: 'Server url for local model provider.',
+                        desc: 'Server url for your Ollama connection: a local instance or Ollama Cloud.',
                         name: 'Ollama endpoint',
                         render: (setting: Setting) => configureOllamaEndpointField(setting, plugin, context),
                     },
@@ -404,6 +424,24 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         desc: 'Custom HTTP headers for Ollama API requests.',
                         name: 'Ollama headers',
                         render: (_setting: Setting, group: SettingGroup) => configureOllamaHeadersField(group.listEl, plugin, context),
+                    },
+                    {
+                        aliases: ['url', 'server', 'gateway', 'kilo', 'lm studio', 'vllm'],
+                        desc: 'Base url of an OpenAI-compatible API, such as the Kilo gateway, LM Studio, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.',
+                        name: 'OpenAI-compatible endpoint',
+                        render: (setting: Setting) => configureOpenAICompatEndpointField(setting, plugin, context),
+                    },
+                    {
+                        desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
+                        name: 'OpenAI-compatible headers',
+                        render: (_setting: Setting, group: SettingGroup) => configureOpenAICompatHeadersField(group.listEl, plugin, context),
+                    },
+                    {
+                        aliases: ['credential', 'token', 'secret'],
+                        desc: 'Sent with every request to the Kilo gateway and stored in your device keychain; never synced.',
+                        name: 'Kilo API key',
+                        render: (setting: Setting) => configureKiloApiKeyField(setting, plugin, context),
+                        visible: () => plugin.settings.openaiCompatEndpoint === CONNECTION_PRESETS.KILO.ENDPOINT,
                     },
                     {
                         desc: 'Secure credential for connecting to Voyage AI models.',
@@ -617,7 +655,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         visible: () => plugin.settings.enableDualLoop,
                     },
                     {
-                        desc: 'Enter the specific Gemini or Ollama model ID.',
+                        desc: 'Enter the specific Gemini, Ollama, or OpenAI-compatible model ID.',
                         name: 'Custom re-ranking model',
                         render: (setting: Setting) => configureCustomReRankingModelField(setting, plugin, context),
                         visible: () => plugin.settings.enableDualLoop && this.isCustomReRankingModel(plugin),
@@ -994,7 +1032,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         const models = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
         const hasApiKey = !!plugin.settings.googleApiKey || !!plugin.settings.googleApiKeySecret;
         const hasOllama = !!plugin.settings.ollamaEndpoint;
-        return (hasApiKey || hasOllama) && !models.some(m => m.id === plugin.settings.chatModel);
+        const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+        return (hasApiKey || hasOllama || hasOpenAICompat) && !models.some(m => m.id === plugin.settings.chatModel);
     }
 
     private isCustomGroundingModel(plugin: IVaultIntelligencePlugin): boolean {
@@ -1007,14 +1046,16 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         const models = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
         const hasApiKey = !!plugin.settings.googleApiKey || !!plugin.settings.googleApiKeySecret;
         const hasOllama = !!plugin.settings.ollamaEndpoint;
-        return (hasApiKey || hasOllama) && !models.some(m => m.id === plugin.settings.codeModel);
+        const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+        return (hasApiKey || hasOllama || hasOpenAICompat) && !models.some(m => m.id === plugin.settings.codeModel);
     }
 
     private isCustomGardenerModel(plugin: IVaultIntelligencePlugin): boolean {
         const models = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
         const hasApiKey = !!plugin.settings.googleApiKey || !!plugin.settings.googleApiKeySecret;
         const hasOllama = !!plugin.settings.ollamaEndpoint;
-        return (hasApiKey || hasOllama) && !models.some(m => m.id === plugin.settings.gardenerModel);
+        const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+        return (hasApiKey || hasOllama || hasOpenAICompat) && !models.some(m => m.id === plugin.settings.gardenerModel);
     }
 
     private isCustomLanguage(plugin: IVaultIntelligencePlugin): boolean {
@@ -1024,7 +1065,7 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
 
     private isOnlineEmbeddingProvider(plugin: IVaultIntelligencePlugin): boolean {
         const provider = plugin.settings.embeddingProvider;
-        return provider === 'gemini' || provider === 'ollama' || provider === 'voyage';
+        return provider === 'gemini' || provider === 'ollama' || provider === 'openai-compat' || provider === 'voyage';
     }
 
     private isCustomEmbeddingModel(plugin: IVaultIntelligencePlugin): boolean {
@@ -1032,8 +1073,9 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
         const models = ModelRegistry.getEmbeddingModels(provider);
         const hasApiKey = !!plugin.settings.googleApiKey || !!plugin.settings.googleApiKeySecret;
         const hasOllama = !!plugin.settings.ollamaEndpoint;
+        const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
         const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
-        const providerEnabled = provider === 'gemini' ? hasApiKey : (provider === 'ollama' ? hasOllama : hasVoyage);
+        const providerEnabled = provider === 'gemini' ? hasApiKey : (provider === 'ollama' ? hasOllama : (provider === 'openai-compat' ? hasOpenAICompat : hasVoyage));
         return providerEnabled && !models.some(m => m.id === plugin.settings.embeddingModel);
     }
 

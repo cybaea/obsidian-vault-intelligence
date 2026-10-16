@@ -44,6 +44,13 @@ This means you are hitting Google's rate limit (Tokens Per Minute or Requests Pe
 * **Cause:** You might be trying to use a newer model (like `gemini-3-flash-preview`) that hasn't rolled out to your API key's region yet, or you have a typo in the model name.
 * **Fix:** Check the [Gemini Models list](https://ai.google.dev/models) and ensure the model name in **Settings** exactly matches a valid model ID.
 
+### "401 Unauthorized" or "404 Not Found" on a gateway or cloud server
+
+* **Cause 1 (401):** The `Authorization: Bearer` header is missing, stale, or carries the wrong key. This applies to Ollama Cloud and any OpenAI-compatible gateway such as the Kilo Gateway.
+* **Fix 1:** Re-enter the key in the provider's API key field (**Ollama Cloud API key** or **Kilo API key**), or the matching headers editor, and press **Test connection**.
+* **Cause 2 (404):** The endpoint URL or protocol does not match the server. Ollama speaks its native protocol (`/api/chat`), while OpenAI-compatible servers use `/chat/completions` under a `/v1` base.
+* **Fix 2:** Point each connection at its own protocol: use the **Ollama endpoint** for Ollama and Ollama Cloud (`https://ollama.com`), and the **OpenAI-compatible endpoint** for the Kilo Gateway (`https://ai-gateway.kilo.ai/api/v1`), LM Studio, vLLM, and similar servers. See the [OpenAI-compatible endpoints guide](/docs/how-to/openai-compatible-endpoints) and the [Ollama guide](/docs/how-to/ollama).
+
 ---
 
 ## Search & quality issues
