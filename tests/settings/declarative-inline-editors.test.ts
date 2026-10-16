@@ -91,7 +91,7 @@ describe('declarative inline editors are hosted inside their setting row', () =>
     it('renders the Ollama headers editor without the redundant settings label and description', () => {
         const { listEl, tab } = makeTabs();
         const pages = tab.getSettingDefinitions() as unknown as TestPage[];
-        const definition = findItemByName(pages, 'Connections', 'Connection settings', 'Ollama headers');
+        const definition = findItemByName(pages, 'Connections', 'Other model providers', 'Ollama headers');
         expect(definition?.render).toBeTypeOf('function');
 
         const setting = new MockSetting();
@@ -107,7 +107,7 @@ describe('declarative inline editors are hosted inside their setting row', () =>
     it('renders the OpenAI-compatible headers editor without the redundant settings label and description', () => {
         const { listEl, tab } = makeTabs();
         const pages = tab.getSettingDefinitions() as unknown as TestPage[];
-        const definition = findItemByName(pages, 'Connections', 'Connection settings', 'OpenAI-compatible headers');
+        const definition = findItemByName(pages, 'Connections', 'Other model providers', 'OpenAI-compatible headers');
         expect(definition?.render).toBeTypeOf('function');
 
         const setting = new MockSetting();

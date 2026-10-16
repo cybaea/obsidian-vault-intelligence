@@ -834,8 +834,12 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
                 refreshSettings(context);
             })();
         }));
-
+        
     configureGoogleApiKeyField(new Setting(containerEl), plugin, context);
+
+    new Setting(containerEl)
+        .setName('Other model providers')
+        .setHeading();
 
     configureConnectionPresetField(new Setting(containerEl), plugin, context);
 

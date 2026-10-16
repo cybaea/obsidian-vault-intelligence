@@ -492,7 +492,7 @@ describe('connection endpoint and API key fields', () => {
             return names;
         };
 
-        it('renders each API key field directly under its endpoint and before the next endpoint (legacy order)', () => {
+        it('separates Google Gemini from other providers and keeps endpoint fields ordered (legacy)', () => {
             const plugin = makePlugin({
                 ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
                 openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT
@@ -501,8 +501,9 @@ describe('connection endpoint and API key fields', () => {
             const names = collectSettingNames(plugin);
             const indexOf = (name: string) => names.indexOf(name);
 
-            // The headers editors are custom rows without a Setting name, so the
-            // named order pins: endpoint → key → (headers) → endpoint → key.
+            expect(indexOf('Google API key')).toBeGreaterThanOrEqual(0);
+            expect(indexOf('Other model providers')).toBeGreaterThan(indexOf('Google API key'));
+            expect(indexOf('Other model providers')).toBeLessThan(indexOf('Connection preset'));
             expect(indexOf('Ollama endpoint')).toBeLessThan(indexOf('Ollama Cloud API key'));
             expect(indexOf('Ollama Cloud API key')).toBeLessThan(indexOf('OpenAI-compatible endpoint'));
             expect(indexOf('OpenAI-compatible endpoint')).toBeLessThan(indexOf('Kilo API key'));

@@ -443,20 +443,26 @@ describe('visibility predicates (T3)', () => {
             return isRender(item) && item.name ? [item.name] : [];
         });
 
-        it('places each API key field directly under its endpoint and keeps the Ollama headers editor unnamed', () => {
+        it('separates Google Gemini from other model providers and keeps provider fields ordered', () => {
             buildPlugin({});
             const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
             const connectionsPage = defs.find(d => d.name === 'Connections');
-            const connectionGroup = (connectionsPage as DefinitionGroup | undefined)?.items
-                ?.find(item => isGroup(item) && item.heading === 'Connection settings') as DefinitionGroup | undefined;
-            const names = collectNames(connectionGroup?.items);
+            const groups = (connectionsPage as DefinitionGroup | undefined)?.items?.filter(isGroup) ?? [];
+            // const connectionGroup = groups.find(group => group.heading === 'Connection settings');
+            const providersGroup = groups.find(group => group.heading === 'Other model providers');
+            // const connectionNames = collectNames(connectionGroup?.items);
+            const names = collectNames(providersGroup?.items);
             const indexOf = (name: string) => names.indexOf(name);
 
+            // expect(connectionNames).toContain('Google API key');
+            expect(names).not.toContain('Google API key');
+            expect(names).toContain('Connection preset');
             expect(indexOf('Ollama endpoint')).toBeGreaterThanOrEqual(0);
             expect(indexOf('Ollama endpoint')).toBeLessThan(indexOf('Ollama Cloud API key'));
             expect(indexOf('Ollama headers')).toBeGreaterThan(indexOf('Ollama endpoint'));
             expect(indexOf('OpenAI-compatible endpoint')).toBeLessThan(indexOf('Kilo API key'));
             expect(indexOf('Kilo API key')).toBeLessThan(indexOf('OpenAI-compatible headers'));
+            expect(indexOf('Voyage API key')).toBeGreaterThan(indexOf('OpenAI-compatible headers'));
         });
     });
 

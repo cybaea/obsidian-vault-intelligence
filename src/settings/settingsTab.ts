@@ -422,12 +422,24 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         name: 'Documentation',
                         render: (setting: Setting) => configureDocumentationField(setting, plugin, context),
                     },
+                ],
+                type: 'group',
+            },
+            {
+                heading: 'Google Gemini API provider',
+                items: [
                     {
                         aliases: ['credential', 'token', 'secret'],
                         desc: 'Secure credential for connecting to Google Gemini models.',
                         name: 'Google API key',
                         render: (setting: Setting) => configureGoogleApiKeyField(setting, plugin, context),
                     },
+                ],
+                type: 'group',
+            },
+            {
+                heading: 'Other model providers',
+                items: [
                     {
                         aliases: ['preset', 'provider', 'gateway', 'cloud'],
                         desc: 'Quickly configure a common provider: sets the endpoint and stores the API key securely where the provider needs one.',
