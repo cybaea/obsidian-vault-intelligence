@@ -223,6 +223,10 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     const pureModelStr = this.settings.embeddingModel.replace("ollama/", "");
                     this.activeModels.add(pureModelStr);
 
+                    // throw: false so 4xx/5xx responses reach the status
+                    // handling below instead of rejecting with a wrapped
+                    // request error (see LocalEmbeddingService for the same
+                    // pattern).
                     const response = await requestUrl({
                         body: JSON.stringify({
                             input: texts,
@@ -231,6 +235,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         }),
                         headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                         method: "POST",
+                        throw: false,
                         url: `${endpoint}/api/embed`
                     });
 
@@ -254,6 +259,13 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     resolve({ tokenCount: tokens, vectors: finalVectors });
 
                 } catch (e: unknown) {
+                    // Crafted ProviderErrors (the status branches above) keep
+                    // their provider and status: the catch only wraps plain
+                    // errors, mirroring the OpenAI-compatible provider.
+                    if (e instanceof ProviderError) {
+                        reject(e);
+                        return;
+                    }
                     const message = e instanceof Error ? e.message : String(e);
                     logger.error("Ollama Provider embedChunks logic error:", message);
                     reject(new ProviderError(message, "ollama"));
@@ -279,6 +291,10 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                     const pureModelStr = this.settings.embeddingModel.replace("ollama/", "");
                     this.activeModels.add(pureModelStr);
 
+                    // throw: false so 4xx/5xx responses reach the status
+                    // handling below instead of rejecting with a wrapped
+                    // request error; the crafted ProviderError carries the
+                    // status for the callers' status mapping.
                     const response = await requestUrl({
                         body: JSON.stringify({
                             input: [text],
@@ -287,11 +303,12 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                         }),
                         headers: { "Content-Type": "application/json", ...await this.getOllamaHeaders() },
                         method: "POST",
+                        throw: false,
                         url: `${endpoint}/api/embed`
                     });
 
                     if (response.status !== 200) {
-                        throw new Error(`Ollama embedding failed: ${response.text}`);
+                        throw new ProviderError(`Ollama embedding error: ${response.status}`, "ollama", response.status);
                     }
 
                     const data = response.json as { embeddings: number[][] };

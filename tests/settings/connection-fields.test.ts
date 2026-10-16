@@ -164,6 +164,27 @@ describe('connection endpoint and API key fields', () => {
                 Authorization: 'Bearer user-token'
             });
             expect(plugin.saveSettings).not.toHaveBeenCalled();
+            // Non-clobbering is surfaced, not silent: the stored key stays
+            // unwired until the user resolves the plain-text entry.
+            expect(Notice).toHaveBeenCalledWith(
+                'An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.'
+            );
+        });
+
+        it('should stay silent when the existing Authorization entry is a secret reference', async () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireText('kilo-key-123');
+
+            // The stored reference is already wired and now resolves to the
+            // freshly stored key, so no "left unwired" feedback may fire.
+            expect(Notice).not.toHaveBeenCalled();
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
         });
 
         it('should delete the stored key on clear', async () => {
@@ -217,6 +238,27 @@ describe('connection endpoint and API key fields', () => {
                 Authorization: 'Bearer user-token',
                 'X-Mine': 'abc'
             });
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            // Non-clobbering is surfaced, not silent: the stored key stays
+            // unwired until the user resolves the plain-text entry.
+            expect(Notice).toHaveBeenCalledWith(
+                'An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.'
+            );
+        });
+
+        it('should stay silent when the existing Authorization entry is a secret reference', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireText('cloud-key-123');
+
+            // The stored reference is already wired and now resolves to the
+            // freshly stored key, so no "left unwired" feedback may fire.
+            expect(Notice).not.toHaveBeenCalled();
             expect(plugin.saveSettings).not.toHaveBeenCalled();
         });
 
@@ -322,7 +364,13 @@ describe('connection endpoint and API key fields', () => {
             const calls = vi.mocked(ModelRegistry.fetchModels).mock.calls;
             expect(calls[0]?.[2]).toBe(plugin.settings);
             expect(calls[0]?.[5]).toBe(true); // forceUpdate: caches are not endpoint-keyed
-            expect(update).toHaveBeenCalledOnce();
+
+            // On success the settings UI refreshes again and the same notice
+            // the manual refresh button shows fires.
+            await vi.waitFor(() => {
+                expect(update).toHaveBeenCalledTimes(2);
+            });
+            expect(Notice).toHaveBeenCalledWith('Model list refreshed');
         });
 
         it('should not surface model fetch failures as preset failures', async () => {
@@ -336,6 +384,10 @@ describe('connection endpoint and API key fields', () => {
             await vi.waitFor(() => {
                 expect(vi.mocked(ModelRegistry.fetchModels)).toHaveBeenCalledOnce();
             });
+
+            // On failure stay silent: the "Test connection" probe is the
+            // failure surface, and the preset-applied notice already fired.
+            expect(Notice).not.toHaveBeenCalledWith('Model list refreshed');
         });
 
         it('should tolerate missing stored header secrets in the preset-triggered refresh', async () => {
@@ -355,6 +407,11 @@ describe('connection endpoint and API key fields', () => {
 
             const calls = vi.mocked(ModelRegistry.fetchModels).mock.calls;
             expect(calls[0]?.[10]).toEqual({}); // openaiCompatHeaders resolve to empty, not an error
+
+            // The refresh still succeeded, so its completion feedback fires.
+            await vi.waitFor(() => {
+                expect(Notice).toHaveBeenCalledWith('Model list refreshed');
+            });
         });
     });
 
@@ -415,12 +472,19 @@ describe('connection endpoint and API key fields', () => {
 
     describe('configureRefreshModelListField', () => {
         it('should refresh through the shared helper, notice, and rebuild the UI', async () => {
-            const plugin = makePlugin({});
+            // A Google-less, Ollama-only setup must be enough to enable the button.
+            const plugin = makePlugin({ ollamaEndpoint: 'https://ollama.com' });
             const update = vi.fn();
             const context = { tabInstance: { update } } as unknown as SettingsTabContext;
             const setting = new MockSetting();
 
             configureRefreshModelListField(setting as unknown as Setting, plugin, context);
+
+            expect(setting.desc).toBe(
+                'Force a fresh fetch of available models from the Gemini API, your Ollama server, and any OpenAI-compatible endpoint.'
+            );
+            expect(setting.buttonComponents[0]?.setDisabled).toHaveBeenCalledWith(false);
+
             await setting.fireButton();
 
             expect(vi.mocked(ModelRegistry.fetchModels)).toHaveBeenCalledOnce();
@@ -430,7 +494,7 @@ describe('connection endpoint and API key fields', () => {
 
         it('should surface fetch failures as a failure notice', async () => {
             vi.mocked(ModelRegistry.fetchModels).mockRejectedValueOnce(new Error('boom'));
-            const plugin = makePlugin({});
+            const plugin = makePlugin({ ollamaEndpoint: 'https://ollama.com' });
             const update = vi.fn();
             const context = { tabInstance: { update } } as unknown as SettingsTabContext;
             const setting = new MockSetting();
@@ -439,6 +503,25 @@ describe('connection endpoint and API key fields', () => {
             await setting.fireButton();
 
             expect(Notice).toHaveBeenCalledWith('Failed to refresh models: boom');
+        });
+
+        it('should disable the button when no connection is configured', async () => {
+            const plugin = makePlugin({});
+            const setting = new MockSetting();
+
+            configureRefreshModelListField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(setting.buttonComponents[0]?.setDisabled).toHaveBeenCalledWith(true);
+            expect(vi.mocked(ModelRegistry.fetchModels)).not.toHaveBeenCalled();
+        });
+
+        it('should keep the Google-key-only setup enabled', async () => {
+            const plugin = makePlugin({ googleApiKey: 'google-key' });
+            const setting = new MockSetting();
+
+            configureRefreshModelListField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(setting.buttonComponents[0]?.setDisabled).toHaveBeenCalledWith(false);
         });
     });
 

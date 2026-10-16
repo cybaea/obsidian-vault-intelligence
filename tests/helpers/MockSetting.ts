@@ -54,6 +54,15 @@ export class MockSetting {
         setValue: Mock;
     }> = [];
 
+    /**
+     * The button mock objects from every `addButton` call, in call order.
+     * Lets behavioural tests assert the `setDisabled` gating (e.g. the
+     * refresh button's enablement by configured connection).
+     */
+    readonly buttonComponents: Array<{
+        setDisabled: Mock;
+    }> = [];
+
     private inputEventListeners: Map<string, Array<(ev: unknown) => void>> = new Map();
 
     private toggleCallback?: (value: boolean) => void | Promise<void>;
@@ -158,6 +167,7 @@ export class MockSetting {
             setIcon: vi.fn().mockReturnThis(),
             setTooltip: vi.fn().mockReturnThis(),
         };
+        this.buttonComponents.push({ setDisabled: button.setDisabled });
         cb(button);
         return this;
     }

@@ -446,6 +446,11 @@ export class OpenAICompatProvider implements IReasoningClient, IModelProvider, I
         const body = this.prepareRequestBody(messages, options, false);
         const endpoint = this.settings.openaiCompatEndpoint.replace(/\/+$/, "");
 
+        // SSRF Protection
+        if (!isExternalUrl(endpoint, true)) {
+            throw new ProviderError("Invalid OpenAI-compatible endpoint (SSRF blocked).", OPENAI_COMPAT_PROVIDER);
+        }
+
         try {
             const response = await requestUrl({
                 body: JSON.stringify(body),

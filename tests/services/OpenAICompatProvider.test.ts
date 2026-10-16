@@ -179,6 +179,12 @@ describe('OpenAICompatProvider', () => {
 
             await expect(provider.generateMessage([{ content: 'hi', role: 'user' }], {})).rejects.toBeInstanceOf(ProviderError);
         });
+
+        it('should block non-http endpoints (SSRF)', async () => {
+            mockSettings.openaiCompatEndpoint = 'file:///etc/passwd';
+
+            await expect(provider.generateMessage([{ content: 'hi', role: 'user' }], {})).rejects.toThrow('SSRF');
+        });
     });
 
     describe('generateMessageStream (SSE)', () => {

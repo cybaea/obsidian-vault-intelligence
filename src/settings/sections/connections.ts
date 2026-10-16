@@ -262,6 +262,23 @@ export function withAuthorizationSecretIfAbsent(currentJson: string | undefined)
 }
 
 /**
+ * Whether the stored headers' Authorization entry is a `vi-secret:` secret
+ * reference rather than a plain-text value. The API key fields use this to
+ * decide whether "the key stayed unwired" feedback is accurate: a stored
+ * reference is already wired to the keychain and picks up the newly stored
+ * key, so only a plain-text entry leaves anything unwired.
+ */
+export function hasSecretAuthorizationReference(currentJson: string | undefined): boolean {
+    let headers: Record<string, string> = {};
+    try {
+        headers = JSON.parse(currentJson || "{}") as Record<string, string>;
+    } catch {
+        headers = {};
+    }
+    return (headers[AUTHORIZATION_HEADER] || "").startsWith(VI_SECRET_PREFIX);
+}
+
+/**
  * Normalizes a connection endpoint: trims surrounding whitespace and strips
  * trailing slashes and, when the user typed no scheme, prefixes the scheme
  * the host plausibly serves — `http://` for localhost and private addresses
@@ -407,11 +424,23 @@ export function configureConnectionPresetField(
                         refreshSettings(context);
                         // Refresh the model list for the pinned endpoint so the
                         // model dropdowns do not sit empty until the user finds
-                        // the refresh button themselves. Best effort: failures
-                        // surface through the "Test connection" status instead.
-                        void refreshModelList(plugin, { tolerateMissingSecrets: true }).catch(() => {
-                            // Ignored deliberately: the preset is already applied.
-                        });
+                        // the refresh button themselves. On success, refresh the
+                        // settings UI again (safe this long after the click; the
+                        // blur-to-click window has passed) and match the manual
+                        // refresh button's "Model list refreshed" feedback, since
+                        // the model dropdowns themselves live on other pages.
+                        void refreshModelList(plugin, { tolerateMissingSecrets: true }).then(
+                            () => {
+                                refreshSettings(context);
+                                new Notice('Model list refreshed');
+                            },
+                            () => {
+                                // Ignored deliberately: the preset is already
+                                // applied, and failures surface through the
+                                // "Test connection" status instead (round-2
+                                // decision), so the notice stays silent here.
+                            }
+                        );
                     })();
                 });
         });
@@ -447,6 +476,10 @@ export function configureOllamaCloudApiKeyField(
                     if (wired !== null) {
                         plugin.settings.ollamaHeaders = wired;
                         await plugin.saveSettings();
+                    } else if (!hasSecretAuthorizationReference(plugin.settings.ollamaHeaders)) {
+                        // The kept entry is plain text, so the stored key genuinely
+                        // stays unwired until the user resolves the collision.
+                        new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
                     }
                 } else if (storage && storage.deleteSecret) {
                     storage.deleteSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
@@ -579,6 +612,10 @@ export function configureKiloApiKeyField(
                     if (wired !== null) {
                         plugin.settings.openaiCompatHeaders = wired;
                         await plugin.saveSettings();
+                    } else if (!hasSecretAuthorizationReference(plugin.settings.openaiCompatHeaders)) {
+                        // The kept entry is plain text, so the stored key genuinely
+                        // stays unwired until the user resolves the collision.
+                        new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
                     }
                 } else if (storage && storage.deleteSecret) {
                     storage.deleteSecret(CONNECTION_PRESETS.KILO.SECRET_NAME);
@@ -689,7 +726,9 @@ export async function refreshModelList(
 
 /**
  * Refresh model list button — forces a fresh fetch of available models
- * from the Gemini API and refreshes the settings UI.
+ * from every configured connection (Google Gemini, Ollama, and the
+ * OpenAI-compatible endpoint) and refreshes the settings UI. Enabled when
+ * any connection is configured, not only when a Google API key exists.
  */
 export function configureRefreshModelListField(
     setting: Setting,
@@ -698,11 +737,11 @@ export function configureRefreshModelListField(
 ): void {
     setting
         .setName('Refresh model list')
-        .setDesc(`Force a fresh fetch of available models from the ${gemini} API.`)
+        .setDesc(`Force a fresh fetch of available models from the ${gemini} API, your ${ollama} server, and any ${openaiCompat} endpoint.`)
         .addButton(btn => btn
             .setButtonText("Refresh models")
             .setIcon('refresh-cw')
-            .setDisabled(!hasGoogleApiKey(plugin.settings))
+            .setDisabled(!hasGoogleApiKey(plugin.settings) && !plugin.settings.ollamaEndpoint && !plugin.settings.openaiCompatEndpoint)
             .onClick(async () => {
                 btn.setDisabled(true);
                 btn.setButtonText("Refreshing...");
