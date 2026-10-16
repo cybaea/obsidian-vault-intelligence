@@ -509,9 +509,12 @@ export class ModelRegistry {
         if (!endpoint) return { models: [], rawResponse: null, success: false };
 
         try {
+            // throw: false so non-200 responses (e.g. a 401) reach the status
+            // check below instead of rejecting and landing in the catch.
             const response = await requestUrl({
                 headers,
                 method: 'GET',
+                throw: false,
                 url: `${endpoint.replace(/\/+$/, '')}/models`
             });
 

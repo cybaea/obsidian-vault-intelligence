@@ -144,7 +144,8 @@ export function configureOllamaEndpointField(
         }
         try {
             const endpoint = url.replace(/\/+$/, '');
-            const response = await requestUrl({ url: `${endpoint}/api/version` });
+            // throw: false so non-200 probes (e.g. a 401) reach the status check instead of rejecting.
+            const response = await requestUrl({ throw: false, url: `${endpoint}/api/version` });
             if (response.status === 200) {
                 statusEl.setText("Online");
                 statusEl.className = 'vi-ollama-status vi-status-success';
@@ -326,7 +327,8 @@ export function configureOpenAICompatEndpointField(
             const endpoint = url.replace(/\/+$/, '');
             const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
             const headers = plugin.settings.openaiCompatHeaders ? await resolveSecrets(plugin.settings.openaiCompatHeaders, resolveSecret, 'openai-compat-headers-') : {};
-            const response = await requestUrl({ headers, url: `${endpoint}/models` });
+            // throw: false so non-200 probes (e.g. a 401 before the key is set) reach the status check.
+            const response = await requestUrl({ headers, throw: false, url: `${endpoint}/models` });
             if (response.status === 200) {
                 statusEl.setText("Online");
                 statusEl.className = 'vi-ollama-status vi-status-success';

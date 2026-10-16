@@ -81,6 +81,7 @@ describe('ModelRegistry', () => {
             expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
                 headers: expect.objectContaining({ 'Authorization': 'Bearer k' }),
                 method: 'GET',
+                throw: false,
                 url: 'https://ai-gateway.kilo.ai/api/v1/models'
             }));
             expect(result.success).toBe(true);
@@ -103,6 +104,20 @@ describe('ModelRegistry', () => {
 
             expect(result.success).toBe(false);
             expect(result.models).toHaveLength(0);
+            // The branch relies on requestUrl resolving 4xx responses (throw: false);
+            // with the default throw: true the rejection would land in the catch.
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ throw: false }));
+        });
+
+        it('should return failure when the model list request rejects (transport error)', async () => {
+            (requestUrl as Mock).mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
+
+            const modelRegistry = ModelRegistry as any;
+            const result = await modelRegistry.fetchOpenAICompatModels('https://ai-gateway.kilo.ai/api/v1', {});
+
+            expect(result.success).toBe(false);
+            expect(result.models).toHaveLength(0);
+            expect(result.rawResponse).toBeNull();
         });
 
         it('should return failure when no endpoint is configured', async () => {
