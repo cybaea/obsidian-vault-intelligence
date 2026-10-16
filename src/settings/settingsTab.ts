@@ -441,16 +441,19 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         render: (setting: Setting) => configureOllamaEndpointField(setting, plugin, context),
                     },
                     {
+                        desc: 'Custom HTTP headers for Ollama API requests.',
+                        name: 'Ollama headers',
+                        render: (setting: Setting) => {
+                            setting.setName('').setDesc('').setClass('vi-standalone-kv-editor');
+                            configureOllamaHeadersField(setting.controlEl, plugin, context);
+                        },
+                    },
+                    {
                         aliases: ['credential', 'token', 'secret'],
                         desc: 'Sent with every request to Ollama Cloud and stored in your device keychain; never synced.',
                         name: 'Ollama Cloud API key',
                         render: (setting: Setting) => configureOllamaCloudApiKeyField(setting, plugin, context),
                         visible: () => isConnectionAtPresetEndpoint(plugin.settings.ollamaEndpoint, CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT),
-                    },
-                    {
-                        desc: 'Custom HTTP headers for Ollama API requests.',
-                        name: 'Ollama headers',
-                        render: (setting: Setting, _group: SettingGroup) => renderRowEditorHost(setting, (host) => configureOllamaHeadersField(host, plugin, context)),
                     },
                     {
                         aliases: ['url', 'server', 'gateway', 'kilo', 'lm studio', 'vllm'],

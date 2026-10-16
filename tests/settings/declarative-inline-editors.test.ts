@@ -88,30 +88,20 @@ describe('declarative inline editors are hosted inside their setting row', () =>
         setMockApiVersion('1.13.0');
     });
 
-    it('renders the Ollama headers editor into the row, not the group list', () => {
+    it('renders the Ollama headers editor without the redundant settings label and description', () => {
         const { listEl, tab } = makeTabs();
         const pages = tab.getSettingDefinitions() as unknown as TestPage[];
         const definition = findItemByName(pages, 'Connections', 'Connection settings', 'Ollama headers');
         expect(definition?.render).toBeTypeOf('function');
 
         const setting = new MockSetting();
-        const settingElCreate = setting.settingEl.createDiv as Mock;
         const cleanup = (definition?.render as RenderFn)(setting as unknown as Setting, makeGroup(listEl));
 
-        // The group container must be left untouched: the renderer replaces
-        // its children with the tracked rows only, wiping anything else.
         expect(listEl.createDiv).not.toHaveBeenCalled();
-
-        // The editor host lives inside the row (survives list rebuilds).
-        expect(settingElCreate).toHaveBeenCalledWith(expect.objectContaining({ cls: 'vi-kv-editor-host' }));
-        const host = settingElCreate.mock.results[0]?.value;
-        expect(host).toBeDefined();
-
-        // The render closure must return the renderer's cleanup contract.
-        expect(cleanup).toBeTypeOf('function');
-        expect(host.remove).not.toHaveBeenCalled();
-        (cleanup as () => void)();
-        expect(host.remove).toHaveBeenCalledOnce();
+        expect(setting.name).toBe('');
+        expect(setting.desc).toBe('');
+        expect(setting.controlEl.createDiv).toHaveBeenCalledWith('vi-kv-editor-wrapper');
+        expect(cleanup).toBeUndefined();
     });
 
     it('renders the OpenAI-compatible headers editor into the row, not the group list', () => {
@@ -159,25 +149,4 @@ describe('declarative inline editors are hosted inside their setting row', () =>
         expect(host.remove).toHaveBeenCalledOnce();
     });
 
-    it('does not stack duplicate hosts across update() re-render passes', () => {
-        const { listEl, tab } = makeTabs();
-        const pages = tab.getSettingDefinitions() as unknown as TestPage[];
-        const definition = findItemByName(pages, 'Connections', 'Connection settings', 'Ollama headers');
-        expect(definition?.render).toBeTypeOf('function');
-
-        const setting = new MockSetting();
-        const settingElCreate = setting.settingEl.createDiv as Mock;
-
-        // First pass, then the cleanup the renderer invokes before tearing
-        // the row contents down, then an update() pass re-running render.
-        const firstCleanup = (definition?.render as RenderFn)(setting as unknown as Setting, makeGroup(listEl));
-        expect(settingElCreate).toHaveBeenCalledOnce();
-        firstCleanup?.();
-        expect((settingElCreate.mock.results[0]?.value as { remove: Mock }).remove).toHaveBeenCalledOnce();
-
-        const secondCleanup = (definition?.render as RenderFn)(setting as unknown as Setting, makeGroup(listEl));
-        expect(settingElCreate).toHaveBeenCalledTimes(2);
-        secondCleanup?.();
-        expect((settingElCreate.mock.results[1]?.value as { remove: Mock }).remove).toHaveBeenCalledOnce();
-    });
 });

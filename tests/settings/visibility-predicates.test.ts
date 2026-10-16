@@ -443,7 +443,7 @@ describe('visibility predicates (T3)', () => {
             return isRender(item) && item.name ? [item.name] : [];
         });
 
-        it('places each API key field directly under its endpoint, before the headers editor', () => {
+        it('places each API key field directly under its endpoint and keeps the Ollama headers editor unnamed', () => {
             buildPlugin({});
             const defs = tab.getSettingDefinitions() as unknown as DefinitionPage[];
             const connectionsPage = defs.find(d => d.name === 'Connections');
@@ -454,7 +454,7 @@ describe('visibility predicates (T3)', () => {
 
             expect(indexOf('Ollama endpoint')).toBeGreaterThanOrEqual(0);
             expect(indexOf('Ollama endpoint')).toBeLessThan(indexOf('Ollama Cloud API key'));
-            expect(indexOf('Ollama Cloud API key')).toBeLessThan(indexOf('Ollama headers'));
+            expect(indexOf('Ollama headers')).toBeGreaterThan(indexOf('Ollama endpoint'));
             expect(indexOf('OpenAI-compatible endpoint')).toBeLessThan(indexOf('Kilo API key'));
             expect(indexOf('Kilo API key')).toBeLessThan(indexOf('OpenAI-compatible headers'));
         });

@@ -1020,6 +1020,30 @@ a.similar-notes-link:hover {
     padding: 1em 0;
 }
 
+.vi-standalone-kv-editor {
+    border: 0;
+    display: block;
+    padding: 0;
+}
+
+.vi-standalone-kv-editor .setting-item-info {
+    display: none;
+}
+
+.vi-standalone-kv-editor .setting-item-control {
+    display: block;
+    width: 100%;
+}
+
+.vi-standalone-kv-editor .vi-kv-editor-wrapper {
+    border-top: 0;
+    text-align: left;
+}
+
+.vi-standalone-kv-editor .vi-kv-editor-wrapper > .setting-item-name {
+    font-weight: normal;
+}
+
 .vi-kv-description {
     margin-bottom: 1em;
     font-size: var(--font-ui-small);
