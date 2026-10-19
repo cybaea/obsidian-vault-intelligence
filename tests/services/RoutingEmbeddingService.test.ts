@@ -7,12 +7,14 @@ import { VaultIntelligenceSettings, IVaultIntelligencePlugin } from "../../src/s
 vi.mock("../../src/services/GeminiProvider");
 vi.mock("../../src/services/LocalEmbeddingService");
 vi.mock("../../src/services/OllamaProvider");
+vi.mock("../../src/services/OpenAICompatProvider");
 vi.mock("../../src/services/VoyageAIProvider");
 
 interface RoutingEmbeddingServicePrivates {
     geminiService: GeminiProvider;
     localService: any;
     ollamaService: any;
+    openaiCompatService: any;
     voyageService: any;
 }
 
@@ -72,6 +74,17 @@ describe('RoutingEmbeddingService', () => {
         
         await service.embedQuery("test");
         expect(voyageService.embedQuery).toHaveBeenCalled();
+    });
+
+    it('should route openai-compat to openaiCompatService', async () => {
+        mockSettings.embeddingProvider = 'openai-compat';
+        mockSettings.embeddingModel = 'openai-compat/text-embedding-3-small';
+        const privates = service as unknown as RoutingEmbeddingServicePrivates;
+        const openaiCompatService = privates.openaiCompatService;
+        openaiCompatService.embedQuery = vi.fn().mockResolvedValue({ tokenCount: 1, vector: [1, 2] });
+
+        await service.embedQuery("test");
+        expect(openaiCompatService.embedQuery).toHaveBeenCalled();
     });
 
     it('should route gemini to geminiService', async () => {

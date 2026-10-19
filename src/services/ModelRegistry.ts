@@ -1,6 +1,6 @@
 import { App, requestUrl } from "obsidian";
 
-import { MODEL_CONSTANTS, MODEL_REGISTRY_CONSTANTS, SANITIZATION_CONSTANTS } from "../constants";
+import { MODEL_CONSTANTS, MODEL_REGISTRY_CONSTANTS, OPENAI_COMPAT_MODEL_PREFIX, SANITIZATION_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { logger } from "../utils/logger";
 
@@ -19,7 +19,7 @@ export interface ModelDefinition {
     isDefault?: boolean;
     label: string;
     outputTokenLimit?: number;
-    provider: 'gemini' | 'local' | 'ollama' | 'voyage';
+    provider: 'gemini' | 'local' | 'ollama' | 'openai-compat' | 'voyage';
     quantized?: boolean;
     supportedMethods?: string[];
     supportsNativeSearch?: boolean;
@@ -29,6 +29,7 @@ export interface ModelDefinition {
 export interface ModelCache {
     models: ModelDefinition[];
     rawOllamaResponse?: OllamaTagsResponse | null;
+    rawOpenAICompatResponse?: OpenAIModelsResponse | null;
     rawResponse?: GeminiApiResponse;
     timestamp: number;
 }
@@ -62,6 +63,10 @@ interface OllamaModel {
 
 interface OllamaTagsResponse {
     models: OllamaModel[];
+}
+
+interface OpenAIModelsResponse {
+    data?: Array<{ id: string; owned_by?: string }>;
 }
 
 interface OllamaShowResponse {
@@ -198,6 +203,7 @@ export class ModelRegistry {
     private static dynamicModels: ModelDefinition[] = [];
     private static rawApiResponse: GeminiApiResponse | null = null;
     private static rawOllamaResponse: OllamaTagsResponse | null = null;
+    private static rawOpenAICompatResponse: OpenAIModelsResponse | null = null;
     private static lastFetchTime: number = 0;
     private static isFetching: boolean = false;
     private static ollamaDetailsCache = new Set<string>();
@@ -221,7 +227,9 @@ export class ModelRegistry {
         forceUpdate: boolean = false, 
         throwOnError: boolean = false, 
         skipOllamaFetch: boolean = false,
-        ollamaHeaders: Record<string, string> = {}
+        ollamaHeaders: Record<string, string> = {},
+        skipOpenAICompatFetch: boolean = false,
+        openaiCompatHeaders: Record<string, string> = {}
     ): Promise<void> {
         if (this.isFetching) return;
 
@@ -232,22 +240,28 @@ export class ModelRegistry {
 
         let geminiModels: ModelDefinition[] = [];
         let ollamaModels: ModelDefinition[] = [];
+        let openAICompatModels: ModelDefinition[] = [];
         let useGeminiCache = false;
         let useOllamaCache = false;
+        let useOpenAICompatCache = false;
 
         let cachedOllamaModels: ModelDefinition[] | null = null;
         let cachedGeminiModels: ModelDefinition[] | null = null;
+        let cachedOpenAICompatModels: ModelDefinition[] | null = null;
 
         // 1. Check Memory Cache for models first
         if (this.dynamicModels.length > 0) {
             cachedGeminiModels = this.dynamicModels.filter(m => m.provider === 'gemini');
             cachedOllamaModels = this.dynamicModels.filter(m => m.provider === 'ollama');
+            cachedOpenAICompatModels = this.dynamicModels.filter(m => m.provider === 'openai-compat');
 
             if (!forceUpdate && (now - this.lastFetchTime < cacheDurationMs)) {
                 useGeminiCache = true;
                 useOllamaCache = true;
+                useOpenAICompatCache = true;
                 geminiModels = cachedGeminiModels;
                 ollamaModels = cachedOllamaModels;
+                openAICompatModels = cachedOpenAICompatModels;
             }
         }
 
@@ -260,15 +274,19 @@ export class ModelRegistry {
                     const parsed = JSON.parse(cached) as unknown as ModelCache;
                     cachedGeminiModels = parsed.models.filter(m => m.provider === 'gemini');
                     cachedOllamaModels = parsed.models.filter(m => m.provider === 'ollama');
+                    cachedOpenAICompatModels = parsed.models.filter(m => m.provider === 'openai-compat');
 
                     if (!forceUpdate && cacheDurationDays > 0 && (now - parsed.timestamp < cacheDurationMs)) {
                         useGeminiCache = true;
                         useOllamaCache = true;
+                        useOpenAICompatCache = true;
                         geminiModels = cachedGeminiModels;
                         ollamaModels = cachedOllamaModels;
+                        openAICompatModels = cachedOpenAICompatModels;
                         this.lastFetchTime = parsed.timestamp;
                         this.rawApiResponse = parsed.rawResponse || null;
                         this.rawOllamaResponse = parsed.rawOllamaResponse || null;
+                        this.rawOpenAICompatResponse = parsed.rawOpenAICompatResponse || null;
                     }
                 } catch (e) {
                     logger.error("Failed to parse model cache file", e);
@@ -340,15 +358,46 @@ export class ModelRegistry {
                 }
             }
 
+            if (settings.openaiCompatEndpoint && !useOpenAICompatCache) {
+                if (skipOpenAICompatFetch) {
+                    if (cachedOpenAICompatModels) {
+                        openAICompatModels = cachedOpenAICompatModels;
+                        useOpenAICompatCache = true; // Pretend we used cache to prevent saving over it
+                    }
+                } else {
+                    tasks.push(
+                        this.fetchOpenAICompatModels(settings.openaiCompatEndpoint, openaiCompatHeaders)
+                            .then(res => {
+                                if (res.success) {
+                                    openAICompatModels = res.models;
+                                    this.rawOpenAICompatResponse = res.rawResponse;
+                                } else if (cachedOpenAICompatModels) {
+                                    // Fallback to stale cache if server is offline
+                                    openAICompatModels = cachedOpenAICompatModels;
+                                    useOpenAICompatCache = true; // prevent saving over
+                                }
+                            })
+                            .catch(err => {
+                                logger.debug("OpenAI-compatible models not available", err);
+                                if (cachedOpenAICompatModels) {
+                                    openAICompatModels = cachedOpenAICompatModels;
+                                    useOpenAICompatCache = true;
+                                }
+                            })
+                    );
+                }
+            }
+
             await Promise.allSettled(tasks);
 
-            this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels]);
+            this.dynamicModels = this.sortModels([...geminiModels, ...ollamaModels, ...openAICompatModels]);
 
-            if (settings.modelCacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache) && (apiKey || settings.ollamaEndpoint)) {
+            if (settings.modelCacheDurationDays > 0 && (!useGeminiCache || !useOllamaCache || !useOpenAICompatCache) && (apiKey || settings.ollamaEndpoint || settings.openaiCompatEndpoint)) {
                 if (this.lastFetchTime === 0) this.lastFetchTime = Date.now();
                 const cacheData: ModelCache = {
                     models: this.dynamicModels,
                     rawOllamaResponse: this.rawOllamaResponse || undefined,
+                    rawOpenAICompatResponse: this.rawOpenAICompatResponse || undefined,
                     rawResponse: this.rawApiResponse || undefined,
                     timestamp: this.lastFetchTime
                 };
@@ -451,6 +500,50 @@ export class ModelRegistry {
         }
     }
 
+    /**
+     * Fetches models from an OpenAI-compatible endpoint via GET {base}/models
+     * and maps them into the 'openai-compat/' namespace. Embedding models are
+     * classified by name heuristics (the protocol exposes no capabilities).
+     */
+    private static async fetchOpenAICompatModels(endpoint: string, headers: Record<string, string> = {}): Promise<{ models: ModelDefinition[], rawResponse: OpenAIModelsResponse | null, success: boolean }> {
+        if (!endpoint) return { models: [], rawResponse: null, success: false };
+
+        try {
+            // throw: false so non-200 responses (e.g. a 401) reach the status
+            // check below instead of rejecting and landing in the catch.
+            const response = await requestUrl({
+                headers,
+                method: 'GET',
+                throw: false,
+                url: `${endpoint.replace(/\/+$/, '')}/models`
+            });
+
+            if (response.status !== 200) return { models: [], rawResponse: null, success: false };
+
+            const data = response.json as OpenAIModelsResponse;
+            const models: ModelDefinition[] = (data.data || []).map((m) => {
+                const lowerName = m.id.toLowerCase();
+                const isEmbedding = lowerName.includes('embed') ||
+                    lowerName.includes('bge') ||
+                    lowerName.includes('e5') ||
+                    lowerName.includes('minilm');
+
+                return {
+                    description: `Model served by your OpenAI-compatible endpoint: ${m.id}`,
+                    id: `${OPENAI_COMPAT_MODEL_PREFIX}${m.id}`,
+                    label: `${m.id} (OpenAI-compatible)`,
+                    provider: 'openai-compat' as const,
+                    supportedMethods: isEmbedding ? ['embedContent'] : ['generateContent']
+                };
+            });
+
+            return { models, rawResponse: data, success: true };
+        } catch (e) {
+            logger.debug("OpenAI-compatible models not available", e);
+            return { models: [], rawResponse: null, success: false };
+        }
+    }
+
     private static sortModels(models: ModelDefinition[]): ModelDefinition[] {
         const filtered = models.filter(m => {
             if (m.provider === 'gemini') {
@@ -526,7 +619,7 @@ export class ModelRegistry {
     public static getChatModels(hiddenModels: string[] = []): ModelDefinition[] {
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_CHAT_MODELS;
         return models.filter(m =>
-            (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama') &&
+            (m.provider === 'gemini' || m.provider === 'local' || m.provider === 'ollama' || m.provider === 'openai-compat') &&
             (m.supportedMethods?.includes('generateContent') || idLooksLikeChat(m.id)) &&
             // Exclude noisy/experimental variants from the main dropdowns
             !m.id.toLowerCase().includes('nano') &&
@@ -541,7 +634,7 @@ export class ModelRegistry {
      * @param hiddenModels - Optional list of model IDs to exclude.
      * @returns Array of embedding model definitions.
      */
-    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' | 'voyage' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
+    public static getEmbeddingModels(provider: 'gemini' | 'local' | 'ollama' | 'openai-compat' | 'voyage' = 'gemini', hiddenModels: string[] = []): ModelDefinition[] {
         if (provider === 'local') return LOCAL_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
         if (provider === 'voyage') return VOYAGE_EMBEDDING_MODELS.filter(m => !hiddenModels.includes(m.id));
         const models = this.dynamicModels.length > 0 ? this.dynamicModels : GEMINI_EMBEDDING_MODELS;
@@ -576,7 +669,7 @@ export class ModelRegistry {
      * @param provider - The provider.
      * @returns The default model ID string.
      */
-    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' | 'voyage' = 'gemini'): string {
+    public static getDefaultModel(type: 'chat' | 'grounding' | 'embedding', provider: 'gemini' | 'local' | 'ollama' | 'openai-compat' | 'voyage' = 'gemini'): string {
         let models: ModelDefinition[] = [];
         if (type === 'chat') models = this.getChatModels();
         else if (type === 'grounding') models = this.getGroundingModels();
@@ -620,6 +713,14 @@ export class ModelRegistry {
     }
 
     /**
+     * Returns the raw API response from the OpenAI-compatible endpoint for debugging purposes.
+     * @returns The OpenAIModelsResponse object or null.
+     */
+    public static getRawOpenAICompatResponse(): OpenAIModelsResponse | null {
+        return this.rawOpenAICompatResponse;
+    }
+
+    /**
      * Resolves the appropriate context budget for a given model.
      * Prioritizes explicit user overrides, falls back to safe defaults for local models, 
      * and uses the global baseline for cloud providers.
@@ -635,7 +736,7 @@ export class ModelRegistry {
         }
 
         // 2. Safe fallback: Local Ollama models (prevent cloud -> local explosion)
-        if (modelId.startsWith("ollama/") || modelId.startsWith("local/")) {
+        if (modelId.startsWith("ollama/") || modelId.startsWith("local/") || modelId.startsWith(OPENAI_COMPAT_MODEL_PREFIX)) {
             return SANITIZATION_CONSTANTS.DEFAULT_LOCAL_CONTEXT_TOKENS;
         }
 
@@ -706,5 +807,6 @@ function idLooksLikeChat(id: string): boolean {
     const lower = id.toLowerCase();
     const isGeminiChat = lower.includes('gemini') && !lower.includes('embedding') && !lower.includes('aqa');
     const isOllamaChat = lower.startsWith('ollama/') && !lower.includes('embed') && !lower.includes('bge');
-    return isGeminiChat || isOllamaChat;
+    const isOpenAICompatChat = lower.startsWith('openai-compat/') && !lower.includes('embed') && !lower.includes('bge');
+    return isGeminiChat || isOllamaChat || isOpenAICompatChat;
 }

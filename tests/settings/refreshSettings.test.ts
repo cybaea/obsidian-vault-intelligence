@@ -154,4 +154,12 @@ describe('refreshVisibility', () => {
 
         expect(openTabById).toHaveBeenCalledWith('vault-intelligence');
     });
+
+    it('should skip the legacy rebuild when legacyRebuild is false (blur-to-click safety)', () => {
+        setMockApiVersion('1.12.0');
+        // No app.setting at all: a rebuild attempt would throw, a skipped one must not run.
+        mockPlugin.app = {} as unknown as App;
+
+        expect(() => refreshVisibility(context, { legacyRebuild: false })).not.toThrow();
+    });
 });

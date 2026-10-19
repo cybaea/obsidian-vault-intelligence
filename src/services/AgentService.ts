@@ -229,7 +229,7 @@ export class AgentService {
         const validToolNames = new Set(tools.map(t => t.name));
 
         const activeModelStr = options.modelId || this.settings.chatModel;
-        const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : "gemini";
+        const providerName = (activeModelStr || "").startsWith("ollama/") || (activeModelStr || "").startsWith("local/") ? "ollama" : ((activeModelStr || "").startsWith("openai-compat/") ? "openai-compat" : "gemini");
         const supportsWeb = provider.supportsWebGrounding;
 
         // Dynamic System Prompt Variables safely injected via templates rather than fragile regex

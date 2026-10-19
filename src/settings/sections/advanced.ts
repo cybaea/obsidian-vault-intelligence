@@ -448,10 +448,12 @@ export function configureFullModelListDebugField(
                 const apiKey = await plugin.geminiService.getApiKey();
                 const resolveSecret = (key: string) => plugin.app.secretStorage.getSecret(key);
                 const ollamaHeaders = plugin.settings.ollamaHeaders ? await resolveSecrets(plugin.settings.ollamaHeaders, resolveSecret, "ollama-headers-") : {};
-                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true, false, false, ollamaHeaders);
+                const openaiCompatHeaders = plugin.settings.openaiCompatHeaders ? await resolveSecrets(plugin.settings.openaiCompatHeaders, resolveSecret, "openai-compat-headers-") : {};
+                await ModelRegistry.fetchModels(plugin.app, plugin.manifest.dir || `${plugin.app.vault.configDir}/plugins/vault-intelligence`, plugin.settings, apiKey || '', 0, true, false, false, ollamaHeaders, false, openaiCompatHeaders);
 
                 const raw = ModelRegistry.getRawResponse();
                 const rawOllama = ModelRegistry.getRawOllamaResponse();
+                const rawOpenAICompat = ModelRegistry.getRawOpenAICompatResponse();
                 if (raw) {
                     logger.debug("[VaultIntelligence] Raw Gemini models:", raw);
                 }
@@ -459,6 +461,11 @@ export function configureFullModelListDebugField(
                     logger.debug("[VaultIntelligence] Raw Ollama models:", rawOllama);
                 } else if (plugin.settings.ollamaEndpoint) {
                     logger.debug(`[VaultIntelligence] Ollama is offline or unreachable at ${plugin.settings.ollamaEndpoint}`);
+                }
+                if (rawOpenAICompat) {
+                    logger.debug("[VaultIntelligence] Raw OpenAI-compatible models:", rawOpenAICompat);
+                } else if (plugin.settings.openaiCompatEndpoint) {
+                    logger.debug(`[VaultIntelligence] The OpenAI-compatible endpoint is offline or unreachable at ${plugin.settings.openaiCompatEndpoint}`);
                 }
             })
         );

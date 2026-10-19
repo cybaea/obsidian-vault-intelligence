@@ -8,6 +8,7 @@ import { VaultIntelligenceSettings } from '../../src/settings/types';
 vi.mock('obsidian');
 vi.mock('../../src/services/GeminiProvider');
 vi.mock('../../src/services/OllamaProvider');
+vi.mock('../../src/services/OpenAICompatProvider');
 
 describe('ProviderRegistry', () => {
     let registry: ProviderRegistry;
@@ -37,6 +38,16 @@ describe('ProviderRegistry', () => {
             const client = registry.getReasoningClient('ollama/llama3');
             // Testing internal Ollama provider access via getOllamaProvider helper
             expect(client).toBe(registry.getOllamaProvider());
+        });
+
+        it('should route openai-compat/* models to OpenAICompatProvider', () => {
+            const client = registry.getReasoningClient('openai-compat/anthropic/claude-sonnet-4.5');
+            expect(client).toBe(registry.getOpenAICompatProvider());
+        });
+
+        it('should route openai-compat/* model capabilities to OpenAICompatProvider', () => {
+            const provider = registry.getModelProvider('openai-compat/gpt-4o');
+            expect(provider).toBe(registry.getOpenAICompatProvider());
         });
 
         it('should use default model from settings if none provided', () => {

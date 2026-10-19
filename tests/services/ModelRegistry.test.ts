@@ -61,6 +61,73 @@ describe('ModelRegistry', () => {
         });
     });
 
+    describe('fetchOpenAICompatModels (OpenAI-compatible discovery)', () => {
+        it('should map models into the openai-compat namespace and classify embeddings', async () => {
+            (requestUrl as Mock).mockResolvedValue({
+                json: {
+                    data: [
+                        { id: 'anthropic/claude-sonnet-4.5' },
+                        { id: 'text-embedding-3-small' }
+                    ]
+                },
+                status: 200
+            });
+
+            // Use any cast locally for private static method access
+            const modelRegistry = ModelRegistry as any;
+            const result = await modelRegistry.fetchOpenAICompatModels('https://ai-gateway.kilo.ai/api/v1', { 'Authorization': 'Bearer k' });
+            const models = result.models;
+
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({
+                headers: expect.objectContaining({ 'Authorization': 'Bearer k' }),
+                method: 'GET',
+                throw: false,
+                url: 'https://ai-gateway.kilo.ai/api/v1/models'
+            }));
+            expect(result.success).toBe(true);
+            expect(models).toHaveLength(2);
+
+            const chat = models.find((m: any) => m.id === 'openai-compat/anthropic/claude-sonnet-4.5');
+            expect(chat?.supportedMethods).toContain('generateContent');
+            expect(chat?.provider).toBe('openai-compat');
+
+            const embed = models.find((m: any) => m.id === 'openai-compat/text-embedding-3-small');
+            expect(embed?.supportedMethods).toContain('embedContent');
+            expect(embed?.provider).toBe('openai-compat');
+        });
+
+        it('should return failure on non-200 responses', async () => {
+            (requestUrl as Mock).mockResolvedValue({ json: {}, status: 401 });
+
+            const modelRegistry = ModelRegistry as any;
+            const result = await modelRegistry.fetchOpenAICompatModels('https://ai-gateway.kilo.ai/api/v1', {});
+
+            expect(result.success).toBe(false);
+            expect(result.models).toHaveLength(0);
+            // The branch relies on requestUrl resolving 4xx responses (throw: false);
+            // with the default throw: true the rejection would land in the catch.
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ throw: false }));
+        });
+
+        it('should return failure when the model list request rejects (transport error)', async () => {
+            (requestUrl as Mock).mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
+
+            const modelRegistry = ModelRegistry as any;
+            const result = await modelRegistry.fetchOpenAICompatModels('https://ai-gateway.kilo.ai/api/v1', {});
+
+            expect(result.success).toBe(false);
+            expect(result.models).toHaveLength(0);
+            expect(result.rawResponse).toBeNull();
+        });
+
+        it('should return failure when no endpoint is configured', async () => {
+            const modelRegistry = ModelRegistry as any;
+            const result = await modelRegistry.fetchOpenAICompatModels('', {});
+
+            expect(result.success).toBe(false);
+        });
+    });
+
     describe('JIT Context Length Extraction', () => {
         it('should fetch model details from /api/show', async () => {
             const mockShowResult = {
@@ -100,6 +167,11 @@ describe('ModelRegistry', () => {
         it('should fall back to safe default for local models if no override exists', () => {
             const customMapping = { 'ollama/llama3': 16000 };
             const budget = ModelRegistry.resolveContextBudget('ollama/qwen2', customMapping, 200000);
+            expect(budget).toBe(8192); // 8192 is DEFAULT_LOCAL_CONTEXT_TOKENS
+        });
+
+        it('should fall back to safe default for openai-compat models if no override exists', () => {
+            const budget = ModelRegistry.resolveContextBudget('openai-compat/anthropic/claude-sonnet-4.5', {}, 200000);
             expect(budget).toBe(8192); // 8192 is DEFAULT_LOCAL_CONTEXT_TOKENS
         });
 

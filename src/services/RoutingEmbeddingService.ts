@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { GeminiProvider } from "./GeminiProvider";
 import { LocalEmbeddingService } from "./LocalEmbeddingService";
 import { OllamaProvider } from "./OllamaProvider";
+import { OpenAICompatProvider } from "./OpenAICompatProvider";
 import { VoyageAIProvider } from "./VoyageAIProvider";
 
 /**
@@ -14,6 +15,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
     private localService: LocalEmbeddingService;
     private geminiService: GeminiProvider;
     private ollamaService: OllamaProvider;
+    private openaiCompatService: OpenAICompatProvider;
     private voyageService: VoyageAIProvider;
     private settings: VaultIntelligenceSettings;
 
@@ -22,6 +24,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         this.localService = new LocalEmbeddingService(plugin, settings);
         this.geminiService = gemini;
         this.ollamaService = new OllamaProvider(settings, plugin.app);
+        this.openaiCompatService = new OpenAICompatProvider(settings, plugin.app);
         this.voyageService = new VoyageAIProvider(settings, plugin.app);
     }
 
@@ -41,6 +44,9 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         await this.localService.terminate();
         if (this.ollamaService.terminate) {
             await this.ollamaService.terminate();
+        }
+        if (this.openaiCompatService.terminate) {
+            await this.openaiCompatService.terminate();
         }
     }
 
@@ -65,6 +71,8 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
                 return this.voyageService;
             case 'ollama':
                 return this.ollamaService;
+            case 'openai-compat':
+                return this.openaiCompatService;
             case 'local':
                 return this.localService;
             case 'gemini':
@@ -117,6 +125,7 @@ export class RoutingEmbeddingService implements IEmbeddingClient, IProvider {
         }
         this.voyageService.updateSettings(this.settings);
         this.ollamaService.updateSettings(this.settings);
+        this.openaiCompatService.updateSettings(this.settings);
         this.geminiService.updateSettings(this.settings);
     }
 

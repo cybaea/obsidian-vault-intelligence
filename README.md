@@ -108,7 +108,8 @@ To provide its features, Vault Intelligence may connect to several external or l
 -   **AI Providers (Inference & Embeddings)**:
     -   **Google Gemini**: Connects to `generativelanguage.googleapis.com` for chat, embeddings, and model management.
     -   **Voyage AI**: Connects to `api.voyageai.com` for high-performance embeddings.
-    -   **Ollama**: Connects to your local or remote Ollama instance (default: `http://localhost:11434`). Supports custom HTTP headers for authenticated proxies.
+    -   **Ollama**: Connects to your local or remote Ollama instance (default: `http://localhost:11434`), including Ollama Cloud (`ollama.com`). Supports custom HTTP headers for authentication.
+    -   **OpenAI-compatible endpoints**: Connects to any OpenAI Chat Completions server you configure, such as the Kilo Gateway (`ai-gateway.kilo.ai`), LM Studio, llama.cpp, vLLM, OpenRouter, or the OpenAI API. Supports custom HTTP headers for authentication.
 -   **Local Model Support**:
     -   **HuggingFace & JSDelivr**: When using local embeddings (Transformers.js), the plugin downloads model weights and WASM binaries from `huggingface.co` and `cdn.jsdelivr.net`.
 -   **Agent Capabilities**:

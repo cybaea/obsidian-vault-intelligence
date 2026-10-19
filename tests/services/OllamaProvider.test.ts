@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { ModelRegistry } from '../../src/services/ModelRegistry';
 import { OllamaProvider } from '../../src/services/OllamaProvider';
 import { VaultIntelligenceSettings } from '../../src/settings/types';
+import { ProviderError } from '../../src/types/providers';
 
 vi.mock('obsidian', () => ({
     Platform: { isDesktopApp: true },
@@ -132,6 +133,55 @@ describe('OllamaProvider', () => {
                     'Authorization': 'token123'
                 })
             }));
+        });
+    });
+
+    /**
+     * Embed status handling: `throw: false` on both `/api/embed` calls keeps
+     * the crafted status branches reachable in production, matching the
+     * `OpenAICompatProvider` embeddings path.
+     */
+    describe('embed status branches are reachable', () => {
+        it('should reach the status branch on a resolved 4xx in embedChunks', async () => {
+            mockApp.secretStorage.getSecret.mockResolvedValue('token123');
+            (requestUrl as Mock).mockResolvedValue({ status: 404 });
+
+            const error = await provider.embedChunks(['one']).catch((e: unknown) => e);
+
+            expect(error).toBeInstanceOf(ProviderError);
+            expect((error as ProviderError).status).toBe(404);
+            expect((error as ProviderError).message).toContain('404');
+
+            // The status mapping relies on requestUrl resolving 4xx responses;
+            // with the default throw: true it would reject before the mapping.
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ throw: false }));
+        });
+
+        it('should surface transport failures from the embedChunks request', async () => {
+            mockApp.secretStorage.getSecret.mockResolvedValue('token123');
+            (requestUrl as Mock).mockRejectedValue(new Error('connection refused'));
+
+            // requestUrl still rejects for network-level failures even with throw: false.
+            await expect(provider.embedChunks(['one'])).rejects.toThrow('connection refused');
+        });
+
+        it('should reach the status branch on a resolved 4xx in embedDocument', async () => {
+            mockApp.secretStorage.getSecret.mockResolvedValue('token123');
+            (requestUrl as Mock).mockResolvedValue({ status: 404 });
+
+            const error = await provider.embedDocument('one').catch((e: unknown) => e);
+
+            expect(error).toBeInstanceOf(ProviderError);
+            expect((error as ProviderError).status).toBe(404);
+            expect((error as ProviderError).message).toContain('404');
+            expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ throw: false }));
+        });
+
+        it('should surface transport failures from the embedDocument request', async () => {
+            mockApp.secretStorage.getSecret.mockResolvedValue('token123');
+            (requestUrl as Mock).mockRejectedValue(new Error('socket hang up'));
+
+            await expect(provider.embedDocument('one')).rejects.toThrow('socket hang up');
         });
     });
 });

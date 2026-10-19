@@ -16,6 +16,7 @@ import { DEFAULT_SETTINGS } from "../types";
 
 const gemini = "Gemini";
 const ollama = "Ollama";
+const openaiCompatLabel = "OpenAI-compatible";
 const voyage = "Voyage AI";
 const analyst = "Analyst";
 const loop = "Loop";
@@ -44,13 +45,14 @@ export function configureEmbeddingProviderField(
             const geminiLocal = "Gemini";
             const transformers = "Transformers.js";
             dropdown.addOption('gemini', `${google} ${geminiLocal} (cloud)`)
-                .addOption('ollama', 'Ollama (local server)')
+                .addOption('ollama', 'Ollama (local or cloud)')
+                .addOption('openai-compat', `${openaiCompatLabel} (server)`)
                 .addOption('voyage', `${voyage} (cloud)`)
                 .addOption('local', `${transformers} (local)`)
                 .setValue(plugin.settings.embeddingProvider)
                 .onChange((value) => {
                     void (async () => {
-                        const provider = value as 'gemini' | 'local' | 'ollama' | 'voyage';
+                        const provider = value as 'gemini' | 'local' | 'ollama' | 'openai-compat' | 'voyage';
                         plugin.settings.embeddingProvider = provider;
 
                         const defaultModelId = ModelRegistry.getDefaultModel('embedding', provider);
@@ -90,10 +92,11 @@ export function configureEmbeddingModelField(
 ): void {
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
     const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
     const providerName = plugin.settings.embeddingProvider;
     const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
-    const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
+    const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : (providerName === 'openai-compat' ? hasOpenAICompat : hasVoyage));
 
     setting
         .setName('Embedding model')
@@ -122,10 +125,10 @@ export function configureEmbeddingModelField(
                     // lags. Acceptable trade-off to preserve input focus.
                     refreshVisibility(context);
                 })();
-            });
+            }, hasOpenAICompat);
         });
     } else {
-        const labelName = providerName === 'gemini' ? 'API key' : (providerName === 'ollama' ? 'Ollama endpoint' : 'Voyage API key');
+        const labelName = providerName === 'gemini' ? 'API key' : (providerName === 'ollama' ? 'Ollama endpoint' : (providerName === 'openai-compat' ? 'OpenAI-compatible endpoint' : 'Voyage API key'));
         setting.addText(text => text
             .setPlaceholder(`Configure ${labelName} to enable selection`)
             .setDisabled(true));
@@ -692,6 +695,7 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
 
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
     const hasVoyage = !!plugin.settings.voyageApiKey || !!plugin.settings.voyageApiKeySecret;
 
     // --- 1. Embedding Provider ---
@@ -706,10 +710,10 @@ export function renderExplorerSettings(context: SettingsTabContext): void {
     // --- 2. Embedding Model ---
     const embeddingSetting = new Setting(containerEl);
 
-    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama' || plugin.settings.embeddingProvider === 'voyage') {
+    if (plugin.settings.embeddingProvider === 'gemini' || plugin.settings.embeddingProvider === 'ollama' || plugin.settings.embeddingProvider === 'openai-compat' || plugin.settings.embeddingProvider === 'voyage') {
         const providerName = plugin.settings.embeddingProvider;
         const onlineEmbeddingModels = ModelRegistry.getEmbeddingModels(providerName);
-        const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : hasVoyage);
+        const providerEnabled = providerName === 'gemini' ? hasApiKey : (providerName === 'ollama' ? hasOllama : (providerName === 'openai-compat' ? hasOpenAICompat : hasVoyage));
 
         configureEmbeddingModelField(embeddingSetting, plugin, context);
 

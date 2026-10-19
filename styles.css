@@ -1020,6 +1020,30 @@ a.similar-notes-link:hover {
     padding: 1em 0;
 }
 
+.vi-standalone-kv-editor {
+    border: 0;
+    display: block;
+    padding: 0;
+}
+
+.vi-standalone-kv-editor .setting-item-info {
+    display: none;
+}
+
+.vi-standalone-kv-editor .setting-item-control {
+    display: block;
+    width: 100%;
+}
+
+.vi-standalone-kv-editor .vi-kv-editor-wrapper {
+    border-top: 0;
+    text-align: left;
+}
+
+.vi-standalone-kv-editor .vi-kv-editor-wrapper > .setting-item-name {
+    font-weight: normal;
+}
+
 .vi-kv-description {
     margin-bottom: 1em;
     font-size: var(--font-ui-small);
@@ -1122,6 +1146,19 @@ a.similar-notes-link:hover {
 
 .vi-ollama-status.vi-status-error {
     color: var(--text-error);
+}
+
+/*
+ * Key-value editor host (HTTP headers editors) and storage shards list.
+ *
+ * In the declarative settings path, these inline editors are rendered
+ * into a wrapper div below the setting row's info area. The setting row
+ * uses a flex layout; this wrapper breaks out to full width below the
+ * flex content.
+ */
+.vi-kv-editor-host {
+    flex-basis: 100%;
+    margin-top: 0.75em;
 }
 
 /*

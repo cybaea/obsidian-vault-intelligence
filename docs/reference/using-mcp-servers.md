@@ -40,9 +40,9 @@ Never paste raw API keys into the Environment (Env) or Headers fields of your MC
 Instead, use Vault Intelligence's secure secret manager:
 
 1. Go to the **Advanced Settings** tab in Vault Intelligence.
-2. Add a new secret (e.g., Key: `brave_api`, Value: `your-real-key`).
+2. Add a new secret (e.g., Key: `brave-api-key`, Value: `your-real-key`). Obsidian's secret ids use lowercase letters, numbers, and dashes only.
 3. In your MCP Server configuration, reference the secret using the `vi-secret:` prefix.
-    * Example Env Config: `{"BRAVE_API_KEY": "vi-secret:brave_api"}`
+    * Example Env Config: `{"BRAVE_API_KEY": "vi-secret:brave-api-key"}`
 
 When the server launches, Vault Intelligence will securely inject the real key directly into memory.
 

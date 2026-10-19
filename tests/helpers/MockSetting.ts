@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { type Mock, vi } from 'vitest';
 
 /**
  * A mock Obsidian `Setting`-like object that captures method calls and
@@ -24,6 +24,7 @@ function mockEl(): any {
         empty: vi.fn(),
         querySelector: vi.fn().mockReturnValue(null),
         remove: vi.fn(),
+        setAttr: vi.fn(),
         setAttribute: vi.fn(),
         setText: vi.fn(),
         style: {},
@@ -42,11 +43,43 @@ export class MockSetting {
     readonly nameEl: any = mockEl();
     readonly componentsEl: any = mockEl();
 
+    /**
+     * The text-component mock objects from every `addText` call, in call
+     * order. Lets behavioural tests assert `setValue` calls (e.g. an endpoint
+     * field normalizing itself on blur) and fire registered input listeners.
+     */
+    readonly textComponents: Array<{
+        inputEl: {
+            addEventListener: Mock;
+        };
+        setValue: Mock;
+    }> = [];
+
+    /**
+     * The button mock objects from every `addButton` call, in call order.
+     * Lets behavioural tests assert the `setDisabled` gating (e.g. the
+     * refresh button's enablement by configured connection).
+     */
+    readonly buttonComponents: Array<{
+        setDisabled: Mock;
+    }> = [];
+
+    private inputEventListeners: Map<string, Array<(ev: unknown) => void>> = new Map();
+
     private toggleCallback?: (value: boolean) => void | Promise<void>;
     private dropdownCallback?: (value: string) => void | Promise<void>;
     private textCallback?: (value: string) => void | Promise<void>;
     private buttonCallback?: () => void | Promise<void>;
     private component?: { fireChange?: (value: string | null) => Promise<void> };
+
+    /**
+     * The raw component captured from `addComponent` (e.g. a SecretComponent
+     * mock), if a component was added. Lets tests assert component-level
+     * behaviour such as `setValue` seeding.
+     */
+    get capturedComponent(): unknown {
+        return this.component;
+    }
 
     setName(name: string): this {
         (this as any).name = name;
@@ -98,13 +131,34 @@ export class MockSetting {
         setPassword: () => any;
         inputEl: any;
     }) => void): this {
+        let textValue = '';
         const text = {
-            inputEl: { addClass: vi.fn(), addEventListener: vi.fn(), parentElement: mockEl(), type: 'text' },
-            onChange: (cb: (v: string) => void | Promise<void>) => { this.textCallback = cb; return text; },
+            getValue: vi.fn((): string => textValue),
+            inputEl: {
+                addClass: vi.fn(),
+                addEventListener: vi.fn().mockImplementation((type: string, listener: (ev: unknown) => void) => {
+                    const listeners = this.inputEventListeners.get(type) ?? [];
+                    listeners.push(listener);
+                    this.inputEventListeners.set(type, listeners);
+                }),
+                parentElement: mockEl(),
+                type: 'text'
+            },
+            onChange: (cb: (v: string) => void | Promise<void>) => {
+                this.textCallback = (v: string) => {
+                    textValue = v;
+                    return cb(v);
+                };
+                return text;
+            },
             setPassword: vi.fn().mockReturnThis(),
             setPlaceholder: vi.fn().mockReturnThis(),
-            setValue: vi.fn().mockReturnThis(),
+            setValue: vi.fn((v: string) => {
+                textValue = v;
+                return text;
+            })
         };
+        this.textComponents.push(text);
         cb(text);
         return this;
     }
@@ -123,6 +177,7 @@ export class MockSetting {
             setIcon: vi.fn().mockReturnThis(),
             setTooltip: vi.fn().mockReturnThis(),
         };
+        this.buttonComponents.push({ setDisabled: button.setDisabled });
         cb(button);
         return this;
     }
@@ -150,6 +205,16 @@ export class MockSetting {
 
     async fireText(value: string): Promise<void> {
         if (this.textCallback) await this.textCallback(value);
+    }
+
+    /**
+     * Fires a DOM event registered on the most recently added text input
+     * (e.g. `blur`, used by the endpoint fields to normalize the URL).
+     */
+    async fireTextEvent(type: string): Promise<void> {
+        for (const listener of this.inputEventListeners.get(type) ?? []) {
+            await Promise.resolve(listener({}));
+        }
     }
 
     async fireButton(): Promise<void> {

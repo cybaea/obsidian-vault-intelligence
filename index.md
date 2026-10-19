@@ -52,7 +52,7 @@ features:
       dark: /images/icon-privacy.png
       alt: Privacy Icon
     title: "100% Local or Frontier Cloud"
-    details: Complete privacy choice. Use frontier models like Gemini 3+ or run entirely offline via native Ollama integration.
+    details: Complete privacy choice. Use frontier models like Gemini 3+ or run entirely offline via native Ollama integration, or route through OpenAI-compatible gateways such as the Kilo Gateway.
     link: /docs/explanation/computing-model
     linkText: Compare options
   - icon:

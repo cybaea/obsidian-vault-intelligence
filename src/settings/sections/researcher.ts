@@ -43,7 +43,8 @@ export function configureChatModelField(
 ): void {
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const canUseChat = hasApiKey || hasOllama;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+    const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
 
     const chatModelCurrent = plugin.settings.chatModel;
     const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
@@ -61,7 +62,7 @@ export function configureChatModelField(
                     }
                     refreshVisibility(context);
                 })();
-            });
+            }, hasOpenAICompat);
         });
 }
 
@@ -474,7 +475,8 @@ export function configureCodeExecutionModelField(
 ): void {
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const canUseChat = hasApiKey || hasOllama;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+    const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
     const codeModelCurrent = plugin.settings.codeModel;
     const chatModels = ModelRegistry.getChatModels(plugin.settings.hiddenModels);
 
@@ -490,7 +492,7 @@ export function configureCodeExecutionModelField(
                     }
                     refreshVisibility(context);
                 })();
-            });
+            }, hasOpenAICompat);
         });
 }
 
@@ -547,7 +549,8 @@ export function renderResearcherSettings(context: SettingsTabContext): void {
     const { containerEl, plugin } = context;
     const hasApiKey = hasGoogleApiKey(plugin.settings);
     const hasOllama = !!plugin.settings.ollamaEndpoint;
-    const canUseChat = hasApiKey || hasOllama;
+    const hasOpenAICompat = !!plugin.settings.openaiCompatEndpoint;
+    const canUseChat = hasApiKey || hasOllama || hasOpenAICompat;
 
     containerEl.createDiv({ cls: 'vault-intelligence-settings-subheading' }, (div) => {
         div.createSpan({ text: 'Personalise your research assistant’s intelligence and capabilities. ' });

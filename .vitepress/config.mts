@@ -111,6 +111,7 @@ export default withMermaid(defineConfig({
                         { text: 'Gardener: Workflows', link: '/docs/how-to/gardener-workflows' },
                         { text: 'Explorer: Connections', link: '/docs/how-to/explorer-connections' },
                         { text: 'Ollama Models & Tuning', link: '/docs/how-to/ollama' },
+                        { text: 'OpenAI-compatible Endpoints', link: '/docs/how-to/openai-compatible-endpoints' },
                         { text: 'Uninstall & Cleanup', link: '/docs/how-to/uninstall-and-cleanup' }
                     ]
                 },
