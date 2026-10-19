@@ -70,7 +70,7 @@ describe('connection endpoint probes (Test connection)', () => {
             const { badge, setting } = configureAndCapture((captured) => {
                 configureOllamaEndpointField(captured, makePlugin({
                     ollamaEndpoint: 'https://ollama.com',
-                    ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                    ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
                 }), context);
             });
             await setting.fireButton();
@@ -193,7 +193,7 @@ describe('connection endpoint probes (Test connection)', () => {
             // collapse the missing credential into a transport-style Offline.
             const plugin = makePlugin({
                 openaiCompatEndpoint: 'https://ai-gateway.kilo.ai/api/v1',
-                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
             (plugin.app.secretStorage.getSecret as Mock).mockResolvedValue(null);
 

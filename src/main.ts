@@ -20,7 +20,7 @@ import { DEFAULT_SETTINGS, IVaultIntelligencePlugin, VaultIntelligenceSettings, 
 import { IEmbeddingClient } from "./types/providers";
 import { GardenerPlanRenderer } from "./ui/GardenerPlanRenderer";
 import { logger } from "./utils/logger";
-import { GOOGLE_API_KEY_SECRET_NAME, VOYAGE_API_KEY_SECRET_NAME, hasGoogleApiKey, hasVoyageApiKey } from "./utils/secrets";
+import { SECRET_ID_MAX_LENGTH, VI_SECRET_PREFIX, GOOGLE_API_KEY_SECRET_NAME, VOYAGE_API_KEY_SECRET_NAME, hasGoogleApiKey, hasVoyageApiKey, sanitizeSecretId } from "./utils/secrets";
 import { ResearchChatView } from "./views/ResearchChatView";
 import { SemanticGraphView } from "./views/SemanticGraphView";
 import { SimilarNotesView } from "./views/SimilarNotesView";
@@ -30,6 +30,7 @@ interface InternalOllamaProvider {
 }
 
 interface InternalSecretStorage {
+	getSecret(key: string): string | null;
 	setSecret(key: string, value: string): void;
 }
 
@@ -621,6 +622,80 @@ export default class VaultIntelligencePlugin extends Plugin implements IVaultInt
 		}
 		if (secretReferencesNormalised) {
 			logger.info("[SecretStorage] Normalised legacy secret references to the resolver-compatible format.");
+			await this.saveData(this.settings);
+		}
+
+		// --- Secret ID Sanitisation (v9.6.0) ---
+		// Obsidian's SecretStorage only accepts lowercase ids of at most 64
+		// characters ([a-z0-9-]+); earlier writers planted references carrying
+		// the raw header key ("vi-secret:Authorization"), which every
+		// SecretStorage.setSecret call rejected, so the referenced secret never
+		// existed. Rewrite those references to the sanitised payload. Where a
+		// legacy id happens to hold a secret (keychain builds older than the id
+		// validation), copy the value across so the sanitised reference
+		// resolves; when the copy cannot be made, keep the legacy reference so
+		// a working setup stays untouched.
+		let secretIdsSanitised = false;
+		const sanitizeReferenceMap = (raw: string | undefined, prefix: string): string | undefined => {
+			if (!raw) return raw;
+			try {
+				const parsed = JSON.parse(raw) as Record<string, string>;
+				let modified = false;
+				const storage = this.app.secretStorage as unknown as InternalSecretStorage | undefined;
+				for (const [k, v] of Object.entries(parsed)) {
+					if (!v.startsWith(VI_SECRET_PREFIX)) continue;
+					const legacyPayload = v.substring(VI_SECRET_PREFIX.length);
+					const sanitizedPayload = sanitizeSecretId(legacyPayload, SECRET_ID_MAX_LENGTH - prefix.length);
+					if (!sanitizedPayload || sanitizedPayload === legacyPayload) continue;
+					const legacyId = `${prefix}${legacyPayload}`;
+					const sanitizedId = `${prefix}${sanitizedPayload}`;
+					if (storage?.getSecret && !this.settings.secretStorageFailure) {
+						const legacyValue = storage.getSecret(legacyId);
+						if (legacyValue !== null) {
+							try {
+								storage.setSecret(sanitizedId, legacyValue);
+							} catch (error) {
+								logger.warn(`[SecretStorage] Could not copy secret ${legacyId} to the sanitised id`, error);
+								continue;
+							}
+						}
+					}
+					parsed[k] = `${VI_SECRET_PREFIX}${sanitizedPayload}`;
+					modified = true;
+				}
+				return modified ? JSON.stringify(parsed) : raw;
+			} catch (e) {
+				logger.warn('Migration: failed to parse a secret reference map for sanitisation', e);
+				return raw;
+			}
+		};
+
+		const sanitizedOllamaHeaders = sanitizeReferenceMap(this.settings.ollamaHeaders, 'ollama-headers-');
+		if (sanitizedOllamaHeaders !== undefined && sanitizedOllamaHeaders !== this.settings.ollamaHeaders) {
+			this.settings.ollamaHeaders = sanitizedOllamaHeaders;
+			secretIdsSanitised = true;
+		}
+		const sanitizedOpenAICompatHeaders = sanitizeReferenceMap(this.settings.openaiCompatHeaders, 'openai-compat-headers-');
+		if (sanitizedOpenAICompatHeaders !== undefined && sanitizedOpenAICompatHeaders !== this.settings.openaiCompatHeaders) {
+			this.settings.openaiCompatHeaders = sanitizedOpenAICompatHeaders;
+			secretIdsSanitised = true;
+		}
+		if (this.settings.mcpServers) {
+			for (const server of this.settings.mcpServers) {
+				const sanitizedEnv = sanitizeReferenceMap(server.env, `mcp-${server.id}-env-`);
+				if (sanitizedEnv !== undefined && sanitizedEnv !== server.env) {
+					server.env = sanitizedEnv;
+					secretIdsSanitised = true;
+				}
+				const sanitizedRemoteHeaders = sanitizeReferenceMap(server.remoteHeaders, `mcp-${server.id}-headers-`);
+				if (sanitizedRemoteHeaders !== undefined && sanitizedRemoteHeaders !== server.remoteHeaders) {
+					server.remoteHeaders = sanitizedRemoteHeaders;
+					secretIdsSanitised = true;
+				}
+			}
+		}
+		if (secretIdsSanitised) {
+			logger.info("[SecretStorage] Sanitised legacy secret references to SecretStorage-compatible ids.");
 			await this.saveData(this.settings);
 		}
 

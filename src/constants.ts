@@ -440,15 +440,16 @@ export const DOCUMENTATION_URLS = {
 /**
  * Quick-fill presets for the connections settings page. Each preset pins an
  * endpoint on the matching connection and, where needed, stores the API key
- * under a namespaced SecretStorage key that the connection resolves as an
- * Authorization Bearer header.
+ * under a namespaced SecretStorage id that the connection resolves as an
+ * Authorization Bearer header. The ids must stay lowercase (letters, numbers,
+ * and dashes only), matching Obsidian's SecretStorage id validation.
  */
 export interface ConnectionPreset {
     /** Endpoint URL the preset writes into the matching connection. */
     ENDPOINT: string;
     /** Human-readable preset label for the settings UI. */
     LABEL: string;
-    /** SecretStorage key for the API key. Empty when the preset needs no key. */
+    /** SecretStorage id for the API key. Empty when the preset needs no key. */
     SECRET_NAME: string;
 }
 
@@ -456,12 +457,12 @@ export const CONNECTION_PRESETS: Record<'KILO' | 'OLLAMA_CLOUD' | 'OLLAMA_LOCAL'
     KILO: {
         ENDPOINT: 'https://ai-gateway.kilo.ai/api/v1',
         LABEL: 'Kilo.ai (OpenAI-compatible)',
-        SECRET_NAME: 'openai-compat-headers-Authorization'
+        SECRET_NAME: 'openai-compat-headers-authorization'
     },
     OLLAMA_CLOUD: {
         ENDPOINT: 'https://ollama.com',
         LABEL: 'Ollama Cloud',
-        SECRET_NAME: 'ollama-headers-Authorization'
+        SECRET_NAME: 'ollama-headers-authorization'
     },
     OLLAMA_LOCAL: {
         ENDPOINT: 'http://localhost:11434',

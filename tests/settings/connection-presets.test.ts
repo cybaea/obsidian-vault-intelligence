@@ -18,9 +18,9 @@ vi.mock('obsidian', async (importOriginal) => {
 
 describe('connection presets', () => {
     describe('withAuthorizationSecret', () => {
-        it('should add a bare Authorization secret reference', () => {
+        it('should add a bare Authorization secret reference (lowercase slot payload)', () => {
             expect(JSON.parse(withAuthorizationSecret(undefined))).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
         });
 
@@ -29,19 +29,19 @@ describe('connection presets', () => {
             const parsed = JSON.parse(withAuthorizationSecret(json)) as Record<string, string>;
 
             expect(parsed['X-Custom']).toBe('abc');
-            expect(parsed['Authorization']).toBe('vi-secret:Authorization');
+            expect(parsed['Authorization']).toBe('vi-secret:authorization');
         });
 
         it('should replace an existing Authorization header', () => {
             const json = JSON.stringify({ Authorization: 'Bearer plain-token' });
             const parsed = JSON.parse(withAuthorizationSecret(json)) as Record<string, string>;
 
-            expect(parsed['Authorization']).toBe('vi-secret:Authorization');
+            expect(parsed['Authorization']).toBe('vi-secret:authorization');
         });
 
         it('should recover from invalid JSON', () => {
             expect(JSON.parse(withAuthorizationSecret('not json'))).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
         });
     });
@@ -62,7 +62,7 @@ describe('connection presets', () => {
 
             expect(plugin.settings.openaiCompatEndpoint).toBe(CONNECTION_PRESETS.KILO.ENDPOINT);
             expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
@@ -74,7 +74,7 @@ describe('connection presets', () => {
 
             expect(plugin.settings.ollamaEndpoint).toBe(CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT);
             expect(JSON.parse(plugin.settings.ollamaHeaders as string)).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });

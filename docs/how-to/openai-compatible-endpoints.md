@@ -25,7 +25,7 @@ The **Test connection** button probes the server's `GET /models` list and report
 ### Kilo Gateway walkthrough
 
 1. In **Connections**, pick **Kilo.ai (OpenAI-compatible)** from the **Connection preset** dropdown.
-2. Paste your key into the **Kilo API key** field. It is stored in the device keychain and sent as the Bearer header automatically.
+2. Click the **Kilo API key** control and link your key: Obsidian stores it in the device keychain (it shows as masked dots with a **Change** button once linked) and Vault Intelligence sends it as the `Authorization: Bearer` header automatically. The field wires the header itself, so it works even when you typed the endpoint by hand.
 3. Click **Test connection**. When the status shows Online, refresh the model list (the preset fetches it for you; use the **Refresh model list** button if you changed things manually) and pick a model in the Researcher settings.
 
 ## 2. Embeddings: know what your server offers

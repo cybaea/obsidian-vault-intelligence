@@ -72,6 +72,15 @@ export class MockSetting {
     private buttonCallback?: () => void | Promise<void>;
     private component?: { fireChange?: (value: string | null) => Promise<void> };
 
+    /**
+     * The raw component captured from `addComponent` (e.g. a SecretComponent
+     * mock), if a component was added. Lets tests assert component-level
+     * behaviour such as `setValue` seeding.
+     */
+    get capturedComponent(): unknown {
+        return this.component;
+    }
+
     setName(name: string): this {
         (this as any).name = name;
         return this;

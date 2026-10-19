@@ -5,7 +5,8 @@ import type { IVaultIntelligencePlugin } from "../types";
 import { CONNECTION_PRESETS, DOCUMENTATION_URLS } from "../../constants";
 import { ModelRegistry } from "../../services/ModelRegistry";
 import { validateHeaderKey } from "../../utils/headers";
-import { hasGoogleApiKey, resolveSecrets } from "../../utils/secrets";
+import { logger } from "../../utils/logger";
+import { VI_SECRET_PREFIX, hasGoogleApiKey, resolveSecrets } from "../../utils/secrets";
 import { renderKeyValueEditor } from "../components";
 import { refreshSettings, refreshVisibility } from "../refreshSettings";
 import { SettingsTabContext } from "../SettingsTabContext";
@@ -29,11 +30,12 @@ const lmStudio = "LM Studio";
 const ollamaCloud = "Ollama Cloud";
 
 const AUTHORIZATION_HEADER = "Authorization";
+const AUTHORIZATION_SECRET_PAYLOAD = "authorization";
+const BEARER_SCHEME = "Bearer ";
 const PRESET_KILO = "kilo";
 const PRESET_NONE = "none";
 const PRESET_OLLAMA_CLOUD = "ollama-cloud";
 const PRESET_OLLAMA_LOCAL = "ollama-local";
-const VI_SECRET_PREFIX = "vi-secret:";
 
 /**
  * Documentation link setting — opens the plugin documentation site.
@@ -215,7 +217,12 @@ export function configureOllamaHeadersField(
         onSaveSecret: (key: string, value: string) => {
             const storage = plugin.app.secretStorage as unknown as { setSecret?: (k: string, v: string) => void };
             if (storage && storage.setSecret) {
-                storage.setSecret(key, value);
+                try {
+                    storage.setSecret(key, value);
+                } catch (error) {
+                    logger.error(`[Connections] Failed to store ${key} in the device keychain`, error);
+                    new Notice('Could not store the secret in the device keychain.');
+                }
             }
         },
         secretKeyPrefix: `ollama-headers-`,
@@ -226,8 +233,11 @@ export function configureOllamaHeadersField(
 
 /**
  * Adds (or replaces) the Authorization header with a secret-backed reference.
- * The reference stores the bare header key; resolvers prepend the
- * connection's namespace prefix when reading the keychain.
+ * The reference stores the bare, lowercase keychain slot suffix; resolvers
+ * prepend the connection's namespace prefix when reading the keychain, so
+ * the resolved id matches the connection's canonical
+ * `ollama-headers-authorization` / `openai-compat-headers-authorization`
+ * SecretStorage slot.
  */
 export function withAuthorizationSecret(currentJson: string | undefined): string {
     let headers: Record<string, string> = {};
@@ -236,7 +246,7 @@ export function withAuthorizationSecret(currentJson: string | undefined): string
     } catch {
         headers = {};
     }
-    headers[AUTHORIZATION_HEADER] = `${VI_SECRET_PREFIX}Authorization`;
+    headers[AUTHORIZATION_HEADER] = `${VI_SECRET_PREFIX}${AUTHORIZATION_SECRET_PAYLOAD}`;
     return JSON.stringify(headers);
 }
 
@@ -257,7 +267,7 @@ export function withAuthorizationSecretIfAbsent(currentJson: string | undefined)
     if (headers[AUTHORIZATION_HEADER]) {
         return null;
     }
-    headers[AUTHORIZATION_HEADER] = `${VI_SECRET_PREFIX}Authorization`;
+    headers[AUTHORIZATION_HEADER] = `${VI_SECRET_PREFIX}${AUTHORIZATION_SECRET_PAYLOAD}`;
     return JSON.stringify(headers);
 }
 
@@ -278,16 +288,18 @@ export function hasSecretAuthorizationReference(currentJson: string | undefined)
     return (headers[AUTHORIZATION_HEADER] || "").startsWith(VI_SECRET_PREFIX);
 }
 
+/** Settings key of the two preset-governed connections' headers JSON. */
+type ConnectionHeadersKey = 'ollamaHeaders' | 'openaiCompatHeaders';
+
 /**
  * Shared by the two API key fields' change handlers: wires the stored key
  * into the Authorization header when the headers have no Authorization
  * entry (the preset path plants the reference itself), and otherwise
- * surfaces a kept PLAIN-TEXT entry once per header state. The memo
- * (`noticeMemo.value`) holds the stored headers the notice was last shown
- * for; because a text field's onChange fires per keystroke and Obsidian
- * stacks notices, a nine-keystroke key would otherwise stack nine
- * identical notices. The memo re-arms whenever the stored headers change,
- * so re-entering a plain-text value after removing it is surfaced again.
+ * surfaces the kept PLAIN-TEXT entry. The SecretComponent-backed fields
+ * fire once per user action (link, change, or clear) rather than per
+ * keystroke, so no deduplication memo is needed; a kept plain-text entry is
+ * reported every time the user links a credential while the collision
+ * stands.
  *
  * A stored `vi-secret:` reference is already wired (it resolves through
  * the same keychain slot the field writes) and stays silent. A
@@ -297,9 +309,8 @@ export function hasSecretAuthorizationReference(currentJson: string | undefined)
  * key, and is accepted rather than complicating the check.
  */
 export async function wireOrNoticeUnwiredAuthorization(
-    headersKey: 'ollamaHeaders' | 'openaiCompatHeaders',
-    plugin: IVaultIntelligencePlugin,
-    noticeMemo: { value: string | null }
+    headersKey: ConnectionHeadersKey,
+    plugin: IVaultIntelligencePlugin
 ): Promise<void> {
     const current = plugin.settings[headersKey];
     const wired = withAuthorizationSecretIfAbsent(current);
@@ -313,11 +324,166 @@ export async function wireOrNoticeUnwiredAuthorization(
     }
     // The kept entry is plain text, so the stored key genuinely stays
     // unwired until the user resolves the collision.
-    if ((current || '') === noticeMemo.value) {
+    new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
+}
+
+/**
+ * Whether Obsidian's SecretStorage is present and usable in this session.
+ * The API exists since the plugin's minimum app version, so this only
+ * fails on a broken runtime or a test double; the plain-text fallback
+ * covers the rest.
+ */
+function hasSecretStorage(plugin: IVaultIntelligencePlugin): boolean {
+    const storage = plugin.app.secretStorage as unknown as { getSecret?: (key: string) => string | null } | undefined;
+    return !!storage && typeof storage.getSecret === "function";
+}
+
+/**
+ * Composes the Authorization header value the connection key fields
+ * manage: `Bearer <key>`. The scheme is only prepended when the credential
+ * does not already carry it, so re-linking a credential that was authored
+ * with the scheme is not double-prefixed.
+ */
+function composeBearerAuthorization(value: string): string {
+    const trimmed = value.trim();
+    if (/^bearer /i.test(trimmed)) {
+        return trimmed;
+    }
+    return `${BEARER_SCHEME}${trimmed}`;
+}
+
+/** Parses a connection's stored headers JSON defensively. */
+function parseConnectionHeaders(currentJson: string | undefined): Record<string, string> {
+    try {
+        return JSON.parse(currentJson || "{}") as Record<string, string>;
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * SecretComponent change handler for a preset-governed connection key. The
+ * component emits the keychain id of the credential the user linked or
+ * added; the id is resolved and its value is copied into the connection's
+ * canonical, resolver-compatible slot as the composed bearer value (one
+ * predictable, deletable secret per connection — the credential the user
+ * picked stays untouched), then the Authorization header reference is
+ * wired. A kept plain-text Authorization entry is surfaced instead of
+ * being clobbered.
+ */
+async function linkConnectionSecret(
+    headersKey: ConnectionHeadersKey,
+    slotId: string,
+    plugin: IVaultIntelligencePlugin,
+    linkedId: string
+): Promise<void> {
+    const storage = plugin.app.secretStorage as unknown as {
+        getSecret?: (key: string) => string | null | Promise<string | null>;
+        setSecret?: (key: string, value: string) => void;
+    } | undefined;
+    if (!storage || typeof storage.getSecret !== "function" || typeof storage.setSecret !== "function") {
+        new Notice('Secure storage is unavailable on this device; the credential could not be stored.');
         return;
     }
-    noticeMemo.value = current || '';
-    new Notice("An authorization header already exists in your headers; the key was stored but left unwired. Edit the headers or remove that entry first.");
+    let linked: string | null = null;
+    try {
+        linked = await storage.getSecret(linkedId);
+    } catch (error) {
+        logger.error('[Connections] Failed to read the linked credential from the keychain', error);
+        new Notice('Could not read the linked credential from the device keychain; nothing was stored.');
+        return;
+    }
+    if (linked === null || linked.trim().length === 0) {
+        new Notice('Could not read the linked credential from the device keychain; nothing was stored.');
+        return;
+    }
+    try {
+        storage.setSecret(slotId, composeBearerAuthorization(linked));
+    } catch (error) {
+        logger.error(`[Connections] Failed to store the credential under ${slotId}`, error);
+        new Notice('Could not store the credential in the device keychain; the authorization header was left unchanged.');
+        return;
+    }
+    await wireOrNoticeUnwiredAuthorization(headersKey, plugin);
+}
+
+/**
+ * Clearing a connection key field: removes the wired Authorization
+ * reference and deletes the canonical keychain slot. A plain-text
+ * Authorization entry is left in place — the field never authored it — and
+ * the user is pointed at the headers editor. `deleteSecret` is a runtime
+ * Obsidian API outside the published typings at this version, so the
+ * optional-call guard stays.
+ */
+async function unwireConnectionAuthorization(
+    headersKey: ConnectionHeadersKey,
+    plugin: IVaultIntelligencePlugin,
+    slotId: string
+): Promise<void> {
+    const headers = parseConnectionHeaders(plugin.settings[headersKey]);
+    const existing = headers[AUTHORIZATION_HEADER];
+    const storage = plugin.app.secretStorage as unknown as { deleteSecret?: (id: string) => boolean } | undefined;
+    const deleteStoredCredential = (): void => {
+        if (storage && typeof storage.deleteSecret === "function") {
+            try {
+                storage.deleteSecret(slotId);
+            } catch (error) {
+                logger.error(`[Connections] Failed to delete the stored credential under ${slotId}`, error);
+            }
+        }
+    };
+    if (existing && !existing.startsWith(VI_SECRET_PREFIX)) {
+        // The entry is plain text the field never authored: it stays, and
+        // the user is pointed at the headers editor. The credential the
+        // field stored (if any) is still cleared.
+        deleteStoredCredential();
+        new Notice('A plain-text authorization entry was kept in the headers; edit the headers if you want to remove it.');
+        return;
+    }
+    let settingsChanged = false;
+    if (existing) {
+        delete headers[AUTHORIZATION_HEADER];
+        plugin.settings[headersKey] = JSON.stringify(headers);
+        settingsChanged = true;
+    }
+    deleteStoredCredential();
+    if (settingsChanged) {
+        await plugin.saveSettings();
+    }
+}
+
+/**
+ * Fallback writer for devices without secure storage (the same trade-off
+ * the plain-text Google API key fallback makes): stores the composed
+ * bearer value as a plain-text Authorization header in the synced settings
+ * JSON. Clearing removes the plain-text entry without touching wired
+ * references.
+ */
+async function setPlaintextAuthorization(
+    headersKey: ConnectionHeadersKey,
+    plugin: IVaultIntelligencePlugin,
+    keyInput: string
+): Promise<void> {
+    const headers = parseConnectionHeaders(plugin.settings[headersKey]);
+    if (keyInput) {
+        headers[AUTHORIZATION_HEADER] = composeBearerAuthorization(keyInput);
+        plugin.settings[headersKey] = JSON.stringify(headers);
+        await plugin.saveSettings();
+        return;
+    }
+    const existing = headers[AUTHORIZATION_HEADER];
+    if (!existing || existing.startsWith(VI_SECRET_PREFIX)) {
+        return;
+    }
+    delete headers[AUTHORIZATION_HEADER];
+    plugin.settings[headersKey] = JSON.stringify(headers);
+    await plugin.saveSettings();
+}
+
+/** Seeds the plain-text fallback with the current plain-text Authorization value, if any. */
+function extractPlaintextAuthorization(currentJson: string | undefined): string {
+    const value = parseConnectionHeaders(currentJson)[AUTHORIZATION_HEADER];
+    return value && !value.startsWith(VI_SECRET_PREFIX) ? value : '';
 }
 
 /**
@@ -489,39 +655,80 @@ export function configureConnectionPresetField(
 }
 
 /**
- * Ollama Cloud API key — stored in the device keychain and sent as the
- * Authorization Bearer header on every Ollama request. Rendered when the
- * Ollama endpoint points at Ollama Cloud.
+ * Shared implementation of the preset-governed connection API key fields
+ * (Ollama Cloud and Kilo). Mirrors the Google API key field: a native
+ * SecretComponent — masked stored state with a "Change" button — backed by
+ * the device keychain through the connection's canonical slot, with the
+ * plain-text fallback for sessions where secure storage is unavailable.
+ */
+function configureConnectionApiKeyField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    headersKey: ConnectionHeadersKey,
+    name: string,
+    description: string,
+    slotId: string
+): void {
+    setting.setName(name).setClass('vault-intelligence-api-setting').setDesc(description);
+
+    if (plugin.settings.secretStorageFailure || !hasSecretStorage(plugin)) {
+        // Fallback: no secure storage — the plain-text trade-off mirrors the
+        // plain-text Google API key fallback.
+        setting.addText(text => {
+            text
+                .setPlaceholder('API key')
+                .setPassword()
+                .setValue(extractPlaintextAuthorization(plugin.settings[headersKey]))
+                .onChange(async (value) => {
+                    await setPlaintextAuthorization(headersKey, plugin, value.trim());
+                });
+        });
+        setting.descEl.createDiv({
+            cls: 'vi-settings-hint',
+            text: 'Secure storage is unavailable on this device, so the key is stored in data.json (it syncs with your vault).'
+        });
+        return;
+    }
+
+    setting.addComponent(el => new SecretComponent(plugin.app, el)
+        // Seed with the canonical slot id: the component renders the masked
+        // stored state when the slot holds a credential and the link/add
+        // affordance otherwise.
+        .setValue(hasSecretAuthorizationReference(plugin.settings[headersKey]) ? slotId : '')
+        .onChange(async (value) => {
+            if (value === null || value === '') {
+                await unwireConnectionAuthorization(headersKey, plugin, slotId);
+                return;
+            }
+            await linkConnectionSecret(headersKey, slotId, plugin, value);
+        }));
+
+    setting.descEl.createDiv({
+        cls: 'vi-settings-hint',
+        text: `The credential is stored in the device keychain and sent as the bearer header automatically. Click the control to link or add it; click "${'Change'}" to replace it.`
+    });
+}
+
+/**
+ * Ollama Cloud API key — a native SecretComponent field. The credential is
+ * stored in the device keychain under the connection's canonical,
+ * resolver-compatible slot and composed into the Authorization bearer
+ * header on every Ollama request. Rendered when the Ollama endpoint points
+ * at Ollama Cloud.
  */
 export function configureOllamaCloudApiKeyField(
     setting: Setting,
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
-    // The unwired notice must not stack on the per-keystroke onChange; the
-    // memo caps it at once per header state (see the helper's docstring).
-    const unwiredNoticeMemo: { value: string | null } = { value: null };
-    setting
-        .setName(`${ollama} Cloud API key`)
-        .setDesc(`Sent with every request to ${ollamaCloud} and stored in your device keychain; never synced.`)
-        .addText(text => text
-            .setPlaceholder('API key')
-            .setPassword()
-            .setValue('')
-            .onChange(async (value) => {
-                const keyInput = value.trim();
-                const storage = plugin.app.secretStorage as unknown as { deleteSecret?: (k: string) => void; setSecret?: (k: string, v: string) => void };
-                if (keyInput) {
-                    if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, keyInput);
-                    // Make the field self-sufficient for manually typed endpoints:
-                    // wire the stored key into the Authorization header when the
-                    // headers have no Authorization entry; otherwise surface (once
-                    // per header state) a kept plain-text entry.
-                    await wireOrNoticeUnwiredAuthorization('ollamaHeaders', plugin, unwiredNoticeMemo);
-                } else if (storage && storage.deleteSecret) {
-                    storage.deleteSecret(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
-                }
-            }));
+    configureConnectionApiKeyField(
+        setting,
+        plugin,
+        'ollamaHeaders',
+        `${ollama} Cloud API key`,
+        `Sent as the bearer header with every request to ${ollamaCloud} and stored in your device keychain; never synced.`,
+        CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME
+    );
 }
 
 /**
@@ -610,7 +817,12 @@ export function configureOpenAICompatHeadersField(
         onSaveSecret: (key: string, value: string) => {
             const storage = plugin.app.secretStorage as unknown as { setSecret?: (k: string, v: string) => void };
             if (storage && storage.setSecret) {
-                storage.setSecret(key, value);
+                try {
+                    storage.setSecret(key, value);
+                } catch (error) {
+                    logger.error(`[Connections] Failed to store ${key} in the device keychain`, error);
+                    new Notice('Could not store the secret in the device keychain.');
+                }
             }
         },
         secretKeyPrefix: `openai-compat-headers-`,
@@ -620,39 +832,25 @@ export function configureOpenAICompatHeadersField(
 }
 
 /**
- * Kilo API key — stored in the device keychain and sent as the
- * Authorization Bearer header on every OpenAI-compatible request. Rendered
- * when the OpenAI-compatible endpoint points at the Kilo Gateway.
+ * Kilo API key — a native SecretComponent field. The gateway credential is
+ * stored in the device keychain under the connection's canonical,
+ * resolver-compatible slot and composed into the Authorization bearer
+ * header on every OpenAI-compatible request. Rendered when the
+ * OpenAI-compatible endpoint points at the Kilo Gateway.
  */
 export function configureKiloApiKeyField(
     setting: Setting,
     plugin: IVaultIntelligencePlugin,
     _context: SettingsTabContext
 ): void {
-    // The unwired notice must not stack on the per-keystroke onChange; the
-    // memo caps it at once per header state (see the helper's docstring).
-    const unwiredNoticeMemo: { value: string | null } = { value: null };
-    setting
-        .setName('Kilo API key')
-        .setDesc(`Sent with every request to the ${kilo} gateway and stored in your device keychain; never synced.`)
-        .addText(text => text
-            .setPlaceholder('API key')
-            .setPassword()
-            .setValue('')
-            .onChange(async (value) => {
-                const keyInput = value.trim();
-                const storage = plugin.app.secretStorage as unknown as { deleteSecret?: (k: string) => void; setSecret?: (k: string, v: string) => void };
-                if (keyInput) {
-                    if (storage && storage.setSecret) storage.setSecret(CONNECTION_PRESETS.KILO.SECRET_NAME, keyInput);
-                    // Make the field self-sufficient for manually typed endpoints:
-                    // wire the stored key into the Authorization header when the
-                    // headers have no Authorization entry; otherwise surface (once
-                    // per header state) a kept plain-text entry.
-                    await wireOrNoticeUnwiredAuthorization('openaiCompatHeaders', plugin, unwiredNoticeMemo);
-                } else if (storage && storage.deleteSecret) {
-                    storage.deleteSecret(CONNECTION_PRESETS.KILO.SECRET_NAME);
-                }
-            }));
+    configureConnectionApiKeyField(
+        setting,
+        plugin,
+        'openaiCompatHeaders',
+        'Kilo API key',
+        `Sent as the bearer header with every request to the ${kilo} gateway and stored in your device keychain; never synced.`,
+        CONNECTION_PRESETS.KILO.SECRET_NAME
+    );
 }
 
 /**

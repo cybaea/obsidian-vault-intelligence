@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 
-import { resolveSecrets } from "../../src/utils/secrets";
+import { resolveSecrets, sanitizeSecretId } from "../../src/utils/secrets";
 
 describe("Secrets Utils", () => {
     describe("resolveSecrets", () => {
@@ -57,6 +57,29 @@ describe("Secrets Utils", () => {
             await expect(resolveSecrets("not valid json", mockedGetSecretValue, "p-")).rejects.toThrow(
                 /Invalid JSON format in configuration/
             );
+        });
+    });
+
+    describe("sanitizeSecretId", () => {
+        it("should lowercase and map SecretStorage-hostile characters to dashes", () => {
+            expect(sanitizeSecretId("Authorization")).toBe("authorization");
+            expect(sanitizeSecretId("X-API-KEY")).toBe("x-api-key");
+            expect(sanitizeSecretId("BRAVE_API_KEY")).toBe("brave-api-key");
+            expect(sanitizeSecretId("  Content-Type  ")).toBe("content-type");
+        });
+
+        it("should collapse repeated dashes and trim the ends", () => {
+            expect(sanitizeSecretId("a  b")).toBe("a-b");
+            expect(sanitizeSecretId("--x--")).toBe("x");
+        });
+
+        it("should cap the id at the requested length", () => {
+            expect(sanitizeSecretId("abcdefghij", 5)).toBe("abcde");
+            expect(sanitizeSecretId("key", 0)).toBe("");
+        });
+
+        it("should return an empty string when nothing valid remains", () => {
+            expect(sanitizeSecretId("###")).toBe("");
         });
     });
 });

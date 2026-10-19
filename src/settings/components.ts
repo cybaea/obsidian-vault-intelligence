@@ -5,6 +5,7 @@ import * as Obsidian from "obsidian";
 
 import { ConfirmationModal } from "../modals/ConfirmationModal";
 import { ModelDefinition } from "../services/ModelRegistry";
+import { SECRET_ID_MAX_LENGTH, sanitizeSecretId, VI_SECRET_PREFIX } from "../utils/secrets";
 
 declare module "obsidian" {
     interface TextComponent {
@@ -178,9 +179,9 @@ export function renderKeyValueEditor({
         const parsed = JSON.parse(currentJson || "{}") as Record<string, string>;
         for (const [k, v] of Object.entries(parsed)) {
             pairs.push({
-                isSecret: v.startsWith('vi-secret:'),
+                isSecret: v.startsWith(VI_SECRET_PREFIX),
                 key: k,
-                value: v.startsWith('vi-secret:') ? '********' : v
+                value: v.startsWith(VI_SECRET_PREFIX) ? '********' : v
             });
         }
     } catch {
@@ -200,11 +201,21 @@ export function renderKeyValueEditor({
             }
 
             if (p.isSecret) {
-                const secretKey = `${secretKeyPrefix}${p.key}`;
+                // Obsidian's SecretStorage only accepts lowercase ids built
+                // from letters, numbers, and dashes (`setSecret` throws for
+                // anything else), so the header key is sanitised before it
+                // becomes the stored id and the planted reference. The
+                // header key itself keeps its original spelling.
+                const sanitizedKey = sanitizeSecretId(p.key, SECRET_ID_MAX_LENGTH - secretKeyPrefix.length);
+                if (!sanitizedKey) {
+                    if (onError) onError(`"${p.key}" cannot be stored securely; rename it with lowercase letters, numbers, and dashes only.`);
+                    continue;
+                }
+                const secretKey = `${secretKeyPrefix}${sanitizedKey}`;
                 if (p.value !== '********') {
                     onSaveSecret(secretKey, p.value);
                 }
-                result[p.key] = `vi-secret:${p.key}`;
+                result[p.key] = `${VI_SECRET_PREFIX}${sanitizedKey}`;
                 p.value = '********'; // Mask in memory
             } else {
                 result[p.key] = p.value;

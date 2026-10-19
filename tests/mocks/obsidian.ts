@@ -251,6 +251,9 @@ export class ToggleComponent {
 export class SecretComponent {
     private changeCallback?: (value: string | null) => unknown;
 
+    /** Recorded `setValue` seed values, in call order (test helper). */
+    readonly setValueCalls: string[] = [];
+
     constructor(_app: any, _el: any) { }
 
     // Obsidian 1.14 types the callback value as `string | null`; null is
@@ -262,7 +265,10 @@ export class SecretComponent {
 
     setDisabled(_disabled: boolean): this { return this; }
     setPlaceholder(_placeholder: string): this { return this; }
-    setValue(_value: string): this { return this; }
+    setValue(value: string): this {
+        this.setValueCalls.push(value);
+        return this;
+    }
 
     /** Test helper: fires the captured onChange callback. */
     async fireChange(value: string | null): Promise<void> {

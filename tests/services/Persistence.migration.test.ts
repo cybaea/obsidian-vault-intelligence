@@ -129,14 +129,72 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
         await plugin.loadSettings();
 
         // Resolvers prepend the namespace prefix at lookup time, so references
-        // must store the bare key for the stored secrets to resolve.
-        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
-        expect(plugin.settings.mcpServers[0]?.env).toBe('{"API_KEY": "vi-secret:API_KEY"}');
-        expect(plugin.settings.mcpServers[0]?.remoteHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+        // must store the bare key for the stored secrets to resolve — and the
+        // key must be an id SecretStorage accepts (lowercase letters, numbers,
+        // and dashes only). The sanitiser parses and re-serialises the map, so
+        // rewritten maps come back in canonical compact JSON.
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization":"vi-secret:authorization"}');
+        expect(plugin.settings.mcpServers[0]?.env).toBe('{"API_KEY":"vi-secret:api-key"}');
+        expect(plugin.settings.mcpServers[0]?.remoteHeaders).toBe('{"Authorization":"vi-secret:authorization"}');
         expect(plugin.saveData).toHaveBeenCalled();
     });
 
-    it('should leave already-normalised secret references untouched', async () => {
+    it('should copy a legacy keychain secret across while sanitising references', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        // Simulate a keychain that already holds the secret under a legacy id
+        // (possible on Obsidian builds older than the id validation): the
+        // value must be copied to the sanitised id so the rewritten reference
+        // keeps resolving.
+        const setSecret = vi.fn();
+        (plugin.app as unknown as { secretStorage: unknown }).secretStorage = {
+            getSecret: (id: string) => (id === 'ollama-headers-Authorization' ? 'Bearer legacy' : null),
+            setSecret
+        };
+
+        const legacyData = {
+            ollamaHeaders: '{"Authorization": "vi-secret:Authorization"}'
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization":"vi-secret:authorization"}');
+        expect(setSecret).toHaveBeenCalledWith('ollama-headers-authorization', 'Bearer legacy');
+    });
+
+    it('should keep the legacy reference when the legacy secret exists but cannot be copied', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        const setSecret = vi.fn(() => {
+            throw new Error('Secure storage is not available.');
+        });
+        (plugin.app as unknown as { secretStorage: unknown }).secretStorage = {
+            getSecret: (id: string) => (id === 'ollama-headers-Authorization' ? 'Bearer legacy' : null),
+            setSecret
+        };
+
+        const legacyData = {
+            ollamaHeaders: '{"Authorization": "vi-secret:Authorization"}'
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        // A working legacy setup must not be broken by a failed copy.
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+        expect(setSecret).toHaveBeenCalled();
+    });
+
+    it('should rewrite references carrying SecretStorage-hostile payloads on their own', async () => {
         const mockApp = new App();
         const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
         const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
@@ -150,6 +208,26 @@ describe('Persistence Migration (Tiered Context Controls)', () => {
 
         await plugin.loadSettings();
 
-        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:Authorization"}');
+        // The mixed-case payload could never have been stored (SecretStorage
+        // rejects such ids), so the rewrite is safe without any copy.
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization":"vi-secret:authorization"}');
+        expect(plugin.saveData).toHaveBeenCalled();
+    });
+
+    it('should leave already-valid secret references untouched', async () => {
+        const mockApp = new App();
+        const mockManifest = { id: 'obsidian-vault-intelligence', version: '9.5.0' } as PluginManifest;
+        const plugin = new VaultIntelligencePlugin(mockApp, mockManifest);
+
+        const legacyData = {
+            ollamaHeaders: '{"Authorization": "vi-secret:authorization"}'
+        };
+
+        plugin.loadData = vi.fn().mockResolvedValue(legacyData);
+        plugin.saveData = vi.fn().mockResolvedValue(undefined);
+
+        await plugin.loadSettings();
+
+        expect(plugin.settings.ollamaHeaders).toBe('{"Authorization": "vi-secret:authorization"}');
     });
 });

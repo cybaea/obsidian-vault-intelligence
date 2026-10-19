@@ -19,7 +19,7 @@ import {
 import { type SettingsTabContext } from '../../src/settings/SettingsTabContext';
 import { type IVaultIntelligencePlugin, type VaultIntelligenceSettings } from '../../src/settings/types';
 import { MockSetting } from '../helpers/MockSetting';
-import { setMockApiVersion } from '../mocks/obsidian';
+import { SecretComponent, setMockApiVersion } from '../mocks/obsidian';
 
 vi.mock('../../src/services/ModelRegistry', () => ({
     ModelRegistry: {
@@ -60,6 +60,12 @@ describe('connection endpoint and API key fields', () => {
             saveSettings: vi.fn().mockResolvedValue(undefined),
             settings: settings as VaultIntelligenceSettings
         } as unknown as IVaultIntelligencePlugin;
+    };
+
+    const getCapturedSecretComponent = (setting: MockSetting): SecretComponent => {
+        const component = setting.capturedComponent;
+        if (!(component instanceof SecretComponent)) throw new Error('Expected the field to render a SecretComponent');
+        return component;
     };
 
     describe('normalizeConnectionEndpoint', () => {
@@ -112,41 +118,75 @@ describe('connection endpoint and API key fields', () => {
     });
 
     describe('withAuthorizationSecretIfAbsent', () => {
-        it('should plant the bare Authorization reference when none exists', () => {
+        it('should plant the bare Authorization reference (lowercase slot payload) when none exists', () => {
             expect(JSON.parse(withAuthorizationSecretIfAbsent(undefined) ?? '')).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
             expect(JSON.parse(withAuthorizationSecretIfAbsent('{"X-Custom": "abc"}') ?? '')).toEqual({
-                Authorization: 'vi-secret:Authorization',
+                Authorization: 'vi-secret:authorization',
                 'X-Custom': 'abc'
             });
         });
 
         it('should return null (plant nothing) when an Authorization entry exists', () => {
             expect(withAuthorizationSecretIfAbsent('{"Authorization": "Bearer user-token"}')).toBeNull();
-            expect(withAuthorizationSecretIfAbsent('{"Authorization": "vi-secret:Authorization"}')).toBeNull();
+            expect(withAuthorizationSecretIfAbsent('{"Authorization": "vi-secret:authorization"}')).toBeNull();
         });
 
         it('should recover from invalid JSON by planting the reference', () => {
             expect(JSON.parse(withAuthorizationSecretIfAbsent('not json') ?? '')).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
         });
     });
 
-    describe('configureKiloApiKeyField', () => {
-        it('should store the key and wire the Authorization reference on entry', async () => {
+    describe('configureKiloApiKeyField (SecretComponent)', () => {
+        it('should seed the canonical slot when the headers hold a secret reference', () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual([CONNECTION_PRESETS.KILO.SECRET_NAME]);
+        });
+
+        it('should seed empty when the headers hold no secret reference', () => {
             const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
             const setting = new MockSetting();
 
             configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('kilo-key-123');
 
-            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME, 'kilo-key-123');
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual(['']);
+        });
+
+        it('should copy the linked credential into the canonical slot as the bearer value and wire the reference', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            // The stored value is the composed Authorization header value; the
+            // emitted keychain id is never sent to the provider.
+            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME, 'Bearer token123');
             expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not double-prefix a credential that already carries the bearer scheme', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            secrets?.getSecret.mockResolvedValue('Bearer xyz');
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME, 'Bearer xyz');
         });
 
         it('should preserve a user-authored Authorization header instead of clobbering it', async () => {
@@ -157,9 +197,9 @@ describe('connection endpoint and API key fields', () => {
             const setting = new MockSetting();
 
             configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('kilo-key-123');
+            await setting.fireSecretChange('linked-credential');
 
-            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME, 'kilo-key-123');
+            expect(secrets?.setSecret).toHaveBeenCalledTimes(1);
             expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
                 Authorization: 'Bearer user-token'
             });
@@ -174,20 +214,107 @@ describe('connection endpoint and API key fields', () => {
         it('should stay silent when the existing Authorization entry is a secret reference', async () => {
             const plugin = makePlugin({
                 openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
-                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
             const setting = new MockSetting();
 
             configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('kilo-key-123');
+            await setting.fireSecretChange('linked-credential');
 
-            // The stored reference is already wired and now resolves to the
-            // freshly stored key, so no "left unwired" feedback may fire.
+            // The stored reference is already wired and resolves through the
+            // same keychain slot the field copied the key into, so no "left
+            // unwired" feedback may fire.
             expect(Notice).not.toHaveBeenCalled();
             expect(plugin.saveSettings).not.toHaveBeenCalled();
         });
 
-        it('should show the unwired notice once per header state, not once per keystroke', async () => {
+        it('should surface a failed credential read and store nothing', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            secrets?.getSecret.mockResolvedValue(null);
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).not.toHaveBeenCalled();
+            expect(plugin.settings.openaiCompatHeaders).toBeUndefined();
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('Could not read the linked credential from the device keychain; nothing was stored.');
+        });
+
+        it('should surface a keychain read failure and store nothing', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            secrets?.getSecret.mockRejectedValue(new Error('keychain error'));
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).not.toHaveBeenCalled();
+            expect(plugin.settings.openaiCompatHeaders).toBeUndefined();
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('Could not read the linked credential from the device keychain; nothing was stored.');
+        });
+
+        it('should surface a keychain write failure and leave the authorization header unchanged', async () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            secrets?.setSecret.mockImplementation(() => {
+                throw new Error('Secure storage is not available.');
+            });
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
+                Authorization: 'vi-secret:authorization'
+            });
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('Could not store the credential in the device keychain; the authorization header was left unchanged.');
+        });
+
+        it('should notice when the keychain vanished between render and link', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            (plugin.app as unknown as { secretStorage: unknown }).secretStorage = undefined;
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('Secure storage is unavailable on this device; the credential could not be stored.');
+        });
+
+        it('should un-wire the reference and delete the slot on clear', async () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange(null);
+
+            expect(plugin.settings.openaiCompatHeaders).toBe('{}');
+            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME);
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should delete the slot even when nothing is wired yet', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('');
+
+            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME);
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+        });
+
+        it('should keep a plain-text authorization entry on clear and point at the headers editor', async () => {
             const plugin = makePlugin({
                 openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
                 openaiCompatHeaders: JSON.stringify({ Authorization: 'Bearer user-token' })
@@ -195,31 +322,14 @@ describe('connection endpoint and API key fields', () => {
             const setting = new MockSetting();
 
             configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('k');
-            await setting.fireText('kil');
-            await setting.fireText('kilo-key-123');
+            await setting.fireSecretChange(null);
 
-            // onChange fires per keystroke and Obsidian stacks notices, so
-            // the plain-text "left unwired" notice must not stack with it.
-            expect(Notice).toHaveBeenCalledTimes(1);
-
-            // A changed header state re-arms the notice: a hand-edited new
-            // plain-text entry is a new surface-worthy collision.
-            plugin.settings.openaiCompatHeaders = JSON.stringify({ Authorization: 'Bearer rotated-token' });
-            await setting.fireText('kilo-key-123x');
-
-            expect(Notice).toHaveBeenCalledTimes(2);
-        });
-
-        it('should delete the stored key on clear', async () => {
-            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT });
-            const setting = new MockSetting();
-
-            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('');
-
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
+                Authorization: 'Bearer user-token'
+            });
             expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.KILO.SECRET_NAME);
             expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('A plain-text authorization entry was kept in the headers; edit the headers if you want to remove it.');
         });
 
         it('should not fire a network call from the key field wiring', async () => {
@@ -227,25 +337,84 @@ describe('connection endpoint and API key fields', () => {
             const setting = new MockSetting();
 
             configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('kilo-key-123');
+            await setting.fireSecretChange('linked-credential');
 
             expect(vi.mocked(ModelRegistry.fetchModels)).not.toHaveBeenCalled();
         });
+
+        it('should fall back to a plain-text field when secure storage is unavailable', async () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.KILO.ENDPOINT,
+                secretStorageFailure: true
+            });
+            const setting = new MockSetting();
+
+            configureKiloApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            expect(setting.capturedComponent).toBeUndefined();
+
+            await setting.fireText('');
+            expect(plugin.settings.openaiCompatHeaders).toBeUndefined();
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+
+            await setting.fireText('kilo-key-123');
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
+                Authorization: 'Bearer kilo-key-123'
+            });
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+
+            await setting.fireText('');
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({});
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+        });
     });
 
-    describe('configureOllamaCloudApiKeyField', () => {
-        it('should store the key and wire the Authorization reference on entry', async () => {
+    describe('configureOllamaCloudApiKeyField (SecretComponent)', () => {
+        it('should seed the canonical slot when the headers hold a secret reference', () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual([CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME]);
+        });
+
+        it('should seed empty when the headers hold no secret reference', () => {
             const plugin = makePlugin({ ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT });
             const setting = new MockSetting();
 
             configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('cloud-key-123');
 
-            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, 'cloud-key-123');
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual(['']);
+        });
+
+        it('should copy the linked credential into the canonical slot as the bearer value and wire the reference', async () => {
+            const plugin = makePlugin({ ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            // The stored value is the composed Authorization header value; the
+            // emitted keychain id is never sent to the provider.
+            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, 'Bearer token123');
             expect(JSON.parse(plugin.settings.ollamaHeaders as string)).toEqual({
-                Authorization: 'vi-secret:Authorization'
+                Authorization: 'vi-secret:authorization'
             });
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not double-prefix a credential that already carries the bearer scheme', async () => {
+            const plugin = makePlugin({ ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT });
+            const setting = new MockSetting();
+
+            secrets?.getSecret.mockResolvedValue('Bearer xyz');
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME, 'Bearer xyz');
         });
 
         it('should preserve a user-authored Authorization header instead of clobbering it', async () => {
@@ -256,8 +425,9 @@ describe('connection endpoint and API key fields', () => {
             const setting = new MockSetting();
 
             configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('cloud-key-123');
+            await setting.fireSecretChange('linked-credential');
 
+            expect(secrets?.setSecret).toHaveBeenCalledTimes(1);
             expect(JSON.parse(plugin.settings.ollamaHeaders as string)).toEqual({
                 Authorization: 'Bearer user-token',
                 'X-Mine': 'abc'
@@ -273,20 +443,81 @@ describe('connection endpoint and API key fields', () => {
         it('should stay silent when the existing Authorization entry is a secret reference', async () => {
             const plugin = makePlugin({
                 ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
-                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
             const setting = new MockSetting();
 
             configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('cloud-key-123');
+            await setting.fireSecretChange('linked-credential');
 
-            // The stored reference is already wired and now resolves to the
-            // freshly stored key, so no "left unwired" feedback may fire.
+            // The stored reference is already wired and resolves through the
+            // same keychain slot the field copied the key into, so no "left
+            // unwired" feedback may fire.
             expect(Notice).not.toHaveBeenCalled();
             expect(plugin.saveSettings).not.toHaveBeenCalled();
         });
 
-        it('should show the unwired notice once per header state, not once per keystroke', async () => {
+        it('should surface a failed credential read and store nothing', async () => {
+            const plugin = makePlugin({ ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT });
+            const setting = new MockSetting();
+
+            secrets?.getSecret.mockResolvedValue('');
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).not.toHaveBeenCalled();
+            expect(plugin.settings.ollamaHeaders).toBeUndefined();
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('Could not read the linked credential from the device keychain; nothing was stored.');
+        });
+
+        it('should un-wire the reference and delete the slot on clear', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange(null);
+
+            expect(plugin.settings.ollamaHeaders).toBe('{}');
+            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should delete the slot even when the stored headers are corrupt', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: 'not json'
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange(null);
+
+            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+        });
+
+        it('should still un-wire when the keychain delete fails on clear', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            secrets?.deleteSecret.mockImplementation(() => {
+                throw new Error('keychain delete error');
+            });
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange(null);
+
+            expect(plugin.settings.ollamaHeaders).toBe('{}');
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should keep a plain-text authorization entry on clear and point at the headers editor', async () => {
             const plugin = makePlugin({
                 ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
                 ollamaHeaders: JSON.stringify({ Authorization: 'Bearer user-token' })
@@ -294,30 +525,41 @@ describe('connection endpoint and API key fields', () => {
             const setting = new MockSetting();
 
             configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('c');
-            await setting.fireText('clo');
-            await setting.fireText('cloud-key-123');
+            await setting.fireSecretChange(null);
 
-            // onChange fires per keystroke and Obsidian stacks notices, so
-            // the plain-text "left unwired" notice must not stack with it.
-            expect(Notice).toHaveBeenCalledTimes(1);
-
-            // A changed header state re-arms the notice: a hand-edited new
-            // plain-text entry is a new surface-worthy collision.
-            plugin.settings.ollamaHeaders = JSON.stringify({ Authorization: 'Bearer rotated-token' });
-            await setting.fireText('cloud-key-123x');
-
-            expect(Notice).toHaveBeenCalledTimes(2);
+            expect(JSON.parse(plugin.settings.ollamaHeaders as string)).toEqual({
+                Authorization: 'Bearer user-token'
+            });
+            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
+            expect(plugin.saveSettings).not.toHaveBeenCalled();
+            expect(Notice).toHaveBeenCalledWith('A plain-text authorization entry was kept in the headers; edit the headers if you want to remove it.');
         });
 
-        it('should delete the stored key on clear', async () => {
+        it('should not fire a network call from the key field wiring', async () => {
             const plugin = makePlugin({ ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT });
             const setting = new MockSetting();
 
             configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
-            await setting.fireText('');
+            await setting.fireSecretChange('linked-credential');
 
-            expect(secrets?.deleteSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.OLLAMA_CLOUD.SECRET_NAME);
+            expect(vi.mocked(ModelRegistry.fetchModels)).not.toHaveBeenCalled();
+        });
+
+        it('should fall back to a plain-text field when secure storage is unavailable', async () => {
+            const plugin = makePlugin({
+                ollamaEndpoint: CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT,
+                secretStorageFailure: true
+            });
+            const setting = new MockSetting();
+
+            configureOllamaCloudApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            expect(setting.capturedComponent).toBeUndefined();
+
+            await setting.fireText('cloud-key-123');
+            expect(JSON.parse(plugin.settings.ollamaHeaders as string)).toEqual({
+                Authorization: 'Bearer cloud-key-123'
+            });
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -577,8 +819,8 @@ describe('connection endpoint and API key fields', () => {
     describe('refreshModelList', () => {
         it('should resolve both connections\u2019 headers and force an update', async () => {
             const plugin = makePlugin({
-                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' }),
-                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' }),
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
 
             await refreshModelList(plugin, { tolerateMissingSecrets: true });
@@ -609,7 +851,7 @@ describe('connection endpoint and API key fields', () => {
 
         it('should fail loudly on a missing stored secret by default', async () => {
             const plugin = makePlugin({
-                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
             secrets?.getSecret.mockResolvedValue(null);
 
@@ -619,7 +861,7 @@ describe('connection endpoint and API key fields', () => {
 
         it('should tolerate missing stored header secrets when tolerateMissingSecrets is set', async () => {
             const plugin = makePlugin({
-                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:Authorization' })
+                ollamaHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
             });
             secrets?.getSecret.mockResolvedValue(null);
 
