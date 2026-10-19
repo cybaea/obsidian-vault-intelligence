@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.7.5] - 2026-10-19
+
+### User features
+
 -   Fix Ollama Cloud and Kilo API keys never being stored or sent: Obsidian's SecretStorage rejects any id containing uppercase letters (its ids are lowercase only), so the fields' keychain id `ollama-headers-Authorization` made every store attempt fail silently, the credential never reached the device keychain, and requests went out without the `Authorization` header while the console reported "Missing secret for Authorization". The credential is now stored under the compatible ids `ollama-headers-authorization` and `openai-compat-headers-authorization` and composed into the `Authorization: Bearer <key>` header value on send; a load-time migration rewrites historical references (and carries any legacy keychain value across), so one re-entry of the key is needed because it was never stored. The same lowercase id validation is now applied to secrets stored through the Ollama, OpenAI-compatible, and MCP headers and environment editors and to the plaintext configuration migration.
 -   Move the Ollama Cloud and Kilo API key entry onto the device keychain control: the fields now render Obsidian's native secret control like the Google API key field — the stored credential shows as masked dots with a Change button, clicking links a credential through Obsidian's secret picker, clearing un-wires the Authorization reference and deletes the stored credential, and a plain-text fallback field (clearly marked as syncing) appears where secure storage is unavailable.
 -   Add an OpenAI-compatible connection for any server speaking the OpenAI Chat Completions protocol: the Kilo Gateway, LM Studio, llama.cpp server, vLLM, OpenRouter, and the OpenAI API itself. The connection lives beside Ollama in Connections settings, has its own endpoint, headers, test button, and `openai-compat/` model namespace, supports chat with SSE streaming, tool calling, and structured output, and can serve as the Explorer embedding provider where the server offers `/embeddings` (the Kilo Gateway does not; pair it with Gemini, Voyage, Transformers.js, or Ollama embeddings). Both connections can be active at once. See the new "Using OpenAI-compatible endpoints" guide.
