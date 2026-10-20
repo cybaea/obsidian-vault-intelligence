@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.9.1] - 2026-10-20
+
+### User features
+
 -   **Spotlight scores**: The Researcher's "Spotlight candidates" list now shows the relevance score as a plain number without a "%" sign, since the hybrid score is a relative composite that can legitimately exceed 1.0 rather than a bounded percentage.
 -   Documentation: The Research Engine explanation page describes the "Spotlight candidates" scores and their ordering semantics.
 
