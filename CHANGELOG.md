@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.9.0] - 2026-10-20
+
+### User features
+
 -   **Anthropic preset** for the OpenAI-compatible connection: one-click endpoint setup plus a keychain-backed "Anthropic API key" field; Claude models appear in the model dropdowns (Anthropic offers no embeddings).
 -   Documentation updates: refreshed the Getting Started, Uninstall, Solver, computing model, Gardener, settings reference, and research-engine pages to match the shipped UI and provider options.
 
