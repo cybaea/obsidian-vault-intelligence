@@ -13,7 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   **Code-fence chunking**: The RAG chunker no longer splits inside fenced code blocks. Header-like comment lines in fenced code (`# comment` in Python, shell, YAML, and similar) are no longer mistaken for Markdown headers, and fences that fit within the chunk budget stay whole during oversized-section splitting, so retrieved excerpts and embeddings keep code intact.
+
 ### Developer features
+
+-   Chunking: `src/utils/indexer-utils.ts` now scans fenced code spans (backtick and tilde fences, including unclosed fences, indented fence markers, and CRLF files) and skips header candidates inside them; `recursiveCharacterSplitter` gained a fence-aware, offset-returning core (`splitWithOffsets`) that keeps every chunk a byte-exact slice of the source document, preserving hydration anchors and highlight offsets.
+-   Regression tests: fence-aware splitting coverage, including comments inside fences, unclosed and tilde fences, nested four-backtick fences, oversized-fence line splitting, literal-slice offset invariants, carry-overlap offsets, and byte-identical splitter output for fenceless text.
 
 ## [9.9.1] - 2026-10-20
 
