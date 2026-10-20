@@ -67,6 +67,18 @@ describe('connection presets', () => {
             expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
 
+        it('should configure the Anthropic preset on the OpenAI-compatible connection', async () => {
+            const plugin = makePlugin();
+
+            await applyConnectionPreset('anthropic', plugin);
+
+            expect(plugin.settings.openaiCompatEndpoint).toBe(CONNECTION_PRESETS.ANTHROPIC.ENDPOINT);
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
+                Authorization: 'vi-secret:authorization'
+            });
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+        });
+
         it('should configure the Ollama Cloud preset on the Ollama connection', async () => {
             const plugin = makePlugin();
 
@@ -103,6 +115,13 @@ describe('connection presets', () => {
 
             expect(Notice).toHaveBeenCalledWith(expect.stringContaining(CONNECTION_PRESETS.KILO.ENDPOINT));
             expect(Notice).toHaveBeenCalledWith(expect.stringContaining('Kilo API key'));
+        });
+
+        it('should announce the set endpoint and the field to fill for the Anthropic preset', async () => {
+            await applyConnectionPreset('anthropic', makePlugin());
+
+            expect(Notice).toHaveBeenCalledWith(expect.stringContaining(CONNECTION_PRESETS.ANTHROPIC.ENDPOINT));
+            expect(Notice).toHaveBeenCalledWith(expect.stringContaining('Anthropic API key'));
         });
 
         it('should announce the set endpoint and the field to fill for the Ollama Cloud preset', async () => {

@@ -1,6 +1,7 @@
 import { App } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CONNECTION_PRESETS } from '../../src/constants';
 import { VaultIntelligenceSettingTab } from '../../src/settings/settingsTab';
 import { IVaultIntelligencePlugin, VaultIntelligenceSettings } from '../../src/settings/types';
 import { setMockApiVersion } from '../mocks/obsidian';
@@ -422,6 +423,37 @@ describe('visibility predicates (T3)', () => {
             buildPlugin({ openaiCompatEndpoint: 'https://ai-gateway.kilo.ai/api/v1/' });
             const def = findConnectionDefinition('Kilo API key');
             expect(def?.visible?.()).toBe(true);
+        });
+
+        it('shows the Anthropic API key field only when the endpoint matches the Anthropic preset', () => {
+            buildPlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.ANTHROPIC.ENDPOINT
+            });
+            const def = findConnectionDefinition('Anthropic API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('shows the Anthropic API key field for a trailing-slash variant of the preset endpoint', () => {
+            buildPlugin({ openaiCompatEndpoint: `${CONNECTION_PRESETS.ANTHROPIC.ENDPOINT}/` });
+            const def = findConnectionDefinition('Anthropic API key');
+            expect(def?.visible?.()).toBe(true);
+        });
+
+        it('hides the Anthropic API key field when the endpoint points elsewhere', () => {
+            buildPlugin({
+                openaiCompatEndpoint: 'http://localhost:1234/v1'
+            });
+            const def = findConnectionDefinition('Anthropic API key');
+            expect(def?.visible).toBeDefined();
+            expect(def?.visible?.()).toBe(false);
+        });
+
+        it('keeps the preset key fields mutually exclusive', () => {
+            buildPlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.ANTHROPIC.ENDPOINT
+            });
+            expect(findConnectionDefinition('Kilo API key')?.visible?.()).toBe(false);
         });
 
         it('shows the Ollama Cloud API key field for a trailing-slash variant of the preset endpoint', () => {

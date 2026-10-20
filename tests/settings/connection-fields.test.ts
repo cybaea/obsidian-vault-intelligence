@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { CONNECTION_PRESETS } from '../../src/constants';
 import { ModelRegistry } from '../../src/services/ModelRegistry';
 import {
+    configureAnthropicApiKeyField,
     configureConnectionPresetField,
     configureKiloApiKeyField,
     configureOllamaCloudApiKeyField,
@@ -137,6 +138,43 @@ describe('connection endpoint and API key fields', () => {
             expect(JSON.parse(withAuthorizationSecretIfAbsent('not json') ?? '')).toEqual({
                 Authorization: 'vi-secret:authorization'
             });
+        });
+    });
+
+    describe('configureAnthropicApiKeyField (SecretComponent)', () => {
+        it('should seed the canonical slot when the headers hold a secret reference', () => {
+            const plugin = makePlugin({
+                openaiCompatEndpoint: CONNECTION_PRESETS.ANTHROPIC.ENDPOINT,
+                openaiCompatHeaders: JSON.stringify({ Authorization: 'vi-secret:authorization' })
+            });
+            const setting = new MockSetting();
+
+            configureAnthropicApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual([CONNECTION_PRESETS.ANTHROPIC.SECRET_NAME]);
+        });
+
+        it('should seed empty when the headers hold no secret reference', () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.ANTHROPIC.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureAnthropicApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+
+            expect(getCapturedSecretComponent(setting).setValueCalls).toEqual(['']);
+        });
+
+        it('should copy the linked credential into the canonical slot as the bearer value and wire the reference', async () => {
+            const plugin = makePlugin({ openaiCompatEndpoint: CONNECTION_PRESETS.ANTHROPIC.ENDPOINT });
+            const setting = new MockSetting();
+
+            configureAnthropicApiKeyField(setting as unknown as Setting, plugin, {} as SettingsTabContext);
+            await setting.fireSecretChange('linked-credential');
+
+            expect(secrets?.setSecret).toHaveBeenCalledWith(CONNECTION_PRESETS.ANTHROPIC.SECRET_NAME, 'Bearer token123');
+            expect(JSON.parse(plugin.settings.openaiCompatHeaders as string)).toEqual({
+                Authorization: 'vi-secret:authorization'
+            });
+            expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
         });
     });
 

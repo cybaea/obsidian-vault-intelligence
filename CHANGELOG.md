@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Anthropic preset for the OpenAI-compatible connection: the Connection preset dropdown now configures Anthropic's OpenAI SDK compatibility endpoint (`https://api.anthropic.com/v1`) with a keychain-backed "Anthropic API key" field that appears automatically while the endpoint matches the preset; Claude models appear in the model dropdowns. Anthropic offers no embeddings, so pair the Explorer with another embedding provider, and its compatibility layer silently ignores the JSON response format, so Gardener replies there are guided by the schema instruction.
+
 ### Developer features
 
 ## [9.8.0] - 2026-10-20

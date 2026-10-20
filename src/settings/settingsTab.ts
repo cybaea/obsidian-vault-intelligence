@@ -42,6 +42,7 @@ import {
     renderAdvancedSettings,
 } from "./sections/advanced";
 import {
+    configureAnthropicApiKeyField,
     configureConnectionPresetField,
     configureDocumentationField,
     configureGoogleApiKeyField,
@@ -468,8 +469,8 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         visible: () => isConnectionAtPresetEndpoint(plugin.settings.ollamaEndpoint, CONNECTION_PRESETS.OLLAMA_CLOUD.ENDPOINT),
                     },
                     {
-                        aliases: ['url', 'server', 'gateway', 'kilo', 'lm studio', 'vllm'],
-                        desc: 'Base url of an OpenAI-compatible API, such as the Kilo gateway, LM Studio, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.',
+                        aliases: ['url', 'server', 'gateway', 'anthropic', 'kilo', 'lm studio', 'vllm'],
+                        desc: 'Base url of an OpenAI-compatible API, such as the Kilo gateway, Anthropic, LM Studio, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.',
                         name: 'OpenAI-compatible endpoint',
                         render: (setting: Setting) => configureOpenAICompatEndpointField(setting, plugin, context),
                     },
@@ -479,6 +480,13 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
                         name: 'Kilo API key',
                         render: (setting: Setting) => configureKiloApiKeyField(setting, plugin, context),
                         visible: () => isConnectionAtPresetEndpoint(plugin.settings.openaiCompatEndpoint, CONNECTION_PRESETS.KILO.ENDPOINT),
+                    },
+                    {
+                        aliases: ['credential', 'token', 'secret'],
+                        desc: 'Sent with every request to Anthropic and stored in your device keychain; never synced.',
+                        name: 'Anthropic API key',
+                        render: (setting: Setting) => configureAnthropicApiKeyField(setting, plugin, context),
+                        visible: () => isConnectionAtPresetEndpoint(plugin.settings.openaiCompatEndpoint, CONNECTION_PRESETS.ANTHROPIC.ENDPOINT),
                     },
                     {
                         desc: 'Custom HTTP headers for OpenAI-compatible API requests.',
