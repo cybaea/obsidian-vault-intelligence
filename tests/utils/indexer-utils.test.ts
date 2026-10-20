@@ -4,6 +4,36 @@ import { stripStopWords, semanticSplit, calculateInheritedScore, estimateTokens,
 
 describe('indexer-utils', () => {
 
+    /**
+     * Standalone fence pairing: every fence opened by a line of at least
+     * three markers must be closed by a matching closer line within the
+     * same excerpt. Used to verify balanced excerpts independently of the
+     * augmentation decision itself.
+     */
+    const isBalanced = (excerpt: string): boolean => {
+        let openChar = '\0';
+        let openLength = 0;
+        for (const rawLine of excerpt.split('\n')) {
+            const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+            let indent = 0;
+            while (indent < 3 && line.charAt(indent) === ' ') indent++;
+            const first = line.charAt(indent);
+            if (first !== '`' && first !== '~') continue;
+
+            let run = 0;
+            while (line.charAt(indent + run) === first) run++;
+            if (run < 3) continue;
+            if (openChar === '\0') {
+                openChar = first;
+                openLength = run;
+            } else if (first === openChar && run >= openLength) {
+                openChar = '\0';
+                openLength = 0;
+            }
+        }
+        return openChar === '\0';
+    };
+
     describe('stripStopWords', () => {
         test('removes stop words', () => {
             const stopwords = ['the', 'a', 'an'];
@@ -169,37 +199,10 @@ describe('indexer-utils', () => {
                 const augmentation = getFenceAugmentation(source, piece.start, piece.end);
                 expect(piece.text).toBe(augmentation.prefix + raw + augmentation.suffix);
                 expect(piece.fenceAugmented).toBe(augmentation.prefix !== '' || augmentation.suffix !== '');
+                // Guard against augmented excerpts that are self-consistent
+                // with the decision function yet still unbalanced.
+                expect(isBalanced(piece.text)).toBe(true);
             }
-        };
-
-        /**
-         * Standalone fence pairing: every fence opened by a line of at least
-         * three markers must be closed by a matching closer line within the
-         * same excerpt. Used to verify balanced excerpts independently of the
-         * augmentation decision itself.
-         */
-        const isBalanced = (excerpt: string): boolean => {
-            let openChar = '\0';
-            let openLength = 0;
-            for (const rawLine of excerpt.split('\n')) {
-                const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
-                let indent = 0;
-                while (indent < 3 && line.charAt(indent) === ' ') indent++;
-                const first = line.charAt(indent);
-                if (first !== '`' && first !== '~') continue;
-
-                let run = 0;
-                while (line.charAt(indent + run) === first) run++;
-                if (run < 3) continue;
-                if (openChar === '\0') {
-                    openChar = first;
-                    openLength = run;
-                } else if (first === openChar && run >= openLength) {
-                    openChar = '\0';
-                    openLength = 0;
-                }
-            }
-            return openChar === '\0';
         };
 
         test('keeps header-like comments inside a fitting fence intact', () => {
@@ -415,6 +418,19 @@ describe('indexer-utils', () => {
 
             expect(recursiveCharacterSplitter(text, 500, 50)).toEqual([text]);
         });
+
+        test('emits a byte-exact chunk for a note with an indented fence closer', () => {
+            const fence = '   ```python\n# comment\n   ```';
+            const text = `# Title\n${fence}\n# Next\nTail`;
+            const chunks = semanticSplit(text, 500);
+
+            // Both sections fit the budget, so they merge into one chunk; with
+            // a broken closer check the chunk would gain a synthetic closer.
+            expect(chunks).toHaveLength(1);
+            expect(chunks[0]?.fenceAugmented).toBe(false);
+            expect(chunks[0]?.text).toBe(text);
+            expect(isBalanced(chunks[0]?.text ?? '')).toBe(true);
+        });
     });
 
     describe('fence augmentation', () => {
@@ -554,6 +570,48 @@ describe('indexer-utils', () => {
 
             expect(precomputed.prefix).toBe('```py\n');
             expect(precomputed).toEqual(scanned);
+        });
+
+        test('treats an indented closer as a complete closer', () => {
+            const text = '   ```py\ncode\n   ```\n';
+
+            expect(getFenceAugmentation(text, 0, 21)).toEqual({ prefix: '', suffix: '' });
+        });
+
+        test('keeps a slice cut right after closer markers with trailing spaces balanced', () => {
+            const text = '~~~\ncode\n~~~   \n# Later Header';
+            // The closer markers span [9, 12); their trailing spaces and the
+            // line break belong to the line, not to the balancing markers.
+            const afterMarkers = getFenceAugmentation(text, 0, 12);
+
+            expect(afterMarkers.prefix).toBe('');
+            expect(afterMarkers.suffix).toBe('');
+
+            // One character earlier the closer is not inside the slice yet.
+            const beforeMarkers = getFenceAugmentation(text, 0, 9);
+
+            expect(beforeMarkers.suffix).toBe('~~~\n');
+        });
+
+        test('excludes the line break of a CRLF closer from the marker reach', () => {
+            const text = '~~~\r\ncode\r\n~~~\r\nafter';
+            // The closer markers span [11, 14); \r\n ends the line.
+            const augmentation = getFenceAugmentation(text, 0, 14);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('closes a three-marker remnant of a longer opener with a longer run', () => {
+            // CommonMark: a closing fence needs the same marker character and
+            // at least the opener's run length, so a slice capturing three of
+            // four markers opens a balanced-able three-marker fence.
+            const text = '````md\nvalue\n````';
+            const augmentation = getFenceAugmentation(text, 0, 3);
+            const excerpt = applyFenceAugmentation(text.slice(0, 3), augmentation);
+
+            expect(augmentation.suffix).toBe('\n````\n');
+            expect(isBalanced(excerpt)).toBe(true);
         });
     });
 

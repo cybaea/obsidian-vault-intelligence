@@ -203,14 +203,20 @@ function fenceLanguage(text: string, markerStart: number): string {
 }
 
 /**
- * Reports whether the fence interval was never closed. Sound by scanner
- * construction: any line matching the closer criteria closes the fence during
- * the scan, so only an interval whose final line is not a closer (or which has
- * no line after the opener at all) can reach end of text open.
+ * Locates the closer candidate of a fence interval: the last line after the
+ * opener line, which is the only place a closer can live (any line matching
+ * the closer criteria closes the fence during the scan, so an unclosed
+ * interval cannot contain one). Returns null when the interval holds no line
+ * after the opener; start may exceed end for an empty final line.
  */
-function isUnclosedFence(text: string, interval: FenceInterval): boolean {
+interface FenceCloserSpan {
+    end: number;
+    start: number;
+}
+
+function fenceCloserSpan(text: string, interval: FenceInterval): FenceCloserSpan | null {
     const openerNewline = text.indexOf('\n', interval.start);
-    if (openerNewline === -1 || openerNewline >= interval.end) return true;
+    if (openerNewline === -1 || openerNewline >= interval.end) return null;
 
     let lineStart: number;
     let lineEnd: number;
@@ -222,10 +228,60 @@ function isUnclosedFence(text: string, interval: FenceInterval): boolean {
         lineEnd = interval.end;
     }
 
-    const line = text.substring(lineStart, lineEnd);
-    const trimmed = line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
+    return { end: lineEnd, start: lineStart };
+}
 
-    return !closesFence(trimmed, text.charAt(interval.start), markerRunLength(text, interval.start));
+/**
+ * The interval's closer candidate with its carriage return stripped, or an
+ * empty string when there is no line after the opener.
+ */
+function fenceCloserLine(text: string, interval: FenceInterval): string {
+    const span = fenceCloserSpan(text, interval);
+    if (span === null) return '';
+
+    const line = text.substring(span.start, span.end);
+    return line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
+}
+
+/**
+ * Reports whether the fence interval was never closed. Sound by scanner
+ * construction: any line matching the closer criteria closes the fence during
+ * the scan, so only an interval whose final line is not a closer (or which has
+ * no line after the opener at all) can reach end of text open. Like the
+ * scanner, up to three leading spaces of indent are stripped from the closer
+ * line before its content is parsed.
+ */
+function isUnclosedFence(text: string, interval: FenceInterval): boolean {
+    const closerLine = fenceCloserLine(text, interval);
+    if (closerLine === '') return true;
+
+    let indent = 0;
+    while (indent <= MAX_FENCE_INDENT_SPACES && closerLine.charAt(indent) === ' ') indent++;
+    if (indent > MAX_FENCE_INDENT_SPACES) return true;
+
+    return !closesFence(closerLine.slice(indent), text.charAt(interval.start), markerRunLength(text, interval.start));
+}
+
+/**
+ * Index just past the closer's marker run of a closed interval, or the
+ * interval end when it is unclosed. Trailing whitespace and the line break
+ * belong to the line, not to the balancing markers: a chunk cut any time
+ * after the markers already carries a complete closer.
+ */
+function closerMarkerEnd(text: string, interval: FenceInterval): number {
+    const span = fenceCloserSpan(text, interval);
+    if (span === null || isUnclosedFence(text, interval)) return interval.end;
+
+    let indent = 0;
+    const closerLine = fenceCloserLine(text, interval);
+    while (indent <= MAX_FENCE_INDENT_SPACES && closerLine.charAt(indent) === ' ') indent++;
+
+    const content = closerLine.slice(indent);
+    const markerChar = text.charAt(interval.start);
+    let run = 0;
+    while (run < content.length && content.charAt(run) === markerChar) run++;
+
+    return span.start + indent + run;
 }
 
 /**
@@ -250,10 +306,12 @@ export function getFenceAugmentation(text: string, start: number, end: number, i
         if (interval.start >= end) break;
 
         const closed = !isUnclosedFence(text, interval);
-        // Index up to which the closer markers must lie inside the chunk for
-        // the fence to close within the excerpt: the trailing newline belongs
-        // to the interval but not to the marker run.
-        const closerEndIndex = text.charAt(interval.end - 1) === '\n' ? interval.end - 1 : interval.end;
+        // Index past the closer's marker run: trailing whitespace and the line
+        // break belong to the interval, not to the balancing markers, so a
+        // chunk cut any time after the markers already holds a complete
+        // closer. For unclosed intervals the markers never end inside the
+        // text, so only the synthetic suffix can close the excerpt.
+        const closerEndIndex = closerMarkerEnd(text, interval);
         const closerFullyInside = closed && end >= closerEndIndex;
         const marker = text.charAt(interval.start).repeat(markerRunLength(text, interval.start));
         const separator = text.charAt(end - 1) === '\n' ? '' : '\n';
