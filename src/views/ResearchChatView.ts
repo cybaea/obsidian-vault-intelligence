@@ -499,7 +499,7 @@ export class ResearchChatView extends ItemView {
                     }).addEventListener("click", () => {
                         void this.plugin.app.workspace.openLinkText(res.path, "", true);
                     });
-                    item.createSpan({ cls: "spotlight-score", text: ` (${Math.round(res.score * 100)}%)` });
+                    item.createSpan({ cls: "spotlight-score", text: ` (${Math.round(res.score * 100)})` });
                 }
                 if (!msg.text) continue;
             }

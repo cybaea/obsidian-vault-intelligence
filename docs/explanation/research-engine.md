@@ -44,6 +44,10 @@ Most RAG (Retrieval-Augmented Generation) systems only look at similarity (text 
 
 This ensures that a core definition note (eg "Project Alpha MOC") ranks higher than a random daily log mentioning "Project Alpha", even if the daily log has more keyword matches.
 
+## Spotlight candidate scores
+
+When you prompt the Researcher, it first lists a few "Spotlight candidates" retrieved by hybrid search. The number next to each note is a relative relevance score combining semantic similarity, keyword matching, and their overlap. It is not a percentage: values above 100 are normal for notes that match on several signals at once, and only the ordering of the list matters.
+
 ## Visual Grounding
 
 Vault Intelligence provides spatial context for the Researcher's reasoning through the Semantic Galaxy.
