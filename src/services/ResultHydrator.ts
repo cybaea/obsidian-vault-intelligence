@@ -2,6 +2,7 @@ import { App, TFile } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult } from "../types/graph";
+import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
 import { fastHash, HASH_BASE, HASH_MOD, splitFrontmatter } from "../utils/link-parsing";
 import { logger } from "../utils/logger";
 import { VaultManager } from "./VaultManager";
@@ -9,6 +10,20 @@ import { VaultManager } from "./VaultManager";
 export interface HydrationResult {
     driftDetected: TFile[];
     hydrated: GraphSearchResult[];
+}
+
+/**
+ * A hydration-verified slice of a file. content is the sanitised file text
+ * that offset-based fence balancing scans, start and end are the exact
+ * offsets text was aligned to, and text is the raw (untrimmed) slice for
+ * those offsets. The anchorless graph-neighbour fallback assembles its own
+ * excerpt: it reports zero offsets and is already fence-balanced.
+ */
+interface AlignedSlice {
+    content: string;
+    end: number;
+    start: number;
+    text: string;
 }
 
 /**
@@ -52,24 +67,31 @@ export class ResultHydrator {
             }
 
             try {
-                const alignedContent = await this.anchoredAlignment(
+                const aligned = await this.anchoredAlignment(
                     file,
                     res.anchorHash ?? 0,
                     res.start ?? 0,
                     res.end ?? 0
                 );
 
+                // Balance fence fragments after alignment and before cleaning:
+                // the synthetic lines must exist before cleanSnippet pairs them
+                // away, and they never take part in the hash checks above.
+                const preClean = aligned === null
+                    ? null
+                    : applyFenceAugmentation(aligned.text, getFenceAugmentation(aligned.content, aligned.start, aligned.end));
+
                 // ACTION: Clean the hydrated content
-                const finalExcerpt = alignedContent
-                    ? this.cleanSnippet(alignedContent)
-                    : "(Content drifted - Re-indexing in background)";
+                const finalExcerpt = preClean === null
+                    ? "(Content drifted - Re-indexing in background)"
+                    : this.cleanSnippet(preClean);
 
                 hydrated.push({
                     ...res,
                     excerpt: finalExcerpt
                 });
 
-                if (!alignedContent) {
+                if (preClean === null) {
                     driftDetected.push(file);
                 }
             } catch (e) {
@@ -125,7 +147,7 @@ export class ResultHydrator {
      * Aligns search results with current file content using hash anchors.
      * This handles "drift" where the file has changed but the index hasn't caught up.
      */
-    private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<string | null> {
+    private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<AlignedSlice | null> {
         let content = await this.vaultManager.readFile(file);
         content = this.sanitizeExcalidrawContent(content);
         const { body } = splitFrontmatter(content);
@@ -134,12 +156,23 @@ export class ResultHydrator {
         if (!expectedHash && !start && !end) {
             // Strip markdown-style links/images for cleaner UI if it's a raw fallback
             const cleanBody = body.replace(/!\[\[.*?\]\]/g, '').replace(/!\[.*?\]\(.*?\)/g, '');
-            return cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim() + "...";
+            const fallback = cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim();
+            // No offsets exist for the anchorless path, so the excerpt is kept
+            // self-balanced right here; hydrate skips balancing for it.
+            const augmentation = getFenceAugmentation(fallback, 0, fallback.length);
+            return {
+                content: content,
+                end: 0,
+                start: 0,
+                text: applyFenceAugmentation(fallback, augmentation) + "..."
+            };
         }
 
         // 1. Direct match check (worker start/end is relative to full file content)
         const snippet = content.substring(start, end);
-        if (fastHash(snippet) === expectedHash) return snippet.trim();
+        if (fastHash(snippet) === expectedHash) {
+            return { content, end, start, text: snippet };
+        }
 
         // 2. Drift Detection: Look for anchor in a sliding window
         const searchRange = GRAPH_CONSTANTS.HYDRATION_SEARCH_RANGE;
@@ -164,7 +197,7 @@ export class ResultHydrator {
         }
 
         if (currentHash === expectedHash) {
-            return window.substring(0, fullChunkLength).trim();
+            return { content, end: searchStart + fullChunkLength, start: searchStart, text: window.substring(0, fullChunkLength) };
         }
 
         // Slide the window using Rabin-Karp (O(1) rolling hash)
@@ -179,8 +212,7 @@ export class ResultHydrator {
             currentHash = (currentHash * HASH_BASE + newChar) % HASH_MOD;
 
             if (currentHash === expectedHash) {
-                const resultStr = window.substring(i, i + fullChunkLength);
-                return resultStr.trim();
+                return { content, end: searchStart + i + fullChunkLength, start: searchStart + i, text: window.substring(i, i + fullChunkLength) };
             }
         }
 

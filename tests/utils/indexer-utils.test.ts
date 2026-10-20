@@ -1,6 +1,6 @@
 import { expect, test, describe } from 'vitest';
 
-import { stripStopWords, semanticSplit, calculateInheritedScore, estimateTokens, recursiveCharacterSplitter, sanitizeProperty, ensureArray, sanitizeExcalidrawContent, extractHeaders, parseYaml, findCodeFenceIntervals, splitWithOffsets } from '../../src/utils/indexer-utils';
+import { stripStopWords, semanticSplit, calculateInheritedScore, estimateTokens, recursiveCharacterSplitter, sanitizeProperty, ensureArray, sanitizeExcalidrawContent, extractHeaders, parseYaml, findCodeFenceIntervals, splitWithOffsets, getFenceAugmentation, applyFenceAugmentation } from '../../src/utils/indexer-utils';
 
 describe('indexer-utils', () => {
 
@@ -157,10 +157,49 @@ describe('indexer-utils', () => {
     });
 
     describe('code fence awareness', () => {
-        const assertOffsetsMatchSource = (source: string, chunks: ReturnType<typeof semanticSplit>): void => {
-            for (const chunk of chunks) {
-                expect(chunk.text).toBe(source.slice(chunk.start, chunk.end));
+        const assertOffsetsMatchSource = (source: string, pieces: Array<{ end: number, fenceAugmented?: boolean, start: number, text: string }>): void => {
+            for (const piece of pieces) {
+                const raw = source.slice(piece.start, piece.end);
+                if (piece.fenceAugmented === undefined) {
+                    // Raw offsets (TextSpan) never carry synthetic fences.
+                    expect(piece.text).toBe(raw);
+                    continue;
+                }
+
+                const augmentation = getFenceAugmentation(source, piece.start, piece.end);
+                expect(piece.text).toBe(augmentation.prefix + raw + augmentation.suffix);
+                expect(piece.fenceAugmented).toBe(augmentation.prefix !== '' || augmentation.suffix !== '');
             }
+        };
+
+        /**
+         * Standalone fence pairing: every fence opened by a line of at least
+         * three markers must be closed by a matching closer line within the
+         * same excerpt. Used to verify balanced excerpts independently of the
+         * augmentation decision itself.
+         */
+        const isBalanced = (excerpt: string): boolean => {
+            let openChar = '\0';
+            let openLength = 0;
+            for (const rawLine of excerpt.split('\n')) {
+                const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+                let indent = 0;
+                while (indent < 3 && line.charAt(indent) === ' ') indent++;
+                const first = line.charAt(indent);
+                if (first !== '`' && first !== '~') continue;
+
+                let run = 0;
+                while (line.charAt(indent + run) === first) run++;
+                if (run < 3) continue;
+                if (openChar === '\0') {
+                    openChar = first;
+                    openLength = run;
+                } else if (first === openChar && run >= openLength) {
+                    openChar = '\0';
+                    openLength = 0;
+                }
+            }
+            return openChar === '\0';
         };
 
         test('keeps header-like comments inside a fitting fence intact', () => {
@@ -175,8 +214,12 @@ describe('indexer-utils', () => {
             const text = '# Title\n```bash\n# not a header\n# Setup\nmore code';
             const chunks = semanticSplit(text, 100);
 
+            // The unterminated fence would swallow the next assembled document,
+            // so the excerpt gains a synthetic closing fence.
             expect(chunks).toHaveLength(1);
-            expect(chunks[0]?.text).toBe(text);
+            expect(chunks[0]?.fenceAugmented).toBe(true);
+            expect(chunks[0]?.text).toBe(`${text}\n\`\`\`\n`);
+            expect(isBalanced(chunks[0]?.text ?? '')).toBe(true);
             assertOffsetsMatchSource(text, chunks);
         });
 
@@ -313,6 +356,204 @@ describe('indexer-utils', () => {
             expect(spans.map((span) => span.start)).toEqual([0, 50, 112]);
             expect(spans.map((span) => span.end)).toEqual([60, 122, 184]);
             assertOffsetsMatchSource(text, spans);
+        });
+
+        test('balances interior chunks of an oversized fence with synthetic lines', () => {
+            const lines = Array.from({ length: 24 }, (_, index) => `code line ${index}`);
+            const text = `# Title\n\n\`\`\`python\n${lines.join('\n')}\n\`\`\`\n\nTail text.`;
+            const chunks = semanticSplit(text, 150);
+            const [fence] = findCodeFenceIntervals(text);
+
+            expect(fence).toBeDefined();
+            assertOffsetsMatchSource(text, chunks);
+            expect(chunks.some((chunk) => chunk.fenceAugmented)).toBe(true);
+            const fenceStart = fence?.start ?? -1;
+            const fenceEnd = fence?.end ?? -1;
+            for (const chunk of chunks) {
+                expect(isBalanced(chunk.text)).toBe(true);
+                const interior = chunk.start > fenceStart && chunk.end < fenceEnd;
+                if (!interior) continue;
+                expect(chunk.fenceAugmented).toBe(true);
+                expect(chunk.text).toBe(`\`\`\`python\n${text.slice(chunk.start, chunk.end)}\n\`\`\`\n`);
+            }
+        });
+
+        test('uses tilde markers for interior chunks of an oversized tilde fence', () => {
+            const lines = Array.from({ length: 30 }, (_, index) => `ts line ${index}`);
+            const text = `# T\n\n~~~~ts\n${lines.join('\n')}\n~~~~\n`;
+            const chunks = semanticSplit(text, 120);
+            const [fence] = findCodeFenceIntervals(text);
+
+            expect(fence).toBeDefined();
+            assertOffsetsMatchSource(text, chunks);
+            expect(chunks.some((chunk) => chunk.fenceAugmented)).toBe(true);
+            const fenceStart = fence?.start ?? -1;
+            const fenceEnd = fence?.end ?? -1;
+            for (const chunk of chunks) {
+                expect(isBalanced(chunk.text)).toBe(true);
+                const interior = chunk.start > fenceStart && chunk.end < fenceEnd;
+                if (!interior) continue;
+                expect(chunk.fenceAugmented).toBe(true);
+                expect(chunk.text.startsWith('~~~~ts\n')).toBe(true);
+                expect(chunk.text.endsWith('~~~~\n')).toBe(true);
+            }
+        });
+
+        test('closes a small note that ends with an unclosed fence', () => {
+            const text = '```py\nvalue = 1';
+            const chunks = semanticSplit(text, 500);
+
+            expect(chunks).toHaveLength(1);
+            expect(chunks[0]?.fenceAugmented).toBe(true);
+            expect(chunks[0]?.text).toBe('```py\nvalue = 1\n```\n');
+            expect(isBalanced(chunks[0]?.text ?? '')).toBe(true);
+            assertOffsetsMatchSource(text, chunks);
+        });
+
+        test('keeps the recursiveCharacterSplitter compatibility wrapper raw', () => {
+            const text = '```py\nvalue = 1';
+
+            expect(recursiveCharacterSplitter(text, 500, 50)).toEqual([text]);
+        });
+    });
+
+    describe('fence augmentation', () => {
+        test('returns empty augmentation for text holding a complete fence', () => {
+            const text = 'prose\n```py\ncode\n```\ntail';
+            const augmentation = getFenceAugmentation(text, 0, text.length);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('');
+            expect(applyFenceAugmentation(text, augmentation)).toBe(text);
+        });
+
+        test('prepends the opener with the language when the span begins inside a fence', () => {
+            const text = '```python\nfirst\nsecond\n```\n';
+            const openerEnd = text.indexOf('\n') + 1;
+            const augmentation = getFenceAugmentation(text, openerEnd, text.length);
+
+            expect(augmentation.prefix).toBe('```python\n');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('appends the closer when the span ends inside a fence', () => {
+            const text = '```py\nfirst\nsecond\n```\ntail';
+            const closerLine = text.indexOf('\n```');
+            const augmentation = getFenceAugmentation(text, 0, closerLine);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('\n```\n');
+            expect(applyFenceAugmentation(text.slice(0, closerLine), augmentation)).toBe('```py\nfirst\nsecond\n```\n');
+        });
+
+        test('wraps a span fully inside a fence interior with both markers', () => {
+            const text = '```py\nfirst\nsecond\nthird\n```\n';
+            const openerEnd = text.indexOf('\n') + 1;
+            const closerStart = text.indexOf('\n```');
+            const augmentation = getFenceAugmentation(text, openerEnd, closerStart);
+
+            expect(augmentation.prefix).toBe('```py\n');
+            expect(augmentation.suffix).toBe('\n```\n');
+            expect(applyFenceAugmentation(text.slice(openerEnd, closerStart), augmentation)).toBe('```py\nfirst\nsecond\nthird\n```\n');
+        });
+
+        test('inserts a newline before a closer appended to a mid-line span', () => {
+            const text = '```py\nfirst\nsecond\n```';
+            const midEnd = text.indexOf('second') + 3;
+            const augmentation = getFenceAugmentation(text, 0, midEnd);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('\n```\n');
+            expect(applyFenceAugmentation(text.slice(0, midEnd), augmentation)).toBe('```py\nfirst\nsec\n```\n');
+        });
+
+        test('pairs a synthetic opener with the real closer at the excerpt start', () => {
+            const text = '```py\nvalue\n```\ntail';
+            const closerStart = text.indexOf('\n```') + 1;
+            const augmentation = getFenceAugmentation(text, closerStart, text.length);
+
+            expect(augmentation.prefix).toBe('```py\n');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('does not double-close a slice cut right after the closer markers', () => {
+            const text = '```py\nvalue\n```\ntail';
+            const closerStart = text.indexOf('\n```') + 1;
+            const augmentation = getFenceAugmentation(text, 0, closerStart + 3);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('requires the complete closer markers when the fence ends the text', () => {
+            const text = '```py\nvalue\n```';
+            const truncated = getFenceAugmentation(text, 0, text.length - 1);
+
+            expect(truncated.suffix).toBe('\n```\n');
+
+            const whole = getFenceAugmentation(text, 0, text.length);
+            expect(whole.prefix).toBe('');
+            expect(whole.suffix).toBe('');
+        });
+
+        test('matches synthetic markers to tilde fences', () => {
+            const text = '~~~~ts\nfirst\nsecond\n~~~~';
+            const openerEnd = text.indexOf('\n') + 1;
+            const augmentation = getFenceAugmentation(text, openerEnd, text.length);
+
+            expect(augmentation.prefix).toBe('~~~~ts\n');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('inserts a newline before a tilde closer appended mid-line', () => {
+            const text = '~~~~ts\nfirst\n~~~~';
+            const spanStart = text.indexOf('firs');
+            const augmentation = getFenceAugmentation(text, spanStart, spanStart + 2);
+
+            expect(augmentation.prefix).toBe('~~~~ts\n');
+            expect(augmentation.suffix).toBe('\n~~~~\n');
+        });
+
+        test('closes the excerpt of a span that ends at the end of an unclosed fence', () => {
+            const text = 'intro\n```python\nprint(1)\n# nope\nstill code';
+            const augmentation = getFenceAugmentation(text, 0, text.length);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('\n```\n');
+        });
+
+        test('closes an unclosed four-backtick fence with a matching marker run', () => {
+            const text = '````md\nkeep\nrunning';
+            const augmentation = getFenceAugmentation(text, 0, text.length);
+
+            expect(augmentation.suffix).toBe('\n````\n');
+        });
+
+        test('keeps only the language token of a long info string', () => {
+            const text = '```python title="Example" linenums="1"\nfirst\n```';
+            const openerEnd = text.indexOf('\n') + 1;
+            const augmentation = getFenceAugmentation(text, openerEnd, text.length);
+
+            expect(augmentation.prefix).toBe('```python\n');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('ignores inline backtick runs in prose', () => {
+            const text = 'use ``` markers inline in a sentence';
+            const augmentation = getFenceAugmentation(text, 0, text.length);
+
+            expect(augmentation.prefix).toBe('');
+            expect(augmentation.suffix).toBe('');
+        });
+
+        test('honours precomputed intervals', () => {
+            const text = '```py\nvalue = 1';
+            const intervals = findCodeFenceIntervals(text);
+            const precomputed = getFenceAugmentation(text, 7, text.length, intervals);
+            const scanned = getFenceAugmentation(text, 7, text.length);
+
+            expect(precomputed.prefix).toBe('```py\n');
+            expect(precomputed).toEqual(scanned);
         });
     });
 

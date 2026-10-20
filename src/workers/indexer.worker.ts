@@ -1205,7 +1205,11 @@ const IndexerWorker: WorkerAPI = {
                     }
 
                     batchedDocs.push({
-                        anchorHash: fastHash(chunk.text),
+                        // Hydration (ResultHydrator.anchoredAlignment) verifies the
+                        // raw file slice, so the anchor must hash that slice; chunk
+                        // text can carry synthetic fence lines that exist nowhere
+                        // in the file.
+                        anchorHash: fastHash(body.slice(chunk.start, chunk.end)),
                         author: parsedFM.author ? sanitizeProperty(parsedFM.author) : undefined,
                         content: chunk.text,
                         context: context,

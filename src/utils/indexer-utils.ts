@@ -155,24 +155,172 @@ function filterHeadersOutsideFences(headerIndices: number[], intervals: FenceInt
     return kept;
 }
 
-export function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): Array<{ text: string, start: number, end: number }> {
-    const chunks: Array<{ text: string, start: number, end: number }> = [];
+/**
+ * Synthetic fence lines required to render a chunk excerpt as a self-balanced
+ * code block: prefix opens the fence the chunk begins inside, suffix closes
+ * the fence the chunk ends inside. Empty strings mean nothing is required.
+ */
+export interface FenceAugmentation {
+    prefix: string;
+    suffix: string;
+}
+
+/**
+ * A semanticSplit chunk. Offsets always address the raw source text, while
+ * text can carry the synthetic fence lines recorded by fenceAugmented.
+ */
+export interface SemanticChunk {
+    end: number;
+    fenceAugmented: boolean;
+    start: number;
+    text: string;
+}
+
+/**
+ * Counts the fence marker characters starting at position; zero when the
+ * position does not start a backtick or tilde run.
+ */
+function markerRunLength(text: string, position: number): number {
+    const markerChar = text.charAt(position);
+    if (markerChar !== BACKTICK_MARKER && markerChar !== TILDE_MARKER) return 0;
+
+    let length = 0;
+    while (position + length < text.length && text.charAt(position + length) === markerChar) length++;
+    return length;
+}
+
+/**
+ * Returns the language token (first whitespace-delimited token of the info
+ * string) of the fence opener whose first marker character sits at markerStart.
+ */
+function fenceLanguage(text: string, markerStart: number): string {
+    let lineEnd = text.indexOf('\n', markerStart);
+    if (lineEnd === -1) lineEnd = text.length;
+
+    const info = text.substring(markerStart + markerRunLength(text, markerStart), lineEnd).trim();
+    const firstSeparator = info.search(/\s/);
+    return firstSeparator === -1 ? info : info.slice(0, firstSeparator);
+}
+
+/**
+ * Reports whether the fence interval was never closed. Sound by scanner
+ * construction: any line matching the closer criteria closes the fence during
+ * the scan, so only an interval whose final line is not a closer (or which has
+ * no line after the opener at all) can reach end of text open.
+ */
+function isUnclosedFence(text: string, interval: FenceInterval): boolean {
+    const openerNewline = text.indexOf('\n', interval.start);
+    if (openerNewline === -1 || openerNewline >= interval.end) return true;
+
+    let lineStart: number;
+    let lineEnd: number;
+    if (text.charAt(interval.end - 1) === '\n') {
+        lineStart = Math.max(text.lastIndexOf('\n', interval.end - 2) + 1, openerNewline + 1);
+        lineEnd = interval.end - 1;
+    } else {
+        lineStart = Math.max(text.lastIndexOf('\n', interval.end - 1) + 1, openerNewline + 1);
+        lineEnd = interval.end;
+    }
+
+    const line = text.substring(lineStart, lineEnd);
+    const trimmed = line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
+
+    return !closesFence(trimmed, text.charAt(interval.start), markerRunLength(text, interval.start));
+}
+
+/**
+ * Decides which synthetic fence lines a chunk span [start, end) of text needs
+ * to render as a self-balanced code block. Offsets must address the same text
+ * the intervals were derived from; intervals may be passed in when the caller
+ * has already scanned text, which keeps oversized sections linear.
+ *
+ * The excerpt stands alone, so a fence it opens must close inside it: a
+ * synthetic opener either pairs with the fence's real closer line (when that
+ * line is fully present) or receives a matching suffix, and a real opener line
+ * inside the excerpt (with its closer beyond the cut) receives a matching
+ * suffix. Marker remnants shorter than a legal fence never open one.
+ */
+export function getFenceAugmentation(text: string, start: number, end: number, intervals?: FenceInterval[]): FenceAugmentation {
+    const augmentation: FenceAugmentation = { prefix: '', suffix: '' };
+    const fenceIntervals = intervals ?? findCodeFenceIntervals(text);
+    if (fenceIntervals.length === 0) return augmentation;
+
+    for (const interval of fenceIntervals) {
+        if (interval.end <= start) continue;
+        if (interval.start >= end) break;
+
+        const closed = !isUnclosedFence(text, interval);
+        // Index up to which the closer markers must lie inside the chunk for
+        // the fence to close within the excerpt: the trailing newline belongs
+        // to the interval but not to the marker run.
+        const closerEndIndex = text.charAt(interval.end - 1) === '\n' ? interval.end - 1 : interval.end;
+        const closerFullyInside = closed && end >= closerEndIndex;
+        const marker = text.charAt(interval.start).repeat(markerRunLength(text, interval.start));
+        const separator = text.charAt(end - 1) === '\n' ? '' : '\n';
+
+        if (interval.start < start) {
+            // The excerpt begins strictly inside the fence, so the opener line
+            // is missing; resynthesise it with the fence's own marker and
+            // language. A real closer line that is fully present later in the
+            // excerpt closes the synthetic opener, so no suffix is needed.
+            augmentation.prefix = `${marker}${fenceLanguage(text, interval.start)}\n`;
+            if (closerFullyInside) continue;
+            augmentation.suffix = `${separator}${marker}\n`;
+            break;
+        }
+
+        // The opener line lies inside the excerpt: the fence it opens must
+        // close within the excerpt. A too-short marker remnant does not open
+        // a fence and stays untouched.
+        const openerPresent = end >= interval.start + MIN_FENCE_MARKER_LENGTH;
+        if (openerPresent && !closerFullyInside) {
+            augmentation.suffix = `${separator}${marker}\n`;
+            break;
+        }
+    }
+
+    return augmentation;
+}
+
+/**
+ * Wraps a chunk text with the synthetic fence lines from getFenceAugmentation.
+ * The prefix always terminates with a newline and the suffix starts and ends
+ * with newlines, so plain concatenation keeps every marker at line start.
+ */
+export function applyFenceAugmentation(text: string, augmentation: FenceAugmentation): string {
+    return `${augmentation.prefix}${text}${augmentation.suffix}`;
+}
+
+export function semanticSplit(text: string, maxChunkSize: number = WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS): SemanticChunk[] {
+    const chunks: SemanticChunk[] = [];
 
     const pushChunk = (t: string, s: number, e: number) => {
         if (!t.trim()) return;
         if (t.length > maxChunkSize) {
             const overlap = Math.floor(maxChunkSize * 0.1);
+            const sectionIntervals = findCodeFenceIntervals(t);
             for (const sub of splitWithOffsets(t, maxChunkSize, overlap)) {
                 if (sub.end <= sub.start) continue;
 
+                const augmentation = getFenceAugmentation(t, sub.start, sub.end, sectionIntervals);
                 chunks.push({
                     end: s + sub.end,
+                    fenceAugmented: augmentation.prefix !== '' || augmentation.suffix !== '',
                     start: s + sub.start,
-                    text: t.slice(sub.start, sub.end),
+                    text: applyFenceAugmentation(t.slice(sub.start, sub.end), augmentation),
                 });
             }
         } else {
-            chunks.push({ end: e, start: s, text: t });
+            // The chunk equals t itself, so fence state is evaluated over the
+            // chunk text: a fitting closed fence stays untouched, while an
+            // unclosed fence that fits whole still needs its closing line.
+            const augmentation = getFenceAugmentation(t, 0, t.length);
+            chunks.push({
+                end: e,
+                fenceAugmented: augmentation.prefix !== '' || augmentation.suffix !== '',
+                start: s,
+                text: applyFenceAugmentation(t, augmentation),
+            });
         }
     };
 
