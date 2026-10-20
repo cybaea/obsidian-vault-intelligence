@@ -45,5 +45,5 @@ Built for performance, privacy, and sovereignty.
 
 - **Sovereign Intelligence**: Option to run **Local Embeddings** (Nomic, etc.) so your vector data never leaves your device.
 - **Privacy-First**: Detailed control over what gets sent to the cloud. "Trust but Verify" modals for any agent write operations.
-- **Worker-First Design**: Heavy lifting (indexing, graph traversal) happens in a background web worker, keeping the Obsidian UI unrelatedly smooth.
+- **Worker-First Design**: Heavy lifting (indexing, graph traversal) happens in a background web worker, keeping the Obsidian UI responsive.
 - **Computational Solver**: The agent can write and execute Python code to analyze data within your notes (eg "Calculate the average rating of books I read this year").

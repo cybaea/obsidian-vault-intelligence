@@ -431,7 +431,7 @@ export const DOCUMENTATION_URLS = {
         GARDENER: `${DOCS_CONFIG}#gardener`,
         OLLAMA_DEBUG: `${DOCS_BASE}docs/how-to/ollama.html#debugging-common-issues`,
         OPENAI_COMPAT: `${DOCS_BASE}docs/how-to/openai-compatible-endpoints.html`,
-        PERFORMANCE: `${DOCS_CONFIG}#performance-and-system`,
+        PERFORMANCE: `${DOCS_CONFIG}#performance`,
         RESEARCHER: `${DOCS_CONFIG}#researcher`,
     },
     SPONSOR: "https://github.com/sponsors/cybaea"

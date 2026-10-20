@@ -14,3 +14,10 @@ declare module "*/indexer.worker" {
  * This is safer than native createDocumentFragment for multi-window support.
  */
 declare function createFragment(callback?: (el: DocumentFragment) => void): DocumentFragment;
+
+// Vite/Vitest ?raw loader: import a file's exact text as a string. Used by the
+// documentation reference test to read docs/reference/configuration.md.
+declare module '*.md?raw' {
+    const content: string;
+    export default content;
+}

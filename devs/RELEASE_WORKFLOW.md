@@ -70,3 +70,9 @@ If the tag was created but the Release Action didn't start:
 ### "Tag already exists"
 
 If you merge a PR that doesn't bump the version (or if you re-run the job), the `auto-tag` workflow detects the existing tag and exits gracefully without error.
+
+### Community store trust scanner (status as of October 2026)
+
+Obsidian's automated trust scanner previously reported vulnerable npm dependencies. The plugin reviewers confirmed in October 2026 that the deployed scanner update resolves those transitive-dependency findings, and a fresh scan no longer reports them.
+
+The current scanner warnings are spurious `globalThis` reports tied to `src/workers/shims.ts` ("Avoid using 'globalThis'. Use 'window' or 'activeWindow' for popout window compatibility."). That file polyfills `window` inside Web Worker scopes, where `window` does not exist, so the repo lint config already disables `obsidianmd/no-global-this` for `src/workers/**` with the rationale that workers need `globalThis`. Reference threads: ([1](https://github.com/obsidianmd/eslint-plugin/issues/150), [2](https://discord.com/channels/686053708261228577/1515318265415733348/1515487925293551676)). No code change is planned; these warnings are intentionally kept out of user-facing documents.

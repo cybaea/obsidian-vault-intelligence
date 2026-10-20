@@ -54,6 +54,6 @@ Vault Intelligence provides spatial context for the Researcher's reasoning throu
 
 ## Privacy and processing
 
-- Local Indexing: Your vault's search index is built and stored entirely on your device (`data/` folder).
-- Cloud Reasoning: When you chat, only the relevant snippets of text (found by the local index) are sent to the Google Gemini API for answer generation.
-- No Training: Data sent to the API is used strictly for generating the response and is not used to train Google's models.
+- Local indexing: Your vault's search index is built and stored on your device — the vectors live in your browser's IndexedDB, and a slim MessagePack copy (vectors and graph edges) is kept in the vault's `.vault-intelligence/` folder.
+- Provider reasoning: When you chat, only the relevant snippets of text (found by the local index) are sent to the model provider you connected — Google Gemini, Ollama, or an OpenAI-compatible endpoint.
+- No Training: Data sent to the Google API is used strictly for generating the response and is not used to train Google's models.

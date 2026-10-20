@@ -19,7 +19,7 @@ When Vault Intelligence indexes your vault, it must convert text to vectors. You
 ### Option A: Google Gemini (Cloud) - _Default & Recommended_
 
 - **Model**: `gemini-embedding-001`
-- **Pros**: Low cost, extremely high quality semantic matching, multilingual processing, zero local hardware requirements. Soon to feature multi-format support (not just markdown) with `gemini-embeddings-2`.
+- **Pros**: Low cost, extremely high quality semantic matching, multilingual processing, zero local hardware requirements. The model list also offers the newer `gemini-embedding-2` (768 dimensions).
 - **Cons**: Requires an internet connection to index new notes, sends your note text to Google.
 - **Best for**: Almost everyone. It is the perfect balance of semantic quality and device efficiency, preserving your battery and RAM.
 
@@ -37,11 +37,18 @@ When Vault Intelligence indexes your vault, it must convert text to vectors. You
 - **Cons**: Requires Ollama running in the background, consumes dedicated VRAM/RAM, initial setup overhead.
 - **Best for**: Power users who want to embed entire long-form documents at once instead of granular paragraphs.
 
+### Other embedding providers
+
+Two more embedding sources appear in the Explorer settings for users of other servers:
+
+- **Voyage AI (cloud)**: high-quality commercial embeddings, activated by a separate API key.
+- **OpenAI-compatible servers**: any server that offers an `/embeddings` route (LM Studio, vLLM, and the OpenAI API do; the Kilo Gateway does not). See [the OpenAI-compatible endpoints guide](../how-to/openai-compatible-endpoints.md) for pairing advice.
+
 ---
 
 ## 2. Tradeoffs: Reasoning & Gardening Models (The Brain & Hands)
 
-Vault Intelligence supports two primary reasoning engines for the active Chat, Solver, and automated Gardener: **Google Gemini** (Cloud) and **Ollama** (Local).
+Vault Intelligence supports three reasoning engines for the active Chat, Solver, and automated Gardener: **Google Gemini** (cloud), **Ollama** (local or Ollama Cloud), and any **OpenAI-compatible endpoint** (the OpenAI API, OpenRouter, Anthropic, LM Studio, vLLM).
 
 | Feature | Cloud (Gemini) [Default] | Local (Ollama) |
 | :--- | :--- | :--- |
@@ -54,6 +61,6 @@ Vault Intelligence supports two primary reasoning engines for the active Chat, S
 | **Configuration** | Simple: only requires an API key. | Complex: Requires [tuning](../how-to/ollama.html) of parameters for your hardware and potentially MCP server configuration. |
 | **Energy Usage** | Minimal battery impact. | Heavy battery drain and heat generation during active use. |
 
-**The Verdict**: We recommend **Gemini** for 95% of users. It provides the best reasoning quality, massive context, embedded tools, and zero setup without requiring an expensive workstation. However, if you have the hardware and strict offline/privacy requirements, **Ollama** offers a brilliant, uncompromising alternative.
+**The Verdict**: We recommend **Gemini** for most users. It provides the best reasoning quality, massive context, built-in tools, and zero setup without requiring an expensive workstation. If you have the hardware and strict offline or privacy requirements, **Ollama** is a brilliant, uncompromising alternative. And if you already subscribe to another provider, the **OpenAI-compatible connection** brings it along — you give up the built-in web grounding and code execution, which remain Gemini-only.
 
 Regardless of your choice, Vault Intelligence operates within a rigorous safety model. To understand how we handle credential storage, SSRF prevention, and secure tool execution, see our **[Security and Robustness Standards](../../devs/security-and-robustness.md)**.

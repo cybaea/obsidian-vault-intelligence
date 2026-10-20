@@ -1,6 +1,6 @@
 # Competitive Landscape Analysis
 
-A comparison of **Vault Intelligence** against key players in the Obsidian AI ecosystem: **SystemSculpt**, **Smart Connections**, and **Obsidian Copilot**.
+A comparison of **Vault Intelligence** against key players in the Obsidian AI ecosystem: **SystemSculpt**, **Smart Connections**, and **Obsidian Copilot**. Assessed as of mid-2026; competitor feature sets evolve quickly, so re-verify any row before leaning on it.
 
 ## Feature Comparison Matrix
 
@@ -11,7 +11,7 @@ A comparison of **Vault Intelligence** against key players in the Obsidian AI ec
 | **Visual Notes** | **Zero-Noise Excalidraw** | Standard Indexing | Standard Indexing | Standard Indexing |
 | **Vault Hygiene** | **Gardener Agent** (Active) | Manual Workflows | None | None |
 | **Graph Algorithm** | **GARS** (Vector + Keyword + Graph) | None | Interactive Graph | Vector Only |
-| **Local Support** | **Full Stack** (Ollama) | **Yes** | Embeddings (transformers.js) | LocalAI Support |
+| **Local Support** | **Full Stack** (Ollama, local OpenAI-compatible servers, Transformers.js) | **Yes** | Embeddings (transformers.js) | LocalAI Support |
 | **Extensibility** | **Secure MCP Servers** | Agent Workflows | No | No |
 | **Code Execution** | **Yes** (Python Solver) | Agent Mode (Write) | No | No |
 | **Privacy** | **Hybrid or 100% Local** | Hybrid or Local | Hybrid or Local | Hybrid or Local |
@@ -59,9 +59,8 @@ We treat multilingual support as a first-class citizen, not an afterthought.
 4. **GARS Scoring**: A proprietary ranking algorithm that outperforms standard vector search by incorporating Graph Theory (centrality/PageRank).
 5. **Secure Extensibility**: While others blindly pipe local requests, we expose external tools via the **Model Context Protocol (MCP)** under strict cryptographic security and approval gates, ensuring your vault data is manipulated only with explicit consent.
 
-## Visuals (Placeholders)
+## See it in action
 
-- [Screenshot: Dual-Loop Search Interface]
-- [Screenshot: Gardener Plan with Diff View]
-- [Screenshot: Zero-Noise Excalidraw Search Results]
-- [Screenshot: GARS Scoring Visualization]
+![The Researcher agent drafting a note update, with the "Confirm agent action" review shown before any change is applied](/images/screenshots/research-delta.png)
+
+![A Gardener review plan: each proposed change appears as an interactive card with a checkbox](/images/screenshots/gardener-plan-ui.png)
