@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.8.0] - 2026-10-20
+
+### User features
+
 -   Fixed version number (9.7.5 should have been a minor release, not a patch) and clean changelog.
 
 ### Developer features
