@@ -10,30 +10,31 @@ To completely remove the Vault Intelligence plugin from your vault:
 
 ## Cleanup Data
 
-Vault Intelligence stores its search index and graph data in a hidden folder to keep your vault clean. This folder is **NOT** automatically removed when you uninstall the plugin (to preserve data if you reinstall).
+Vault Intelligence keeps its data in two places, and neither contains your notes:
 
-To ensure a completely clean removal, you must delete this data.
+- **Local search indexes**: stored in your browser's IndexedDB and in the plugin folder (`data/`). Obsidian deletes the plugin folder automatically when you uninstall.
+- **Synced graph state**: a slim MessagePack copy of vectors and graph edges in the hidden `.vault-intelligence/` folder at the root of your vault. It is **not** removed on uninstall (so your setup survives a reinstall) and it keeps itself out of Git via an automatic local `.gitignore`.
 
-### Method 1: Purge & Reset (Recommended)
+### Method 1: Purge all data (recommended, before uninstalling)
 
-_Before_ uninstalling the plugin:
+1. Go to `Settings > Vault Intelligence > Storage`.
+2. Find the **Purge all data** setting and click **Purge and reset**.
+3. Click the notice to confirm; the plugin removes all indexes, cached models, and stored states, then reloads itself.
 
-1. Go to `Settings > Vault Intelligence`.
-2. Navigate to the **Advanced** tab.
-3. Scroll down to the **Danger Zone**.
-4. Click **Purge & Reset**.
+You can now uninstall the plugin safely.
 
-This will automatically delete the hidden data folder and reset the plugin's state. You can then uninstall the plugin safely.
-
-### Method 2: Manual Deletion
-
-If you have already uninstalled the plugin, you can manually delete the data folder:
+### Method 2: Manual deletion (after uninstalling)
 
 1. Open your vault in your file explorer (Finder / Explorer).
 2. Locate the `.vault-intelligence` folder in the root of your vault.
     - _Note: You may need to enable "Show hidden files" in your operating system settings._
 3. Delete the entire `.vault-intelligence` folder.
 
+### What stays behind
+
+- Your notes: never touched — they live in the vault itself.
+- API keys: stored in your operating system's keychain (or in the plugin's `data.json`, which Obsidian removes on uninstall). Clear keychain entries through your OS settings if you want them gone.
+
 ## Is my data safe?
 
-Yes. The plugin only stores **derived** data (search indexes and relationship graphs) in this folder. It does not store your actual notes or any original content. Deleting this folder simply resets the plugin's "brain" – it **will not** delete your notes.
+Yes. Both locations store only **derived** data (search indexes and relationship graphs), never your notes or their original content. Deleting them simply resets the plugin's "brain" – it **will not** delete your notes.

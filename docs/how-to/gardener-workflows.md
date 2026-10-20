@@ -8,7 +8,7 @@ The Gardener performs several types of vault maintenance:
 
 1. **Topic suggestion**: Identifying notes missing relevant topics and proposing links to existing (or new) topic files based on your semantic history.
 2. **Topic merging**: Intelligently detecting duplicate or highly similar concepts in your ontology (eg `AI Agents` and `Ai Agents`) using lexical, structural, and semantic matching. When applied, the Gardener safely rewires all links across your vault to point to the canonical topic.
-3. **Orphan pruning**: Identifying abandoned topic files that have zero incoming links—whether via standard wikilinks or native YAML frontmatter arrays (eg `topics:`)—and proposing them for deletion to keep your folder structure clean.
+3. **Orphan pruning**: Identifying abandoned topic files that have zero incoming links—whether via standard wikilinks or native YAML frontmatter arrays (eg `topics:`)—and proposing to move them to your archive folder (`Ontology/_Archive` by default) so nothing is deleted outright.
 
 ## The Workflow: Plan -> Review -> Apply
 
@@ -28,7 +28,7 @@ The agent will scan your recent notes (configured in settings) and compare them 
 
 ## Step 2: Reviewing the plan
 
-Once the scan is complete, a new note will open (e.g., `Gardener/Plans/Plan_2024-03-20`). This note uses a special "Live Preview" rendering mode to show you interactive cards.
+Once the scan is complete, a new note will open (e.g., `Gardener/Plans/Gardener Plan 2026-03-20 14-30.md`). This note uses a special "Live Preview" rendering mode to show you interactive cards.
 
 ### Understanding the Action Cards
 
@@ -49,9 +49,9 @@ Each card represents a suggestion for a single note:
 ## Step 3: Applying changes
 
 1. Scroll to the bottom of the plan note.
-2. Click the **Apply Changes** button.
+2. Click the **Apply selected actions** button.
 3. The agent will move files and add tags as requested.
-4. The plan file is automatically archived or deleted based on your retention settings.
+4. Old plan files are purged automatically according to your Plans retention setting.
 
 ## Customising behaviour
 

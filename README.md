@@ -18,11 +18,22 @@ Obsidian vaults naturally degrade. As facts change, your notes become outdated. 
 
 **Vault Intelligence functions as a maintenance system. It identifies gaps in your notes by cross-referencing your writing with live web searches. It retrieves information based on the explicit structural links you built, rather than just matching text. It audits your tags to connect notes to existing topics, proposing new ones when needed. It connects to external tools—like local scripts or databases—under strict cryptographic security.**
 
--   100% local offline capability: Vault Intelligence can use API models or it can run entirely offline using local embeddings via Transformers.js and Ollama, and local language models via Ollama. Your data never has to leave your device.
+-   Frontier or local — your choice: Reason with Google Gemini (the recommended default), Ollama (local or Ollama Cloud), or any OpenAI-compatible server (OpenAI, OpenRouter, LM Studio, vLLM, and more). Embed notes with Gemini, Voyage AI, Ollama, any OpenAI-compatible server, or fully local Transformers.js.
+-   100% offline capable: With Transformers.js embeddings and a local Ollama model, nothing ever leaves your device.
 
 It is designed to keep your knowledge current, connected, and secure.
 
 Vault Intelligence is **free** and **open source**.
+
+## Install
+
+Vault Intelligence is published in the official Obsidian Community Plugins directory at <https://community.obsidian.md/plugins/vault-intelligence> — the fastest and safest way to install and to stay updated:
+
+1.  Open **Settings > Community plugins** in Obsidian (select **Turn on community plugins** first if they are restricted).
+2.  Select **Browse**, search for "Vault Intelligence", and select **Install**.
+3.  Select **Enable**.
+
+Prefer a manual install? Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cybaea/obsidian-vault-intelligence/releases/latest) into `<your vault>/.obsidian/plugins/vault-intelligence/`, then enable Vault Intelligence in **Settings > Community plugins**.
 
 ## Why use Vault Intelligence?
 
@@ -41,19 +52,21 @@ To achieve this, we built Vault Intelligence around four distinct personas that 
 
 **1. The Explorer (Finding the Hidden Threads)**
 
-Traditional search is a "bag of words." If you search for "automobile," it won't find notes about "cars." The Explorer understands _meaning_. By combining state-of-the-art semantic vector search with your graph's structural connections, it finds the invisible threads between your ideas. It knows that two notes are related not just because they share text, but because they share a conceptual sibling in your personal ontology. It brings serendipity back to your research.
+Traditional search is a "bag of words." If you search for "automobile," it won't find notes about "cars." The Explorer understands _meaning_. By combining state-of-the-art semantic vector search with your graph's structural connections, it finds the invisible threads between your ideas. It knows that two notes are related not just because they share text, but because they share a conceptual sibling in your personal ontology. It brings serendipity back to your research. See the [Explorer guide](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/explorer-connections) for hands-on steps.
 
 **2. The Researcher (Your Intellectual Partner)**
 
-Imagine having a research assistant who has memorized every note you’ve ever written. The Researcher doesn't just answer questions; it grounds its reasoning entirely in your vault. If it needs to crunch numbers, it can write and execute Python code. If it needs to verify a real-world fact, it can search the web. But crucially, it is bound by your context. It reads your files, understands your specific terminology, and can even draft or update notes—always asking for your final approval via a "Trust but Verify" prompt before writing a single word.
+Imagine having a research assistant who has memorised every note you’ve ever written. The Researcher doesn't just answer questions; it grounds its reasoning entirely in your vault. If it needs to crunch numbers, it can write and execute Python code. If it needs to verify a real-world fact, it can search the web. But crucially, it is bound by your context. It reads your files, understands your specific terminology, and can even draft or update notes—always asking for your final approval via a "Trust but Verify" prompt before writing a single word. See the [Researcher guide](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/researcher-workflows) for hands-on patterns.
+
+![The Researcher agent drafting an update to a note, with the "Confirm agent action" review that appears before any change is applied](./public/images/screenshots/research-delta.png)
 
 **3. The Gardener (The Guardian of Your Graph)**
 
-A garden left untended becomes a jungle. The Gardener is a proactive agent that understands your personal ontology. It works in the background, analyzing your notes to find missing tags, suggesting new conceptual links, and proposing structural improvements. It never alters your files silently. Instead, it generates an interactive "Gardening Plan" for you to review, approve, or reject. It takes the chore out of Personal Knowledge Management.
+A garden left untended becomes a jungle. The Gardener is a proactive agent that understands your personal ontology. It works in the background, analysing your notes to find missing tags, suggesting new conceptual links, and proposing structural improvements. It never alters your files silently. Instead, it generates an interactive "Gardening Plan" for you to review, approve, or reject. It takes the chore out of Personal Knowledge Management. See the [Gardener guide](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/gardener-workflows) for hands-on steps.
 
 **4. The Solver (Advanced Analysis in your Vault)**
 
-Words are only half the story. If you track habits, log expenses, or compile research data in Markdown tables, that information usually sits dead on the page. The Solver brings it to life. When faced with a complex analytical question, it doesn't just guess—it acts as your personal data scientist. It can read your structured data, write Python code, and execute it inside a secure sandbox to crunch numbers, calculate trends, and forecast outcomes right inside your chat window. It turns static logs into actionable insights.
+Words are only half the story. If you track habits, log expenses, or compile research data in Markdown tables, that information usually sits dead on the page. The Solver brings it to life. When faced with a complex analytical question, it doesn't just guess—it acts as your personal data scientist. It can read your structured data, write Python code, and execute it inside a secure sandbox to crunch numbers, calculate trends, and forecast outcomes right inside your chat window. It turns static logs into actionable insights. See the [Solver guide](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/solver-analysis) with worked examples.
 
 ---
 
@@ -61,7 +74,7 @@ Words are only half the story. If you track habits, log expenses, or compile res
 
 To make this seamless, Vault Intelligence uses a "Slim-Sync" Hybrid Architecture rather than acting as a standard LLM wrapper:
 
--   **Flexible Privacy** (Local or Cloud): Choose how your vault is mapped. Use the default Gemini embeddings for unmatched multilingual support and mobile performance, or switch to 100% local WASM embeddings to ensure your raw notes never leave your device.
+-   **Flexible Privacy** (Local, Server, or Cloud): Choose how your vault is mapped. Use the default Gemini embeddings for unmatched multilingual support and mobile performance, or switch to Ollama, any OpenAI-compatible server, or 100% local WASM embeddings to ensure your raw notes never leave your device.
 -   **Zero Sync Bloat**: Full vector indexes are kept in your device's local IndexedDB, while only a feather-light blueprint is synced across your devices.
 -   **Dynamic Context**: An "Accordion" assembly system dynamically scales from reading full documents to just reading headers, ensuring the AI never hallucinates due to context overload.
 -   **Rigorous Security**: We implement a strict "Human-in-the-Loop" model with SSRF protection, command injection prevention, and cryptographically signed tool configurations. Read our **[Security and Robustness Standards](https://cybaea.github.io/obsidian-vault-intelligence/devs/security-and-robustness)** for the full technical breakdown.
@@ -83,23 +96,10 @@ For more details, see our [Security Policy](SECURITY.md) and [Security and Robus
 
 ## Documentation
 
--   [**Getting Started**](https://cybaea.github.io/obsidian-vault-intelligence/docs/tutorials/getting-started): Connect your API key and run your first query in 5 minutes.
+-   [**Getting Started**](https://cybaea.github.io/obsidian-vault-intelligence/docs/tutorials/getting-started): Install from the Community Plugins directory, connect Gemini, Ollama, or any OpenAI-compatible provider, and run your first query in five minutes.
 -   [**How-To Guides**](https://cybaea.github.io/obsidian-vault-intelligence/docs/how-to/researcher-workflows): Master specific workflows like data analysis and context management.
 -   [**Reference & Troubleshooting**](https://cybaea.github.io/obsidian-vault-intelligence/docs/reference/configuration): Detailed configuration options.
 -   [**Explanation**](https://cybaea.github.io/obsidian-vault-intelligence/docs/explanation/research-engine): Understand the Hybrid Search and GARS engine.
-
-## Installation
-
-Install via the Obsidian Community site: <https://community.obsidian.md/plugins/vault-intelligence>.
-
-(Some false positives ([1](https://github.com/obsidianmd/eslint-plugin/issues/150), [2](https://discord.com/channels/686053708261228577/1515318265415733348/1515487925293551676)) may negatively affect the community score displayed by the automated scanner.)
-
-Alternatively, via BRAT:
-
-1.  Install **BRAT** from the Community Plugins store.
-2.  In BRAT settings, click **Add Beta plugin**.
-3.  Enter: `https://github.com/cybaea/obsidian-vault-intelligence`
-4.  Enable Vault Intelligence in your Community Plugins list.
 
 ## Network Connectivity
 
@@ -120,11 +120,11 @@ To provide its features, Vault Intelligence may connect to several external or l
 
 ## WebAssembly (WASM) Disclosures
 
-To deliver high-performance, local-first AI features directly inside the desktop application without requiring native, platform-dependent installation binaries, this plugin utilizes standard, open-source WebAssembly (WASM) modules. 
+To deliver high-performance, local-first AI features directly inside the desktop application without requiring native, platform-dependent installation binaries, this plugin utilises standard, open-source WebAssembly (WASM) modules. 
 
 The 9 referenced `.wasm` files originate entirely from our upstream production dependencies:
 
--   **ONNX Runtime Web (`onnxruntime-web` via `@xenova/transformers`)**: Handles local tokenization and vector embedding generation on your CPU. The multiple `.wasm` references represent different pre-compiled execution targets (e.g., base WASM, SIMD-accelerated, and multi-threaded variants) that the engine dynamically switches between to optimize performance based on your computer's hardware.
+-   **ONNX Runtime Web (`onnxruntime-web` via `@xenova/transformers`)**: Handles local tokenization and vector embedding generation on your CPU. The multiple `.wasm` references represent different pre-compiled execution targets (e.g., base WASM, SIMD-accelerated, and multi-threaded variants) that the engine dynamically switches between to optimise performance based on your computer's hardware.
 -   **Sharp Graphics Engine (@img/sharp-wasm32)**: Carried strictly as a transient sub-dependency of `@xenova/transformers` v2. While the vault intelligence plugin only handles local text tokenization and embedding generation, the upstream Hugging Face framework bundles sharp by default to support image vision architectures. It remains entirely unused by our production plugin code. See also issue [#566](https://github.com/cybaea/obsidian-vault-intelligence/issues/566).
 -   **Orama Search Engine (`@orama/orama`)**: Powers ultra-fast, local full-text keyword slicing and indexing.
 

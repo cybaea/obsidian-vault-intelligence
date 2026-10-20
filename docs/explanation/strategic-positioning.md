@@ -20,7 +20,7 @@ While competitors use Vector + Keyword search, we use **Dual-Loop Architecture**
 
 ### 2. The Vault is Alive: The Gardener Agent
 
-This is our strongest unique selling proposition (USP). Every other AI plugin is a query tool. Vault Intelligence introduces **The Gardener**—the first active agent dedicated to vault hygiene. It proactively classification notes, suggests structural improvements based on a shared ontology, and generates interactive hygiene plans. It maintains the knowledge base so the user can focus on creation.
+This is our strongest unique selling proposition (USP). Every other AI plugin is a query tool. Vault Intelligence introduces **The Gardener**—the first active agent dedicated to vault hygiene. It proactively classifies notes, suggests structural improvements based on a shared ontology, and generates interactive hygiene plans. It maintains the knowledge base so the user can focus on creation.
 
 ### 3. Zero-Compromise Security & Power: Hybrid & Local Architecture
 

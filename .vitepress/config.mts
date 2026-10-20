@@ -62,7 +62,6 @@ export default withMermaid(defineConfig({
         'releases/about.md',
         'README.md',
         'README_DOC.md',
-        'docs/my-ontology-system.md',
         'thoughts/**'
     ],
     vite: {
@@ -128,7 +127,7 @@ export default withMermaid(defineConfig({
                     items: [
                         { text: 'The Research Engine', link: '/docs/explanation/research-engine' },
                         { text: 'Vault Hygiene Philosophy', link: '/docs/explanation/vault-hygiene' },
-                        { text: 'Why Gemini?', link: '/docs/explanation/computing-model' },
+                        { text: 'The computing model', link: '/docs/explanation/computing-model' },
                         { text: 'Key Features', link: '/docs/explanation/key-features' },
                         { text: 'Competitor Comparison', link: '/docs/explanation/competitor-comparison' },
                         { text: 'Strategic Positioning', link: '/docs/explanation/strategic-positioning' },
