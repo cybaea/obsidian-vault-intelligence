@@ -13,10 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
--   Anthropic preset for the OpenAI-compatible connection: one-click endpoint setup plus a keychain-backed "Anthropic API key" field; Claude models appear in the model dropdowns (Anthropic offers no embeddings).
--   Onboarding documentation: the Getting Started guide and README now install from the official Obsidian Community plugins directory (BRAT instructions removed), set up every supported provider (Gemini, Ollama, OpenAI-compatible servers, Transformers.js, and Voyage AI), and drop the outdated trust score note.
--   Documentation review: refreshed the uninstall, Solver, computing model, Gardener, and research-engine pages to match the shipped UI and provider options, filled the competitor comparison's screenshot section with real captures, and removed a stray personal note from `docs/`.
--   Settings reference: the plugin-settings reference now mirrors the seven settings tabs in order, adds the missing Storage and MCP Tools entries, and gains a test that keeps it in sync with the settings UI.
+-   **Anthropic preset** for the OpenAI-compatible connection: one-click endpoint setup plus a keychain-backed "Anthropic API key" field; Claude models appear in the model dropdowns (Anthropic offers no embeddings).
+-   Documentation updates: refreshed the Getting Started, Uninstall, Solver, computing model, Gardener, settings reference, and research-engine pages to match the shipped UI and provider options.
 
 ### Developer features
 

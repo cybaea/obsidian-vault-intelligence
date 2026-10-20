@@ -32,8 +32,8 @@ Manage your core intelligence providers and credentials. Credentials are stored 
 | :--- | :--- | :--- |
 | Connection preset | `None` | Quick-fill presets for common providers: Ollama (local), Ollama Cloud, the Kilo Gateway, and Anthropic. Fills in the endpoint and a secure, keychain-backed API key header where the provider needs one, then refreshes the model list. |
 | Ollama endpoint | `http://localhost:11434` | Server URL for your Ollama connection: a local instance or Ollama Cloud (`https://ollama.com`). Required for Ollama-based chat and embeddings. |
-| Ollama Cloud API key | `None` | Sent as the `Authorization: Bearer` header for Ollama Cloud requests and wired to that header automatically. Uses the native device keychain control: click it to link or add the credential, click Change to replace it, and the stored state shows as masked dots. Never synced. Shown only when the Ollama endpoint points at Ollama Cloud. |
 | Ollama headers | `None` | Custom HTTP headers for Ollama API requests, for example an `Authorization: Bearer` key. Values marked as Secret are stored in the device keychain. |
+| Ollama Cloud API key | `None` | Sent as the `Authorization: Bearer` header for Ollama Cloud requests and wired to that header automatically. Uses the native device keychain control: click it to link or add the credential, click Change to replace it, and the stored state shows as masked dots. Never synced. Shown only when the Ollama endpoint points at Ollama Cloud. |
 | OpenAI-compatible endpoint | `None` | Base URL of an OpenAI Chat Completions API, such as the Kilo Gateway (`https://ai-gateway.kilo.ai/api/v1`), LM Studio, llama.cpp, vLLM, or OpenRouter. Local servers are matched with `http://` automatically when you type the address without a scheme. See the [OpenAI-compatible endpoints guide](/docs/how-to/openai-compatible-endpoints). |
 | Kilo API key | `None` | Sent as the `Authorization: Bearer` header for Kilo Gateway requests and wired to that header automatically. Uses the native device keychain control: click it to link or add the credential, click Change to replace it, and the stored state shows as masked dots. Never synced. Shown only when the OpenAI-compatible endpoint points at the Kilo Gateway. |
 | Anthropic API key | `None` | Sent as the bearer header with every request to Anthropic (via its OpenAI SDK compatibility endpoint) and stored in your device keychain; never synced. Shown only when the OpenAI-compatible endpoint points at Anthropic. Shares its keychain credential with the Kilo Gateway preset, so the same key survives switching between the two. |
@@ -92,14 +92,14 @@ Fine-tune how connections are discovered and how the semantic graph is visualise
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | Embedding provider | `gemini` | Choose where your document vectors are calculated. Changing this triggers a full vault re-embedding on exit. <br>**Google Gemini:** Cloud-based (requires an API key). <br>**Ollama:** Local or cloud server (requires an Ollama connection). <br>**OpenAI-compatible:** Any server offering `/embeddings` (LM Studio, vLLM, OpenAI; the Kilo Gateway does not). <br>**Voyage AI:** Cloud-based (requires a Voyage API key). <br>**Transformers.js:** 100% local CPU/GPU processing (no server required). |
-| Embedding model | `gemini-embedding-001` | The specific model used to generate vector embeddings. Local models (eg `nomic-embed-text`) are downloaded once (~25MB--150MB). Shown for online (cloud/server) providers. |
+| Embedding model | `gemini-embedding-001` | The specific model used to generate vector embeddings. Shown for online (cloud/server) providers. Local (Transformers.js) models have their own row and are downloaded once on first use (the built-ins range from ~15MB to ~220MB). |
 | Custom embedding model | — | Shown when Embedding model is set to `Custom`: enter the model identifier exactly as the server names it. |
 | Embedding dimension | `768` | Control the size of the vector. Higher dimensions mean better search but a larger index. Changing this triggers a full vault re-embedding on exit. Local models (like the Transformers.js models) support lower Matryoshka dimensions. |
 | Local embedding model | `local/Xenova/multilingual-e5-small` (registry default) | The specific model used to generate vector embeddings while the local (Transformers.js) provider is active. There is no separate local-model setting: the choice is stored on the shared `embeddingModel` key while the local provider is active. Downloaded once when first used. |
 | Custom local model | — | Shown when the local model dropdown is set to `Custom`: enter an arbitrary Transformers.js model identifier. |
-| Model dimensions | `—` | The output vector size. Incorrect values break search. Override used when a custom or unlisted local model has no built-in dimension metadata. |
+| Model dimensions | `—` | The output vector size. Incorrect values break search. Shown for custom local models: it writes the shared Embedding dimension and queues a full vault re-embedding on exit. |
 | Local model status | `—` | Manage the local weights for the active Transformers.js model; includes a Force re-download button (which shows "Downloading..." while fetching). |
-| Quantize local model | `On` | Enable 8-bit quantization to reduce memory usage and download size. Disable to run the unquantized fp32 model fully on the GPU (where WebGPU is available). |
+| Quantize local model | Set per model (`On` initially) | Enable 8-bit quantization to reduce memory usage and download size. Disable to run the unquantized fp32 model fully on the GPU (where WebGPU is available). Switching local models applies that model's recommended quantization setting. |
 
 #### Note for flatpak users
 
@@ -196,7 +196,6 @@ Configure the automated hygiene agent to maintain your vault's ontology.
 
 Manage local vector databases and sharded storage. Vault Intelligence stores its search index and relationship graph in a specialised binary format: MessagePack shards of the form `graph-state-<model-id>.msgpack` in the vault's hidden `.vault-intelligence/` folder.
 
-- **Shard separation**: The plugin stores separate indexes for different embedding models to prevent data corruption, so you can switch between providers and dimensions without losing data or risking corruption.
 - **Automated .gitignore**: The plugin automatically manages a `.gitignore` file inside `.vault-intelligence/` (ignoring everything except the `.gitignore` itself) to prevent massive index files from bloating your Git repository or causing sync conflicts.
 - **Data Safety**: The index is a derived cache; it can be regenerated from your notes at any time by clicking **Re-index vault** in the Explorer tab (see [Explorer](#explorer)).
 - **Secure Storage**: On supported systems (macOS, Windows, Linux with `libsecret`), your API keys are stored in the OS keychain, never in plain text.
@@ -224,7 +223,7 @@ Vault Intelligence can connect to external MCP (Model Context Protocol) servers 
 | Command | — | Stdio only: the executable to launch for this server. |
 | Arguments | — | Stdio only: one argument per line, avoiding command-line string escaping issues. |
 | Server URL | — | Remote connection types (SSE and Streamable HTTP): the server endpoint URL. |
-| Environment variables | — | Optional environment variables for the server. Use 'Secret' to securely store API keys in the device keychain; never paste raw API keys into these fields, reference secrets with the `vi-secret:` prefix instead. |
+| Environment variables | — | Optional environment variables for the server (stdio connection type only). Use 'Secret' to securely store API keys in the device keychain; never paste raw API keys into these fields, reference secrets with the `vi-secret:` prefix instead. |
 | HTTP headers | — | Optional HTTP headers for authentication (remote connection types only). Use 'Secret' to securely store tokens in the device keychain; never paste raw API keys into these fields, reference secrets with the `vi-secret:` prefix instead. |
 | Require explicit confirmation | `On` | If on, you will be prompted to confirm every execution of this server's tools. Turn off only for explicitly safe, read-only tools. |
 

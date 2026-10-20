@@ -117,6 +117,8 @@ describe('Docs: configuration reference stays in sync with the settings UI', () 
             }
             previous = position;
         }
+        const h2Count: number = (doc.match(/^## /gm) ?? []).length;
+        expect(h2Count, 'The reference page must contain exactly the seven tab sections').toBe(7);
     });
 
     it('lists every group heading and setting row from the declarative settings definitions', () => {
