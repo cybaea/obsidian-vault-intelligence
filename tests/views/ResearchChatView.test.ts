@@ -262,4 +262,38 @@ describe('ResearchChatView Rendering', () => {
         expect(contentEl?.innerText).toBe('Starting edge case');
         expect(thoughtEl).toBeUndefined(); // Temporary thoughts are cleared on completion
     });
+
+    it('renders spotlight scores as unbounded relative numbers without a "%" unit', async () => {
+        const mockStream = (async function* () {
+            yield { isDone: true };
+        })();
+
+        view.agent.chatStream = vi.fn().mockReturnValue(mockStream);
+        view.agent.prepareContext = vi.fn().mockResolvedValue({ cleanMessage: 'test', contextFiles: [] });
+        // Hybrid composite scores can legitimately exceed 1.0: the indexer
+        // worker pre-blends keyword evidence into vector similarity (ceiling
+        // 1.5) and the orchestrator blend divides by HYBRID_VECTOR_DIVIDER.
+        view.agent.reflexSearch = vi.fn().mockResolvedValue([
+            { excerpt: 'dual match', path: 'dual-match.md', score: 1.4 },
+            { excerpt: 'plain match', path: 'plain-match.md', score: 0.5 }
+        ]);
+
+        await (view as any).handleSubmit();
+
+        type ElLike = { children: ElLike[]; className: string; innerText: string };
+        const collectScores = (el: ElLike, acc: string[] = []): string[] => {
+            if (el.className.includes('spotlight-score')) acc.push(el.innerText);
+            el.children.forEach(c => collectScores(c, acc));
+            return acc;
+        };
+
+        const scores = collectScores(mockChatContainer);
+        expect(scores).toHaveLength(2);
+
+        // The spotlit score is a composite relevance value, not a bounded
+        // percentage, so no "%" is rendered.
+        expect(scores[0]).toBe(' (140)');
+        expect(scores[1]).toBe(' (50)');
+        expect(scores.join('')).not.toContain('%');
+    });
 });

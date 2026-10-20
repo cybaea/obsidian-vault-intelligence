@@ -88,6 +88,51 @@ describe('SearchOrchestrator', () => {
         });
     });
 
+    describe('hybrid ranking semantics (ADR-005, ADR-011)', () => {
+        it('preserves hybrid preference, vector trust, and score values for dual/vector/keyword evidence', async () => {
+            // Vector input mirrors the indexer worker's early-fusion output:
+            // cosine similarity (max 1.0) plus 0.5 * locally-normalised keyword
+            // bonus for documents that also matched keywords -> ceiling 1.5.
+            graphService.search.mockResolvedValue([
+                { excerpt: 'dual signal', path: 'dual.md', score: 1.5 },
+                { excerpt: 'vector only', path: 'vector.md', score: 0.95 }
+            ]);
+
+            // Raw BM25 scores from the keyword path (unbounded).
+            graphService.keywordSearch.mockResolvedValue([
+                { excerpt: 'keyword only', path: 'keyword.md', score: 6.0 },
+                { excerpt: 'dual signal', path: 'dual.md', score: 6.0 }
+            ]);
+
+            const results = await orchestrator.searchReflex('evidence query', 10);
+
+            // Keyword sigmoids (K = 1.2): 6 / (6 + 1.2) = 0.8333
+            // dual.md:    (1.5 + 0.8333) / 1.5 = 1.5556
+            // vector.md:  0.95
+            // keyword.md: 0.8333
+            expect(results).toHaveLength(3);
+
+            // ADR-005 (hybrid preference): a dual match outranks pure matches...
+            expect(results[0]?.path).toBe('dual.md');
+            // ...even when its vector input exceeds 1.0 (worker early fusion).
+            expect(results[0]?.score).toBeCloseTo(1.5556, 4);
+
+            // The divider (1.5) encodes vector trust: with equal raw keyword
+            // evidence, the vector-only result outranks the keyword-only result.
+            expect(results[1]?.path).toBe('vector.md');
+            expect(results[1]?.score).toBeCloseTo(0.95, 4);
+
+            expect(results[2]?.path).toBe('keyword.md');
+            expect(results[2]?.score).toBeCloseTo(0.8333, 4);
+
+            // ADR-011 (deep recall + post-filter): all three evidence classes
+            // survive the absolute minSimilarityScore floor (0.5).
+            for (const r of results) {
+                expect(r.score).toBeGreaterThanOrEqual(0.5);
+            }
+        });
+    });
+
     describe('searchAnalyst (Loop 2)', () => {
         it('should respect enableDualLoop setting', async () => {
             settings.enableDualLoop = false;

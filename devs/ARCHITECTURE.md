@@ -273,6 +273,8 @@ Where `keywordWeight` (default `1.2`) is a configurable parameter in the plugin 
 
 This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
+The keyword calibration limits only the keyword signal; the composite Reflex score can legitimately exceed 1.0 because it blends two fusion layers (the indexer worker pre-blends keyword evidence into vector similarity with a ceiling of 1.5, and the orchestrator blend divides a dual match's `vector + sigmoid` sum by `HYBRID_VECTOR_DIVIDER` of 1.5). The Researcher spotlight therefore displays this composite as a relative number without a "%" unit; ranking semantics (hybrid preference, vector trust, minimum-similarity floor) are locked by regression tests in `tests/services/SearchOrchestrator.test.ts`.
+
 ### 3.4. Dynamic model ranking and fetching
 
 The `ModelRegistry` synchronises available Gemini models and ranks them to ensure the user always has access to the most capable stable versions.
