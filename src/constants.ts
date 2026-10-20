@@ -453,7 +453,12 @@ export interface ConnectionPreset {
     SECRET_NAME: string;
 }
 
-export const CONNECTION_PRESETS: Record<'KILO' | 'OLLAMA_CLOUD' | 'OLLAMA_LOCAL', ConnectionPreset> = {
+export const CONNECTION_PRESETS: Record<'ANTHROPIC' | 'KILO' | 'OLLAMA_CLOUD' | 'OLLAMA_LOCAL', ConnectionPreset> = {
+    ANTHROPIC: {
+        ENDPOINT: 'https://api.anthropic.com/v1',
+        LABEL: 'Anthropic (OpenAI-compatible)',
+        SECRET_NAME: 'openai-compat-headers-authorization'
+    },
     KILO: {
         ENDPOINT: 'https://ai-gateway.kilo.ai/api/v1',
         LABEL: 'Kilo.ai (OpenAI-compatible)',

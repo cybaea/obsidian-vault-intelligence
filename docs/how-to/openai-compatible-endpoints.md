@@ -1,6 +1,6 @@
 # Using OpenAI-compatible endpoints (2026 Edition)
 
-Vault Intelligence can reason against any server that speaks the OpenAI Chat Completions protocol: the Kilo Gateway, LM Studio, llama.cpp server, vLLM, OpenRouter, and the OpenAI API itself. This guide covers connecting, authenticating, and pairing embeddings, as of our October 2026 updates.
+Vault Intelligence can reason against any server that speaks the OpenAI Chat Completions protocol: the Kilo Gateway, LM Studio, llama.cpp server, vLLM, OpenRouter, the OpenAI API, and Anthropic's OpenAI SDK compatibility layer. This guide covers connecting, authenticating, and pairing embeddings, as of our October 2026 updates.
 
 > [!NOTE]
 > The OpenAI-compatible connection is separate from the Ollama connection. They speak different wire protocols, so pointing one at the other returns errors — and both connections can be active at the same time.
@@ -14,11 +14,12 @@ In settings, open **Connections** and either pick a preset or fill in the **Open
 | Kilo Gateway | `https://ai-gateway.kilo.ai/api/v1` |
 | OpenRouter | `https://openrouter.ai/api/v1` |
 | OpenAI | `https://api.openai.com/v1` |
+| Anthropic (OpenAI SDK compatibility) | `https://api.anthropic.com/v1` |
 | LM Studio | `http://localhost:1234/v1` |
 | llama.cpp server | `http://localhost:8080/v1` |
 | vLLM | `http://localhost:8000/v1` |
 
-Most servers require an API key sent as an `Authorization: Bearer <your_api_key>` header. The **Connection preset** dropdown fills in the endpoint and a secure, keychain-backed header for common providers; the **OpenAI-compatible headers** editor handles any other header-based scheme, with a Secret toggle that stores values in your device keychain instead of your synced settings.
+Most servers require an API key sent as an `Authorization: Bearer <your_api_key>` header. The **Connection preset** dropdown fills in the endpoint and a secure, keychain-backed header for common providers (Kilo Gateway, Anthropic, Ollama); the **OpenAI-compatible headers** editor handles any other header-based scheme, with a Secret toggle that stores values in your device keychain instead of your synced settings.
 
 The **Test connection** button probes the server's `GET /models` list and reports Online, Offline, or "Unauthorized (check your API key)" when the server answered but rejected the credentials.
 
@@ -32,7 +33,7 @@ The **Test connection** button probes the server's `GET /models` list and report
 
 Embeddings for the Explorer are a separate setting from the reasoning model, and not every OpenAI-compatible server offers them:
 
-- The Kilo Gateway and OpenRouter do not host embedding models at all.
+- The Kilo Gateway, OpenRouter, and Anthropic do not host embedding models at all.
 - LM Studio, vLLM, llama.cpp, and the OpenAI API do offer `/embeddings`, and you can select them as the **Embedding provider** in the Explorer settings.
 
 If your reasoning server has no embeddings, pair it with one of the other providers: Google Gemini or Voyage AI (cloud), Transformers.js (100% local, no server), or a local Ollama instance.
@@ -53,7 +54,7 @@ OpenAI-compatible models use the same conservative default context budget as loc
 ## 5. Capabilities and fallbacks
 
 - **Tool calling** uses the OpenAI function-calling format natively, which the Kilo Gateway and mainstream local servers support.
-- **Structured output** (used by the Gardener and other JSON replies) is requested with a `json_object` response format; servers that reject it fall back to a schema-in-prompt request, and markdown code fences around the JSON are stripped automatically.
+- **Structured output** (used by the Gardener and other JSON replies) is requested with a `json_object` response format; servers that reject it fall back to a schema-in-prompt request, and markdown code fences around the JSON are stripped automatically. Anthropic's compatibility layer silently ignores the response format instead of rejecting it, so replies to Anthropic models are guided by the schema instruction alone.
 - **Web grounding and native code execution** are not available through this connection; those features need a Gemini model.
 
 ## 6. Troubleshooting

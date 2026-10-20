@@ -114,6 +114,8 @@ For the Editor:
 
     [ ] The "Result" Check: Does every step describe what the user should see next? (e.g., "You should see a green checkmark.")
 
+    [ ] The Changelog Check: Is every release-note entry one lead sentence (see section 6), with caveats and walkthroughs living on the documentation site?
+
 For the AI Coding Agent:
 
     [ ] Context Window: Is the necessary context (imports, file paths) included in code snippets?
@@ -136,7 +138,21 @@ For the AI Coding Agent:
 
     Assumed Knowledge: Never say "simply" or "obviously."
 
-## 6. How to use this specification
+    The Novel Entry: A changelog bullet narrating the whole feature or its implementation. Cut to the one-sentence rule in section 6; the documentation site carries the story.
+
+## 6. The Changelog (Release Communication)
+
+The changelog is skimmable release communication; the documentation site is where detail lives. Users read release notes to decide whether to update, not to learn the system.
+
+    One bullet, one sentence: lead with the new capability or fixed behaviour ("Connection presets now include Anthropic"), plus at most one short clause for what to do next.
+
+    Write for the actor: say what the user can now do, not how the implementation works. Endpoints, header wiring, and internal mechanics belong in the how-to guide.
+
+    Caveats go to the guide, not the bullet: put limitations such as a provider without embeddings, or an ignored request field, on the page where someone will actually meet them. Keep a caveat clause only when a silent default would otherwise surprise the user.
+
+    Do not grow entry prose to match research: if implementation produced a paragraph, cut it here and move the substance into the guide in the same change.
+
+## 7. How to use this specification
 
 **When writing for Conversion (Objective 1):**
 

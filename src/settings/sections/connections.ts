@@ -25,6 +25,7 @@ const gemini = "Gemini";
 const ollama = "Ollama";
 const openaiCompat = "OpenAI-compatible";
 const voyage = "Voyage AI";
+const anthropic = "Anthropic";
 const kilo = "Kilo";
 const lmStudio = "LM Studio";
 const ollamaCloud = "Ollama Cloud";
@@ -32,6 +33,7 @@ const ollamaCloud = "Ollama Cloud";
 const AUTHORIZATION_HEADER = "Authorization";
 const AUTHORIZATION_SECRET_PAYLOAD = "authorization";
 const BEARER_SCHEME = "Bearer ";
+const PRESET_ANTHROPIC = "anthropic";
 const PRESET_KILO = "kilo";
 const PRESET_NONE = "none";
 const PRESET_OLLAMA_CLOUD = "ollama-cloud";
@@ -601,6 +603,10 @@ export async function applyConnectionPreset(presetId: string, plugin: IVaultInte
         plugin.settings.openaiCompatEndpoint = CONNECTION_PRESETS.KILO.ENDPOINT;
         plugin.settings.openaiCompatHeaders = withAuthorizationSecret(plugin.settings.openaiCompatHeaders);
         noticeText = `${kilo} preset applied: the ${openaiCompat} endpoint is set to ${CONNECTION_PRESETS.KILO.ENDPOINT}; enter your ${kilo} API key below.`;
+    } else if (presetId === PRESET_ANTHROPIC) {
+        plugin.settings.openaiCompatEndpoint = CONNECTION_PRESETS.ANTHROPIC.ENDPOINT;
+        plugin.settings.openaiCompatHeaders = withAuthorizationSecret(plugin.settings.openaiCompatHeaders);
+        noticeText = `${anthropic} preset applied: the ${openaiCompat} endpoint is set to ${CONNECTION_PRESETS.ANTHROPIC.ENDPOINT}; enter your ${anthropic} API key below.`;
     } else {
         return;
     }
@@ -624,6 +630,7 @@ export function configureConnectionPresetField(
                 .addOption(PRESET_OLLAMA_LOCAL, CONNECTION_PRESETS.OLLAMA_LOCAL.LABEL)
                 .addOption(PRESET_OLLAMA_CLOUD, CONNECTION_PRESETS.OLLAMA_CLOUD.LABEL)
                 .addOption(PRESET_KILO, CONNECTION_PRESETS.KILO.LABEL)
+                .addOption(PRESET_ANTHROPIC, CONNECTION_PRESETS.ANTHROPIC.LABEL)
                 .setValue(PRESET_NONE)
                 .onChange((value) => {
                     void (async () => {
@@ -769,7 +776,7 @@ export function configureOpenAICompatEndpointField(
 
     setting
         .setName(`${openaiCompat} endpoint`)
-        .setDesc(`Base url of an ${openaiCompat} API, such as the ${kilo} gateway, ${lmStudio}, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.`)
+        .setDesc(`Base url of an ${openaiCompat} API, such as the ${kilo} gateway, ${anthropic}, ${lmStudio}, vLLM, or llama.cpp. Add the authorization bearer header below or in the headers editor.`)
         .addText(text => {
             text
                 .setPlaceholder(`Enter endpoint (e.g., ${CONNECTION_PRESETS.KILO.ENDPOINT})`)
@@ -850,6 +857,27 @@ export function configureKiloApiKeyField(
         'Kilo API key',
         `Sent as the bearer header with every request to the ${kilo} gateway and stored in your device keychain; never synced.`,
         CONNECTION_PRESETS.KILO.SECRET_NAME
+    );
+}
+
+/**
+ * Anthropic API key — a native SecretComponent field for the OpenAI-
+ * compatible connection pinned to Anthropic's OpenAI SDK compatibility
+ * endpoint. Shares Kilo's canonical openai-compat secret slot, so the same
+ * keychain credential survives switching between the two presets.
+ */
+export function configureAnthropicApiKeyField(
+    setting: Setting,
+    plugin: IVaultIntelligencePlugin,
+    _context: SettingsTabContext
+): void {
+    configureConnectionApiKeyField(
+        setting,
+        plugin,
+        'openaiCompatHeaders',
+        `${anthropic} API key`,
+        `Sent as the bearer header with every request to ${anthropic} and stored in your device keychain; never synced.`,
+        CONNECTION_PRESETS.ANTHROPIC.SECRET_NAME
     );
 }
 
@@ -1053,6 +1081,8 @@ export function renderConnectionSettings(context: SettingsTabContext): void {
 
     if (isConnectionAtPresetEndpoint(plugin.settings.openaiCompatEndpoint, CONNECTION_PRESETS.KILO.ENDPOINT)) {
         configureKiloApiKeyField(new Setting(containerEl), plugin, context);
+    } else if (isConnectionAtPresetEndpoint(plugin.settings.openaiCompatEndpoint, CONNECTION_PRESETS.ANTHROPIC.ENDPOINT)) {
+        configureAnthropicApiKeyField(new Setting(containerEl), plugin, context);
     }
 
     configureOpenAICompatHeadersField(containerEl, plugin, context);
