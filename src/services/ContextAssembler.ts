@@ -3,6 +3,7 @@ import { App, TFile } from "obsidian";
 import { SEARCH_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings/types";
 import { VaultSearchResult } from "../types/search";
+import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
 import { logger } from "../utils/logger";
 import { GraphService } from "./GraphService";
 import { McpClientManager } from "./McpClientManager";
@@ -100,7 +101,10 @@ export class ContextAssembler {
                     const fitsInBudget = (currentUsageTokens + fullFileTokens) < budgetTokens;
 
                     if (isNotTooHuge && fitsInBudget) {
-                        contentToAdd = content;
+                        // Balance against the full text: a source note whose final
+                        // fence is never closed gains its closing line here, so it
+                        // cannot bleed into the next document header.
+                        contentToAdd = applyFenceAugmentation(content, getFenceAugmentation(content, 0, content.length));
                         addedTokens = fullFileTokens;
                         logger.debug(`[ContextAssembler] [Accordion:PRIMARY] (${(relativeRelevance * 100).toFixed(0)}% rel) full file: ${file.path} (${fullFileTokens} tokens)`);
                     } else if (doc.excerpt) {
@@ -180,11 +184,18 @@ export class ContextAssembler {
                 const halfWindow = Math.floor(availableSpace / 2);
                 const start = Math.max(0, idx - halfWindow);
                 const end = Math.min(content.length, idx + halfWindow);
-                return `...[clipped]...\n${content.substring(start, end)}\n...[clipped]...`;
+                // Offsets address the full content, never the slice: a window
+                // that begins inside a fence carries no opener line of its own.
+                const augmentation = getFenceAugmentation(content, start, end);
+                const slice = applyFenceAugmentation(content.substring(start, end), augmentation);
+                return `...[clipped]...\n${slice}\n...[clipped]...`;
             }
         }
 
         // Default: Start of doc
-        return content.substring(0, availableSpace) + "\n...[clipped]...";
+        const end = Math.min(availableSpace, content.length);
+        const augmentation = getFenceAugmentation(content, 0, end);
+        const slice = applyFenceAugmentation(content.substring(0, end), augmentation);
+        return slice + "\n...[clipped]...";
     }
 }
