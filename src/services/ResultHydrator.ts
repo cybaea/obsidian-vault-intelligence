@@ -158,7 +158,8 @@ export class ResultHydrator {
             const cleanBody = body.replace(/!\[\[.*?\]\]/g, '').replace(/!\[.*?\]\(.*?\)/g, '');
             const fallback = cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim();
             // No offsets exist for the anchorless path, so the excerpt is kept
-            // self-balanced right here; hydrate skips balancing for it.
+            // self-balanced right here; the zero offsets make hydrate's own
+            // balancing call an empty no-op.
             const augmentation = getFenceAugmentation(fallback, 0, fallback.length);
             return {
                 content: content,

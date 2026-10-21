@@ -66,3 +66,12 @@ To reduce token-bloat and increase research quality, you MUST favor high-level d
 - **Status**: Report only significant research milestones.
 - **Format**: Use sentence case. Avoid bold in headers. Use "and" over "&".
 - **Tone**: Professional, adversarial, and engineering-focused.
+
+## 6. Upstream CLI operations (GitHub and similar)
+
+Incident reference (2026-10-20): three GitHub issues (#704, #705, #706 on this repository) were created with empty bodies after multi-line descriptions were piped to `gh issue create --body -` through a shell heredoc. Every command reported success and returned issue URLs while the stdin payload never arrived. This is the upstream equivalent of the Cat-Write anti-pattern: silent data loss across a tool boundary, with a green exit code.
+
+- **Never deliver generated multi-line content through stdin.** Pipes and heredocs into CLI tools (`gh ... --body -`, API payloads, file uploads) are not reliable through the shell harness, and upstream tools may accept an empty or truncated payload as a silent success.
+- **Author upstream-bound content as a durable file artifact first**, then hand it to the tool through a flag (for example `gh issue edit N --body-file .tasks/issue-N-slug.md`). Issue and PR descriptions are written to `.tasks/` with specific filenames before they are pushed upstream, so a delivery failure can never lose authorship.
+- **Verify the upstream round-trip.** A returned URL or exit code 0 is not proof of delivery. After an upstream mutation, read the object back (for example `gh issue view N --json body --jq '.body | length'`) and sample interior content, not only the first line.
+- **Generalisation**: the pattern applies to any command that receives bulk content through stdin — issue and PR bodies, review comments, CI dispatch payloads, and file uploads. Prefer file-flag interfaces, and confirm state after writing.

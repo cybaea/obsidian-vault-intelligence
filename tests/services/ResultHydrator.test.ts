@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { ResultHydrator } from "../../src/services/ResultHydrator";
 import { VaultManager } from "../../src/services/VaultManager";
-import { fastHash } from "../../src/utils/link-parsing";
+import { semanticSplit } from "../../src/utils/indexer-utils";
+import { fastHash, splitFrontmatter } from "../../src/utils/link-parsing";
 
 describe("ResultHydrator", () => {
     let mockApp: App;
@@ -159,6 +160,34 @@ describe("ResultHydrator", () => {
 
         expect(results.driftDetected).toHaveLength(0);
         expect(results.hydrated[0]?.excerpt).toBe("value = 1");
+    });
+
+    it("should heal an interior chunk of a large fence after a frontmatter drift", async () => {
+        const lines = Array.from({ length: 500 }, (_, index) => `const line_${index} = ${index};`);
+        const fence = "```ts\n" + lines.join("\n") + "\n```";
+        const originalContent = `---\ntitle: Big\n---\n# Header\n${fence}\nTail`;
+        const driftedContent = `---\ntitle: Big (Updated)\n---\n# Header\n${fence}\nTail`;
+        const { body, bodyOffset } = splitFrontmatter(originalContent);
+        const chunks = semanticSplit(body, 500);
+
+        // An interior code chunk deep inside the oversized fence.
+        const middleChunk = chunks[10];
+        expect(middleChunk?.fenceAugmented).toBe(true);
+        const anchorHash = fastHash(body.slice(middleChunk?.start ?? 0, middleChunk?.end ?? 0));
+        const result = {
+            anchorHash,
+            end: (middleChunk?.end ?? 0) + bodyOffset,
+            path: "test.md",
+            score: 1.0,
+            start: (middleChunk?.start ?? 0) + bodyOffset
+        };
+
+        mockVaultManager.readFile = vi.fn().mockResolvedValue(driftedContent);
+        const results = await hydrator.hydrate([result]);
+
+        expect(results.driftDetected).toHaveLength(0);
+        // The raw slice is re-balanced with the fence's own marker before cleaning.
+        expect(results.hydrated[0]?.excerpt).toBe("[Code Block]");
     });
 
     it("should not mask drift when a fenced excerpt no longer matches", async () => {
