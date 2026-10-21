@@ -13,6 +13,12 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Developer features
+
+## [9.10.0] - 2026-10-21
+
+### User features
+
 -   **Code-fence chunking**: The RAG chunker no longer splits inside fenced code blocks, so retrieved excerpts and embeddings keep code intact.
 -   **Balanced code excerpts**: Retrieved code excerpts are now self-balanced: synthetic fence lines close fences the source note leaves open, so clipped or unterminated excerpts can no longer swallow later documents in the assembled context.
 -   **Balanced tool results**: Agent tool results that carry raw vault or web text (note reads, URL reads, and Google search answers) are now self-balanced: a result whose source leaves a code fence unclosed gains a synthetic closing line, so one result can no longer swallow later turns of the conversation as code.
