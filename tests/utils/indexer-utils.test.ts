@@ -124,6 +124,11 @@ describe('indexer-utils', () => {
         test('leaves normal content untouched', () => {
             expect(sanitizeExcalidrawContent('Hello World')).toBe('Hello World');
         });
+
+        test('leaves content with shorter backtick runs before the marker untouched', () => {
+            const content = 'Note with ``compressed-json inside inline code';
+            expect(sanitizeExcalidrawContent(content)).toBe(content);
+        });
     });
 
     describe('extractHeaders', () => {
@@ -443,6 +448,18 @@ describe('indexer-utils', () => {
             expect(applyFenceAugmentation(text, augmentation)).toBe(text);
         });
 
+        test('returns empty augmentation for a zero-width span inside a fence', () => {
+            const text = '```py\nvalue = 1\n```\ntail';
+            const insideFence = text.indexOf('value');
+            expect(getFenceAugmentation(text, insideFence, insideFence)).toEqual({ prefix: '', suffix: '' });
+        });
+
+        test('returns empty augmentation for an inverted span', () => {
+            const text = '```py\nvalue = 1\n```\ntail';
+            expect(getFenceAugmentation(text, 0, 0)).toEqual({ prefix: '', suffix: '' });
+            expect(getFenceAugmentation(text, text.length, 3)).toEqual({ prefix: '', suffix: '' });
+        });
+
         test('prepends the opener with the language when the span begins inside a fence', () => {
             const text = '```python\nfirst\nsecond\n```\n';
             const openerEnd = text.indexOf('\n') + 1;
@@ -616,6 +633,16 @@ describe('indexer-utils', () => {
     });
 
     describe('findCodeFenceIntervals', () => {
+        test('returns an empty list for fence-free prose', () => {
+            const text = 'Plain prose with no markers at all.\nSecond line.';
+            expect(findCodeFenceIntervals(text)).toEqual([]);
+        });
+
+        test('returns an empty list for inline marker runs too short to open a fence', () => {
+            const text = 'inline ~~ pairs and ` snippets stay prose';
+            expect(findCodeFenceIntervals(text)).toEqual([]);
+        });
+
         test('covers the closing fence even with trailing spaces', () => {
             const text = '~~~\ncode\n~~~   \n# Later Header';
             const intervals = findCodeFenceIntervals(text);
