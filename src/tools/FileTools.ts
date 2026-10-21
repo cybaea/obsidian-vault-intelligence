@@ -1,5 +1,6 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 
+import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
 import { splitFrontmatter } from "../utils/link-parsing";
 
 export class FileTools {
@@ -194,6 +195,12 @@ export class FileTools {
         return `Contents of ${normalizedPath}:\n${files.join("\n")}`;
     }
 
+    /**
+     * Reads a note for agent consumption. The raw vault text is fence-balanced
+     * so an unclosed code fence in the source cannot swallow the rest of the
+     * tool result or later conversation turns; fenceless and already-balanced
+     * notes return byte-identical content.
+     */
     async readNote(path: string): Promise<string> {
         const normalizedPath = normalizePath(path.replace(/^\/+/, "") + (path.endsWith(".md") ? "" : ".md"));
         const file = this.app.vault.getAbstractFileByPath(normalizedPath);
@@ -202,6 +209,7 @@ export class FileTools {
             throw new Error(`Note not found: ${normalizedPath}`);
         }
 
-        return await this.app.vault.read(file);
+        const content = await this.app.vault.read(file);
+        return applyFenceAugmentation(content, getFenceAugmentation(content, 0, content.length));
     }
 }
