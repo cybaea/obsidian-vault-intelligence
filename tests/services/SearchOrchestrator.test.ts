@@ -155,6 +155,18 @@ describe('SearchOrchestrator', () => {
             expect(results[0]?.score).toBe(0.95);
             expect(reasoningClient.generateStructured).toHaveBeenCalled();
         });
+
+        it('should embed the re-rank payload as escaped JSON even when content holds an unclosed fence (safe-path guard)', async () => {
+            embeddingService.embedQuery.mockResolvedValue({ vector: [0.1, 0.2] });
+            const payload = [{ content: '```python\nunclosed code', path: 'fenced.md', score: 0.9 }];
+            graphService.buildPriorityPayload.mockResolvedValue(payload);
+            reasoningClient.generateStructured.mockResolvedValue([]);
+
+            await orchestrator.searchAnalyst('fenced query');
+
+            const options = reasoningClient.generateStructured.mock.calls[0][2];
+            expect(options.systemInstruction).toContain(`Document Context:\n${JSON.stringify(payload)}`);
+        });
     });
 
     describe('search (Primary Entry)', () => {
