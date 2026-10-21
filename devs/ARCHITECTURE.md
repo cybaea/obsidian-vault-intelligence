@@ -122,6 +122,8 @@ flowchart LR
 1.  **Processing details**:
 
 -   **Excalidraw sanitization**: The worker automatically detects and strips `compressed-json` blocks from drawings, preserving only the actual text labels to prevent high-entropy JSON metadata from "poisoning" the vector space.
+-   **Fence-aware chunking**: `semanticSplit` (in `src/utils/indexer-utils.ts`) never splits inside fenced code blocks: fences that fit the chunk budget (`DEFAULT_MAX_CHUNK_CHARACTERS`, 2000) stay atomic, header-like comment lines inside fences are not treated as structural headers, and oversized fences split at line boundaries only (a single line longer than the budget is hard-sliced as the last resort). Interior chunks of an oversized fence are re-balanced with synthetic fence lines that match the original marker, marker length, and language, so every excerpt opens and closes its own fence.
+-   **Byte-exact chunk offsets**: `splitWithOffsets` emits literal slices of the source (paragraph split, then line split, with a ~10% carry overlap between consecutive chunks). Excerpt offsets always address the raw document, so the hydration anchor (`anchorHash`, hashed from the raw file slice — never from `chunk.text`) and highlight offsets transfer byte-exactly from the indexer worker to hydration; the additive `fenceAugmented` flag marks excerpts carrying synthetic lines while offsets stay raw bounds. `tests/utils/indexer-utils.test.ts` and `tests/indexer_anchor_hash.test.ts` pin the contract (including CRLF documents).
 -   **Semantic context injection**: The system pre-pends a standard header (Title, Folder Structure, Topics, Tags, Author) to every document chunk. This creates "semantic bridges" that allow the index to associate concepts even without explicit Wikilinks.
 -   **Implicit Graph Injection**: The indexing worker actively monitors the `implicitFolderSemantics` matrix to inject physical folder paths as structural graph edges (`source: implicit-folder`). It leverages efficient `aliasMap` validation to securely promote valid overarching directories directly into the semantic graph space without cluttering the WebGL visualization with generic storage names like `/Inbox/`.
 -   **Hybrid storage (Slim-Sync)**:
@@ -274,6 +276,10 @@ Where `keywordWeight` (default `1.2`) is a configurable parameter in the plugin 
 This "Relative Ranking" approach ensures that even in large vaults, the agent only receives high-confidence information, preventing "hallucination by bloat".
 
 The keyword calibration limits only the keyword signal; the composite Reflex score can legitimately exceed 1.0 because it blends two fusion layers (the indexer worker pre-blends keyword evidence into vector similarity with a ceiling of 1.5, and the orchestrator blend divides a dual match's `vector + sigmoid` sum by `HYBRID_VECTOR_DIVIDER` of 1.5). The Researcher spotlight therefore displays this composite as a relative number without a "%" unit; ranking semantics (hybrid preference, vector trust, minimum-similarity floor) are locked by regression tests in `tests/services/SearchOrchestrator.test.ts`.
+
+#### Fence-balanced excerpts
+
+Excerpt emission never breaks the fence contract either: `ResultHydrator` balances aligned excerpts (including the anchorless fallback) before snippet cleaning, and `ContextAssembler` applies the same balancing to the last raw emission paths — primary-tier full-file injection and both snippet-clipping paths. An excerpt that begins or ends inside a fenced code block gains synthetic opener and closer lines matching the original fence (including fences the source note leaves open), so an unterminated excerpt can no longer swallow subsequent documents in the assembled context. `tests/services/ContextAssembler.test.ts` pins these paths, including CRLF input and byte-identical fenceless output.
 
 ### 3.4. Dynamic model ranking and fetching
 
@@ -786,6 +792,7 @@ export class ProviderRegistry {
 | `WORKER_INDEXER_CONSTANTS.SEARCH_LIMIT_DEFAULT` | `5` | Default number of results for vector search. |
 | `WORKER_INDEXER_CONSTANTS.SIMILARITY_THRESHOLD_STRICT` | `0.001` | Minimum cosine similarity to consider a note "related". |
 | `WORKER_INDEXER_CONSTANTS.KEYWORD_TOLERANCE` | `2` | Levenshtein distance allowed for fuzzy keyword matching. |
+| `WORKER_INDEXER_CONSTANTS.DEFAULT_MAX_CHUNK_CHARACTERS` | `2000` | Chunk budget for semantic splitting; oversized sections and fences split into fence-balanced, byte-exact chunks. |
 | `WORKER_INDEXER_CONSTANTS.RECALL_THRESHOLD_PERMISSIVE` | `1.0` | Orama threshold setting for maximum recall (Permissive/OR logic). |
 | `SEARCH_CONSTANTS.CHARS_PER_TOKEN_ESTIMATE` | `4` | Heuristic for budget calculation (English). |
 | `SEARCH_CONSTANTS.SINGLE_DOC_SOFT_LIMIT_RATIO` | `0.10` | Prevent any single doc from starving others in context assembly. |
