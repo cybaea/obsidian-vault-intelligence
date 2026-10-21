@@ -33,6 +33,8 @@ const MAX_FENCE_INDENT_SPACES = 3;
 const MIN_FENCE_MARKER_LENGTH = 3;
 const BACKTICK_MARKER = '`';
 const TILDE_MARKER = '~';
+const BACKTICK_PROBE_RUN = BACKTICK_MARKER.repeat(MIN_FENCE_MARKER_LENGTH);
+const TILDE_PROBE_RUN = TILDE_MARKER.repeat(MIN_FENCE_MARKER_LENGTH);
 
 /**
  * Half-open character span in the text it was derived from; end is exclusive.
@@ -53,6 +55,15 @@ export interface FenceInterval {
  * including CRLF-terminated documents.
  */
 export function findCodeFenceIntervals(text: string): FenceInterval[] {
+    // Presence probe: every legal fence opens with a run of at least three
+    // identical marker characters, so text holding no three-backtick or
+    // three-tilde run cannot contain one. Shorter inline runs still scan and
+    // still produce no intervals, so the probe can only skip work, never a
+    // fence.
+    if (!text.includes(BACKTICK_PROBE_RUN) && !text.includes(TILDE_PROBE_RUN)) {
+        return [];
+    }
+
     const intervals: FenceInterval[] = [];
     const len = text.length;
     let lineStart = 0;
@@ -295,8 +306,17 @@ function closerMarkerEnd(text: string, interval: FenceInterval): number {
  * line is fully present) or receives a matching suffix, and a real opener line
  * inside the excerpt (with its closer beyond the cut) receives a matching
  * suffix. Marker remnants shorter than a legal fence never open one.
+ *
+ * A span that holds no characters (start >= end) needs no synthetic lines and
+ * returns before any interval scan.
  */
 export function getFenceAugmentation(text: string, start: number, end: number, intervals?: FenceInterval[]): FenceAugmentation {
+    // A degenerate span holds no excerpt characters, so no synthetic fence
+    // line can be missing from it. Returning before the scan keeps the
+    // anchorless hydration path (zero offsets) from paying a full-file
+    // interval pass.
+    if (start >= end) return { prefix: '', suffix: '' };
+
     const augmentation: FenceAugmentation = { prefix: '', suffix: '' };
     const fenceIntervals = intervals ?? findCodeFenceIntervals(text);
     if (fenceIntervals.length === 0) return augmentation;
@@ -688,7 +708,15 @@ export function ensureArray(val: unknown): unknown[] {
     return Array.isArray(val) ? val : [val];
 }
 
+const EXCALIDRAW_BLOCK_MARKER = '```compressed-json';
+
 export function sanitizeExcalidrawContent(content: string): string {
+    // The replacement regex scans the full document; skip it for the majority
+    // of notes that hold no compressed Excalidraw block at all. The marker
+    // constant must stay the exact prefix the regex below matches.
+    if (!content.includes(EXCALIDRAW_BLOCK_MARKER)) {
+        return content;
+    }
     return content.replace(/```compressed-json[\s\S]*?```/g, '');
 }
 
