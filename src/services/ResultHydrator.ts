@@ -2,7 +2,7 @@ import { App, TFile } from "obsidian";
 
 import { GRAPH_CONSTANTS } from "../constants";
 import { GraphSearchResult } from "../types/graph";
-import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
+import { applyFenceAugmentation, FenceInterval, findCodeFenceIntervals, getFenceAugmentation, sanitizeExcalidrawContent } from "../utils/indexer-utils";
 import { fastHash, HASH_BASE, HASH_MOD, splitFrontmatter } from "../utils/link-parsing";
 import { logger } from "../utils/logger";
 import { VaultManager } from "./VaultManager";
@@ -27,6 +27,18 @@ interface AlignedSlice {
 }
 
 /**
+ * One vault file prepared for a hydration batch: the sanitised text every
+ * offset in the batch addresses, its frontmatter-split body, and the fence
+ * intervals derived lazily on the first balancing call so anchorless and
+ * drifted results never pay a full-content scan.
+ */
+interface BatchFileContext {
+    body: string;
+    content: string;
+    intervals?: FenceInterval[];
+}
+
+/**
  * Service responsible for hydrating "hollow" search results from the worker
  * with actual content from the Obsidian vault.
  * Handles drift detection (self-healing) by comparing content hashes.
@@ -48,6 +60,23 @@ export class ResultHydrator {
         const hydrated: GraphSearchResult[] = [];
         const driftDetected: TFile[] = [];
 
+        // Batch-local: one read and one preparation per distinct path; nothing
+        // survives the batch, and a rejected read is caught by each result's own
+        // error handling so other paths and results still hydrate.
+        const contexts = new Map<string, Promise<BatchFileContext>>();
+
+        const loadContext = (file: TFile): Promise<BatchFileContext> => {
+            const existing = contexts.get(file.path);
+            if (existing) return existing;
+
+            const context = this.vaultManager.readFile(file).then(raw => {
+                const content = sanitizeExcalidrawContent(raw);
+                return { body: splitFrontmatter(content).body, content };
+            });
+            contexts.set(file.path, context);
+            return context;
+        };
+
         for (const res of results) {
             // Case 1: Vector Result (Has excerpt from Worker)
             if (res.excerpt && res.excerpt.length > 0) {
@@ -67,19 +96,32 @@ export class ResultHydrator {
             }
 
             try {
-                const aligned = await this.anchoredAlignment(
-                    file,
+                const context = await loadContext(file);
+                const aligned = this.alignSlice(
+                    context,
                     res.anchorHash ?? 0,
                     res.start ?? 0,
                     res.end ?? 0
                 );
 
-                // Balance fence fragments after alignment and before cleaning:
-                // the synthetic lines must exist before cleanSnippet pairs them
-                // away, and they never take part in the hash checks above.
-                const preClean = aligned === null
-                    ? null
-                    : applyFenceAugmentation(aligned.text, getFenceAugmentation(aligned.content, aligned.start, aligned.end));
+                let preClean: string | null;
+                if (aligned === null) {
+                    preClean = null;
+                } else if (aligned.start >= aligned.end) {
+                    // The anchorless fallback reports zero offsets and is already
+                    // self-balanced, so no balancing pass is needed at all.
+                    preClean = aligned.text;
+                } else {
+                    // Balance fence fragments after alignment and before cleaning:
+                    // the synthetic lines must exist before cleanSnippet pairs them
+                    // away, and they never take part in the hash checks above.
+                    // Intervals come from the batch context, so same-path results
+                    // share one full-content scan.
+                    preClean = applyFenceAugmentation(
+                        aligned.text,
+                        getFenceAugmentation(aligned.content, aligned.start, aligned.end, this.fenceIntervalsOf(context))
+                    );
+                }
 
                 // ACTION: Clean the hydrated content
                 const finalExcerpt = preClean === null
@@ -139,18 +181,25 @@ export class ResultHydrator {
         return clean;
     }
 
-    private sanitizeExcalidrawContent(content: string): string {
-        return content.replace(/```compressed-json[\s\S]*?```/g, '');
+    /**
+     * Full-content fence intervals for a batch context, computed on the first
+     * balancing call and shared by every same-path result in the batch.
+     */
+    private fenceIntervalsOf(context: BatchFileContext): FenceInterval[] {
+        const existing = context.intervals;
+        if (existing) return existing;
+
+        const intervals = findCodeFenceIntervals(context.content);
+        context.intervals = intervals;
+        return intervals;
     }
 
     /**
      * Aligns search results with current file content using hash anchors.
      * This handles "drift" where the file has changed but the index hasn't caught up.
      */
-    private async anchoredAlignment(file: TFile, expectedHash: number, start: number, end: number): Promise<AlignedSlice | null> {
-        let content = await this.vaultManager.readFile(file);
-        content = this.sanitizeExcalidrawContent(content);
-        const { body } = splitFrontmatter(content);
+    private alignSlice(context: BatchFileContext, expectedHash: number, start: number, end: number): AlignedSlice | null {
+        const { body, content } = context;
 
         // FALLBACK: If no anchor/offsets (Graph Neighbor only), show start of body
         if (!expectedHash && !start && !end) {
@@ -158,8 +207,8 @@ export class ResultHydrator {
             const cleanBody = body.replace(/!\[\[.*?\]\]/g, '').replace(/!\[.*?\]\(.*?\)/g, '');
             const fallback = cleanBody.substring(0, GRAPH_CONSTANTS.FALLBACK_EXCERPT_LENGTH).trim();
             // No offsets exist for the anchorless path, so the excerpt is kept
-            // self-balanced right here; the zero offsets make hydrate's own
-            // balancing call an empty no-op.
+            // self-balanced right here and hydrate skips its own balancing call
+            // for the degenerate zero-offset span.
             const augmentation = getFenceAugmentation(fallback, 0, fallback.length);
             return {
                 content: content,
