@@ -9,6 +9,7 @@ import { ModelRegistry } from "../services/ModelRegistry";
 import { SearchOrchestrator } from "../services/SearchOrchestrator";
 import { DEFAULT_SETTINGS, VaultIntelligenceSettings } from "../settings";
 import { IModelProvider, IReasoningClient, IToolDefinition } from "../types/providers";
+import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
 import { truncateJsonStrings, JsonValue } from "../utils/json";
 import { logger } from "../utils/logger";
 import { isExternalUrl } from "../utils/url";
@@ -349,7 +350,9 @@ export class ToolRegistry {
         logger.info(`Delegating search to sub-agent for: ${query}`);
         if (this.provider.supportsWebGrounding) {
             const result = await this.reasoningClient.searchWithGrounding(query);
-            return { result: result.text };
+            const text = result?.text ?? "";
+            const balanced = applyFenceAugmentation(text, getFenceAugmentation(text, 0, text.length));
+            return { result: balanced };
         }
         return { error: "Google Search is not supported by the current provider." };
     }
@@ -409,7 +412,14 @@ export class ToolRegistry {
         }
 
         const res = await requestUrl({ url });
-        return { result: res.text.substring(0, SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT) };
+        const rawText = res.text ?? "";
+        const sliceEnd = Math.min(SEARCH_CONSTANTS.TOOL_RESPONSE_TRUNCATE_LIMIT, rawText.length);
+        const slice = rawText.substring(0, sliceEnd);
+        // The augmentation is computed against the full payload, not the slice:
+        // an opener cut mid-run derives its true marker run only from the
+        // full text, without which the synthetic closer cannot close the fence.
+        const result = applyFenceAugmentation(slice, getFenceAugmentation(rawText, 0, sliceEnd));
+        return { result };
     }
 
     private async executeCalculator(args: Record<string, unknown>, isCodeEnabled: boolean) {

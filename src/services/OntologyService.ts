@@ -1,7 +1,9 @@
 import { App, TFolder, TFile, normalizePath } from "obsidian";
 
+import { ONTOLOGY_CONSTANTS } from "../constants";
 import { VaultIntelligenceSettings } from "../settings";
 import { ONTOLOGY_TEMPLATES } from "../templates/ontology-en-GB";
+import { applyFenceAugmentation, getFenceAugmentation } from "../utils/indexer-utils";
 import { logger } from "../utils/logger";
 
 /**
@@ -202,10 +204,17 @@ export class OntologyService {
                 const indexFile = this.app.vault.getAbstractFileByPath(indexPath);
                 if (indexFile instanceof TFile) {
                     const content = await this.app.vault.read(indexFile);
-                    folders[child.name] = content.slice(0, 500); // First 500 chars
+                    const sliceEnd = Math.min(ONTOLOGY_CONSTANTS.FOLDER_INDEX_SLICE_CHARS, content.length);
+                    // Balance against the full index content so an opener cut mid-run
+                    // at the slice boundary closes with its true marker run.
+                    folders[child.name] = applyFenceAugmentation(
+                        content.slice(0, sliceEnd),
+                        getFenceAugmentation(content, 0, sliceEnd)
+                    );
                 }
             } else if (child instanceof TFile && child.name.toLowerCase() === "instructions.md") {
-                instructions = await this.app.vault.read(child);
+                const content = await this.app.vault.read(child);
+                instructions = applyFenceAugmentation(content, getFenceAugmentation(content, 0, content.length));
             }
         }
 

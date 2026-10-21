@@ -280,6 +280,9 @@ export const ONTOLOGY_CONSTANTS = {
         IMPLICIT: 0.8
     },
 
+    /** Character prefix of each ontology folder index note embedded as the Gardener folder description */
+    FOLDER_INDEX_SLICE_CHARS: 500,
+
     /** Minimum inbound links to be considered a 'Hub' if not in ontology folder */
     HUB_MIN_DEGREE: 2,
 

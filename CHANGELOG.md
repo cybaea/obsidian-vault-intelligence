@@ -15,6 +15,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   **Code-fence chunking**: The RAG chunker no longer splits inside fenced code blocks, so retrieved excerpts and embeddings keep code intact.
 -   **Balanced code excerpts**: Retrieved code excerpts are now self-balanced: synthetic fence lines close fences the source note leaves open, so clipped or unterminated excerpts can no longer swallow later documents in the assembled context.
+-   **Balanced tool results**: Agent tool results that carry raw vault or web text (note reads, URL reads, and Google search answers) are now self-balanced: a result whose source leaves a code fence unclosed gains a synthetic closing line, so one result can no longer swallow later turns of the conversation as code.
+-   **Balanced Gardener prompts**: The Gardener now balances code fences in ontology folder descriptions and user instructions before assembling its system prompt, so an unclosed fence can no longer swallow the rest of the instructions that govern the whole batch analysis.
 -   Documentation: The Research Engine explanation page now describes how notes become excerpts — fence-aware chunking, splitting of oversized code blocks, and balanced code excerpts.
 
 ### Developer features
@@ -24,6 +26,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Regression tests: fence-aware splitting coverage, including comments inside fences, unclosed and tilde fences, nested four-backtick fences, oversized-fence line splitting, literal-slice offset invariants, carry-overlap offsets, and byte-identical splitter output for fenceless text.
 -   Regression tests: the hydration anchor-hash contract test now also covers CRLF documents (frontmatter split and oversized fence joined with Windows line endings).
 -   Documentation: `devs/ARCHITECTURE.md` records the fence-aware chunking contract — byte-exact chunk offsets, synthetic fence augmentation, and hydration anchors — plus the default chunk-budget constant.
+-   Regression tests: fence-balancing coverage for the `read_note`, `read_url`, and `google_search` tool results and the `OntologyService` Gardener context, including full-source marker-run derivation at truncation cuts, plus a safe-path guard that the Analyst re-rank payload stays JSON-escaped.
 
 ## [9.9.1] - 2026-10-20
 
