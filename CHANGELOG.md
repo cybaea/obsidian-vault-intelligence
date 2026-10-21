@@ -13,7 +13,14 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   **Code-fence chunking**: The RAG chunker no longer splits inside fenced code blocks. Header-like comment lines in fenced code (`# comment` in Python, shell, YAML, and similar) are no longer mistaken for Markdown headers, and fences that fit within the chunk budget stay whole during oversized-section splitting, so retrieved excerpts and embeddings keep code intact.
+-   **Balanced code excerpts**: Chunks that begin or end inside a fenced code block now gain synthetic fence lines (matching the fence's own marker, with the code language preserved) so every retrieved excerpt is a self-balanced code block. An unterminated excerpt can no longer swallow later documents in assembled LLM context, and notes whose code fence is never closed get their excerpts closed too.
+
 ### Developer features
+
+-   Chunking: `src/utils/indexer-utils.ts` now scans fenced code spans (backtick and tilde fences, including unclosed fences, indented fence markers, and CRLF files) and skips header candidates inside them; `recursiveCharacterSplitter` gained a fence-aware, offset-returning core (`splitWithOffsets`) that keeps every chunk a byte-exact slice of the source document, preserving hydration anchors and highlight offsets.
+-   Chunking: `getFenceAugmentation` and `applyFenceAugmentation` in `src/utils/indexer-utils.ts` compute and wrap excerpts with balanced synthetic fence lines; `semanticSplit` chunks now carry an additive `fenceAugmented` flag while their offsets stay raw slice bounds. The indexer worker anchors hydration (`anchorHash`) to the raw file slice instead of chunk text, and `ResultHydrator` balances aligned excerpts (including the anchorless fallback) before snippet cleaning, so fenced excerpts stay correct on devices restored from the slim sync index.
+-   Regression tests: fence-aware splitting coverage, including comments inside fences, unclosed and tilde fences, nested four-backtick fences, oversized-fence line splitting, literal-slice offset invariants, carry-overlap offsets, and byte-identical splitter output for fenceless text.
 
 ## [9.9.1] - 2026-10-20
 

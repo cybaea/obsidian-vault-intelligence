@@ -103,6 +103,7 @@ If the user asks for "modern AI features" or "latest Obsidian API":
 - **Historical Integrity Protocol**: You are forbidden from deleting, summarizing, or truncating existing history in `CHANGELOG.md`, `ARCHITECTURE.md`, or any other key documents.
 - **Byte-Count Verification**: Before committing an edit to a file over 50 lines, you must state the original line count and the expected new line count to verify you aren't accidentally dropping data.
 - **Shortcut Prohibition**: Truncating a file to save context tokens is defined as an Architectural Failure. You have a large token window; use it to maintain the full file content.
+- **Upstream CLI Data Loss**: Never deliver generated multi-line content to CLI tools through stdin (for example `gh issue create --body -` fed by a heredoc). Stdin payloads can silently fail while the command exits 0 (incident: issues #704, #705, and #706 were created with empty bodies on 2026-10-20). Author upstream-bound content as a durable `.tasks/` file artifact first, apply it through file flags (for example `gh issue edit N --body-file <file>`), and verify the upstream round-trip by reading the object back and sampling interior content. Full protocol: `.goose/vault-intelligence-rules.md`, section 6.
 
 ## Tests
 
