@@ -15,6 +15,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   **Code-fence chunking**: The RAG chunker no longer splits inside fenced code blocks, so retrieved excerpts and embeddings keep code intact.
 -   **Balanced code excerpts**: Retrieved code excerpts are now self-balanced: synthetic fence lines close fences the source note leaves open, so clipped or unterminated excerpts can no longer swallow later documents in the assembled context.
+-   Documentation: The Research Engine explanation page now describes how notes become excerpts — fence-aware chunking, splitting of oversized code blocks, and balanced code excerpts.
 
 ### Developer features
 
@@ -22,6 +23,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 -   Chunking: `getFenceAugmentation` and `applyFenceAugmentation` wrap excerpts with balanced synthetic fence lines, and the indexer worker now anchors hydration (`anchorHash`) to the raw file slice so fenced excerpts stay correct on devices restored from the slim sync index.
 -   Regression tests: fence-aware splitting coverage, including comments inside fences, unclosed and tilde fences, nested four-backtick fences, oversized-fence line splitting, literal-slice offset invariants, carry-overlap offsets, and byte-identical splitter output for fenceless text.
 -   Regression tests: the hydration anchor-hash contract test now also covers CRLF documents (frontmatter split and oversized fence joined with Windows line endings).
+-   Documentation: `devs/ARCHITECTURE.md` records the fence-aware chunking contract — byte-exact chunk offsets, synthetic fence augmentation, and hydration anchors — plus the default chunk-budget constant.
 
 ## [9.9.1] - 2026-10-20
 
