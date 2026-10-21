@@ -104,6 +104,24 @@ describe("ContextAssembler", () => {
         expect(fragment).toContain("```\n\n...[clipped]...");
     });
 
+    it("balances a primary fallback clip of a tilde fence", async () => {
+        const opening = "Prose heading.\n" + "t".repeat(1185) + "\n~~~python\n";
+        const code = `y = "${"z".repeat(480)}"\nk = 1\n`;
+        const content = opening + code + "~~~\n";
+        expect(content.length).toBe(1708);
+        expect(content.charAt(1599)).toBe("z");
+        const openerStart = content.indexOf("~~~");
+        expect(content.charAt(openerStart - 1)).toBe("\n");
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(content);
+
+        const assembled = await assembler.assemble([{ path: "note.md", score: 1.0 }], "needle", 400);
+        const fragment = fragmentAt(assembled.context, 0, 1);
+
+        expect(isBalanced(fragment)).toBe(true);
+        expect(fragment).toContain("~~~python");
+        expect(fragment).toContain("~~~\n\n...[clipped]...");
+    });
+
     it("balances a keyword window that begins inside a fence with a synthetic opener", async () => {
         // The needle sits 971 characters past the opener, so the window
         // [1000 - 800, 1000 + 800) starts strictly inside the fence while the
@@ -131,6 +149,26 @@ describe("ContextAssembler", () => {
         const fragment = fragmentAt(assembled.context, 0, 1);
 
         expect(isBalanced(fragment)).toBe(true);
+        expect(fragment).toContain("\n```\n\n...[clipped]...");
+    });
+
+    it("balances a keyword window that starts and ends inside one fence", async () => {
+        // The needle sits 838 characters into the fence body and the closer
+        // lies beyond the window [200, 1800), so the fragment needs a
+        // synthetic opener (prefix) AND a synthetic closer (suffix) together.
+        const content = "q".repeat(150) + "\n```python\n" + "z".repeat(838) + "\nneedle\n" + "z".repeat(892) + "\n```\n" + "w".repeat(50);
+        expect(content.indexOf("needle")).toBe(1000);
+        expect(content.length).toBe(1954);
+        expect(content.charAt(1799)).toBe("z");
+        const openerStart = content.indexOf("```");
+        expect(content.charAt(openerStart - 1)).toBe("\n");
+        mockApp.vault.cachedRead = vi.fn().mockResolvedValue(content);
+
+        const assembled = await assembler.assemble([{ isKeywordMatch: true, path: "note.md", score: 1.0 }], "needle", 400);
+        const fragment = fragmentAt(assembled.context, 0, 1);
+
+        expect(isBalanced(fragment)).toBe(true);
+        expect(fragment).toContain("...[clipped]...\n```python\n");
         expect(fragment).toContain("\n```\n\n...[clipped]...");
     });
 
