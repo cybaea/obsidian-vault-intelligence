@@ -13,6 +13,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Security
+
+-   Resolve the `npm audit` critical for `dompurify` (GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr, and GHSA-c6gr-qvv4-5v3f; all fixed upstream in 3.4.17) with an in-range lockfile update to 3.4.17; the affected chain is dev-only (mermaid documentation tooling), so no override entry is needed. The remaining high-severity `braces` chain is dev-only with no upstream patch and stays tracked in issue #627.
+
 ### Developer features
 
 ## [9.10.0] - 2026-10-21
