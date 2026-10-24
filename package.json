@@ -84,7 +84,7 @@
     "@huggingface/transformers": "4.3.1"
   },
   "overrides": {
-    "global-agent": "^4.1.5",
+    "global-agent": "^4.1.6",
     "esbuild": "0.28.2",
     "lodash-es": "4.18.1",
     "minimatch": "^10.2.6",
