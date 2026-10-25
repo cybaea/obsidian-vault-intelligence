@@ -97,7 +97,7 @@
     "protobufjs": "$protobufjs",
     "uuid": "^14.0.3",
     "fetch-blob": "^4.0.0",
-    "ip-address": "10.7.4",
+    "ip-address": "10.7.5",
     "node-domexception": "file:./scripts/stubs/node-domexception",
     "markdown-it": "^15.0.3",
     "brace-expansion": "^5.0.12",
