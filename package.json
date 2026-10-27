@@ -63,7 +63,7 @@
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.56.0",
     "vite": "^8.0.14",
-    "vitepress": "2.0.0-alpha.20",
+    "vitepress": "2.0.0-alpha.21",
     "vitepress-plugin-mermaid": "^2.0.17",
     "vitest": "^5.0.0"
   },
@@ -81,7 +81,7 @@
     "sigma": "^4.0.0",
     "zod": "^4.3.5",
     "zod-to-json-schema": "^3.25.1",
-    "@huggingface/transformers": "4.3.1"
+    "@huggingface/transformers": "4.3.2"
   },
   "overrides": {
     "global-agent": "^4.1.6",
@@ -93,7 +93,7 @@
     "smol-toml": "^1.9.1",
     "vite": "$vite",
     "@vitejs/plugin-vue": "^6.0.10",
-    "vitepress": "2.0.0-alpha.20",
+    "vitepress": "2.0.0-alpha.21",
     "protobufjs": "$protobufjs",
     "uuid": "^14.0.3",
     "fetch-blob": "^4.0.0",
