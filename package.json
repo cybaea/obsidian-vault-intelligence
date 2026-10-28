@@ -42,7 +42,7 @@
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^5.0.0",
     "@vitest/ui": "^5.0.0",
     "esbuild": "0.28.2",
