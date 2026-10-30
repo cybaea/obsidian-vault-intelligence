@@ -17,6 +17,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 -   Resolve the `npm audit` critical for `dompurify` (GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr, and GHSA-c6gr-qvv4-5v3f; all fixed upstream in 3.4.17) with an in-range lockfile update to 3.4.17; the affected chain is dev-only (mermaid documentation tooling), so no override entry is needed. The remaining high-severity `braces` chain is dev-only with no upstream patch and stays tracked in issue #627.
 
+-   Resolve the remaining `npm audit` findings: `@hono/node-server` (GHSA-rmxm-3fg6-px4f, moderate) via a lockfile-only update to 2.1.5, and `re2js` (GHSA-gg6h-894w-4m9c, high) via an `overrides` entry at 2.8.8, because markdownlint pins the vulnerable version exactly and the override avoids downgrading `markdownlint-cli2`. Neither chain ships in the plugin bundle; retire the override if markdownlint un-pins.
+
 ### Developer features
 
 ## [9.10.0] - 2026-10-21
