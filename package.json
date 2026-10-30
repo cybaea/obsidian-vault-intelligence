@@ -87,7 +87,7 @@
     "global-agent": "^4.1.6",
     "esbuild": "0.28.2",
     "lodash-es": "4.18.1",
-    "minimatch": "^11.0.2",
+    "minimatch": "^11.0.3",
     "glob": "^14.0.3",
     "katex": "0.19.1",
     "smol-toml": "^1.9.1",
