@@ -102,6 +102,7 @@
     "markdown-it": "^15.0.3",
     "brace-expansion": "^5.0.12",
     "js-yaml": "^5.5.0",
-    "moment": "^2.31.0"
+    "moment": "^2.31.0",
+    "re2js": "2.8.8"
   }
 }
