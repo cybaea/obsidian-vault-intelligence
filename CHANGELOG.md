@@ -21,6 +21,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### Developer features
 
+-   Add a Renovate `packageRules` entry grouping the stylelint stack (`/stylelint/`) under one group, so co-released lockstep majors (stylelint 18, PR #738; stylelint-config-standard 41, PR #740) form a single update PR instead of two mutually broken ones: each config major pins the matching core major as a peer dependency, so the split branches each fail CI alone.
+
 ## [9.10.0] - 2026-10-21
 
 ### User features
