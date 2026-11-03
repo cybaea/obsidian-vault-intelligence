@@ -16,6 +16,13 @@
       ]
     },
     {
+      "description": "Group the stylelint stack into one update PR: core and config packages release in lockstep and each config major pins the matching core major as a peer dependency (stylelint 18 and stylelint-config-standard 41 are co-released majors that each fail CI alone when split, see PRs #738 and #740).",
+      "groupName": "stylelint",
+      "matchPackageNames": [
+        "/stylelint/"
+      ]
+    },
+    {
       "description": "Bump `overrides` entries in package.json instead of lockfile-only updates. npm install with an explicit package argument fails with EOVERRIDE when the package is overridden but is not a direct dependency (see PR #658).",
       "matchDepTypes": ["overrides"],
       "rangeStrategy": "bump"
