@@ -61,4 +61,4 @@ description: Carefully review, research, and verify a Renovate dependency pull r
    8. Cleanup (Optional)
 
 - If the review is successful and you are NOT merging immediately, switch back to main.
-- `git checkout main && git branch -D -`
+- `git checkout main && git branch -D @{-1}`

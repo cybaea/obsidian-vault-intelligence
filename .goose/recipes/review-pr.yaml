@@ -75,4 +75,4 @@ instructions: |
         
   9. Cleanup (Optional)
      If the review is successful and you are NOT merging immediately, switch back to main. Execute:
-     `git checkout main && git branch -D -`
+     `git checkout main && git branch -D @{-1}`
