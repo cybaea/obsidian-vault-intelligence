@@ -196,7 +196,7 @@ export class StdioTransportStrategy implements IMcpTransportStrategy {
                     mergedEnv[k] = v;
                 }
             } catch (e) {
-                throw new Error(`Configuration error: ${e instanceof Error ? e.message : "Unknown error"}`);
+                throw new Error(`Configuration error: ${e instanceof Error ? e.message : "Unknown error"}`, { cause: e });
             }
         }
 

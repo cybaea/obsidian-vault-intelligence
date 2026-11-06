@@ -25,7 +25,7 @@ export class StreamableHttpTransportStrategy implements IMcpTransportStrategy {
             try {
                 headers = await resolveSecrets(server.remoteHeaders, resolveSecret, `mcp-${server.id}-headers-`);
             } catch (e) {
-                throw new Error(`Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`);
+                throw new Error(`Header configuration error: ${e instanceof Error ? e.message : "Unknown error"}`, { cause: e });
             }
         }
 

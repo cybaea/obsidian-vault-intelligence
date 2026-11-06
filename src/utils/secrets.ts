@@ -86,7 +86,7 @@ export async function resolveSecrets(
     try {
         parsed = JSON.parse(rawMap) as Record<string, string>;
     } catch (e) {
-        throw new Error(`Invalid JSON format in configuration: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`Invalid JSON format in configuration: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
     }
 
     const resolved: Record<string, string> = {};

@@ -46,7 +46,6 @@ describe('VaultIntelligenceSettingTab.display() (imperative path) — T5', () =>
     it('should render without throwing on v1.12 (imperative path)', () => {
         setMockApiVersion('1.12.0');
         // Provide a functional containerEl via the mock's default mockElement()
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- testing the imperative display() path
         expect(() => tab.display()).not.toThrow();
     });
 
@@ -56,13 +55,11 @@ describe('VaultIntelligenceSettingTab.display() (imperative path) — T5', () =>
         // The ButtonComponent mock records creations; we verify display() runs
         // the full tab array without throwing, which exercises all 7 render
         // function references.
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- testing the imperative display() path
         expect(() => tab.display()).not.toThrow();
     });
 
     it('should return early on v1.13 without rendering imperative UI', () => {
         setMockApiVersion('1.13.0');
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- testing the safety-net guard
         expect(() => tab.display()).not.toThrow();
     });
 });

@@ -339,7 +339,7 @@ const IndexerWorker: WorkerAPI = {
             const collectedVectors: number[][] = [];
             
             // 1. Explicit Topic Definition: Get embedding if > TOPIC_MIN_EXPLICIT_BYTES
-            let topicEmbedding: number[] | undefined = undefined;
+            let topicEmbedding: number[] | undefined;
             if (attr.size > ONTOLOGY_CONSTANTS.TOPIC_MIN_EXPLICIT_BYTES) {
                 const results = await search(orama, {
                     includeVectors: true,

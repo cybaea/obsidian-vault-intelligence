@@ -344,13 +344,23 @@ export class VaultIntelligenceSettingTab extends PluginSettingTab {
      * eagerly during module load, which throws on Obsidian v1.12.x where
      * `SettingPage` does not exist (it resolves to `undefined`).
      *
-     * Defined as a class expression (not a class declaration) because the
-     * `obsidianmd/no-unsupported-api` lint rule only inspects `ClassDeclaration`
-     * superclasses for version gating; the actual v1.13 `SettingPage` reference
-     * (evaluation of `extends`) is guarded by `requireApiVersion` at the call
-     * site in {@link buildDeclarativeDefinitions}.
+     * Defined as a class expression (not a class declaration) so the
+     * `extends SettingPage` binding is only evaluated when the factory runs.
+     * The `obsidianmd/no-unsupported-api` lint rule (since 0.5.x) also
+     * inspects `ClassExpression` superclass references, so the version gate
+     * is mirrored inside this method, in addition to the existing
+     * `requireApiVersion` gate at the call site in
+     * {@link buildDeclarativeDefinitions}.
      */
     private createMcpSettingPage(plugin: IVaultIntelligencePlugin): SettingPage {
+        // Mirror the call-site version gate: on Obsidian v1.12.x `SettingPage`
+        // resolves to `undefined`, and evaluating the `extends` clause below
+        // would throw. Unreachable in practice, because every call site is
+        // guarded, but it satisfies the lint rule's definition-site check.
+        if (!requireApiVersion("1.13.0")) {
+            throw new Error("SettingPage requires Obsidian 1.13.0 or later.");
+        }
+
         // Capture outer app in a closure variable to pass into the constructor.
         // `this` is passed directly in the `new` expression below to avoid
         // aliasing `this` to a local variable (no-this-alias lint rule).

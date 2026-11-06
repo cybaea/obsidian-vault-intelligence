@@ -508,8 +508,15 @@ export const URL_CONSTANTS = {
 };
 
 export const REGEX_CONSTANTS = {
-    /** Pattern to match @[link] or @link mentions */
-    MENTION: /(?<!\w)@(?:\[\[([^\]]+)\]\]|"([^"]+)"|([a-z0-9_\-./]+(?=$|\s|[^\w\-./])))/gi
+    /**
+     * Pattern to match @[link] or @link mentions. The `(?:^|[^\w])` prefix
+     * replaces the iOS-unsafe lookbehind boundary: it consumes the non-word
+     * character or string start before the `@`, so a match is only yielded
+     * outside word tokens like `bob@host`. The prefix is non-capturing, so
+     * capture groups 1-3 are unchanged, and consumers read only the groups
+     * (`AgentService.prepareContext`), keeping the match results identical.
+     */
+    MENTION: /(?:^|[^\w])@(?:\[\[([^\]]+)\]\]|"([^"]+)"|([a-z0-9_\-./]+(?=$|\s|[^\w\-./])))/gi
 };
 
 export const MODEL_CONSTANTS = {

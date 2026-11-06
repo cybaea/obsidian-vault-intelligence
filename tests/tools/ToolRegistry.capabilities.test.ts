@@ -220,7 +220,7 @@ describe('ToolRegistry Capabilities', () => {
                 expect(parsed).toBeDefined();
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
-                throw new Error(`JSON truncation resulted in invalid JSON schema: ${message}`);
+                throw new Error(`JSON truncation resulted in invalid JSON schema: ${message}`, { cause: e });
             }
         });
 

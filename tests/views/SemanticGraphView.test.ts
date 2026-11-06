@@ -13,6 +13,7 @@ vi.mock('obsidian', () => {
     class MockItemView {
         leaf: unknown;
         contentEl = {
+            addClass: vi.fn(),
             clientHeight: 100,
             clientWidth: 100,
             createDiv: vi.fn().mockReturnValue({

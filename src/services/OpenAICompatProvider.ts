@@ -725,7 +725,7 @@ export class OpenAICompatProvider implements IReasoningClient, IModelProvider, I
         );
         body.response_format = { type: "json_object" };
 
-        let content = "";
+        let content: string;
         try {
             content = await this.postStructuredChat(endpoint, body);
         } catch (e: unknown) {
@@ -749,7 +749,7 @@ export class OpenAICompatProvider implements IReasoningClient, IModelProvider, I
             return JSON.parse(cleaned) as T;
         } catch (parseErr) {
             logger.error("[OpenAI-compat] Failed to parse structured output", parseErr, cleaned);
-            throw new Error("The OpenAI-compatible model failed to generate a valid JSON structure.");
+            throw new Error("The OpenAI-compatible model failed to generate a valid JSON structure.", { cause: parseErr });
         }
     }
 
