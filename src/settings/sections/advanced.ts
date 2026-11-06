@@ -73,7 +73,7 @@ export function configureEmbeddingChunkSizeField(
     _context: SettingsTabContext
 ): void {
     const chunkDesc = createFragment();
-    chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk).');
+    chunkDesc.appendText('Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/CJK).');
     chunkDesc.createDiv({ cls: 'vault-intelligence-settings-warning' }, (div: HTMLDivElement) => {
         setIcon(div.createSpan(), 'lucide-alert-triangle');
         div.createSpan({ text: ' Changing this triggers a full vault re-embedding on exit.' });
@@ -82,7 +82,7 @@ export function configureEmbeddingChunkSizeField(
     setting.setName('Embedding chunk size')
         .setDesc(chunkDesc)
         .addDropdown(dropdown => dropdown
-            .addOption('512', '512 (standard / cjk max)')
+            .addOption('512', '512 (standard / CJK max)')
             .addOption('1024', '1024 (high context / code max)')
             .addOption('1500', `1500 (${gemini} safe)`)
             .addOption('2048', `2048 (${gemini} english only)`)
@@ -640,7 +640,7 @@ export function renderAdvancedSettings(context: SettingsTabContext): void {
         div.appendText('Allows the agent to access localhost and private network IPs. ');
         div.createDiv({ cls: 'vault-intelligence-settings-warning' }, (warnDiv) => {
             setIcon(warnDiv.createSpan(), 'lucide-alert-triangle');
-            warnDiv.createSpan({ text: ' Warning: This makes you vulnerable to ssrf (server-side request forgery) and dns rebinding attacks. Malicious external websites could resolve to local ip addresses and bypass standard url checks if the agent reads malicious notes or prompt injections. Use with caution.' });
+            warnDiv.createSpan({ text: ' Warning: This makes you vulnerable to SSRF (server-side request forgery) and DNS rebinding attacks. Malicious external websites could resolve to local IP addresses and bypass standard URL checks if the agent reads malicious notes or prompt injections. Use with caution.' });
         });
     });
     const secGroup = new SettingGroup(containerEl).setHeading(secHeading);

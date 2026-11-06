@@ -14,7 +14,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### User features
 
 -   Mobile compatibility: the @mention parser no longer uses a regex lookbehind, which iOS versions before 16.4 cannot evaluate (the pattern is built at plugin load, so earlier releases failed on those devices); the boundary is now matched with a consumed non-capturing prefix, and the captured mentions are identical.
--   Settings polish: the embedding option labels follow sentence case (`512 (standard / cjk max)`, `1024 (high context / code max)`, and the Explorer dimension labels), per the Obsidian style guidelines. Dropdown values are unchanged, so existing settings keep working.
+-   Settings polish: the embedding option labels follow sentence case (`512 (standard / CJK max)`, `1024 (high context / code max)`, and the Explorer dimension labels), per the Obsidian style guidelines, with initialisms (SSRF, DNS, IP, URL, CJK) kept capitalized for readability. Dropdown values are unchanged, so existing settings keep working.
 
 ### Security
 

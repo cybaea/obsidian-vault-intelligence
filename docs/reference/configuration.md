@@ -241,7 +241,7 @@ Technical tuning for performance, provider reliability, and security.
 | :--- | :--- | :--- |
 | Indexing delay (ms) | `5000` | Debounce delay for background indexing while typing: the wait time after typing stops before re-indexing in the background. |
 | Indexing throttle (ms) | `100` | Technical delay between files during processing to avoid API rate limiting. |
-| Embedding chunk size | `512` | Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk). Options: `512` (standard / cjk max), `1024` (high context / code max), `1500` (Gemini safe), `2048` (Gemini english only), `4096` (Voyage safe), `8192` (Voyage maximum). **Note:** Changing this triggers a full vault re-embedding on exit. |
+| Embedding chunk size | `512` | Target size for vector chunks. Higher values provide more context but risk API rejection if the text is dense (code/cjk). Options: `512` (standard / CJK max), `1024` (high context / code max), `1500` (Gemini safe), `2048` (Gemini english only), `4096` (Voyage safe), `8192` (Voyage maximum). **Note:** Changing this triggers a full vault re-embedding on exit. |
 | Token estimation ratio | `4` | Characters per token for budget estimation. Lower if you use CJK languages or dense code (e.g. 2 for Japanese). **Note:** Incorrect values may cause context-window overflow or under-utilisation. |
 | Local worker threads | `2` (desktop) / `1` (mobile) | CPU threads used for local (Transformers.js) embeddings. Higher is faster but heavier. |
 

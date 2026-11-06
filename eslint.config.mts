@@ -95,8 +95,10 @@ export default defineConfig(
 			"obsidianmd/prefer-create-el": "off", // Conflicts with standard TypeScript Document types
 			"obsidianmd/prefer-file-manager-trash-file": "warn",
 			"obsidianmd/prefer-instanceof": "error",
+			// Initialisms that may stay capitalized in user-facing text
+			// (everything else in UI strings must be sentence case).
 			"obsidianmd/ui/sentence-case": ["error", {
-				acronyms: ["API", "HTML", "AI", "ID", "CX"],
+				acronyms: ["AI", "API", "CJK", "CX", "DNS", "HTML", "ID", "IP", "SSRF", "URL"],
 				brands: ["Google", "Gemini", "Google Cloud Console", "Transformers.js"]
 			}],
 
