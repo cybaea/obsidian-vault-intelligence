@@ -718,7 +718,7 @@ export class OllamaProvider implements IReasoningClient, IModelProvider, IEmbedd
                 return JSON.parse(content) as T;
             } catch (parseErr) {
                 logger.error("[Ollama] Failed to parse structured output", parseErr, content);
-                throw new Error("Local model failed to generate valid JSON structure.");
+                throw new Error("Local model failed to generate valid JSON structure.", { cause: parseErr });
             }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);

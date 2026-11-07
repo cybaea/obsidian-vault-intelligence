@@ -13,6 +13,9 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Mobile compatibility: the @mention parser no longer uses a regex lookbehind, which iOS versions before 16.4 cannot evaluate (the pattern is built at plugin load, so earlier releases failed on those devices); the boundary is now matched with a consumed non-capturing prefix, and the captured mentions are identical.
+-   Settings polish: the embedding option labels follow sentence case (`512 (standard / CJK max)`, `1024 (high context / code max)`, and the Explorer dimension labels), per the Obsidian style guidelines, with initialisms (SSRF, DNS, IP, URL, CJK) kept capitalized for readability. Dropdown values are unchanged, so existing settings keep working.
+
 ### Security
 
 -   Resolve the `npm audit` critical for `dompurify` (GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr, and GHSA-c6gr-qvv4-5v3f; all fixed upstream in 3.4.17) with an in-range lockfile update to 3.4.17; the affected chain is dev-only (mermaid documentation tooling), so no override entry is needed. The remaining high-severity `braces` chain is dev-only with no upstream patch and stays tracked in issue #627.

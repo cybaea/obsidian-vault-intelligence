@@ -242,7 +242,7 @@ export function configureOllamaHeadersField(
  * SecretStorage slot.
  */
 export function withAuthorizationSecret(currentJson: string | undefined): string {
-    let headers: Record<string, string> = {};
+    let headers: Record<string, string>;
     try {
         headers = JSON.parse(currentJson || "{}") as Record<string, string>;
     } catch {
@@ -260,7 +260,7 @@ export function withAuthorizationSecret(currentJson: string | undefined): string
  * written (callers then skip the settings save).
  */
 export function withAuthorizationSecretIfAbsent(currentJson: string | undefined): string | null {
-    let headers: Record<string, string> = {};
+    let headers: Record<string, string>;
     try {
         headers = JSON.parse(currentJson || "{}") as Record<string, string>;
     } catch {
@@ -281,7 +281,7 @@ export function withAuthorizationSecretIfAbsent(currentJson: string | undefined)
  * key, so only a plain-text entry leaves anything unwired.
  */
 export function hasSecretAuthorizationReference(currentJson: string | undefined): boolean {
-    let headers: Record<string, string> = {};
+    let headers: Record<string, string>;
     try {
         headers = JSON.parse(currentJson || "{}") as Record<string, string>;
     } catch {
@@ -387,7 +387,7 @@ async function linkConnectionSecret(
         new Notice('Secure storage is unavailable on this device; the credential could not be stored.');
         return;
     }
-    let linked: string | null = null;
+    let linked: string | null;
     try {
         linked = await storage.getSecret(linkedId);
     } catch (error) {

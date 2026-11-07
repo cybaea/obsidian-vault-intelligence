@@ -85,7 +85,7 @@ export class OntologyService {
             if (msg.toLowerCase().includes('already exists')) {
                 logger.debug(`${label} ${normalizedPath} already exists (checked during creation).`);
             } else {
-                throw new Error(`Failed to create ${label} ${normalizedPath}: ${msg}`);
+                throw new Error(`Failed to create ${label} ${normalizedPath}: ${msg}`, { cause: e });
             }
         }
     }
@@ -112,7 +112,7 @@ export class OntologyService {
             if (msg.toLowerCase().includes('already exists')) {
                 logger.debug(`Folder ${normalizedPath} already exists (checked during creation).`);
             } else {
-                throw new Error(`Failed to create folder ${normalizedPath}: ${msg}`);
+                throw new Error(`Failed to create folder ${normalizedPath}: ${msg}`, { cause: e });
             }
         }
     }

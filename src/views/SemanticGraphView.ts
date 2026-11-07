@@ -234,24 +234,10 @@ export class SemanticGraphView extends ItemView {
 
         // 1. Strict Obsidian Flexbox Container
         this.contentEl.empty();
-        this.contentEl.setCssStyles({
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            padding: "0"
-        });
+        this.contentEl.addClass("semantic-graph-container");
 
         // Top Bar Controls
         const topBar = this.contentEl.createDiv({ cls: "semantic-graph-controls" });
-        topBar.setCssStyles({
-            alignItems: "center",
-            borderBottom: "1px solid var(--background-modifier-border)",
-            display: "flex",
-            flexShrink: "0",
-            gap: "var(--size-4-2)",
-            justifyContent: "flex-end",
-            padding: "var(--size-4-1) var(--size-4-2)"
-        });
 
         topBar.createSpan({ attr: { style: "font-size: var(--font-ui-small);" }, cls: "text-muted", text: "Attraction" });
         const sliderLabel = topBar.createSpan({ attr: { style: "font-size: var(--font-ui-small); width: 1.5em; text-align: right;" }, cls: "text-muted", text: this.attractionMultiplier.toFixed(1) });
@@ -283,13 +269,6 @@ export class SemanticGraphView extends ItemView {
         });
 
         this.wrapperEl = this.contentEl.createDiv({ cls: "semantic-graph-wrapper" });
-        this.wrapperEl.setCssStyles({
-            backgroundColor: "transparent",
-            flex: "1 1 auto",
-            height: "100%",
-            position: "relative",
-            width: "100%"
-        });
 
         // Initialize theme colors and reducers
         this.resolveThemeColors();
@@ -516,7 +495,7 @@ export class SemanticGraphView extends ItemView {
      * Includes debouncing, race protection, and smart panning.
      */
     updateForFile = debounce((...args: unknown[]) => {
-        const file = args[0] as TFile | null;
+        const file = args[0] instanceof TFile ? args[0] : null;
         const force = (args[1] ?? false) as boolean;
         const ignorePositions = (args[2] ?? false) as boolean;
 

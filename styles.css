@@ -1174,3 +1174,35 @@ a.similar-notes-link:hover {
     margin-top: 0.75em;
     padding-left: 0;
 }
+
+/*
+ * Semantic Galaxy (graph) view layout.
+ *
+ * These classes carry the structural styles previously applied inline with
+ * `setCssStyles` in `src/views/SemanticGraphView.ts`. Static styling belongs
+ * in CSS so themes and overrides can target it.
+ */
+.semantic-graph-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.semantic-graph-controls {
+    align-items: center;
+    border-bottom: 1px solid var(--background-modifier-border);
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-4-2);
+    justify-content: flex-end;
+    padding: var(--size-4-1) var(--size-4-2);
+}
+
+.semantic-graph-wrapper {
+    background-color: transparent;
+    flex: 1 1 auto;
+    height: 100%;
+    position: relative;
+    width: 100%;
+}

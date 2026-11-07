@@ -53,7 +53,7 @@ export class WorkerLifecycleManager {
             return forceWipe || needsForcedScan;
         } catch (error) {
             logger.error("[WorkerLifecycleManager] Initialization failed:", error);
-            throw new Error("Failed to initialize vault intelligence graph sync");
+            throw new Error("Failed to initialize vault intelligence graph sync", { cause: error });
         }
     }
 

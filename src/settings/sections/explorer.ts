@@ -186,27 +186,27 @@ export function configureEmbeddingDimensionField(
             const isModern = plugin.settings.embeddingModel.includes('gemini-embedding');
 
             if (providerName === 'voyage') {
-                dropdown.addOption('1024', '1024 (Standard)')
-                    .addOption('512', '512 (Matryoshka)')
-                    .addOption('256', '256 (Matryoshka)')
-                    .addOption('128', '128 (Matryoshka)')
-                    .addOption('2048', '2048 (Large)');
+                dropdown.addOption('1024', '1024 (standard)')
+                    .addOption('512', '512 (matryoshka)')
+                    .addOption('256', '256 (matryoshka)')
+                    .addOption('128', '128 (matryoshka)')
+                    .addOption('2048', '2048 (large)');
             } else if (providerName === 'ollama') {
                 const nativeDim = currentModel?.dimensions || 768;
                 dropdown.addOption(String(nativeDim), `${nativeDim} (native)`);
 
                 if (plugin.settings.embeddingModel.includes('nomic')) {
                     // Nomic models support Matryoshka compression
-                    const name = 'Matryoshka';
+                    const name = 'matryoshka';
                     if (nativeDim > 512) dropdown.addOption('512', `512 (${name})`);
                     if (nativeDim > 256) dropdown.addOption('256', `256 (${name})`);
                     if (nativeDim > 128) dropdown.addOption('128', `128 (${name})`);
                     dropdown.addOption('64', `64 (${name})`);
                 }
             } else {
-                dropdown.addOption('768', '768 (Flash / standard)')
-                    .addOption('1536', '1536 (Balanced)')
-                    .addOption('3072', '3072 (Max / v4 default)');
+                dropdown.addOption('768', '768 (flash / standard)')
+                    .addOption('1536', '1536 (balanced)')
+                    .addOption('3072', '3072 (max / v4 default)');
             }
 
             dropdown.setValue(String(plugin.settings.embeddingDimension))
