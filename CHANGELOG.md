@@ -16,6 +16,7 @@ Security fixes should be added to a `### Security` section and include the CVE a
 ### Security
 
 -   Resolve the minimatch advisories in development tooling (GHSA-cf2h-pxjq-68xw, quadratic compile time for long wildcard patterns, plus the medium GHSA-c859-jr93-m5j4 and GHSA-hqmv-qgp3-jx75; all patched upstream in 11.0.8) by raising the `overrides` entry to `^11.0.8`. The affected chains are dev-only (eslint, eslint-plugin-n, eslint-plugin-import), so nothing ships in the plugin bundle and there is no user-facing runtime exposure.
+-   Close the low-severity `glob` advisory in development tooling (GHSA-qxr8-q827-836c / CVE-2026-118764: `ignore` patterns skipped the `braceExpandMax` cap, quadratic compile time for very large brace expansions; patched upstream in 14.0.6) by raising the `overrides` entry to `^14.0.6`. The pin is only hardening: no dependency chain installs `glob`, so nothing ships in the plugin bundle and there is no runtime exposure.
 
 ### Developer features
 
