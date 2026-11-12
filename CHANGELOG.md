@@ -13,6 +13,10 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+### Security
+
+-   Resolve the minimatch advisories in development tooling (GHSA-cf2h-pxjq-68xw, quadratic compile time for long wildcard patterns, plus the medium GHSA-c859-jr93-m5j4 and GHSA-hqmv-qgp3-jx75; all patched upstream in 11.0.8) by raising the `overrides` entry to `^11.0.8`. The affected chains are dev-only (eslint, eslint-plugin-n, eslint-plugin-import), so nothing ships in the plugin bundle and there is no user-facing runtime exposure.
+
 ### Developer features
 
 ## [9.10.1] - 2026-11-10
