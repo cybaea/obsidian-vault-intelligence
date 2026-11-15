@@ -389,7 +389,7 @@ export function configureQuantizeLocalModelField(
 ): void {
     setting
         .setName('Quantize local model')
-        .setDesc('Enable 8-bit quantization to reduce memory usage and download size. Disable to run unquantized fp32 model fully on the gpu (much faster but uses more memory).')
+        .setDesc('Enable 8-bit quantization to reduce memory usage and download size. Disable to run unquantized fp32 model fully on the GPU (much faster but uses more memory).')
         .addToggle(toggle => toggle
             .setValue(plugin.settings.embeddingLocalQuantized)
             .onChange(async (value) => {
