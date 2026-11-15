@@ -13,6 +13,8 @@ Security fixes should be added to a `### Security` section and include the CVE a
 
 ### User features
 
+-   Settings polish: the local model quantization description now capitalizes `GPU` (previously lowercase `gpu`), per the Obsidian sentence-case initialism guidelines enforced by `eslint-plugin-obsidianmd` 0.6.0; wording and behavior are otherwise unchanged.
+
 ### Security
 
 -   Resolve the minimatch advisories in development tooling (GHSA-cf2h-pxjq-68xw, quadratic compile time for long wildcard patterns, plus the medium GHSA-c859-jr93-m5j4 and GHSA-hqmv-qgp3-jx75; all patched upstream in 11.0.8) by raising the `overrides` entry to `^11.0.8`. The affected chains are dev-only (eslint, eslint-plugin-n, eslint-plugin-import), so nothing ships in the plugin bundle and there is no user-facing runtime exposure.
