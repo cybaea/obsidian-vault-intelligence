@@ -1,12 +1,12 @@
 version: 1.0.0
 title: "Review Renovate Pull Request"
-description: "Carefully review, research, rebase, fix (where needed) and verify a Renovate dependency pull request."
+description: "Carefully review, research, locally rebase, and verify a Renovate dependency pull request."
 parameters:
   - key: pr_number
     input_type: string
     requirement: required
     description: "The GitHub pull request number to review."
-prompt: "Please review, rebase and push, verify, and summarize PR {{ pr_number }}"
+prompt: "Please review, locally rebase, verify (including the Allan-Dev Obsidian vault), and summarize PR {{ pr_number }}"
 extensions:
   - type: builtin
     name: developer
@@ -25,54 +25,98 @@ instructions: |
 
   ### Strict Execution Protocol
   - **No Pre-flight Checks**: Do NOT execute environment verification commands (e.g., `which node`, `ls`, `env`, `pwd`) unless a required command fails with a "not found" or permission error.
-  - **Trust the Toolchain**: Assume `npm`, `gh`, and `git` are correctly configured and available in the PATH.
+  - **Trust the Toolchain**: Assume `npm`, `gh`, `git`, and `obsidian` are correctly configured and available in the PATH.
   - **Atomic Steps**: Group related shell commands into single execution blocks to maintain momentum.
   - **No Hallucinations**: If a command fails, report the exact error. Do not speculate about "Hermit" or other environment wrappers unless they appear in the stderr.
   - **Script Integrity**: If using `Developer.execute`, treat TypeScript errors (e.g., `TS2339`) as bugs in your own script logic. Do NOT blame the environment for compilation failures.
   - **Safe Types**: When writing scripts for `Developer.execute`, always initialize objects with explicit types (e.g., `const results: any = {}`) to avoid strict property checking failures during sandbox compilation.
-  - **Prefer `npm run` commands always**: Watch yourself and when you start using lower-level commands, e.g, `npx vitest run`, STOP AND THINK: it is probably your sandbox or terminal environment that is confused. Review your environment first.
+  - **Prefer `npm run` commands always**: Watch yourself and when you start using lower-level commands, e.g., `npx vitest run`, STOP AND THINK: it is probably your sandbox or terminal environment that is confused. Review your environment first.
 
   1. Check for uncommitted changes and switch to the PR branch
      Execute the following shell command to check out PR {{ pr_number }}:
      `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout {{ pr_number }} && git pull origin $(git branch --show-current)`
-     
+
   2. Rebase on main (Local verification only)
-     This rebase is for local verification only. DO NOT PUSH the rebased branch to origin unless you intend to "take over" the PR and stop Renovate updates.
+     This rebase is for local verification only. DO NOT push the rebased branch to origin, as pushing takes over the PR and stops Renovate from auto-rebasing it.
      If rebase fails due to conflicts, abort immediately to keep the workspace clean. Execute:
      `git fetch origin main && (git rebase origin/main || (echo "❌ Merge Conflict detected! Aborting rebase to clean up..." && git rebase --abort && exit 1))`
-     If this step fails with a merge conflict, instruct the user to go to the Renovate Dependency Dashboard in GitHub and tick the checkbox to rebase/retry the PR.
-     
+     If this step fails with a merge conflict, note in your report that the Renovate Dependency Dashboard checkbox in GitHub should be ticked to rebase/retry the PR.
+
   3. Identify changed dependencies
      Parse the PR body or `package.json` diff to identify exactly which packages are being upgraded.
-     
+
   4. Research release notes and breaking changes
      Search the web or the package's changelogs. Look for "breaking changes", "migration guide", or security fixes.
      Include your findings in the final report, especially if there are potential breaking changes or security implications. If the PR is a security fix, identify the CVE or GHSA ID and include it in the report.
-     
+
   5. Codebase impact analysis
      Use your tools to search the codebase (e.g., `grep` or search features) to find usage of affected APIs if breaking changes are suspected.
-     
+
   6. Automated Verification Suite
-     Run the tests using `npm ci` to respect the lockfile and avoid unnecessary changes. Execute:
+     Run the build, test, lint, and docs suite using `npm ci` to respect the lockfile. Execute:
      `npm ci && npm run build && npm test && npm run lint && npm run docs:build`
-     If any of these steps fail, include the exact error messages in your final report. Do NOT attempt to fix the errors yourself; just report them as findings.
+     If any of these steps fail, record the exact error messages for your report. Do NOT attempt to fix the errors yourself.
 
-  7. Push verified rebase
-     If all automated checks pass, push the verified rebase to confirm it works on the remote. Execute:
-     `git push origin HEAD --force-with-lease`
-     This ensures the rebased changes are verified and available for review or merging.
+  7. Obsidian `Allan-Dev` Vault Console Check
+     Only run this step if Step 6 (`npm run build`) succeeded. Reload the freshly built plugin in the `Allan-Dev` vault and inspect the developer console for errors:
+     ```bash
+     PLUGIN_ID=$(node -p "require('./manifest.json').id")
+     if ! pgrep -x obsidian >/dev/null 2>&1; then
+       nohup obsidian >/dev/null 2>&1 &
+       sleep 5
+     fi
+     obsidian vault="Allan-Dev" plugin:reload id="$PLUGIN_ID"
+     sleep 3
+     obsidian vault="Allan-Dev" dev:errors
+     obsidian vault="Allan-Dev" dev:console level=error
+     ```
+     - Note: Ensure your `Allan-Dev` vault's `.obsidian/plugins/` directory points to the build output of this working directory.
+     - If `dev:errors` or `dev:console level=error` outputs any plugin errors—or if the `obsidian` CLI command fails—record the exact output and treat the Obsidian check as failed.
 
-  8. Report Findings
-     Summarize your research and verification results explicitly in the chat.
+  8. Report Findings on GitHub
      Post the summary as a comment on the PR using `gh pr comment`.
-     
-     a. Write your detailed findings to a temporary file named `pr_summary.txt`. 
-        Include a section: "**Rebased and Verified**: This PR has been rebased on the latest main and all automated checks passed."
-        Include a section: "**Manual Verification**: Please manually load the plugin in Obsidian to check for UI regressions, as automated tests cannot cover this."
-        If this is a security fix, include a section: "**Changelog Entry**: Provide the entry for the `### Security` section, including the CVE/GHSA ID."
+     a. Write your detailed findings to a temporary file named `pr_summary.txt`:
+        - Include a section: "**Local Rebase & Verification**: Rebased locally on `main`; automated build, test, lint, and docs checks [passed/failed]."
+        - Include a section: "**Obsidian `Allan-Dev` Console Check**: Reloaded plugin in `Allan-Dev`; [zero console errors detected / list errors]."
+        - If this is a security fix, include a section: "**Changelog Entry**: Provide the entry for the `### Security` section, including the CVE/GHSA ID."
      b. Execute the following to post the comment and clean up:
         `gh pr comment {{ pr_number }} --body-file pr_summary.txt && rm pr_summary.txt`
-        
-  9. Cleanup (Optional)
-     If the review is successful and you are NOT merging immediately, switch back to main. Execute:
+
+  9. Cleanup
+     Switch back to `main` and delete the local PR branch so the workspace stays clean:
      `git checkout main && git branch -D @{-1}`
+
+  10. Final Structured Verdict
+      Populate the required JSON response schema accurately based on Steps 2–7:
+      - `pr_number`: {{ pr_number }} as an integer.
+      - `safe_to_merge`: `true` ONLY if local rebase succeeded, all commands in Step 6 passed, Obsidian `Allan-Dev` reloaded with zero errors in Step 7, and no unmitigated breaking changes were found. Otherwise `false`.
+      - `risk_level`: `"low"` for patch/minor updates with clean checks; `"medium"` for major version bumps or broad dependency updates that passed all checks; `"high"` if any check failed, breaking changes affect used APIs, or Obsidian reported errors.
+      - `requires_manual_ui_check`: `true` if the upgraded package directly affects UI rendering, CSS, or Obsidian workspace views; otherwise `false`.
+      - `security_advisory`: The CVE or GHSA ID if this PR addresses a vulnerability, otherwise `""`.
+      - `summary`: A concise 1–2 sentence summary of the dependency change, test/Obsidian results, and recommendation.
+response:
+  json_schema:
+    type: object
+    required:
+      - pr_number
+      - safe_to_merge
+      - risk_level
+      - requires_manual_ui_check
+      - summary
+    properties:
+      pr_number:
+        type: integer
+      safe_to_merge:
+        type: boolean
+        description: "True ONLY if all builds/tests pass, Obsidian console has zero new errors, and there are no unmitigated breaking changes."
+      risk_level:
+        type: string
+        enum: ["low", "medium", "high"]
+      requires_manual_ui_check:
+        type: boolean
+      security_advisory:
+        type: string
+        description: "CVE or GHSA ID if this is a security patch, otherwise empty string."
+      summary:
+        type: string
+
