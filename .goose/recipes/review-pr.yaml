@@ -81,7 +81,7 @@ instructions: |
 
   9. Cleanup
      Switch back to `main` and delete the local PR branch so the workspace stays clean:
-     `git checkout main && git branch -D @{-1}`
+     `git checkout main`
 
   10. Write Machine-Readable Verdict File
       Write a valid JSON file to `/tmp/goose-verdict-{{ pr_number }}.json` with these exact fields:
