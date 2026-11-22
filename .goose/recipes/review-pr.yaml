@@ -11,8 +11,6 @@ extensions:
   - type: builtin
     name: developer
   - type: builtin
-    name: code_execution
-  - type: builtin
     name: extensionmanager
   - type: builtin
     name: analyze
@@ -28,13 +26,11 @@ instructions: |
   - **Trust the Toolchain**: Assume `npm`, `gh`, `git`, and `obsidian` are correctly configured and available in the PATH.
   - **Atomic Steps**: Group related shell commands into single execution blocks to maintain momentum.
   - **No Hallucinations**: If a command fails, report the exact error. Do not speculate about "Hermit" or other environment wrappers unless they appear in the stderr.
-  - **Script Integrity**: If using `Developer.execute`, treat TypeScript errors (e.g., `TS2339`) as bugs in your own script logic. Do NOT blame the environment for compilation failures.
-  - **Safe Types**: When writing scripts for `Developer.execute`, always initialize objects with explicit types (e.g., `const results: any = {}`) to avoid strict property checking failures during sandbox compilation.
   - **Prefer `npm run` commands always**: Watch yourself and when you start using lower-level commands, e.g., `npx vitest run`, STOP AND THINK: it is probably your sandbox or terminal environment that is confused. Review your environment first.
 
   1. Check for uncommitted changes and switch to the PR branch
-     Execute the following shell command to check out PR {{ pr_number }}:
-     `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout {{ pr_number }} && git pull origin $(git branch --show-current)`
+     Execute the following shell command to check out PR {{ pr_number }} cleanly:
+     `if [ -n "$(git status --porcelain)" ]; then echo "❌ Error: You have uncommitted changes. Please stash or commit them before running this workflow."; exit 1; fi && gh pr checkout {{ pr_number }} --force`
 
   2. Rebase on main (Local verification only)
      This rebase is for local verification only. DO NOT push the rebased branch to origin, as pushing takes over the PR and stops Renovate from auto-rebasing it.
@@ -58,19 +54,20 @@ instructions: |
      If any of these steps fail, record the exact error messages for your report. Do NOT attempt to fix the errors yourself.
 
   7. Obsidian `Allan-Dev` Vault Console Check
-     Only run this step if Step 6 (`npm run build`) succeeded. Reload the freshly built plugin in the `Allan-Dev` vault and inspect the developer console for errors:
+     Only run this step if Step 6 (`npm run build`) succeeded. Attach the debugger, reload the freshly built plugin in `Allan-Dev`, inspect errors, and detach:
      ```bash
      PLUGIN_ID=$(node -p "require('./manifest.json').id")
      if ! pgrep -x obsidian >/dev/null 2>&1; then
        nohup obsidian >/dev/null 2>&1 &
        sleep 5
      fi
+     obsidian vault="Allan-Dev" dev:debug on
      obsidian vault="Allan-Dev" plugin:reload id="$PLUGIN_ID"
      sleep 3
      obsidian vault="Allan-Dev" dev:errors
      obsidian vault="Allan-Dev" dev:console level=error
+     obsidian vault="Allan-Dev" dev:debug off
      ```
-     - Note: Ensure your `Allan-Dev` vault's `.obsidian/plugins/` directory points to the build output of this working directory.
      - If `dev:errors` or `dev:console level=error` outputs any plugin errors—or if the `obsidian` CLI command fails—record the exact output and treat the Obsidian check as failed.
 
   8. Report Findings on GitHub
@@ -87,7 +84,7 @@ instructions: |
      `git checkout main && git branch -D @{-1}`
 
   10. Final Structured Verdict
-      Populate the required JSON response schema accurately based on Steps 2–7:
+      Call the `final_output` tool with the JSON matching `response.json_schema`:
       - `pr_number`: {{ pr_number }} as an integer.
       - `safe_to_merge`: `true` ONLY if local rebase succeeded, all commands in Step 6 passed, Obsidian `Allan-Dev` reloaded with zero errors in Step 7, and no unmitigated breaking changes were found. Otherwise `false`.
       - `risk_level`: `"low"` for patch/minor updates with clean checks; `"medium"` for major version bumps or broad dependency updates that passed all checks; `"high"` if any check failed, breaking changes affect used APIs, or Obsidian reported errors.
