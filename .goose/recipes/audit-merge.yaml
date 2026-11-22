@@ -1,0 +1,45 @@
+version: 1.0.0
+title: "Audit PR Review Before Auto-Merge"
+description: "Adversarial second-opinion check comparing a PR diff and CI status against the posted review comment."
+parameters:
+  - key: pr_number
+    input_type: string
+    requirement: required
+    description: "The GitHub pull request number to audit."
+prompt: "Audit PR {{ pr_number }} and its latest review comment to decide if auto-merge is justified."
+extensions:
+  - type: builtin
+    name: developer
+instructions: |
+  You are a strict release-gate auditor. Your job is to **disprove** that PR {{ pr_number }} is safe for unattended auto-merge. Do NOT modify any files in the repository or run builds.
+
+  1. Fetch the PR metadata, diff, CI checks, and latest comment in a single shell command:
+     ```bash
+     gh pr view {{ pr_number }} --json number,title,author,isDraft,mergeable,files,statusCheckRollup,comments \
+       --jq '{number, title, author: .author.login, isDraft, mergeable, files: [.files[].path], checks: [.statusCheckRollup[]? | {name: (.name // .context), status, conclusion}], last_comment: .comments[-1].body}'
+     git fetch origin main --quiet && gh pr diff {{ pr_number }} | head -n 200
+     ```
+
+  2. Audit for any red flags or contradictions between the diff/checks and `last_comment`:
+     - Author is not `app/renovate`, PR is a draft, or `mergeable` is not `MERGEABLE`.
+     - Any GitHub status check has `conclusion` of `FAILURE`, `TIMED_OUT`, `CANCELLED`, or `ACTION_REQUIRED`.
+     - Any source/runtime file (`src/**`, `manifest.json`, `esbuild.config.mjs`) was modified, or `package.json` shows a **major** version bump (`^1.x` -> `^2.x` or `0.x` -> `0.y`).
+     - `last_comment` is missing, truncated, or shows any failed verification step (tests, lint, docs, or Obsidian `Allan-Dev` console check).
+     - `last_comment` claims a package is dev-only when `package.json` lists it under `dependencies` rather than `devDependencies`.
+
+  3. Write `/tmp/goose-audit-{{ pr_number }}.json` with exact fields:
+     - `pr_number`: {{ pr_number }} (integer)
+     - `approved`: `true` ONLY if zero red flags were found above; otherwise `false` (boolean)
+     - `reason`: One concise sentence explaining why auto-merge is approved or blocked (string)
+
+     Validate the file:
+     ```bash
+     node -e '
+       const a = JSON.parse(require("fs").readFileSync("/tmp/goose-audit-{{ pr_number }}.json", "utf8"));
+       if (typeof a.pr_number !== "number" || typeof a.approved !== "boolean" || typeof a.reason !== "string") {
+         throw new Error("Invalid audit JSON");
+       }
+       console.log("AUDIT_OK");
+     '
+     ```
+     Once `AUDIT_OK` prints, stop immediately.
